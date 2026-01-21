@@ -1,0 +1,29 @@
+{
+  "name": "expense-tracker-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "modules/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "rimraf dist coverage node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "dotenv-cli": "^11.0.0",
+    "nodemon": "^3.0.3",
+    "prisma": "^7.2.0",
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
