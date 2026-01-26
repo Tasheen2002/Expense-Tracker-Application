@@ -62,6 +62,40 @@ import { PrismaRecurringExpenseRepository } from "../../../modules/expense-ledge
 import { RecurringExpenseService } from "../../../modules/expense-ledger/application/services/recurring-expense.service";
 import { RecurringExpenseController } from "../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller";
 
+// Budget Management Module - Repositories
+import { BudgetRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget.repository.impl";
+import { BudgetAllocationRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget-allocation.repository.impl";
+import { BudgetAlertRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget-alert.repository.impl";
+import { SpendingLimitRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/spending-limit.repository.impl";
+
+// Budget Management Module - Services
+import { BudgetService } from "../../../modules/budget-management/application/services/budget.service";
+import { SpendingLimitService } from "../../../modules/budget-management/application/services/spending-limit.service";
+
+// Budget Management Module - Command Handlers
+import { CreateBudgetHandler } from "../../../modules/budget-management/application/commands/create-budget.command";
+import { UpdateBudgetHandler } from "../../../modules/budget-management/application/commands/update-budget.command";
+import { DeleteBudgetHandler } from "../../../modules/budget-management/application/commands/delete-budget.command";
+import { ActivateBudgetHandler } from "../../../modules/budget-management/application/commands/activate-budget.command";
+import { ArchiveBudgetHandler } from "../../../modules/budget-management/application/commands/archive-budget.command";
+import { AddAllocationHandler } from "../../../modules/budget-management/application/commands/add-allocation.command";
+import { UpdateAllocationHandler } from "../../../modules/budget-management/application/commands/update-allocation.command";
+import { DeleteAllocationHandler } from "../../../modules/budget-management/application/commands/delete-allocation.command";
+import { CreateSpendingLimitHandler } from "../../../modules/budget-management/application/commands/create-spending-limit.command";
+import { UpdateSpendingLimitHandler } from "../../../modules/budget-management/application/commands/update-spending-limit.command";
+import { DeleteSpendingLimitHandler } from "../../../modules/budget-management/application/commands/delete-spending-limit.command";
+
+// Budget Management Module - Query Handlers
+import { GetBudgetHandler } from "../../../modules/budget-management/application/queries/get-budget.query";
+import { ListBudgetsHandler } from "../../../modules/budget-management/application/queries/list-budgets.query";
+import { GetAllocationsHandler } from "../../../modules/budget-management/application/queries/get-allocations.query";
+import { GetUnreadAlertsHandler } from "../../../modules/budget-management/application/queries/get-unread-alerts.query";
+import { ListSpendingLimitsHandler } from "../../../modules/budget-management/application/queries/list-spending-limits.query";
+
+// Budget Management Module - Controllers
+import { BudgetController } from "../../../modules/budget-management/infrastructure/http/controllers/budget.controller";
+import { SpendingLimitController } from "../../../modules/budget-management/infrastructure/http/controllers/spending-limit.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -261,6 +295,78 @@ export class Container {
     this.services.set("attachmentController", attachmentController);
     this.services.set("recurringExpenseController", recurringExpenseController);
 
+    // ============================================
+    // Budget Management Module
+    // ============================================
+
+    // Repositories
+    const budgetRepository = new BudgetRepositoryImpl(prisma);
+    const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(prisma);
+    const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
+    const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
+
+    this.services.set("budgetRepository", budgetRepository);
+    this.services.set("budgetAllocationRepository", budgetAllocationRepository);
+    this.services.set("budgetAlertRepository", budgetAlertRepository);
+    this.services.set("spendingLimitRepository", spendingLimitRepository);
+
+    // Services
+    const budgetService = new BudgetService(
+      budgetRepository,
+      budgetAllocationRepository,
+      budgetAlertRepository
+    );
+    const spendingLimitService = new SpendingLimitService(spendingLimitRepository);
+
+    this.services.set("budgetService", budgetService);
+    this.services.set("spendingLimitService", spendingLimitService);
+
+    // Command Handlers
+    const createBudgetHandler = new CreateBudgetHandler(budgetService);
+    const updateBudgetHandler = new UpdateBudgetHandler(budgetService);
+    const deleteBudgetHandler = new DeleteBudgetHandler(budgetService);
+    const activateBudgetHandler = new ActivateBudgetHandler(budgetService);
+    const archiveBudgetHandler = new ArchiveBudgetHandler(budgetService);
+    const addAllocationHandler = new AddAllocationHandler(budgetService);
+    const updateAllocationHandler = new UpdateAllocationHandler(budgetService);
+    const deleteAllocationHandler = new DeleteAllocationHandler(budgetService);
+    const createSpendingLimitHandler = new CreateSpendingLimitHandler(spendingLimitService);
+    const updateSpendingLimitHandler = new UpdateSpendingLimitHandler(spendingLimitService);
+    const deleteSpendingLimitHandler = new DeleteSpendingLimitHandler(spendingLimitService);
+
+    // Query Handlers
+    const getBudgetHandler = new GetBudgetHandler(budgetService);
+    const listBudgetsHandler = new ListBudgetsHandler(budgetService);
+    const getAllocationsHandler = new GetAllocationsHandler(budgetService);
+    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
+    const listSpendingLimitsHandler = new ListSpendingLimitsHandler(spendingLimitService);
+
+    // Controllers
+    const budgetController = new BudgetController(
+      createBudgetHandler,
+      updateBudgetHandler,
+      deleteBudgetHandler,
+      activateBudgetHandler,
+      archiveBudgetHandler,
+      addAllocationHandler,
+      updateAllocationHandler,
+      deleteAllocationHandler,
+      getBudgetHandler,
+      listBudgetsHandler,
+      getAllocationsHandler,
+      getUnreadAlertsHandler
+    );
+
+    const spendingLimitController = new SpendingLimitController(
+      createSpendingLimitHandler,
+      updateSpendingLimitHandler,
+      deleteSpendingLimitHandler,
+      listSpendingLimitsHandler
+    );
+
+    this.services.set("budgetController", budgetController);
+    this.services.set("spendingLimitController", spendingLimitController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -317,6 +423,19 @@ export class Container {
       ),
       recurringExpenseController: this.get<RecurringExpenseController>(
         "recurringExpenseController",
+      ),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all budget-management services for route registration
+   */
+  getBudgetManagementServices() {
+    return {
+      budgetController: this.get<BudgetController>("budgetController"),
+      spendingLimitController: this.get<SpendingLimitController>(
+        "spendingLimitController",
       ),
       prisma: this.get<PrismaClient>("prisma"),
     };
