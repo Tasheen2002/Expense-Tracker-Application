@@ -1,6 +1,8 @@
 import fp from 'fastify-plugin'
 import { container } from './container'
 import { registerIdentityWorkspaceRoutes } from '../../../modules/identity-workspace/infrastructure/http/routes/index'
+import { registerExpenseLedgerRoutes } from '../../../modules/expense-ledger/infrastructure/http/routes/index'
+import { registerBudgetRoutes } from '../../../modules/budget-management/infrastructure/http/routes/index'
 
 export default fp(
   async (fastify) => {
@@ -14,12 +16,18 @@ export default fp(
     fastify.log.info('✓ Identity-Workspace module registered')
 
     // ============================================
-    // Future modules will be registered here
+    // Expense-Ledger Module
     // ============================================
-    // Example:
-    // const expenseLedgerServices = container.getExpenseLedgerServices()
-    // await registerExpenseLedgerRoutes(fastify, expenseLedgerServices)
-    // fastify.log.info('✓ Expense-Ledger module registered')
+    const expenseLedgerServices = container.getExpenseLedgerServices()
+    await registerExpenseLedgerRoutes(fastify, expenseLedgerServices, expenseLedgerServices.prisma)
+    fastify.log.info('✓ Expense-Ledger module registered')
+
+    // ============================================
+    // Budget Management Module
+    // ============================================
+    const budgetManagementServices = container.getBudgetManagementServices()
+    await registerBudgetRoutes(fastify, budgetManagementServices, budgetManagementServices.prisma)
+    fastify.log.info('✓ Budget Management module registered')
 
     fastify.log.info('All modules registered successfully')
   },
