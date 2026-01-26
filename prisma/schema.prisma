@@ -9,7 +9,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity_workspace", "expense_ledger"]
+  schemas  = ["identity_workspace", "expense_ledger", "budget_management"]
 }
 
 // ============================================
@@ -253,4 +253,126 @@ model RecurringExpense {
   @@index([status])
   @@map("recurring_expenses")
   @@schema("expense_ledger")
+}
+
+// ============================================
+// SCHEMA: budget_management
+// ============================================
+
+enum BudgetPeriodType {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+
+  @@schema("budget_management")
+}
+
+enum BudgetStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  EXCEEDED
+
+  @@schema("budget_management")
+}
+
+enum AlertLevel {
+  INFO      // 50% threshold
+  WARNING   // 75% threshold
+  CRITICAL  // 90% threshold
+  EXCEEDED  // 100% threshold
+
+  @@schema("budget_management")
+}
+
+model Budget {
+  id             String           @id @default(uuid()) @db.Uuid
+  workspaceId    String           @map("workspace_id") @db.Uuid
+  name           String           @db.VarChar(255)
+  description    String?          @db.Text
+  totalAmount    Decimal          @map("total_amount") @db.Decimal(12, 2)
+  currency       String           @default("USD") @db.VarChar(3)
+  periodType     BudgetPeriodType @map("period_type")
+  startDate      DateTime         @map("start_date") @db.Date
+  endDate        DateTime         @map("end_date") @db.Date
+  status         BudgetStatus     @default(DRAFT)
+  createdBy      String           @map("created_by") @db.Uuid
+  isRecurring    Boolean          @default(false) @map("is_recurring")
+  rolloverUnused Boolean          @default(false) @map("rollover_unused")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  allocations    BudgetAllocation[]
+  alerts         BudgetAlert[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdBy])
+  @@map("budgets")
+  @@schema("budget_management")
+}
+
+model BudgetAllocation {
+  id             String   @id @default(uuid()) @db.Uuid
+  budgetId       String   @map("budget_id") @db.Uuid
+  categoryId     String?  @map("category_id") @db.Uuid
+  allocatedAmount Decimal @map("allocated_amount") @db.Decimal(12, 2)
+  spentAmount    Decimal  @default(0) @map("spent_amount") @db.Decimal(12, 2)
+  description    String?  @db.VarChar(500)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, categoryId], map: "budget_category_allocation")
+  @@index([budgetId])
+  @@index([categoryId])
+  @@map("budget_allocations")
+  @@schema("budget_management")
+}
+
+model BudgetAlert {
+  id             String     @id @default(uuid()) @db.Uuid
+  budgetId       String     @map("budget_id") @db.Uuid
+  allocationId   String?    @map("allocation_id") @db.Uuid
+  level          AlertLevel
+  threshold      Decimal    @db.Decimal(5, 2) // Percentage (0-100)
+  currentSpent   Decimal    @map("current_spent") @db.Decimal(12, 2)
+  allocatedAmount Decimal   @map("allocated_amount") @db.Decimal(12, 2)
+  message        String     @db.Text
+  isRead         Boolean    @default(false) @map("is_read")
+  notifiedAt     DateTime?  @map("notified_at") @db.Timestamptz
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@index([allocationId])
+  @@index([level])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("budget_alerts")
+  @@schema("budget_management")
+}
+
+model SpendingLimit {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid // null = applies to all users
+  categoryId  String?  @map("category_id") @db.Uuid // null = applies to all categories
+  limitAmount Decimal  @map("limit_amount") @db.Decimal(12, 2)
+  currency    String   @default("USD") @db.VarChar(3)
+  periodType  BudgetPeriodType @map("period_type")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([isActive])
+  @@map("spending_limits")
+  @@schema("budget_management")
 }
