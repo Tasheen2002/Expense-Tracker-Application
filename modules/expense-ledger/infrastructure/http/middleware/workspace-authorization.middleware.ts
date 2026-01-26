@@ -1,32 +1,28 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { PrismaClient } from '@prisma/client'
+import { FastifyRequest, FastifyReply } from "fastify";
+import { PrismaClient } from "@prisma/client";
 
-/**
- * Middleware to verify that the authenticated user is a member of the workspace
- * CRITICAL: Prevents unauthorized access to workspace resources
- */
 export async function workspaceAuthorizationMiddleware(
   request: FastifyRequest<{ Params: { workspaceId: string } }>,
   reply: FastifyReply,
-  prisma: PrismaClient
+  prisma: PrismaClient,
 ) {
-  const userId = request.user?.userId
-  const { workspaceId } = request.params
+  const userId = request.user?.userId;
+  const { workspaceId } = request.params;
 
   if (!userId) {
     return reply.status(401).send({
       success: false,
       statusCode: 401,
-      message: 'Authentication required',
-    })
+      message: "Authentication required",
+    });
   }
 
   if (!workspaceId) {
     return reply.status(400).send({
       success: false,
       statusCode: 400,
-      message: 'Workspace ID is required',
-    })
+      message: "Workspace ID is required",
+    });
   }
 
   // Check if user is a member of the workspace
@@ -37,29 +33,29 @@ export async function workspaceAuthorizationMiddleware(
         workspaceId,
       },
     },
-  })
+  });
 
   if (!membership) {
     return reply.status(403).send({
       success: false,
       statusCode: 403,
-      message: 'Access denied: You are not a member of this workspace',
-    })
+      message: "Access denied: You are not a member of this workspace",
+    });
   }
 
   // Attach workspace membership info to request for use in handlers
   request.workspaceMembership = {
     role: membership.role,
     workspaceId: membership.workspaceId,
-  }
+  };
 }
 
 // Extend Fastify request type
-declare module 'fastify' {
+declare module "fastify" {
   interface FastifyRequest {
     workspaceMembership?: {
-      role: string
-      workspaceId: string
-    }
+      role: string;
+      workspaceId: string;
+    };
   }
 }
