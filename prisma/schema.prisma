@@ -1,0 +1,285 @@
+// Expense Tracker - Multi-Schema Prisma Configuration
+// Following your e-commerce pattern with schema-per-module
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["identity_workspace", "expense_ledger", "categorization_rules", "receipt_vault", "cost_allocation", "event_outbox"]
+}
+
+// ============================================
+// SCHEMA: identity_workspace
+// ============================================
+
+model UserAccount {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  fullName      String?  @map("full_name")
+  isActive      Boolean  @default(true) @map("is_active")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  workspaceMemberships WorkspaceMembership[]
+
+  @@map("user_account")
+  @@schema("identity_workspace")
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerId   String   @map("owner_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members WorkspaceMembership[]
+
+  @@map("workspace")
+  @@schema("identity_workspace")
+}
+
+model WorkspaceMembership {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  workspaceId String   @map("workspace_id")
+  role        String   // owner, admin, member
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@map("workspace_membership")
+  @@schema("identity_workspace")
+}
+
+model WorkspaceInvitation {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  email       String
+  role        String
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  acceptedAt  DateTime? @map("accepted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([email])
+  @@map("workspace_invitation")
+  @@schema("identity_workspace")
+}
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("auth_session")
+  @@schema("identity_workspace")
+}
+
+// ============================================
+// SCHEMA: expense_ledger
+// ============================================
+
+model ExpenseRecord {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  userId      String   @map("user_id")
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @db.VarChar(3)
+  description String?
+  merchant    String?
+  date        DateTime
+  categoryId  String?  @map("category_id")
+  status      String   @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("expense_record")
+  @@schema("expense_ledger")
+}
+
+model ExpenseSplit {
+  id        String   @id @default(uuid())
+  expenseId String   @map("expense_id")
+  userId    String   @map("user_id")
+  amount    Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([expenseId])
+  @@map("expense_split")
+  @@schema("expense_ledger")
+}
+
+// ============================================
+// SCHEMA: categorization_rules
+// ============================================
+
+model ExpenseCategory {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  color       String?
+  icon        String?
+  parentId    String?  @map("parent_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("expense_category")
+  @@schema("categorization_rules")
+}
+
+model ExpenseTag {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  color       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([workspaceId, name])
+  @@map("expense_tag")
+  @@schema("categorization_rules")
+}
+
+model ExpenseTagLink {
+  id        String   @id @default(uuid())
+  expenseId String   @map("expense_id")
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([expenseId, tagId])
+  @@index([expenseId])
+  @@index([tagId])
+  @@map("expense_tag_link")
+  @@schema("categorization_rules")
+}
+
+model AutoCategorizationRule {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  condition   String   // JSON condition (merchant contains, amount range, etc.)
+  categoryId  String   @map("category_id")
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("auto_categorization_rule")
+  @@schema("categorization_rules")
+}
+
+// ============================================
+// SCHEMA: receipt_vault
+// ============================================
+
+model StoredFile {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  fileName    String   @map("file_name")
+  mimeType    String   @map("mime_type")
+  size        Int
+  storageKey  String   @map("storage_key") // S3 key
+  uploadedBy  String   @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@map("stored_file")
+  @@schema("receipt_vault")
+}
+
+model ReceiptDocument {
+  id        String   @id @default(uuid())
+  fileId    String   @unique @map("file_id")
+  ocrData   String?  @map("ocr_data") @db.Text // JSON OCR results
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("receipt_document")
+  @@schema("receipt_vault")
+}
+
+model ExpenseReceiptLink {
+  id        String   @id @default(uuid())
+  expenseId String   @map("expense_id")
+  receiptId String   @map("receipt_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([expenseId, receiptId])
+  @@index([expenseId])
+  @@map("expense_receipt_link")
+  @@schema("receipt_vault")
+}
+
+// ============================================
+// SCHEMA: cost_allocation
+// ============================================
+
+model CostCenter {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  code        String
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, code])
+  @@map("cost_center")
+  @@schema("cost_allocation")
+}
+
+model ProjectAccount {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  code        String
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([workspaceId, code])
+  @@map("project_account")
+  @@schema("cost_allocation")
+}
+
+// ============================================
+// SCHEMA: event_outbox
+// ============================================
+
+model OutboxMessage {
+  id          String   @id @default(uuid())
+  eventName   String   @map("event_name")
+  payload     String   @db.Text // JSON
+  occurredAt  DateTime @map("occurred_at")
+  processed   Boolean  @default(false)
+  processedAt DateTime? @map("processed_at")
+  retryCount  Int      @default(0) @map("retry_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([processed, createdAt])
+  @@map("outbox_message")
+  @@schema("event_outbox")
+}
