@@ -5,6 +5,7 @@ import { DeleteCategoryHandler } from '../../../application/commands/delete-cate
 import { GetCategoryHandler } from '../../../application/queries/get-category.query'
 import { ListCategoriesHandler } from '../../../application/queries/list-categories.query'
 import { Category } from '../../../domain/entities/category.entity'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class CategoryController {
   constructor(
@@ -54,12 +55,8 @@ export class CategoryController {
           updatedAt: category.updatedAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -102,12 +99,8 @@ export class CategoryController {
           updatedAt: category.updatedAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -130,12 +123,8 @@ export class CategoryController {
         statusCode: 200,
         message: 'Category deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -169,12 +158,8 @@ export class CategoryController {
           updatedAt: category.updatedAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -210,12 +195,8 @@ export class CategoryController {
           updatedAt: category.updatedAt.toISOString(),
         })),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }
