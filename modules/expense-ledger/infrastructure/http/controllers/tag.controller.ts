@@ -5,6 +5,7 @@ import { DeleteTagHandler } from '../../../application/commands/delete-tag.comma
 import { GetTagHandler } from '../../../application/queries/get-tag.query'
 import { ListTagsHandler } from '../../../application/queries/list-tags.query'
 import { Tag } from '../../../domain/entities/tag.entity'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class TagController {
   constructor(
@@ -46,12 +47,8 @@ export class TagController {
           createdAt: tag.createdAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -87,12 +84,8 @@ export class TagController {
           createdAt: tag.createdAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -115,12 +108,8 @@ export class TagController {
         statusCode: 200,
         message: 'Tag deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -150,12 +139,8 @@ export class TagController {
           createdAt: tag.createdAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -184,12 +169,8 @@ export class TagController {
           createdAt: tag.createdAt.toISOString(),
         })),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }
