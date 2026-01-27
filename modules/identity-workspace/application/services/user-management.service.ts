@@ -3,6 +3,10 @@ import { User, CreateUserData } from '../../domain/entities/user.entity'
 import { UserId } from '../../domain/value-objects/user-id.vo'
 import { Email } from '../../domain/value-objects/email.vo'
 import bcrypt from 'bcrypt'
+import {
+  UserNotFoundError,
+  UserAlreadyExistsError,
+} from '../../domain/errors/identity.errors'
 
 export interface UserManagementServiceOptions {
   page?: number
@@ -21,7 +25,7 @@ export class UserManagementService {
     const email = Email.create(data.email)
     const existingUser = await this.userRepository.findByEmail(email)
     if (existingUser) {
-      throw new Error('User with this email already exists')
+      throw new UserAlreadyExistsError(data.email)
     }
 
     // Create user
@@ -60,7 +64,7 @@ export class UserManagementService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(id)
     }
 
     // Update email if provided
@@ -68,7 +72,7 @@ export class UserManagementService {
       const newEmail = Email.create(updateData.email)
       const existingUser = await this.userRepository.findByEmail(newEmail)
       if (existingUser && !existingUser.getId().equals(userId)) {
-        throw new Error('Email already in use')
+        throw new UserAlreadyExistsError(updateData.email)
       }
       user.updateEmail(updateData.email)
     }
@@ -87,7 +91,7 @@ export class UserManagementService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(id)
     }
 
     // Hash password
@@ -104,7 +108,7 @@ export class UserManagementService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(id)
     }
 
     user.verifyEmail()
@@ -117,7 +121,7 @@ export class UserManagementService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(id)
     }
 
     user.deactivate()
@@ -130,7 +134,7 @@ export class UserManagementService {
     const user = await this.userRepository.findById(userId)
 
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(id)
     }
 
     user.activate()
