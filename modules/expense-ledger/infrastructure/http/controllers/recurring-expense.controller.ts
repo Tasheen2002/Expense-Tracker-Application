@@ -44,16 +44,8 @@ export class RecurringExpenseController {
         message: "Recurring expense created successfully",
         data: expense,
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: "Bad Request",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to create recurring expense",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -67,15 +59,8 @@ export class RecurringExpenseController {
         statusCode: 200,
         message: "Recurring expense paused",
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to pause recurring expense",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -89,15 +74,8 @@ export class RecurringExpenseController {
         statusCode: 200,
         message: "Recurring expense resumed",
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to resume recurring expense",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -111,15 +89,8 @@ export class RecurringExpenseController {
         statusCode: 200,
         message: "Recurring expense stopped",
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to stop recurring expense",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -136,16 +107,8 @@ export class RecurringExpenseController {
         message: `Processed ${processedCount} recurring expenses`,
         data: { count: processedCount },
       });
-    } catch (error) {
-      return reply.status(500).send({
-        success: false,
-        statusCode: 500,
-        error: "Internal Server Error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to process recurring expenses",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }
