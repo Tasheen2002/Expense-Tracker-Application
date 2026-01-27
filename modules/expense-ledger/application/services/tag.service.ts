@@ -1,6 +1,10 @@
 import { TagRepository } from '../../domain/repositories/tag.repository'
 import { Tag } from '../../domain/entities/tag.entity'
 import { TagId } from '../../domain/value-objects/tag-id'
+import {
+  TagNotFoundError,
+  TagAlreadyExistsError,
+} from '../../domain/errors/expense.errors'
 
 export class TagService {
   constructor(private readonly tagRepository: TagRepository) {}
@@ -14,7 +18,7 @@ export class TagService {
     const existingTag = await this.tagRepository.findByName(params.name, params.workspaceId)
 
     if (existingTag) {
-      throw new Error('Tag with this name already exists')
+      throw new TagAlreadyExistsError(params.name, params.workspaceId)
     }
 
     const tag = Tag.create({
@@ -39,14 +43,14 @@ export class TagService {
     const tag = await this.tagRepository.findById(TagId.fromString(tagId), workspaceId)
 
     if (!tag) {
-      throw new Error('Tag not found')
+      throw new TagNotFoundError(tagId, workspaceId)
     }
 
     // Check if new name conflicts with existing tag
     if (params.name && params.name !== tag.name) {
       const existingTag = await this.tagRepository.findByName(params.name, workspaceId)
       if (existingTag) {
-        throw new Error('Tag with this name already exists')
+        throw new TagAlreadyExistsError(params.name, workspaceId)
       }
       tag.updateName(params.name)
     }
@@ -64,7 +68,7 @@ export class TagService {
     const tag = await this.tagRepository.findById(TagId.fromString(tagId), workspaceId)
 
     if (!tag) {
-      throw new Error('Tag not found')
+      throw new TagNotFoundError(tagId, workspaceId)
     }
 
     await this.tagRepository.delete(TagId.fromString(tagId), workspaceId)

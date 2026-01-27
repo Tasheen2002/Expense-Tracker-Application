@@ -7,6 +7,11 @@ import {
 import { UserId } from '../../domain/value-objects/user-id.vo'
 import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo'
 import { MembershipId } from '../../domain/value-objects/membership-id.vo'
+import {
+  MembershipNotFoundError,
+  MembershipAlreadyExistsError,
+  CannotRemoveOwnerError,
+} from '../../domain/errors/identity.errors'
 
 export class WorkspaceMembershipService {
   constructor(private readonly membershipRepository: IWorkspaceMembershipRepository) {}
@@ -18,7 +23,7 @@ export class WorkspaceMembershipService {
     // Check if membership already exists
     const existing = await this.membershipRepository.findByUserAndWorkspace(userId, workspaceId)
     if (existing) {
-      throw new Error('User is already a member of this workspace')
+      throw new MembershipAlreadyExistsError(data.userId, data.workspaceId)
     }
 
     const membership = WorkspaceMembership.create(data)
@@ -58,7 +63,7 @@ export class WorkspaceMembershipService {
     const membership = await this.membershipRepository.findById(id)
 
     if (!membership) {
-      throw new Error('Membership not found')
+      throw new MembershipNotFoundError(membershipId)
     }
 
     membership.changeRole(newRole)
@@ -71,11 +76,11 @@ export class WorkspaceMembershipService {
     const membership = await this.membershipRepository.findById(id)
 
     if (!membership) {
-      throw new Error('Membership not found')
+      throw new MembershipNotFoundError(membershipId)
     }
 
     if (membership.isOwner()) {
-      throw new Error('Cannot remove workspace owner. Transfer ownership first.')
+      throw new CannotRemoveOwnerError()
     }
 
     await this.membershipRepository.delete(id)

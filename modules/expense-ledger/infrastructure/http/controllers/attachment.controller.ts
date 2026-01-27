@@ -3,6 +3,7 @@ import { CreateAttachmentHandler } from '../../../application/commands/create-at
 import { DeleteAttachmentHandler } from '../../../application/commands/delete-attachment.command'
 import { GetAttachmentHandler } from '../../../application/queries/get-attachment.query'
 import { ListAttachmentsHandler } from '../../../application/queries/list-attachments.query'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class AttachmentController {
   constructor(
@@ -61,12 +62,8 @@ export class AttachmentController {
           createdAt: attachment.createdAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -90,12 +87,8 @@ export class AttachmentController {
         statusCode: 200,
         message: 'Attachment deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -129,12 +122,8 @@ export class AttachmentController {
           createdAt: attachment.createdAt.toISOString(),
         },
       })
-    } catch (error: any) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -167,12 +156,8 @@ export class AttachmentController {
           createdAt: attachment.createdAt.toISOString(),
         })),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }

@@ -2,6 +2,7 @@ import { ISpendingLimitRepository, SpendingLimitFilters } from '../../domain/rep
 import { SpendingLimit } from '../../domain/entities/spending-limit.entity'
 import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id'
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
+import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors'
 
 export class SpendingLimitService {
   constructor(private readonly limitRepository: ISpendingLimitRepository) {}
@@ -41,7 +42,7 @@ export class SpendingLimitService {
     )
 
     if (!limit) {
-      throw new Error('Spending limit not found')
+      throw new SpendingLimitNotFoundError(limitId)
     }
 
     if (updates.limitAmount) {
@@ -60,7 +61,7 @@ export class SpendingLimitService {
     )
 
     if (!limit) {
-      throw new Error('Spending limit not found')
+      throw new SpendingLimitNotFoundError(limitId)
     }
 
     limit.activate()
@@ -77,7 +78,7 @@ export class SpendingLimitService {
     )
 
     if (!limit) {
-      throw new Error('Spending limit not found')
+      throw new SpendingLimitNotFoundError(limitId)
     }
 
     limit.deactivate()
@@ -92,7 +93,7 @@ export class SpendingLimitService {
 
     const limit = await this.limitRepository.findById(limitIdObj, workspaceId)
     if (!limit) {
-      throw new Error('Spending limit not found')
+      throw new SpendingLimitNotFoundError(limitId)
     }
 
     await this.limitRepository.delete(limitIdObj, workspaceId)

@@ -4,6 +4,10 @@ import { Workspace, CreateWorkspaceData } from '../../domain/entities/workspace.
 import { WorkspaceMembership, WorkspaceRole } from '../../domain/entities/workspace-membership.entity'
 import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo'
 import { UserId } from '../../domain/value-objects/user-id.vo'
+import {
+  WorkspaceNotFoundError,
+  WorkspaceAlreadyExistsError,
+} from '../../domain/errors/identity.errors'
 
 export interface WorkspaceManagementServiceOptions {
   page?: number
@@ -24,7 +28,7 @@ export class WorkspaceManagementService {
     const slug = Workspace['generateSlug'](data.name) // Access private static method for validation
     const existingWorkspace = await this.workspaceRepository.findBySlug(slug)
     if (existingWorkspace) {
-      throw new Error('Workspace with this name already exists')
+      throw new WorkspaceAlreadyExistsError(slug)
     }
 
     // Create workspace
@@ -95,7 +99,7 @@ export class WorkspaceManagementService {
     const workspace = await this.workspaceRepository.findById(workspaceId)
 
     if (!workspace) {
-      throw new Error('Workspace not found')
+      throw new WorkspaceNotFoundError(id)
     }
 
     // Update name if provided
@@ -103,7 +107,7 @@ export class WorkspaceManagementService {
       const newSlug = Workspace['generateSlug'](updateData.name)
       const existingWorkspace = await this.workspaceRepository.findBySlug(newSlug)
       if (existingWorkspace && !existingWorkspace.getId().equals(workspaceId)) {
-        throw new Error('Workspace with this name already exists')
+        throw new WorkspaceAlreadyExistsError(newSlug)
       }
       workspace.updateName(updateData.name)
     }
@@ -117,7 +121,7 @@ export class WorkspaceManagementService {
     const workspace = await this.workspaceRepository.findById(workspaceId)
 
     if (!workspace) {
-      throw new Error('Workspace not found')
+      throw new WorkspaceNotFoundError(id)
     }
 
     workspace.deactivate()
@@ -130,7 +134,7 @@ export class WorkspaceManagementService {
     const workspace = await this.workspaceRepository.findById(workspaceId)
 
     if (!workspace) {
-      throw new Error('Workspace not found')
+      throw new WorkspaceNotFoundError(id)
     }
 
     workspace.activate()

@@ -3,6 +3,12 @@ import { ExpenseRepository } from '../../domain/repositories/expense.repository'
 import { Attachment } from '../../domain/entities/attachment.entity'
 import { AttachmentId } from '../../domain/value-objects/attachment-id'
 import { ExpenseId } from '../../domain/value-objects/expense-id'
+import {
+  ExpenseNotFoundError,
+  AttachmentNotFoundError,
+  InvalidExpenseStatusError,
+  FileSizeLimitExceededError,
+} from '../../domain/errors/expense.errors'
 
 export class AttachmentService {
   constructor(
@@ -26,12 +32,12 @@ export class AttachmentService {
     )
 
     if (!expense) {
-      throw new Error('Expense not found')
+      throw new ExpenseNotFoundError(params.expenseId, params.workspaceId)
     }
 
     // Check if expense can be edited
     if (!expense.canBeEdited()) {
-      throw new Error('Cannot add attachments to expense in its current status')
+      throw new InvalidExpenseStatusError(params.expenseId, expense.status, 'add attachments to')
     }
 
     // Check total attachment size limit (e.g., 50MB per expense)
@@ -40,7 +46,7 @@ export class AttachmentService {
     )
     const maxTotalSize = 50 * 1024 * 1024 // 50MB
     if (currentTotalSize + params.fileSize > maxTotalSize) {
-      throw new Error('Total attachment size exceeds 50MB limit')
+      throw new FileSizeLimitExceededError(currentTotalSize + params.fileSize, maxTotalSize)
     }
 
     const attachment = Attachment.create({
@@ -69,12 +75,12 @@ export class AttachmentService {
     const attachment = await this.attachmentRepository.findById(AttachmentId.fromString(attachmentId))
 
     if (!attachment) {
-      throw new Error('Attachment not found')
+      throw new AttachmentNotFoundError(attachmentId)
     }
 
     // Verify attachment belongs to the specified expense
     if (attachment.expenseId !== expenseId) {
-      throw new Error('Attachment not found')
+      throw new AttachmentNotFoundError(attachmentId)
     }
 
     // Verify expense exists
@@ -84,12 +90,12 @@ export class AttachmentService {
     )
 
     if (!expense) {
-      throw new Error('Expense not found')
+      throw new ExpenseNotFoundError(expenseId, workspaceId)
     }
 
     // Check if expense can be edited
     if (!expense.canBeEdited()) {
-      throw new Error('Cannot delete attachments from expense in its current status')
+      throw new InvalidExpenseStatusError(expenseId, expense.status, 'delete attachments from')
     }
 
     // Remove attachment from expense

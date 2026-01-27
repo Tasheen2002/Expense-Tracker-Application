@@ -1,6 +1,10 @@
 import { CategoryRepository } from '../../domain/repositories/category.repository'
 import { Category } from '../../domain/entities/category.entity'
 import { CategoryId } from '../../domain/value-objects/category-id'
+import {
+  CategoryNotFoundError,
+  CategoryAlreadyExistsError,
+} from '../../domain/errors/expense.errors'
 
 export class CategoryService {
   constructor(private readonly categoryRepository: CategoryRepository) {}
@@ -19,7 +23,7 @@ export class CategoryService {
     )
 
     if (existingCategory) {
-      throw new Error('Category with this name already exists')
+      throw new CategoryAlreadyExistsError(params.name, params.workspaceId)
     }
 
     const category = Category.create({
@@ -52,14 +56,14 @@ export class CategoryService {
     )
 
     if (!category) {
-      throw new Error('Category not found')
+      throw new CategoryNotFoundError(categoryId, workspaceId)
     }
 
     // Check if new name conflicts with existing category
     if (params.name && params.name !== category.name) {
       const existingCategory = await this.categoryRepository.findByName(params.name, workspaceId)
       if (existingCategory) {
-        throw new Error('Category with this name already exists')
+        throw new CategoryAlreadyExistsError(params.name, workspaceId)
       }
       category.updateName(params.name)
     }
@@ -88,7 +92,7 @@ export class CategoryService {
     )
 
     if (!category) {
-      throw new Error('Category not found')
+      throw new CategoryNotFoundError(categoryId, workspaceId)
     }
 
     await this.categoryRepository.delete(CategoryId.fromString(categoryId), workspaceId)
@@ -113,7 +117,7 @@ export class CategoryService {
     )
 
     if (!category) {
-      throw new Error('Category not found')
+      throw new CategoryNotFoundError(categoryId, workspaceId)
     }
 
     category.activate()
@@ -130,7 +134,7 @@ export class CategoryService {
     )
 
     if (!category) {
-      throw new Error('Category not found')
+      throw new CategoryNotFoundError(categoryId, workspaceId)
     }
 
     category.deactivate()

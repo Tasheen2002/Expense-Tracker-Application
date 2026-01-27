@@ -13,6 +13,9 @@ import { GetAllocationsHandler } from '../../../application/queries/get-allocati
 import { GetUnreadAlertsHandler } from '../../../application/queries/get-unread-alerts.query'
 import { Budget } from '../../../domain/entities/budget.entity'
 import { BudgetAllocation } from '../../../domain/entities/budget-allocation.entity'
+import { BudgetPeriodType } from '../../../domain/enums/budget-period-type'
+import { BudgetStatus } from '../../../domain/enums/budget-status'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class BudgetController {
   constructor(
@@ -65,7 +68,7 @@ export class BudgetController {
         description: request.body.description,
         totalAmount: request.body.totalAmount,
         currency: request.body.currency,
-        periodType: request.body.periodType as any,
+        periodType: request.body.periodType as BudgetPeriodType,
         startDate: new Date(request.body.startDate),
         endDate: request.body.endDate ? new Date(request.body.endDate) : undefined,
         createdBy: userId,
@@ -79,12 +82,8 @@ export class BudgetController {
         message: 'Budget created successfully',
         data: this.serializeBudget(budget),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to create budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -116,12 +115,8 @@ export class BudgetController {
         message: 'Budget updated successfully',
         data: this.serializeBudget(budget),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to update budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -145,12 +140,8 @@ export class BudgetController {
         message: 'Budget activated successfully',
         data: this.serializeBudget(budget),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to activate budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -174,12 +165,8 @@ export class BudgetController {
         message: 'Budget archived successfully',
         data: this.serializeBudget(budget),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to archive budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -202,12 +189,8 @@ export class BudgetController {
         statusCode: 200,
         message: 'Budget deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to delete budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -239,12 +222,8 @@ export class BudgetController {
         message: 'Budget retrieved successfully',
         data: this.serializeBudget(budget),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to retrieve budget',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -266,7 +245,7 @@ export class BudgetController {
 
       const budgets = await this.listBudgetsHandler.handle({
         workspaceId,
-        status: status as any,
+        status: status as BudgetStatus | undefined,
         isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
         createdBy,
         currency,
@@ -278,12 +257,8 @@ export class BudgetController {
         message: 'Budgets retrieved successfully',
         data: budgets.map((budget) => this.serializeBudget(budget)),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to retrieve budgets',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -314,12 +289,8 @@ export class BudgetController {
         message: 'Allocation added successfully',
         data: this.serializeAllocation(allocation),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to add allocation',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -348,12 +319,8 @@ export class BudgetController {
         message: 'Allocation updated successfully',
         data: this.serializeAllocation(allocation),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to update allocation',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -375,12 +342,8 @@ export class BudgetController {
         statusCode: 200,
         message: 'Allocation deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to delete allocation',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -403,12 +366,8 @@ export class BudgetController {
         message: 'Allocations retrieved successfully',
         data: allocations.map((allocation) => this.serializeAllocation(allocation)),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to retrieve allocations',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -442,12 +401,8 @@ export class BudgetController {
           createdAt: alert.getCreatedAt().toISOString(),
         })),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to retrieve alerts',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 

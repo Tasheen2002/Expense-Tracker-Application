@@ -20,7 +20,7 @@ export class WorkspaceController {
 
   async createWorkspace(request: FastifyRequest, reply: FastifyReply) {
     const { name } = request.body as { name: string }
-    const user = (request as any).user
+    const user = request.user
 
     if (!user || !user.userId) {
       return reply.status(401).send({
@@ -118,7 +118,7 @@ export class WorkspaceController {
   }
 
   async getUserWorkspaces(request: FastifyRequest, reply: FastifyReply) {
-    const user = (request as any).user
+    const user = request.user
 
     if (!user || !user.userId) {
       return reply.status(401).send({

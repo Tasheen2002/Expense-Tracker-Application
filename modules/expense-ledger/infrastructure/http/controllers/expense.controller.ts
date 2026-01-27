@@ -13,6 +13,9 @@ import { GetExpenseStatisticsHandler } from "../../../application/queries/get-ex
 import { Expense } from "../../../domain/entities/expense.entity";
 import { TagId } from "../../../domain/value-objects/tag-id";
 import { AttachmentId } from "../../../domain/value-objects/attachment-id";
+import { PaymentMethod } from "../../../domain/enums/payment-method";
+import { ExpenseStatus } from "../../../domain/enums/expense-status";
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class ExpenseController {
   constructor(
@@ -68,7 +71,7 @@ export class ExpenseController {
         expenseDate: request.body.expenseDate,
         categoryId: request.body.categoryId,
         merchant: request.body.merchant,
-        paymentMethod: request.body.paymentMethod as any,
+        paymentMethod: request.body.paymentMethod as PaymentMethod,
         isReimbursable: request.body.isReimbursable,
         tagIds: request.body.tagIds,
       });
@@ -95,12 +98,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -143,7 +142,7 @@ export class ExpenseController {
         expenseDate: request.body.expenseDate,
         categoryId: request.body.categoryId,
         merchant: request.body.merchant,
-        paymentMethod: request.body.paymentMethod as any,
+        paymentMethod: request.body.paymentMethod as PaymentMethod,
         isReimbursable: request.body.isReimbursable,
       });
 
@@ -168,12 +167,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -205,12 +200,8 @@ export class ExpenseController {
         statusCode: 200,
         message: "Expense deleted successfully",
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -254,12 +245,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -301,12 +288,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         })),
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -337,8 +320,8 @@ export class ExpenseController {
         workspaceId,
         userId: query.userId,
         categoryId: query.categoryId,
-        status: query.status as any,
-        paymentMethod: query.paymentMethod as any,
+        status: query.status as ExpenseStatus | undefined,
+        paymentMethod: query.paymentMethod as PaymentMethod | undefined,
         isReimbursable: query.isReimbursable === "true",
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
@@ -370,12 +353,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         })),
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -402,12 +381,8 @@ export class ExpenseController {
         message: "Expense statistics retrieved successfully",
         data: statistics,
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -444,12 +419,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -477,12 +448,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -510,12 +477,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -543,12 +506,8 @@ export class ExpenseController {
           updatedAt: expense.updatedAt.toISOString(),
         },
       });
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message,
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }

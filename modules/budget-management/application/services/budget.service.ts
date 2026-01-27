@@ -6,9 +6,15 @@ import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity
 import { BudgetAlert } from '../../domain/entities/budget-alert.entity'
 import { BudgetId } from '../../domain/value-objects/budget-id'
 import { AllocationId } from '../../domain/value-objects/allocation-id'
+import { AlertId } from '../../domain/value-objects/alert-id'
 import { BudgetStatus } from '../../domain/enums/budget-status'
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
 import { Decimal } from '@prisma/client/runtime/library'
+import {
+  BudgetNotFoundError,
+  AllocationNotFoundError,
+  AlertNotFoundError,
+} from '../../domain/errors/budget.errors'
 
 export class BudgetService {
   constructor(
@@ -64,7 +70,7 @@ export class BudgetService {
     )
 
     if (!budget) {
-      throw new Error('Budget not found')
+      throw new BudgetNotFoundError(budgetId, workspaceId)
     }
 
     if (updates.name) {
@@ -91,7 +97,7 @@ export class BudgetService {
     )
 
     if (!budget) {
-      throw new Error('Budget not found')
+      throw new BudgetNotFoundError(budgetId, workspaceId)
     }
 
     budget.activate()
@@ -108,7 +114,7 @@ export class BudgetService {
     )
 
     if (!budget) {
-      throw new Error('Budget not found')
+      throw new BudgetNotFoundError(budgetId, workspaceId)
     }
 
     budget.archive()
@@ -123,7 +129,7 @@ export class BudgetService {
 
     const exists = await this.budgetRepository.exists(budgetIdObj, workspaceId)
     if (!exists) {
-      throw new Error('Budget not found')
+      throw new BudgetNotFoundError(budgetId, workspaceId)
     }
 
     // Delete associated allocations and alerts
@@ -183,7 +189,7 @@ export class BudgetService {
     )
 
     if (!allocation) {
-      throw new Error('Allocation not found')
+      throw new AllocationNotFoundError(allocationId)
     }
 
     if (updates.allocatedAmount) {
@@ -208,7 +214,7 @@ export class BudgetService {
     )
 
     if (!allocation) {
-      throw new Error('Allocation not found')
+      throw new AllocationNotFoundError(allocationId)
     }
 
     allocation.updateSpentAmount(spentAmount)
@@ -256,11 +262,11 @@ export class BudgetService {
 
   async markAlertAsRead(alertId: string): Promise<BudgetAlert> {
     const alert = await this.alertRepository.findById(
-      BudgetId.fromString(alertId) as any
+      AlertId.fromString(alertId)
     )
 
     if (!alert) {
-      throw new Error('Alert not found')
+      throw new AlertNotFoundError(alertId)
     }
 
     alert.markAsRead()

@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { RegisterUserHandler } from '../../../application/commands/register-user.command'
 import { LoginUserHandler } from '../../../application/queries/login-user.query'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 interface RegisterRequest {
   email: string
@@ -71,22 +72,8 @@ export class AuthController {
         },
         message: 'User registered successfully',
       })
-    } catch (error) {
-      request.log.error(error, 'Failed to register user')
-
-      if (error instanceof Error && error.message.includes('already exists')) {
-        return reply.code(409).send({
-          success: false,
-          error: 'Conflict',
-          message: 'User with this email already exists',
-        })
-      }
-
-      return reply.code(500).send({
-        success: false,
-        error: 'Internal server error',
-        message: 'Failed to register user',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -138,21 +125,15 @@ export class AuthController {
         },
         message: 'Login successful',
       })
-    } catch (error) {
-      request.log.error(error, 'Failed to login user')
-
-      return reply.code(500).send({
-        success: false,
-        error: 'Internal server error',
-        message: 'Failed to login',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
   async me(request: FastifyRequest, reply: FastifyReply) {
     try {
       // User is attached by authenticate middleware
-      const user = (request as any).user
+      const user = request.user
 
       if (!user) {
         return reply.code(401).send({
@@ -170,14 +151,8 @@ export class AuthController {
           workspaceId: user.workspaceId,
         },
       })
-    } catch (error) {
-      request.log.error(error, 'Failed to get current user')
-
-      return reply.code(500).send({
-        success: false,
-        error: 'Internal server error',
-        message: 'Failed to get user information',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }

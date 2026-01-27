@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { WorkspaceMembershipService } from "../../../application/services/workspace-membership.service";
 import { WorkspaceAuthHelper } from "../middleware/workspace-auth.helper";
 import { WorkspaceRole } from "../../../domain/entities/workspace-membership.entity";
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class MemberController {
   constructor(
@@ -106,14 +107,8 @@ export class MemberController {
         statusCode: 200,
         message: "Member removed successfully",
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: "Bad Request",
-        message:
-          error instanceof Error ? error.message : "Failed to remove member",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -202,16 +197,8 @@ export class MemberController {
           updatedAt: updatedMembership.getUpdatedAt(),
         },
       });
-    } catch (error) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: "Bad Request",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to update member role",
-      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 }

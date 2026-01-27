@@ -9,7 +9,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity_workspace", "expense_ledger", "budget_management"]
+  schemas  = ["identity_workspace", "expense_ledger", "budget_management", "receipt_vault"]
 }
 
 // ============================================
@@ -375,4 +375,171 @@ model SpendingLimit {
   @@index([isActive])
   @@map("spending_limits")
   @@schema("budget_management")
+}
+
+// ============================================
+// SCHEMA: receipt_vault
+// ============================================
+
+enum ReceiptStatus {
+  PENDING       // Uploaded, waiting for processing
+  PROCESSING    // OCR in progress
+  PROCESSED     // OCR completed successfully
+  FAILED        // OCR or processing failed
+  VERIFIED      // Manually verified by user
+  REJECTED      // Rejected as invalid
+
+  @@schema("receipt_vault")
+}
+
+enum ReceiptType {
+  EXPENSE       // General expense receipt
+  INVOICE       // Invoice document
+  BILL          // Utility or service bill
+  TICKET        // Travel ticket (flight, train, etc.)
+  OTHER         // Other types
+
+  @@schema("receipt_vault")
+}
+
+enum StorageProvider {
+  LOCAL         // Local file system
+  S3            // AWS S3
+  AZURE_BLOB    // Azure Blob Storage
+  GCS           // Google Cloud Storage
+
+  @@schema("receipt_vault")
+}
+
+model Receipt {
+  id              String          @id @default(uuid()) @db.Uuid
+  workspaceId     String          @map("workspace_id") @db.Uuid
+  expenseId       String?         @map("expense_id") @db.Uuid // Can be null if not yet linked
+  userId          String          @map("user_id") @db.Uuid // Who uploaded the receipt
+
+  // File information
+  fileName        String          @map("file_name") @db.VarChar(255)
+  originalName    String          @map("original_name") @db.VarChar(255)
+  filePath        String          @map("file_path") @db.VarChar(1000) // Storage path/URL
+  fileSize        Int             @map("file_size") // Size in bytes
+  mimeType        String          @map("mime_type") @db.VarChar(100)
+  fileHash        String?         @map("file_hash") @db.VarChar(64) // SHA-256 for deduplication
+
+  // Receipt metadata
+  receiptType     ReceiptType     @default(EXPENSE) @map("receipt_type")
+  status          ReceiptStatus   @default(PENDING)
+
+  // Storage information
+  storageProvider StorageProvider @default(LOCAL) @map("storage_provider")
+  storageBucket   String?         @map("storage_bucket") @db.VarChar(255) // For cloud storage
+  storageKey      String?         @map("storage_key") @db.VarChar(500) // Cloud storage key
+
+  // Thumbnail
+  thumbnailPath   String?         @map("thumbnail_path") @db.VarChar(1000)
+
+  // OCR and extracted data (optional)
+  ocrText         String?         @map("ocr_text") @db.Text // Full OCR extracted text
+  ocrConfidence   Decimal?        @map("ocr_confidence") @db.Decimal(5, 2) // 0-100
+
+  // Processing metadata
+  processedAt     DateTime?       @map("processed_at") @db.Timestamptz
+  failureReason   String?         @map("failure_reason") @db.Text
+
+  // Audit
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?       @map("deleted_at") @db.Timestamptz // Soft delete
+
+  // Relations
+  metadata        ReceiptMetadata?
+  tags            ReceiptTag[]
+
+  @@index([workspaceId])
+  @@index([expenseId])
+  @@index([userId])
+  @@index([status])
+  @@index([receiptType])
+  @@index([createdAt])
+  @@index([fileHash])
+  @@map("receipts")
+  @@schema("receipt_vault")
+}
+
+model ReceiptMetadata {
+  id              String    @id @default(uuid()) @db.Uuid
+  receiptId       String    @unique @map("receipt_id") @db.Uuid
+
+  // Extracted financial data
+  merchantName    String?   @map("merchant_name") @db.VarChar(255)
+  merchantAddress String?   @map("merchant_address") @db.Text
+  merchantPhone   String?   @map("merchant_phone") @db.VarChar(50)
+  merchantTaxId   String?   @map("merchant_tax_id") @db.VarChar(50) // VAT/Tax ID
+
+  // Transaction details
+  transactionDate DateTime? @map("transaction_date") @db.Date
+  transactionTime String?   @map("transaction_time") @db.VarChar(20)
+
+  // Financial amounts
+  subtotal        Decimal?  @db.Decimal(12, 2)
+  taxAmount       Decimal?  @map("tax_amount") @db.Decimal(12, 2)
+  tipAmount       Decimal?  @map("tip_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  currency        String?   @db.VarChar(3)
+
+  // Payment details
+  paymentMethod   String?   @map("payment_method") @db.VarChar(50)
+  lastFourDigits  String?   @map("last_four_digits") @db.VarChar(4) // Last 4 digits of card
+
+  // Invoice specific
+  invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
+  poNumber        String?   @map("po_number") @db.VarChar(100) // Purchase Order Number
+
+  // Line items (stored as JSON array)
+  lineItems       Json?     @map("line_items") // [{ description, quantity, unitPrice, amount }]
+
+  // Additional data
+  notes           String?   @db.Text
+  customFields    Json?     @map("custom_fields") // Flexible key-value pairs
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  receipt         Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([merchantName])
+  @@index([transactionDate])
+  @@index([invoiceNumber])
+  @@map("receipt_metadata")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTagDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  name        String   @db.VarChar(50)
+  color       String?  @db.VarChar(7) // Hex color code
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  receipts    ReceiptTag[]
+
+  @@unique([workspaceId, name], map: "receipt_tag_workspace_name")
+  @@index([workspaceId])
+  @@map("receipt_tag_definitions")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTag {
+  receiptId String   @map("receipt_id") @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  receipt Receipt              @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  tag     ReceiptTagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([receiptId, tagId])
+  @@index([receiptId])
+  @@index([tagId])
+  @@map("receipt_tags")
+  @@schema("receipt_vault")
 }

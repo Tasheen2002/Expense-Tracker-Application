@@ -4,6 +4,8 @@ import { UpdateSpendingLimitHandler } from '../../../application/commands/update
 import { DeleteSpendingLimitHandler } from '../../../application/commands/delete-spending-limit.command'
 import { ListSpendingLimitsHandler } from '../../../application/queries/list-spending-limits.query'
 import { SpendingLimit } from '../../../domain/entities/spending-limit.entity'
+import { BudgetPeriodType } from '../../../domain/enums/budget-period-type'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class SpendingLimitController {
   constructor(
@@ -35,7 +37,7 @@ export class SpendingLimitController {
         categoryId: request.body.categoryId,
         limitAmount: request.body.limitAmount,
         currency: request.body.currency,
-        periodType: request.body.periodType as any,
+        periodType: request.body.periodType as BudgetPeriodType,
       })
 
       return reply.status(201).send({
@@ -44,12 +46,8 @@ export class SpendingLimitController {
         message: 'Spending limit created successfully',
         data: this.serializeLimit(limit),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to create spending limit',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -77,12 +75,8 @@ export class SpendingLimitController {
         message: 'Spending limit updated successfully',
         data: this.serializeLimit(limit),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to update spending limit',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -105,12 +99,8 @@ export class SpendingLimitController {
         statusCode: 200,
         message: 'Spending limit deleted successfully',
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to delete spending limit',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
@@ -135,7 +125,7 @@ export class SpendingLimitController {
         userId,
         categoryId,
         isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-        periodType: periodType as any,
+        periodType: periodType as BudgetPeriodType | undefined,
       })
 
       return reply.status(200).send({
@@ -144,12 +134,8 @@ export class SpendingLimitController {
         message: 'Spending limits retrieved successfully',
         data: limits.map((limit) => this.serializeLimit(limit)),
       })
-    } catch (error: any) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: error.message || 'Failed to retrieve spending limits',
-      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
   }
 
