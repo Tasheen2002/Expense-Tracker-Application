@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { RecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
 import {
   RecurringExpense,
@@ -20,7 +20,7 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
         endDate: expense.endDate,
         nextRunDate: expense.nextRunDate,
         status: expense.status,
-        template: expense.template as any, // Prisma handles JSON
+        template: expense.template as unknown as Prisma.InputJsonValue,
         updatedAt: expense.updatedAt,
       },
       create: {
@@ -33,7 +33,7 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
         endDate: expense.endDate,
         nextRunDate: expense.nextRunDate,
         status: expense.status,
-        template: expense.template as any, // Prisma handles JSON
+        template: expense.template as unknown as Prisma.InputJsonValue,
         createdAt: expense.createdAt,
         updatedAt: expense.updatedAt,
       },
