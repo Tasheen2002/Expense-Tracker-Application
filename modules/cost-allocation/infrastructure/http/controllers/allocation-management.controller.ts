@@ -3,17 +3,14 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 import {
   CreateDepartmentBody,
   UpdateDepartmentBody,
-  DepartmentIdParam,
 } from "../validation/department.schema";
 import {
   CreateCostCenterBody,
   UpdateCostCenterBody,
-  CostCenterIdParam,
 } from "../validation/cost-center.schema";
 import {
   CreateProjectBody,
   UpdateProjectBody,
-  ProjectIdParam,
 } from "../validation/project.schema";
 
 // Command Handlers
