@@ -105,3 +105,12 @@ export class WorkflowStepNotFoundError extends Error {
     this.name = 'WorkflowStepNotFoundError'
   }
 }
+
+export class CurrentStepNotFoundError extends Error {
+  statusCode = 404
+
+  constructor(expenseId: string) {
+    super(`No current step found in workflow for expense ${expenseId}`)
+    this.name = 'CurrentStepNotFoundError'
+  }
+}
