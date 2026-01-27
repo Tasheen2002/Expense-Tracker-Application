@@ -134,6 +134,18 @@ import { ListTagsHandler as ListReceiptTagsHandler } from "../../../modules/rece
 import { ReceiptController } from "../../../modules/receipt-vault/infrastructure/http/controllers/receipt.controller";
 import { TagController as ReceiptTagController } from "../../../modules/receipt-vault/infrastructure/http/controllers/tag.controller";
 
+// Approval Workflow Module - Repositories
+import { PrismaApprovalChainRepository } from "../../../modules/approval-workflow/infrastructure/persistence/approval-chain.repository.impl";
+import { PrismaExpenseWorkflowRepository } from "../../../modules/approval-workflow/infrastructure/persistence/expense-workflow.repository.impl";
+
+// Approval Workflow Module - Services
+import { ApprovalChainService } from "../../../modules/approval-workflow/application/services/approval-chain.service";
+import { WorkflowService } from "../../../modules/approval-workflow/application/services/workflow.service";
+
+// Approval Workflow Module - Controllers
+import { ApprovalChainController } from "../../../modules/approval-workflow/infrastructure/http/controllers/approval-chain.controller";
+import { WorkflowController } from "../../../modules/approval-workflow/infrastructure/http/controllers/workflow.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -488,6 +500,34 @@ export class Container {
     this.services.set("receiptController", receiptController);
     this.services.set("receiptTagController", receiptTagController);
 
+    // ============================================
+    // Approval Workflow Module
+    // ============================================
+
+    // Repositories
+    const approvalChainRepository = new PrismaApprovalChainRepository(prisma);
+    const expenseWorkflowRepository = new PrismaExpenseWorkflowRepository(prisma);
+
+    this.services.set("approvalChainRepository", approvalChainRepository);
+    this.services.set("expenseWorkflowRepository", expenseWorkflowRepository);
+
+    // Services
+    const approvalChainService = new ApprovalChainService(approvalChainRepository);
+    const workflowService = new WorkflowService(
+      expenseWorkflowRepository,
+      approvalChainRepository
+    );
+
+    this.services.set("approvalChainService", approvalChainService);
+    this.services.set("workflowService", workflowService);
+
+    // Controllers
+    const approvalChainController = new ApprovalChainController(approvalChainService);
+    const workflowController = new WorkflowController(workflowService);
+
+    this.services.set("approvalChainController", approvalChainController);
+    this.services.set("workflowController", workflowController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -569,6 +609,17 @@ export class Container {
     return {
       receiptController: this.get<ReceiptController>("receiptController"),
       tagController: this.get<ReceiptTagController>("receiptTagController"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all approval-workflow services for route registration
+   */
+  getApprovalWorkflowServices() {
+    return {
+      approvalChainController: this.get<ApprovalChainController>("approvalChainController"),
+      workflowController: this.get<WorkflowController>("workflowController"),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }
