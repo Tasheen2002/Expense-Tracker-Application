@@ -10,7 +10,7 @@ import { CategoryController } from "../controllers/category.controller";
 import { TagController } from "../controllers/tag.controller";
 import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
-import { workspaceAuthorizationMiddleware } from "../middleware/workspace-authorization.middleware";
+import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
 
 export async function registerExpenseLedgerRoutes(
   fastify: FastifyInstance,
