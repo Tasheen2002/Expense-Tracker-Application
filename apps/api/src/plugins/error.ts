@@ -4,6 +4,13 @@ import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
 
 /**
+ * Base class for domain errors (can be used by all modules)
+ */
+abstract class DomainError extends Error {
+  abstract readonly statusCode: number
+}
+
+/**
  * Error Handler Plugin
  * Global error handling for the application
  * Following e-commerce pattern for error handling
@@ -20,6 +27,17 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         url: request.url,
         method: request.method,
       })
+
+      // Domain-specific errors (from all modules)
+      // Checks if error has statusCode property (all our domain errors have this)
+      if ('statusCode' in error && typeof error.statusCode === 'number' && error.statusCode < 600) {
+        return reply.status(error.statusCode).send({
+          success: false,
+          statusCode: error.statusCode,
+          message: error.message,
+          error: error.name,
+        })
+      }
 
       // Fastify validation errors (JSON Schema)
       if (error.code === 'FST_ERR_VALIDATION') {
