@@ -10,6 +10,13 @@ import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo'
 import { InvitationId } from '../../domain/value-objects/invitation-id.vo'
 import { UserId } from '../../domain/value-objects/user-id.vo'
 import { Email } from '../../domain/value-objects/email.vo'
+import {
+  MembershipAlreadyExistsError,
+  InvitationNotFoundError,
+  InvitationExpiredError,
+  InvitationAlreadyAcceptedError,
+  UserNotFoundError,
+} from '../../domain/errors/identity.errors'
 
 export class WorkspaceInvitationService {
   constructor(
@@ -30,7 +37,7 @@ export class WorkspaceInvitationService {
         workspaceId
       )
       if (membership) {
-        throw new Error('User is already a member of this workspace')
+        throw new MembershipAlreadyExistsError(existingUser.getId().getValue(), data.workspaceId)
       }
     }
 
@@ -40,7 +47,7 @@ export class WorkspaceInvitationService {
       data.email
     )
     if (pendingInvitation) {
-      throw new Error('A pending invitation already exists for this email')
+      throw new MembershipAlreadyExistsError(data.email, data.workspaceId)
     }
 
     // Create invitation with default 7-day expiry
@@ -80,25 +87,25 @@ export class WorkspaceInvitationService {
     const invitation = await this.invitationRepository.findByToken(token)
 
     if (!invitation) {
-      throw new Error('Invitation not found')
+      throw new InvitationNotFoundError(token)
     }
 
     if (invitation.isExpired()) {
-      throw new Error('Invitation has expired')
+      throw new InvitationExpiredError()
     }
 
     if (invitation.isAccepted()) {
-      throw new Error('Invitation has already been accepted')
+      throw new InvitationAlreadyAcceptedError()
     }
 
     // Verify the user's email matches the invitation
     const user = await this.userRepository.findById(UserId.fromString(userId))
     if (!user) {
-      throw new Error('User not found')
+      throw new UserNotFoundError(userId)
     }
 
     if (user.getEmail().getValue().toLowerCase() !== invitation.getEmail().toLowerCase()) {
-      throw new Error('Invitation email does not match your account email')
+      throw new MembershipAlreadyExistsError(userId, invitation.getWorkspaceId().getValue())
     }
 
     // Check if already a member
@@ -107,7 +114,7 @@ export class WorkspaceInvitationService {
       invitation.getWorkspaceId()
     )
     if (existingMembership) {
-      throw new Error('You are already a member of this workspace')
+      throw new MembershipAlreadyExistsError(userId, invitation.getWorkspaceId().getValue())
     }
 
     // Create membership
@@ -131,11 +138,11 @@ export class WorkspaceInvitationService {
     const invitation = await this.invitationRepository.findById(id)
 
     if (!invitation) {
-      throw new Error('Invitation not found')
+      throw new InvitationNotFoundError(invitationId)
     }
 
     if (invitation.isAccepted()) {
-      throw new Error('Cannot cancel an accepted invitation')
+      throw new InvitationAlreadyAcceptedError()
     }
 
     await this.invitationRepository.delete(id)
