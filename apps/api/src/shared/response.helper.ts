@@ -1,31 +1,25 @@
-import { FastifyReply } from 'fastify'
+import { FastifyReply } from "fastify";
 
 /**
  * Standard success response format
  */
 export interface SuccessResponse<T = any> {
-  success: true
-  statusCode: number
-  message: string
-  data?: T
+  success: true;
+  statusCode: number;
+  message: string;
+  data?: T;
 }
 
 /**
  * Standard error response format
  */
 export interface ErrorResponse {
-  success: false
-  statusCode: number
-  message: string
-  error?: string
+  success: false;
+  statusCode: number;
+  message: string;
+  error?: string;
 }
 
-/**
- * Response helper utility for consistent API responses
- *
- * Provides standardized success and error response formats across all controllers.
- * Automatically extracts statusCode from domain errors.
- */
 export class ResponseHelper {
   /**
    * Send a success response
@@ -39,19 +33,19 @@ export class ResponseHelper {
     reply: FastifyReply,
     statusCode: number,
     message: string,
-    data?: T
+    data?: T,
   ): FastifyReply {
     const response: SuccessResponse<T> = {
       success: true,
       statusCode,
       message,
-    }
+    };
 
     if (data !== undefined) {
-      response.data = data
+      response.data = data;
     }
 
-    return reply.status(statusCode).send(response)
+    return reply.status(statusCode).send(response);
   }
 
   /**
@@ -66,23 +60,21 @@ export class ResponseHelper {
   static error(reply: FastifyReply, error: unknown): FastifyReply {
     // Extract statusCode from domain errors
     const statusCode =
-      error && typeof error === 'object' && 'statusCode' in error
+      error && typeof error === "object" && "statusCode" in error
         ? (error as { statusCode: number }).statusCode
-        : 500
+        : 500;
 
     // Extract error message
     const message =
-      error instanceof Error
-        ? error.message
-        : 'Internal server error'
+      error instanceof Error ? error.message : "Internal server error";
 
     const response: ErrorResponse = {
       success: false,
       statusCode,
       message,
-    }
+    };
 
-    return reply.status(statusCode).send(response)
+    return reply.status(statusCode).send(response);
   }
 
   /**
@@ -93,13 +85,13 @@ export class ResponseHelper {
    */
   static unauthorized(
     reply: FastifyReply,
-    message: string = 'User not authenticated'
+    message: string = "User not authenticated",
   ): FastifyReply {
     return reply.status(401).send({
       success: false,
       statusCode: 401,
       message,
-    })
+    });
   }
 
   /**
@@ -110,13 +102,13 @@ export class ResponseHelper {
    */
   static forbidden(
     reply: FastifyReply,
-    message: string = 'Access forbidden'
+    message: string = "Access forbidden",
   ): FastifyReply {
     return reply.status(403).send({
       success: false,
       statusCode: 403,
       message,
-    })
+    });
   }
 
   /**
@@ -127,12 +119,12 @@ export class ResponseHelper {
    */
   static notFound(
     reply: FastifyReply,
-    message: string = 'Resource not found'
+    message: string = "Resource not found",
   ): FastifyReply {
     return reply.status(404).send({
       success: false,
       statusCode: 404,
       message,
-    })
+    });
   }
 }

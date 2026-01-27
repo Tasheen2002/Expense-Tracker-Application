@@ -4,6 +4,7 @@ import { registerIdentityWorkspaceRoutes } from '../../../modules/identity-works
 import { registerExpenseLedgerRoutes } from '../../../modules/expense-ledger/infrastructure/http/routes/index'
 import { registerBudgetRoutes } from '../../../modules/budget-management/infrastructure/http/routes/index'
 import { registerReceiptVaultRoutes } from '../../../modules/receipt-vault/infrastructure/http/routes/index'
+import { registerApprovalWorkflowRoutes } from '../../../modules/approval-workflow/infrastructure/http/routes/index'
 
 export default fp(
   async (fastify) => {
@@ -36,6 +37,13 @@ export default fp(
     const receiptVaultServices = container.getReceiptVaultServices()
     await registerReceiptVaultRoutes(fastify, receiptVaultServices, receiptVaultServices.prisma)
     fastify.log.info('✓ Receipt Vault module registered')
+
+    // ============================================
+    // Approval Workflow Module
+    // ============================================
+    const approvalWorkflowServices = container.getApprovalWorkflowServices()
+    await registerApprovalWorkflowRoutes(fastify, approvalWorkflowServices)
+    fastify.log.info('✓ Approval Workflow module registered')
 
     fastify.log.info('All modules registered successfully')
   },
