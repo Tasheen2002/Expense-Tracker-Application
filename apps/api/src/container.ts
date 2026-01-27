@@ -146,6 +146,21 @@ import { WorkflowService } from "../../../modules/approval-workflow/application/
 import { ApprovalChainController } from "../../../modules/approval-workflow/infrastructure/http/controllers/approval-chain.controller";
 import { WorkflowController } from "../../../modules/approval-workflow/infrastructure/http/controllers/workflow.controller";
 
+// Notification Dispatch Module - Repositories
+import { NotificationRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification.repository.impl";
+import { NotificationTemplateRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification-template.repository.impl";
+import { NotificationPreferenceRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification-preference.repository.impl";
+
+// Notification Dispatch Module - Services
+import { NotificationService } from "../../../modules/notification-dispatch/application/services/notification.service";
+import { TemplateService } from "../../../modules/notification-dispatch/application/services/template.service";
+import { PreferenceService } from "../../../modules/notification-dispatch/application/services/preference.service";
+
+// Notification Dispatch Module - Controllers
+import { NotificationController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/notification.controller";
+import { TemplateController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/template.controller";
+import { PreferenceController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/preference.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -351,7 +366,9 @@ export class Container {
 
     // Repositories
     const budgetRepository = new BudgetRepositoryImpl(prisma);
-    const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(prisma);
+    const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
+      prisma,
+    );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
 
@@ -364,9 +381,11 @@ export class Container {
     const budgetService = new BudgetService(
       budgetRepository,
       budgetAllocationRepository,
-      budgetAlertRepository
+      budgetAlertRepository,
     );
-    const spendingLimitService = new SpendingLimitService(spendingLimitRepository);
+    const spendingLimitService = new SpendingLimitService(
+      spendingLimitRepository,
+    );
 
     this.services.set("budgetService", budgetService);
     this.services.set("spendingLimitService", spendingLimitService);
@@ -380,16 +399,24 @@ export class Container {
     const addAllocationHandler = new AddAllocationHandler(budgetService);
     const updateAllocationHandler = new UpdateAllocationHandler(budgetService);
     const deleteAllocationHandler = new DeleteAllocationHandler(budgetService);
-    const createSpendingLimitHandler = new CreateSpendingLimitHandler(spendingLimitService);
-    const updateSpendingLimitHandler = new UpdateSpendingLimitHandler(spendingLimitService);
-    const deleteSpendingLimitHandler = new DeleteSpendingLimitHandler(spendingLimitService);
+    const createSpendingLimitHandler = new CreateSpendingLimitHandler(
+      spendingLimitService,
+    );
+    const updateSpendingLimitHandler = new UpdateSpendingLimitHandler(
+      spendingLimitService,
+    );
+    const deleteSpendingLimitHandler = new DeleteSpendingLimitHandler(
+      spendingLimitService,
+    );
 
     // Query Handlers
     const getBudgetHandler = new GetBudgetHandler(budgetService);
     const listBudgetsHandler = new ListBudgetsHandler(budgetService);
     const getAllocationsHandler = new GetAllocationsHandler(budgetService);
     const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
-    const listSpendingLimitsHandler = new ListSpendingLimitsHandler(spendingLimitService);
+    const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
+      spendingLimitService,
+    );
 
     // Controllers
     const budgetController = new BudgetController(
@@ -404,14 +431,14 @@ export class Container {
       getBudgetHandler,
       listBudgetsHandler,
       getAllocationsHandler,
-      getUnreadAlertsHandler
+      getUnreadAlertsHandler,
     );
 
     const spendingLimitController = new SpendingLimitController(
       createSpendingLimitHandler,
       updateSpendingLimitHandler,
       deleteSpendingLimitHandler,
-      listSpendingLimitsHandler
+      listSpendingLimitsHandler,
     );
 
     this.services.set("budgetController", budgetController);
@@ -424,23 +451,27 @@ export class Container {
     // Repositories
     const receiptRepository = new ReceiptRepositoryImpl(prisma);
     const receiptMetadataRepository = new ReceiptMetadataRepositoryImpl(prisma);
-    const receiptTagDefinitionRepository = new ReceiptTagDefinitionRepositoryImpl(prisma);
+    const receiptTagDefinitionRepository =
+      new ReceiptTagDefinitionRepositoryImpl(prisma);
     const receiptTagRepository = new ReceiptTagRepositoryImpl(prisma);
 
     this.services.set("receiptRepository", receiptRepository);
     this.services.set("receiptMetadataRepository", receiptMetadataRepository);
-    this.services.set("receiptTagDefinitionRepository", receiptTagDefinitionRepository);
+    this.services.set(
+      "receiptTagDefinitionRepository",
+      receiptTagDefinitionRepository,
+    );
     this.services.set("receiptTagRepository", receiptTagRepository);
 
     // Services
     const receiptService = new ReceiptService(
       receiptRepository,
       receiptMetadataRepository,
-      receiptTagRepository
+      receiptTagRepository,
     );
     const receiptTagService = new ReceiptTagService(
       receiptTagDefinitionRepository,
-      receiptTagRepository
+      receiptTagRepository,
     );
 
     this.services.set("receiptService", receiptService);
@@ -448,27 +479,47 @@ export class Container {
 
     // Command Handlers
     const uploadReceiptHandler = new UploadReceiptHandler(receiptService);
-    const linkReceiptToExpenseHandler = new LinkReceiptToExpenseHandler(receiptService);
-    const unlinkReceiptFromExpenseHandler = new UnlinkReceiptFromExpenseHandler(receiptService);
+    const linkReceiptToExpenseHandler = new LinkReceiptToExpenseHandler(
+      receiptService,
+    );
+    const unlinkReceiptFromExpenseHandler = new UnlinkReceiptFromExpenseHandler(
+      receiptService,
+    );
     const processReceiptHandler = new ProcessReceiptHandler(receiptService);
     const verifyReceiptHandler = new VerifyReceiptHandler(receiptService);
     const rejectReceiptHandler = new RejectReceiptHandler(receiptService);
     const deleteReceiptHandler = new DeleteReceiptHandler(receiptService);
-    const addReceiptMetadataHandler = new AddReceiptMetadataHandler(receiptService);
-    const updateReceiptMetadataHandler = new UpdateReceiptMetadataHandler(receiptService);
+    const addReceiptMetadataHandler = new AddReceiptMetadataHandler(
+      receiptService,
+    );
+    const updateReceiptMetadataHandler = new UpdateReceiptMetadataHandler(
+      receiptService,
+    );
     const addReceiptTagHandler = new AddReceiptTagHandler(receiptService);
     const removeReceiptTagHandler = new RemoveReceiptTagHandler(receiptService);
-    const createReceiptTagHandler = new CreateReceiptTagHandler(receiptTagService);
-    const updateReceiptTagHandler = new UpdateReceiptTagHandler(receiptTagService);
-    const deleteReceiptTagHandler = new DeleteReceiptTagHandler(receiptTagService);
+    const createReceiptTagHandler = new CreateReceiptTagHandler(
+      receiptTagService,
+    );
+    const updateReceiptTagHandler = new UpdateReceiptTagHandler(
+      receiptTagService,
+    );
+    const deleteReceiptTagHandler = new DeleteReceiptTagHandler(
+      receiptTagService,
+    );
 
     // Query Handlers
     const getReceiptHandler = new GetReceiptHandler(receiptService);
     const listReceiptsHandler = new ListReceiptsHandler(receiptService);
-    const getReceiptsByExpenseHandler = new GetReceiptsByExpenseHandler(receiptService);
-    const getReceiptMetadataHandler = new GetReceiptMetadataHandler(receiptService);
+    const getReceiptsByExpenseHandler = new GetReceiptsByExpenseHandler(
+      receiptService,
+    );
+    const getReceiptMetadataHandler = new GetReceiptMetadataHandler(
+      receiptService,
+    );
     const getReceiptStatsHandler = new GetReceiptStatsHandler(receiptService);
-    const listReceiptTagsHandler = new ListReceiptTagsHandler(receiptTagService);
+    const listReceiptTagsHandler = new ListReceiptTagsHandler(
+      receiptTagService,
+    );
 
     // Controllers
     const receiptController = new ReceiptController(
@@ -487,14 +538,14 @@ export class Container {
       listReceiptsHandler,
       getReceiptsByExpenseHandler,
       getReceiptMetadataHandler,
-      getReceiptStatsHandler
+      getReceiptStatsHandler,
     );
 
     const receiptTagController = new ReceiptTagController(
       createReceiptTagHandler,
       updateReceiptTagHandler,
       deleteReceiptTagHandler,
-      listReceiptTagsHandler
+      listReceiptTagsHandler,
     );
 
     this.services.set("receiptController", receiptController);
@@ -506,27 +557,80 @@ export class Container {
 
     // Repositories
     const approvalChainRepository = new PrismaApprovalChainRepository(prisma);
-    const expenseWorkflowRepository = new PrismaExpenseWorkflowRepository(prisma);
+    const expenseWorkflowRepository = new PrismaExpenseWorkflowRepository(
+      prisma,
+    );
 
     this.services.set("approvalChainRepository", approvalChainRepository);
     this.services.set("expenseWorkflowRepository", expenseWorkflowRepository);
 
     // Services
-    const approvalChainService = new ApprovalChainService(approvalChainRepository);
+    const approvalChainService = new ApprovalChainService(
+      approvalChainRepository,
+    );
     const workflowService = new WorkflowService(
       expenseWorkflowRepository,
-      approvalChainRepository
+      approvalChainRepository,
     );
 
     this.services.set("approvalChainService", approvalChainService);
     this.services.set("workflowService", workflowService);
 
     // Controllers
-    const approvalChainController = new ApprovalChainController(approvalChainService);
+    const approvalChainController = new ApprovalChainController(
+      approvalChainService,
+    );
     const workflowController = new WorkflowController(workflowService);
 
     this.services.set("approvalChainController", approvalChainController);
     this.services.set("workflowController", workflowController);
+
+    // ============================================
+    // Notification Dispatch Module
+    // ============================================
+
+    // Repositories
+    const notificationRepository = new NotificationRepositoryImpl(prisma);
+    const notificationTemplateRepository =
+      new NotificationTemplateRepositoryImpl(prisma);
+    const notificationPreferenceRepository =
+      new NotificationPreferenceRepositoryImpl(prisma);
+
+    this.services.set("notificationRepository", notificationRepository);
+    this.services.set(
+      "notificationTemplateRepository",
+      notificationTemplateRepository,
+    );
+    this.services.set(
+      "notificationPreferenceRepository",
+      notificationPreferenceRepository,
+    );
+
+    // Services
+    const notificationService = new NotificationService(
+      notificationRepository,
+      notificationTemplateRepository,
+      notificationPreferenceRepository,
+    );
+    const templateService = new TemplateService(notificationTemplateRepository);
+    const preferenceService = new PreferenceService(
+      notificationPreferenceRepository,
+    );
+
+    this.services.set("notificationService", notificationService);
+    this.services.set("templateService", templateService);
+    this.services.set("preferenceService", preferenceService);
+
+    // Controllers
+    const notificationController = new NotificationController(
+      notificationService,
+    );
+    const templateController = new TemplateController(templateService);
+    const preferenceController = new PreferenceController(preferenceService);
+
+    this.services.set("notificationController", notificationController);
+    this.services.set("templateController", templateController);
+    this.services.set("preferenceController", preferenceController);
 
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
@@ -618,8 +722,26 @@ export class Container {
    */
   getApprovalWorkflowServices() {
     return {
-      approvalChainController: this.get<ApprovalChainController>("approvalChainController"),
+      approvalChainController: this.get<ApprovalChainController>(
+        "approvalChainController",
+      ),
       workflowController: this.get<WorkflowController>("workflowController"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all notification-dispatch services for route registration
+   */
+  getNotificationDispatchServices() {
+    return {
+      notificationController: this.get<NotificationController>(
+        "notificationController",
+      ),
+      templateController: this.get<TemplateController>("templateController"),
+      preferenceController: this.get<PreferenceController>(
+        "preferenceController",
+      ),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }

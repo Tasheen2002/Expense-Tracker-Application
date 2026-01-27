@@ -1,13 +1,15 @@
 /**
  * Base error class for Identity-Workspace module
  */
-export abstract class IdentityWorkspaceError extends Error {
-  abstract readonly statusCode: number
-
-  constructor(message: string) {
-    super(message)
-    this.name = this.constructor.name
-    Error.captureStackTrace(this, this.constructor)
+export class IdentityWorkspaceError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly statusCode: number = 400,
+  ) {
+    super(message);
+    this.name = this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 
@@ -15,42 +17,52 @@ export abstract class IdentityWorkspaceError extends Error {
  * User-related errors
  */
 export class UserNotFoundError extends IdentityWorkspaceError {
-  readonly statusCode = 404
-
   constructor(identifier: string) {
-    super(`User ${identifier} not found`)
+    super(
+      `User ${identifier} not found`,
+      'USER_NOT_FOUND',
+      404
+    );
   }
 }
 
 export class UserAlreadyExistsError extends IdentityWorkspaceError {
-  readonly statusCode = 409
-
   constructor(email: string) {
-    super(`User with email '${email}' already exists`)
+    super(
+      `User with email '${email}' already exists`,
+      'USER_ALREADY_EXISTS',
+      409
+    );
   }
 }
 
 export class InvalidCredentialsError extends IdentityWorkspaceError {
-  readonly statusCode = 401
-
   constructor() {
-    super('Invalid email or password')
+    super(
+      'Invalid email or password',
+      'INVALID_CREDENTIALS',
+      401
+    );
   }
 }
 
 export class EmailNotVerifiedError extends IdentityWorkspaceError {
-  readonly statusCode = 403
-
   constructor() {
-    super('Email address has not been verified')
+    super(
+      'Email address has not been verified',
+      'EMAIL_NOT_VERIFIED',
+      403
+    );
   }
 }
 
 export class UserInactiveError extends IdentityWorkspaceError {
-  readonly statusCode = 403
-
   constructor() {
-    super('User account is inactive')
+    super(
+      'User account is inactive',
+      'USER_INACTIVE',
+      403
+    );
   }
 }
 
@@ -58,26 +70,32 @@ export class UserInactiveError extends IdentityWorkspaceError {
  * Workspace-related errors
  */
 export class WorkspaceNotFoundError extends IdentityWorkspaceError {
-  readonly statusCode = 404
-
   constructor(identifier: string) {
-    super(`Workspace ${identifier} not found`)
+    super(
+      `Workspace ${identifier} not found`,
+      'WORKSPACE_NOT_FOUND',
+      404
+    );
   }
 }
 
 export class WorkspaceAlreadyExistsError extends IdentityWorkspaceError {
-  readonly statusCode = 409
-
   constructor(slug: string) {
-    super(`Workspace with slug '${slug}' already exists`)
+    super(
+      `Workspace with slug '${slug}' already exists`,
+      'WORKSPACE_ALREADY_EXISTS',
+      409
+    );
   }
 }
 
 export class WorkspaceInactiveError extends IdentityWorkspaceError {
-  readonly statusCode = 403
-
   constructor(workspaceId: string) {
-    super(`Workspace ${workspaceId} is inactive`)
+    super(
+      `Workspace ${workspaceId} is inactive`,
+      'WORKSPACE_INACTIVE',
+      403
+    );
   }
 }
 
@@ -85,37 +103,41 @@ export class WorkspaceInactiveError extends IdentityWorkspaceError {
  * Membership-related errors
  */
 export class MembershipNotFoundError extends IdentityWorkspaceError {
-  readonly statusCode = 404
-
   constructor(userId: string, workspaceId?: string) {
     const message = workspaceId
       ? `Membership for user ${userId} in workspace ${workspaceId} not found`
-      : `Membership ${userId} not found`
-    super(message)
+      : `Membership ${userId} not found`;
+    super(message, 'MEMBERSHIP_NOT_FOUND', 404);
   }
 }
 
 export class MembershipAlreadyExistsError extends IdentityWorkspaceError {
-  readonly statusCode = 409
-
   constructor(userId: string, workspaceId: string) {
-    super(`User ${userId} is already a member of workspace ${workspaceId}`)
+    super(
+      `User ${userId} is already a member of workspace ${workspaceId}`,
+      'MEMBERSHIP_ALREADY_EXISTS',
+      409
+    );
   }
 }
 
 export class InsufficientPermissionsError extends IdentityWorkspaceError {
-  readonly statusCode = 403
-
   constructor(operation: string) {
-    super(`Insufficient permissions to ${operation}`)
+    super(
+      `Insufficient permissions to ${operation}`,
+      'INSUFFICIENT_PERMISSIONS',
+      403
+    );
   }
 }
 
 export class CannotRemoveOwnerError extends IdentityWorkspaceError {
-  readonly statusCode = 400
-
   constructor() {
-    super('Cannot remove the workspace owner. Transfer ownership first.')
+    super(
+      'Cannot remove the workspace owner. Transfer ownership first.',
+      'CANNOT_REMOVE_OWNER',
+      400
+    );
   }
 }
 
@@ -123,26 +145,32 @@ export class CannotRemoveOwnerError extends IdentityWorkspaceError {
  * Invitation-related errors
  */
 export class InvitationNotFoundError extends IdentityWorkspaceError {
-  readonly statusCode = 404
-
   constructor(token: string) {
-    super(`Invitation with token ${token} not found`)
+    super(
+      `Invitation with token ${token} not found`,
+      'INVITATION_NOT_FOUND',
+      404
+    );
   }
 }
 
 export class InvitationExpiredError extends IdentityWorkspaceError {
-  readonly statusCode = 400
-
   constructor() {
-    super('Invitation has expired')
+    super(
+      'Invitation has expired',
+      'INVITATION_EXPIRED',
+      400
+    );
   }
 }
 
 export class InvitationAlreadyAcceptedError extends IdentityWorkspaceError {
-  readonly statusCode = 400
-
   constructor() {
-    super('Invitation has already been accepted')
+    super(
+      'Invitation has already been accepted',
+      'INVITATION_ALREADY_ACCEPTED',
+      400
+    );
   }
 }
 
@@ -150,17 +178,21 @@ export class InvitationAlreadyAcceptedError extends IdentityWorkspaceError {
  * Session-related errors
  */
 export class SessionNotFoundError extends IdentityWorkspaceError {
-  readonly statusCode = 401
-
   constructor() {
-    super('Session not found or expired')
+    super(
+      'Session not found or expired',
+      'SESSION_NOT_FOUND',
+      401
+    );
   }
 }
 
 export class SessionExpiredError extends IdentityWorkspaceError {
-  readonly statusCode = 401
-
   constructor() {
-    super('Session has expired')
+    super(
+      'Session has expired',
+      'SESSION_EXPIRED',
+      401
+    );
   }
 }
