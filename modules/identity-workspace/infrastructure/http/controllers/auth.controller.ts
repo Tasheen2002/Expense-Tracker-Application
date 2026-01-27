@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { RegisterUserHandler } from '../../../application/commands/register-user.command'
 import { LoginUserHandler } from '../../../application/queries/login-user.query'
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 interface RegisterRequest {
   email: string
@@ -152,7 +153,7 @@ export class AuthController {
   async me(request: FastifyRequest, reply: FastifyReply) {
     try {
       // User is attached by authenticate middleware
-      const user = (request as any).user
+      const user = request.user
 
       if (!user) {
         return reply.code(401).send({
