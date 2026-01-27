@@ -67,18 +67,22 @@ export class ReceiptController {
 
     const { workspaceId } = request.params
 
-    const receipt = await this.uploadReceiptHandler.handle({
-      workspaceId,
-      userId,
-      ...request.body,
-    })
+    try {
+      const receipt = await this.uploadReceiptHandler.handle({
+        workspaceId,
+        userId,
+        ...request.body,
+      })
 
-    return reply.status(201).send({
-      success: true,
-      statusCode: 201,
-      message: 'Receipt uploaded successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(201).send({
+        success: true,
+        statusCode: 201,
+        message: 'Receipt uploaded successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async getReceipt(
@@ -89,22 +93,26 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const receipt = await this.getReceiptHandler.handle({ receiptId, workspaceId })
+    try {
+      const receipt = await this.getReceiptHandler.handle({ receiptId, workspaceId })
 
-    if (!receipt) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: 'Receipt not found',
+      if (!receipt) {
+        return reply.status(404).send({
+          success: false,
+          statusCode: 404,
+          message: 'Receipt not found',
+        })
+      }
+
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt retrieved successfully',
+        data: this.serializeReceipt(receipt),
       })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
-
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt retrieved successfully',
-      data: this.serializeReceipt(receipt),
-    })
   }
 
   async listReceipts(
@@ -117,27 +125,31 @@ export class ReceiptController {
     const { workspaceId } = request.params
     const query = request.query
 
-    const result = await this.listReceiptsHandler.handle({
-      workspaceId,
-      userId: query.userId,
-      expenseId: query.expenseId,
-      status: query.status,
-      receiptType: query.receiptType,
-      isLinked: query.isLinked,
-      isDeleted: query.isDeleted,
-      fromDate: query.fromDate,
-      toDate: query.toDate,
-      page: query.page,
-      pageSize: query.pageSize,
-    })
+    try {
+      const result = await this.listReceiptsHandler.handle({
+        workspaceId,
+        userId: query.userId,
+        expenseId: query.expenseId,
+        status: query.status,
+        receiptType: query.receiptType,
+        isLinked: query.isLinked,
+        isDeleted: query.isDeleted,
+        fromDate: query.fromDate,
+        toDate: query.toDate,
+        page: query.page,
+        pageSize: query.pageSize,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipts retrieved successfully',
-      data: result.data.map((receipt) => this.serializeReceipt(receipt)),
-      pagination: result.pagination,
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipts retrieved successfully',
+        data: result.data.map((receipt) => this.serializeReceipt(receipt)),
+        pagination: result.pagination,
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async getReceiptsByExpense(
@@ -148,14 +160,18 @@ export class ReceiptController {
   ) {
     const { workspaceId, expenseId } = request.params
 
-    const receipts = await this.getReceiptsByExpenseHandler.handle({ expenseId, workspaceId })
+    try {
+      const receipts = await this.getReceiptsByExpenseHandler.handle({ expenseId, workspaceId })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipts retrieved successfully',
-      data: receipts.map((receipt) => this.serializeReceipt(receipt)),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipts retrieved successfully',
+        data: receipts.map((receipt) => this.serializeReceipt(receipt)),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async linkToExpense(
@@ -168,18 +184,22 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params
     const { expenseId } = request.body
 
-    const receipt = await this.linkReceiptHandler.handle({
-      receiptId,
-      expenseId,
-      workspaceId,
-    })
+    try {
+      const receipt = await this.linkReceiptHandler.handle({
+        receiptId,
+        expenseId,
+        workspaceId,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt linked to expense successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt linked to expense successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async unlinkFromExpense(
@@ -190,17 +210,21 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const receipt = await this.unlinkReceiptHandler.handle({
-      receiptId,
-      workspaceId,
-    })
+    try {
+      const receipt = await this.unlinkReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt unlinked from expense successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt unlinked from expense successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async processReceipt(
@@ -212,19 +236,23 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const receipt = await this.processReceiptHandler.handle({
-      receiptId,
-      workspaceId,
-      ocrText: request.body.ocrText,
-      ocrConfidence: request.body.ocrConfidence,
-    })
+    try {
+      const receipt = await this.processReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+        ocrText: request.body.ocrText,
+        ocrConfidence: request.body.ocrConfidence,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt processed successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt processed successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async verifyReceipt(
@@ -235,17 +263,21 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const receipt = await this.verifyReceiptHandler.handle({
-      receiptId,
-      workspaceId,
-    })
+    try {
+      const receipt = await this.verifyReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt verified successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt verified successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async rejectReceipt(
@@ -257,18 +289,22 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const receipt = await this.rejectReceiptHandler.handle({
-      receiptId,
-      workspaceId,
-      reason: request.body.reason,
-    })
+    try {
+      const receipt = await this.rejectReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+        reason: request.body.reason,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt rejected successfully',
-      data: this.serializeReceipt(receipt),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt rejected successfully',
+        data: this.serializeReceipt(receipt),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async deleteReceipt(
@@ -281,17 +317,21 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params
     const { permanent } = request.query
 
-    await this.deleteReceiptHandler.handle({
-      receiptId,
-      workspaceId,
-      permanent,
-    })
+    try {
+      await this.deleteReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+        permanent,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: permanent ? 'Receipt permanently deleted' : 'Receipt deleted successfully',
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: permanent ? 'Receipt permanently deleted' : 'Receipt deleted successfully',
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async addMetadata(
@@ -303,18 +343,22 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const metadata = await this.addMetadataHandler.handle({
-      receiptId,
-      workspaceId,
-      ...request.body,
-    })
+    try {
+      const metadata = await this.addMetadataHandler.handle({
+        receiptId,
+        workspaceId,
+        ...request.body,
+      })
 
-    return reply.status(201).send({
-      success: true,
-      statusCode: 201,
-      message: 'Metadata added successfully',
-      data: this.serializeMetadata(metadata),
-    })
+      return reply.status(201).send({
+        success: true,
+        statusCode: 201,
+        message: 'Metadata added successfully',
+        data: this.serializeMetadata(metadata),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async updateMetadata(
@@ -326,18 +370,22 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const metadata = await this.updateMetadataHandler.handle({
-      receiptId,
-      workspaceId,
-      ...request.body,
-    })
+    try {
+      const metadata = await this.updateMetadataHandler.handle({
+        receiptId,
+        workspaceId,
+        ...request.body,
+      })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Metadata updated successfully',
-      data: this.serializeMetadata(metadata),
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Metadata updated successfully',
+        data: this.serializeMetadata(metadata),
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async getMetadata(
@@ -348,22 +396,26 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId } = request.params
 
-    const metadata = await this.getMetadataHandler.handle({ receiptId, workspaceId })
+    try {
+      const metadata = await this.getMetadataHandler.handle({ receiptId, workspaceId })
 
-    if (!metadata) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        message: 'Metadata not found',
+      if (!metadata) {
+        return reply.status(404).send({
+          success: false,
+          statusCode: 404,
+          message: 'Metadata not found',
+        })
+      }
+
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Metadata retrieved successfully',
+        data: this.serializeMetadata(metadata),
       })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
     }
-
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Metadata retrieved successfully',
-      data: this.serializeMetadata(metadata),
-    })
   }
 
   async addTag(
@@ -376,13 +428,17 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params
     const { tagId } = request.body
 
-    await this.addTagHandler.handle({ receiptId, tagId, workspaceId })
+    try {
+      await this.addTagHandler.handle({ receiptId, tagId, workspaceId })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Tag added to receipt successfully',
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Tag added to receipt successfully',
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async removeTag(
@@ -393,13 +449,17 @@ export class ReceiptController {
   ) {
     const { workspaceId, receiptId, tagId } = request.params
 
-    await this.removeTagHandler.handle({ receiptId, tagId, workspaceId })
+    try {
+      await this.removeTagHandler.handle({ receiptId, tagId, workspaceId })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Tag removed from receipt successfully',
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Tag removed from receipt successfully',
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   async getStats(
@@ -410,14 +470,18 @@ export class ReceiptController {
   ) {
     const { workspaceId } = request.params
 
-    const stats = await this.getStatsHandler.handle({ workspaceId })
+    try {
+      const stats = await this.getStatsHandler.handle({ workspaceId })
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Receipt statistics retrieved successfully',
-      data: stats,
-    })
+      return reply.status(200).send({
+        success: true,
+        statusCode: 200,
+        message: 'Receipt statistics retrieved successfully',
+        data: stats,
+      })
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error)
+    }
   }
 
   private serializeReceipt(receipt: Receipt) {
