@@ -161,6 +161,46 @@ import { NotificationController } from "../../../modules/notification-dispatch/i
 import { TemplateController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/template.controller";
 import { PreferenceController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/preference.controller";
 
+// Cost Allocation Module - Repositories
+import { DepartmentRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/department.repository.impl";
+import { CostCenterRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/cost-center.repository.impl";
+import { ProjectRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/project.repository.impl";
+import { ExpenseAllocationRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/expense-allocation.repository.impl";
+
+// Cost Allocation Module - Services
+import { AllocationManagementService } from "../../../modules/cost-allocation/application/services/allocation-management.service";
+import { ExpenseAllocationService } from "../../../modules/cost-allocation/application/services/expense-allocation.service";
+
+// Cost Allocation Module - Command Handlers
+import { CreateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/create-department.command";
+import { UpdateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/update-department.command";
+import { DeleteDepartmentHandler } from "../../../modules/cost-allocation/application/commands/delete-department.command";
+import { ActivateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/activate-department.command";
+import { CreateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/create-cost-center.command";
+import { UpdateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/update-cost-center.command";
+import { DeleteCostCenterHandler } from "../../../modules/cost-allocation/application/commands/delete-cost-center.command";
+import { ActivateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/activate-cost-center.command";
+import { CreateProjectHandler } from "../../../modules/cost-allocation/application/commands/create-project.command";
+import { UpdateProjectHandler } from "../../../modules/cost-allocation/application/commands/update-project.command";
+import { DeleteProjectHandler } from "../../../modules/cost-allocation/application/commands/delete-project.command";
+import { ActivateProjectHandler } from "../../../modules/cost-allocation/application/commands/activate-project.command";
+import { AllocateExpenseHandler } from "../../../modules/cost-allocation/application/commands/allocate-expense.command";
+import { DeleteAllocationsHandler } from "../../../modules/cost-allocation/application/commands/delete-allocations.command";
+
+// Cost Allocation Module - Query Handlers
+import { GetDepartmentHandler } from "../../../modules/cost-allocation/application/queries/get-department.query";
+import { ListDepartmentsHandler } from "../../../modules/cost-allocation/application/queries/list-departments.query";
+import { GetCostCenterHandler } from "../../../modules/cost-allocation/application/queries/get-cost-center.query";
+import { ListCostCentersHandler } from "../../../modules/cost-allocation/application/queries/list-cost-centers.query";
+import { GetProjectHandler } from "../../../modules/cost-allocation/application/queries/get-project.query";
+import { ListProjectsHandler } from "../../../modules/cost-allocation/application/queries/list-projects.query";
+import { GetExpenseAllocationsHandler } from "../../../modules/cost-allocation/application/queries/get-expense-allocations.query";
+import { GetAllocationSummaryHandler } from "../../../modules/cost-allocation/application/queries/get-allocation-summary.query";
+
+// Cost Allocation Module - Controllers
+import { AllocationManagementController } from "../../../modules/cost-allocation/infrastructure/http/controllers/allocation-management.controller";
+import { ExpenseAllocationController } from "../../../modules/cost-allocation/infrastructure/http/controllers/expense-allocation.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -632,6 +672,92 @@ export class Container {
     this.services.set("templateController", templateController);
     this.services.set("preferenceController", preferenceController);
 
+    // ============================================
+    // Cost Allocation Module
+    // ============================================
+
+    // Repositories
+    const departmentRepository = new DepartmentRepositoryImpl(prisma);
+    const costCenterRepository = new CostCenterRepositoryImpl(prisma);
+    const projectRepository = new ProjectRepositoryImpl(prisma);
+    const expenseAllocationRepository = new ExpenseAllocationRepositoryImpl(prisma);
+
+    this.services.set("departmentRepository", departmentRepository);
+    this.services.set("costCenterRepository", costCenterRepository);
+    this.services.set("projectRepository", projectRepository);
+    this.services.set("expenseAllocationRepository", expenseAllocationRepository);
+
+    // Services
+    const allocationManagementService = new AllocationManagementService(
+      departmentRepository,
+      costCenterRepository,
+      projectRepository,
+    );
+    const expenseAllocationService = new ExpenseAllocationService(
+      expenseAllocationRepository,
+      prisma,
+    );
+
+    this.services.set("allocationManagementService", allocationManagementService);
+    this.services.set("expenseAllocationService", expenseAllocationService);
+
+    // Command Handlers
+    const createDepartmentHandler = new CreateDepartmentHandler(allocationManagementService);
+    const updateDepartmentHandler = new UpdateDepartmentHandler(allocationManagementService);
+    const deleteDepartmentHandler = new DeleteDepartmentHandler(allocationManagementService);
+    const activateDepartmentHandler = new ActivateDepartmentHandler(allocationManagementService);
+    const createCostCenterHandler = new CreateCostCenterHandler(allocationManagementService);
+    const updateCostCenterHandler = new UpdateCostCenterHandler(allocationManagementService);
+    const deleteCostCenterHandler = new DeleteCostCenterHandler(allocationManagementService);
+    const activateCostCenterHandler = new ActivateCostCenterHandler(allocationManagementService);
+    const createProjectHandler = new CreateProjectHandler(allocationManagementService);
+    const updateProjectHandler = new UpdateProjectHandler(allocationManagementService);
+    const deleteProjectHandler = new DeleteProjectHandler(allocationManagementService);
+    const activateProjectHandler = new ActivateProjectHandler(allocationManagementService);
+    const allocateExpenseHandler = new AllocateExpenseHandler(expenseAllocationService);
+    const deleteAllocationsHandler = new DeleteAllocationsHandler(expenseAllocationService);
+
+    // Query Handlers
+    const getDepartmentHandler = new GetDepartmentHandler(allocationManagementService);
+    const listDepartmentsHandler = new ListDepartmentsHandler(allocationManagementService);
+    const getCostCenterHandler = new GetCostCenterHandler(allocationManagementService);
+    const listCostCentersHandler = new ListCostCentersHandler(allocationManagementService);
+    const getProjectHandler = new GetProjectHandler(allocationManagementService);
+    const listProjectsHandler = new ListProjectsHandler(allocationManagementService);
+    const getExpenseAllocationsHandler = new GetExpenseAllocationsHandler(expenseAllocationService);
+    const getAllocationSummaryHandler = new GetAllocationSummaryHandler(expenseAllocationService);
+
+    // Controllers
+    const allocationManagementController = new AllocationManagementController(
+      createDepartmentHandler,
+      updateDepartmentHandler,
+      deleteDepartmentHandler,
+      activateDepartmentHandler,
+      getDepartmentHandler,
+      listDepartmentsHandler,
+      createCostCenterHandler,
+      updateCostCenterHandler,
+      deleteCostCenterHandler,
+      activateCostCenterHandler,
+      getCostCenterHandler,
+      listCostCentersHandler,
+      createProjectHandler,
+      updateProjectHandler,
+      deleteProjectHandler,
+      activateProjectHandler,
+      getProjectHandler,
+      listProjectsHandler,
+    );
+    const expenseAllocationController = new ExpenseAllocationController(
+      allocateExpenseHandler,
+      deleteAllocationsHandler,
+      getExpenseAllocationsHandler,
+      getAllocationSummaryHandler,
+    );
+
+    this.services.set("allocationManagementController", allocationManagementController);
+    this.services.set("expenseAllocationController", expenseAllocationController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -741,6 +867,21 @@ export class Container {
       templateController: this.get<TemplateController>("templateController"),
       preferenceController: this.get<PreferenceController>(
         "preferenceController",
+      ),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all cost-allocation services for route registration
+   */
+  getCostAllocationServices() {
+    return {
+      allocationManagementController: this.get<AllocationManagementController>(
+        "allocationManagementController",
+      ),
+      expenseAllocationController: this.get<ExpenseAllocationController>(
+        "expenseAllocationController",
       ),
       prisma: this.get<PrismaClient>("prisma"),
     };
