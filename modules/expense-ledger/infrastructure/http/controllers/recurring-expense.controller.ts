@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { RecurringExpenseService } from "../../../application/services/recurring-expense.service";
 import { RecurrenceFrequency } from "../../../domain/enums/recurrence-frequency";
 import { ExpenseTemplate } from "../../../domain/entities/recurring-expense.entity";
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class RecurringExpenseController {
   constructor(
