@@ -9,7 +9,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity_workspace", "expense_ledger", "budget_management", "receipt_vault"]
+  schemas  = ["identity_workspace", "expense_ledger", "budget_management", "receipt_vault", "approval_workflow"]
 }
 
 // ============================================
@@ -542,4 +542,97 @@ model ReceiptTag {
   @@index([tagId])
   @@map("receipt_tags")
   @@schema("receipt_vault")
+}
+
+// ============================================
+// SCHEMA: approval_workflow
+// ============================================
+
+enum ApprovalStatus {
+  PENDING       @map("pending")
+  APPROVED      @map("approved")
+  REJECTED      @map("rejected")
+  DELEGATED     @map("delegated")
+  AUTO_APPROVED @map("auto_approved")
+
+  @@schema("approval_workflow")
+}
+
+enum WorkflowStatus {
+  PENDING     @map("pending")
+  IN_PROGRESS @map("in_progress")
+  APPROVED    @map("approved")
+  REJECTED    @map("rejected")
+  CANCELLED   @map("cancelled")
+
+  @@schema("approval_workflow")
+}
+
+model ApprovalChain {
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  name             String    @db.VarChar(100)
+  description      String?   @db.Text
+  minAmount        Decimal?  @map("min_amount") @db.Decimal(12, 2)
+  maxAmount        Decimal?  @map("max_amount") @db.Decimal(12, 2)
+  categoryIds      String[]  @map("category_ids") @db.Uuid
+  requiresReceipt  Boolean   @map("requires_receipt") @default(false)
+  approverSequence String[]  @map("approver_sequence") @db.Uuid
+  isActive         Boolean   @map("is_active") @default(true)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  workflows ExpenseWorkflow[]
+
+  @@index([workspaceId])
+  @@index([isActive])
+  @@map("approval_chains")
+  @@schema("approval_workflow")
+}
+
+model ExpenseWorkflow {
+  id                String         @id @default(uuid()) @db.Uuid
+  expenseId         String         @unique @map("expense_id") @db.Uuid
+  workspaceId       String         @map("workspace_id") @db.Uuid
+  userId            String         @map("user_id") @db.Uuid
+  chainId           String         @map("chain_id") @db.Uuid
+  status            WorkflowStatus @default(PENDING)
+  currentStepNumber Int            @map("current_step_number") @default(1)
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt       DateTime?      @map("completed_at") @db.Timestamptz
+
+  chain ApprovalChain   @relation(fields: [chainId], references: [id])
+  steps ApprovalStep[]
+
+  @@index([expenseId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([chainId])
+  @@index([status])
+  @@map("expense_workflows")
+  @@schema("approval_workflow")
+}
+
+model ApprovalStep {
+  id          String         @id @default(uuid()) @db.Uuid
+  workflowId  String         @map("workflow_id") @db.Uuid
+  stepNumber  Int            @map("step_number")
+  approverId  String         @map("approver_id") @db.Uuid
+  delegatedTo String?        @map("delegated_to") @db.Uuid
+  status      ApprovalStatus @default(PENDING)
+  comments    String?        @db.Text
+  processedAt DateTime?      @map("processed_at") @db.Timestamptz
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  workflow ExpenseWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, stepNumber])
+  @@index([workflowId])
+  @@index([approverId])
+  @@index([delegatedTo])
+  @@index([status])
+  @@map("approval_steps")
+  @@schema("approval_workflow")
 }
