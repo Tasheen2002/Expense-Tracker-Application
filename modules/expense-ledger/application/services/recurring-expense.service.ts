@@ -7,6 +7,7 @@ import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
 import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
 import { ExpenseService } from "./expense.service";
 import { PaymentMethod } from "../../domain/enums/payment-method";
+import { RecurringExpenseNotFoundError } from "../../domain/errors/expense.errors";
 
 export class RecurringExpenseService {
   constructor(
@@ -87,7 +88,7 @@ export class RecurringExpenseService {
 
   async pauseRecurringExpense(id: string): Promise<void> {
     const expense = await this.recurringExpenseRepository.findById(id);
-    if (!expense) throw new Error("Recurring expense not found");
+    if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.pause();
     await this.recurringExpenseRepository.save(expense);
@@ -95,7 +96,7 @@ export class RecurringExpenseService {
 
   async resumeRecurringExpense(id: string): Promise<void> {
     const expense = await this.recurringExpenseRepository.findById(id);
-    if (!expense) throw new Error("Recurring expense not found");
+    if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.resume();
     await this.recurringExpenseRepository.save(expense);
@@ -103,7 +104,7 @@ export class RecurringExpenseService {
 
   async stopRecurringExpense(id: string): Promise<void> {
     const expense = await this.recurringExpenseRepository.findById(id);
-    if (!expense) throw new Error("Recurring expense not found");
+    if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.stop();
     await this.recurringExpenseRepository.save(expense);
