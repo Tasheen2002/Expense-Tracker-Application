@@ -4,6 +4,7 @@ import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
 import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id'
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo'
 
 export class PrismaApprovalChainRepository implements ApprovalChainRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -20,7 +21,7 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
         maxAmount: chain.getMaxAmount(),
         categoryIds: chain.getCategoryIds()?.map(id => id.getValue()) || [],
         requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain.getApproverSequence(),
+        approverSequence: chain.getApproverSequence().map(id => id.getValue()),
         isActive: chain.isActive(),
         createdAt: chain.getCreatedAt(),
         updatedAt: chain.getUpdatedAt(),
@@ -32,7 +33,7 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
         maxAmount: chain.getMaxAmount(),
         categoryIds: chain.getCategoryIds()?.map(id => id.getValue()) || [],
         requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain.getApproverSequence(),
+        approverSequence: chain.getApproverSequence().map(id => id.getValue()),
         isActive: chain.isActive(),
         updatedAt: chain.getUpdatedAt(),
       },
@@ -105,7 +106,7 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
       maxAmount: row.maxAmount ? Number(row.maxAmount) : undefined,
       categoryIds: row.categoryIds?.length > 0 ? row.categoryIds.map((id: string) => CategoryId.fromString(id)) : undefined,
       requiresReceipt: row.requiresReceipt,
-      approverSequence: row.approverSequence,
+      approverSequence: row.approverSequence.map((id: string) => UserId.fromString(id)),
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
