@@ -1,9 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import {
-  AllocateExpenseBody,
-  ExpenseIdParam,
-} from "../validation/allocation.schema";
+import { AllocateExpenseBody } from "../validation/allocation.schema";
 
 // Command Handlers
 import { AllocateExpenseCommand, AllocateExpenseHandler } from "../../../application/commands/allocate-expense.command";
