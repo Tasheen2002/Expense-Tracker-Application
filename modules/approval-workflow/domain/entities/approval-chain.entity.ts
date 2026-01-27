@@ -1,6 +1,7 @@
 import { ApprovalChainId } from '../value-objects/approval-chain-id'
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo'
 
 export interface ApprovalChainProps {
   chainId: ApprovalChainId
@@ -11,7 +12,7 @@ export interface ApprovalChainProps {
   maxAmount?: number
   categoryIds?: CategoryId[]
   requiresReceipt: boolean
-  approverSequence: string[] // Array of userId in order
+  approverSequence: UserId[] // Array of userId in order
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -51,7 +52,7 @@ export class ApprovalChain {
       maxAmount: params.maxAmount,
       categoryIds: params.categoryIds?.map(id => CategoryId.fromString(id)),
       requiresReceipt: params.requiresReceipt,
-      approverSequence: params.approverSequence,
+      approverSequence: params.approverSequence.map(id => UserId.fromString(id)),
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -94,7 +95,7 @@ export class ApprovalChain {
     return this.props.requiresReceipt
   }
 
-  getApproverSequence(): string[] {
+  getApproverSequence(): UserId[] {
     return this.props.approverSequence
   }
 
@@ -133,7 +134,7 @@ export class ApprovalChain {
     if (approverSequence.length === 0) {
       throw new Error('Approval chain must have at least one approver')
     }
-    this.props.approverSequence = approverSequence
+    this.props.approverSequence = approverSequence.map(id => UserId.fromString(id))
     this.props.updatedAt = new Date()
   }
 
