@@ -4,6 +4,7 @@ import { budgetRoutes } from "./budget.routes";
 import { spendingLimitRoutes } from "./spending-limit.routes";
 import { BudgetController } from "../controllers/budget.controller";
 import { SpendingLimitController } from "../controllers/spending-limit.controller";
+import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
 
 export async function registerBudgetRoutes(
   fastify: FastifyInstance,
@@ -15,6 +16,11 @@ export async function registerBudgetRoutes(
 ) {
   await fastify.register(
     async (instance) => {
+      // Add workspace authorization middleware to all routes
+      instance.addHook("onRequest", async (request, reply) => {
+        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+      });
+
       await budgetRoutes(instance, controllers.budgetController);
       await spendingLimitRoutes(instance, controllers.spendingLimitController);
     },

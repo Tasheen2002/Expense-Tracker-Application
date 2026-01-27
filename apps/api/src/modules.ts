@@ -6,6 +6,7 @@ import { registerBudgetRoutes } from "../../../modules/budget-management/infrast
 import { registerReceiptVaultRoutes } from "../../../modules/receipt-vault/infrastructure/http/routes/index";
 import { registerApprovalWorkflowRoutes } from "../../../modules/approval-workflow/infrastructure/http/routes/index";
 import { registerNotificationDispatchRoutes } from "../../../modules/notification-dispatch/infrastructure/http/routes/index";
+import { registerCostAllocationRoutes } from "../../../modules/cost-allocation/infrastructure/http/routes/index";
 
 export default fp(
   async (fastify) => {
@@ -69,6 +70,17 @@ export default fp(
       notificationDispatchServices.prisma,
     );
     fastify.log.info("✓ Notification Dispatch module registered");
+
+    // ============================================
+    // Cost Allocation Module
+    // ============================================
+    const costAllocationServices = container.getCostAllocationServices();
+    await registerCostAllocationRoutes(
+      fastify,
+      costAllocationServices,
+      costAllocationServices.prisma,
+    );
+    fastify.log.info("✓ Cost Allocation module registered");
 
     fastify.log.info("All modules registered successfully");
   },

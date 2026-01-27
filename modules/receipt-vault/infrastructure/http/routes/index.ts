@@ -4,6 +4,7 @@ import { receiptRoutes } from './receipt.routes'
 import { tagRoutes } from './tag.routes'
 import { ReceiptController } from '../controllers/receipt.controller'
 import { TagController } from '../controllers/tag.controller'
+import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware'
 
 interface ReceiptVaultServices {
   receiptController: ReceiptController
@@ -16,9 +17,19 @@ export async function registerReceiptVaultRoutes(
   services: ReceiptVaultServices,
   prisma: PrismaClient
 ) {
-  // Register receipt routes
-  await receiptRoutes(fastify, services.receiptController)
+  await fastify.register(
+    async (instance) => {
+      // Add workspace authorization middleware to all routes
+      instance.addHook('onRequest', async (request, reply) => {
+        await workspaceAuthorizationMiddleware(request as any, reply, prisma)
+      })
 
-  // Register receipt tag routes
-  await tagRoutes(fastify, services.tagController)
+      // Register receipt routes
+      await receiptRoutes(instance, services.receiptController)
+
+      // Register receipt tag routes
+      await tagRoutes(instance, services.tagController)
+    },
+    { prefix: '/api/v1' }
+  )
 }

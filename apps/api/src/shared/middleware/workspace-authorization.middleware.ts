@@ -1,6 +1,16 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { PrismaClient } from "@prisma/client";
 
+/**
+ * Workspace Authorization Middleware
+ *
+ * Validates that the authenticated user is a member of the requested workspace.
+ * This middleware should be applied to all workspace-scoped routes.
+ *
+ * @throws 401 - If user is not authenticated
+ * @throws 400 - If workspaceId is missing from params
+ * @throws 403 - If user is not a member of the workspace
+ */
 export async function workspaceAuthorizationMiddleware(
   request: FastifyRequest<{ Params: { workspaceId: string } }>,
   reply: FastifyReply,
@@ -9,6 +19,7 @@ export async function workspaceAuthorizationMiddleware(
   const userId = request.user?.userId;
   const { workspaceId } = request.params;
 
+  // Check authentication
   if (!userId) {
     return reply.status(401).send({
       success: false,
@@ -17,6 +28,7 @@ export async function workspaceAuthorizationMiddleware(
     });
   }
 
+  // Check workspaceId presence
   if (!workspaceId) {
     return reply.status(400).send({
       success: false,
@@ -25,7 +37,7 @@ export async function workspaceAuthorizationMiddleware(
     });
   }
 
-  // Check if user is a member of the workspace
+  // Check workspace membership
   const membership = await prisma.workspaceMembership.findUnique({
     where: {
       userId_workspaceId: {
