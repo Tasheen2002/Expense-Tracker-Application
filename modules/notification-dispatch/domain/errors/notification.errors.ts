@@ -75,3 +75,13 @@ export class InvalidIdFormatError extends NotificationDomainError {
     super(`Invalid ${idType} format: ${value}`, "INVALID_ID_FORMAT", 400);
   }
 }
+
+export class UnauthorizedNotificationAccessError extends NotificationDomainError {
+  constructor(notificationId: string, userId: string) {
+    super(
+      `User '${userId}' is not authorized to access notification '${notificationId}'`,
+      "UNAUTHORIZED_NOTIFICATION_ACCESS",
+      403,
+    );
+  }
+}

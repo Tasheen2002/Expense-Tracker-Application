@@ -22,7 +22,7 @@ export class NotificationController {
         return ResponseHelper.unauthorized(reply);
       }
 
-      const notifications = await this.notificationService.getNotifications(
+      const result = await this.notificationService.getNotifications(
         userId,
         workspaceId,
         {
@@ -41,10 +41,14 @@ export class NotificationController {
         200,
         "Notifications retrieved successfully",
         {
-          notifications: notifications.map((n) =>
-            this.serializeNotification(n),
-          ),
+          notifications: result.items.map((n) => this.serializeNotification(n)),
           unreadCount,
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
         },
       );
     } catch (error) {
@@ -59,10 +63,21 @@ export class NotificationController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { notificationId } = request.params;
 
-      const notification =
-        await this.notificationService.markAsRead(notificationId);
+      const notification = await this.notificationService.markAsRead(
+        notificationId,
+        userId,
+      );
 
       return ResponseHelper.success(
         reply,

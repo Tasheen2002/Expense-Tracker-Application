@@ -6,6 +6,10 @@ import { UserId } from "../../../identity-workspace/domain/value-objects/user-id
 import { PlanPeriod } from "../../domain/value-objects/plan-period";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
 import { BudgetPlanNotFoundError } from "../../domain/errors/budget-planning.errors";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class BudgetPlanService {
   constructor(private readonly budgetPlanRepository: BudgetPlanRepository) {}
@@ -91,10 +95,12 @@ export class BudgetPlanService {
   async listPlans(
     workspaceId: string,
     status?: PlanStatus,
-  ): Promise<BudgetPlan[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetPlan>> {
     return this.budgetPlanRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       status,
+      options,
     );
   }
 }

@@ -3,12 +3,24 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 import { AllocateExpenseBody } from "../validation/allocation.schema";
 
 // Command Handlers
-import { AllocateExpenseCommand, AllocateExpenseHandler } from "../../../application/commands/allocate-expense.command";
-import { DeleteAllocationsCommand, DeleteAllocationsHandler } from "../../../application/commands/delete-allocations.command";
+import {
+  AllocateExpenseCommand,
+  AllocateExpenseHandler,
+} from "../../../application/commands/allocate-expense.command";
+import {
+  DeleteAllocationsCommand,
+  DeleteAllocationsHandler,
+} from "../../../application/commands/delete-allocations.command";
 
 // Query Handlers
-import { GetExpenseAllocationsQuery, GetExpenseAllocationsHandler } from "../../../application/queries/get-expense-allocations.query";
-import { GetAllocationSummaryQuery, GetAllocationSummaryHandler } from "../../../application/queries/get-allocation-summary.query";
+import {
+  GetExpenseAllocationsQuery,
+  GetExpenseAllocationsHandler,
+} from "../../../application/queries/get-expense-allocations.query";
+import {
+  GetAllocationSummaryQuery,
+  GetAllocationSummaryHandler,
+} from "../../../application/queries/get-allocation-summary.query";
 
 export class ExpenseAllocationController {
   constructor(
@@ -30,11 +42,12 @@ export class ExpenseAllocationController {
       const { allocations } = request.body;
 
       // Extract userId from authenticated user context
-      const userId = (request as any).user?.id;
+      const userId = request.user?.userId;
       if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "Unauthorized: User ID not found",
+        return reply.status(401).send({
+          success: false,
           statusCode: 401,
+          message: "User not authenticated",
         });
       }
 
@@ -63,6 +76,15 @@ export class ExpenseAllocationController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, expenseId } = request.params;
       const query = new GetExpenseAllocationsQuery(expenseId, workspaceId);
       const allocations = await this.getExpenseAllocationsHandler.handle(query);
@@ -95,6 +117,15 @@ export class ExpenseAllocationController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, expenseId } = request.params;
       const command = new DeleteAllocationsCommand(expenseId, workspaceId);
       await this.deleteAllocationsHandler.handle(command);
@@ -117,6 +148,15 @@ export class ExpenseAllocationController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const query = new GetAllocationSummaryQuery(workspaceId);
       const summary = await this.getAllocationSummaryHandler.handle(query);

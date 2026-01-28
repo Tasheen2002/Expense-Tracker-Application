@@ -1,5 +1,6 @@
-import { ExpenseStatus } from '../../domain/enums/expense-status'
-import { PaymentMethod } from '../../domain/enums/payment-method'
+import { ExpenseService } from "../services/expense.service";
+import { ExpenseStatus } from "../../domain/enums/expense-status";
+import { PaymentMethod } from "../../domain/enums/payment-method";
 
 export class FilterExpensesQuery {
   constructor(
@@ -14,12 +15,14 @@ export class FilterExpensesQuery {
     public readonly minAmount?: number,
     public readonly maxAmount?: number,
     public readonly currency?: string,
-    public readonly searchText?: string
+    public readonly searchText?: string,
+    public readonly limit?: number,
+    public readonly offset?: number,
   ) {}
 }
 
 export class FilterExpensesHandler {
-  constructor(private readonly expenseService: any) {}
+  constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(query: FilterExpensesQuery) {
     return await this.expenseService.getExpensesWithFilters({
@@ -35,6 +38,10 @@ export class FilterExpensesHandler {
       maxAmount: query.maxAmount,
       currency: query.currency,
       searchText: query.searchText,
-    })
+      pagination: {
+        limit: query.limit,
+        offset: query.offset,
+      },
+    });
   }
 }

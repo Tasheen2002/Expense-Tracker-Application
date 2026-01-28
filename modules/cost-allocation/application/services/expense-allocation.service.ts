@@ -13,13 +13,15 @@ import {
   ExpenseNotFoundError,
   ExpenseWorkspaceMismatchError,
 } from "../../domain/errors/cost-allocation.errors";
-import { PrismaClient } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { IExpenseLookupPort } from "../ports/expense-lookup.port";
+import { IAllocationSummaryPort } from "../ports/allocation-summary.port";
 
 export class ExpenseAllocationService {
   constructor(
     private readonly allocationRepository: ExpenseAllocationRepository,
-    private readonly prisma: PrismaClient,
+    private readonly expenseLookup: IExpenseLookupPort,
+    private readonly allocationSummary: IAllocationSummaryPort,
   ) {}
 
   async allocateExpense(params: {
@@ -37,11 +39,10 @@ export class ExpenseAllocationService {
   }): Promise<void> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    // 1. Fetch Expense Validation Data
-    const expense = await this.prisma.expense.findUnique({
-      where: { id: params.expenseId },
-      select: { amount: true, workspaceId: true },
-    });
+    // 1. Fetch Expense Validation Data via port (no direct Prisma dependency)
+    const expense = await this.expenseLookup.findExpenseForAllocation(
+      params.expenseId,
+    );
 
     if (!expense) {
       throw new ExpenseNotFoundError(params.expenseId);
@@ -148,11 +149,9 @@ export class ExpenseAllocationService {
     expenseId: string,
     workspaceId: string,
   ): Promise<void> {
-    // Verify expense exists and belongs to workspace
-    const expense = await this.prisma.expense.findUnique({
-      where: { id: expenseId },
-      select: { workspaceId: true },
-    });
+    // Verify expense exists and belongs to workspace via port
+    const expense =
+      await this.expenseLookup.findExpenseForAllocation(expenseId);
 
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId);
@@ -170,95 +169,72 @@ export class ExpenseAllocationService {
 
   async getAllocationSummary(workspaceId: string): Promise<{
     totalAllocations: number;
-    byDepartment: Array<{ departmentId: string; departmentName: string; total: number; count: number }>;
-    byCostCenter: Array<{ costCenterId: string; costCenterName: string; total: number; count: number }>;
-    byProject: Array<{ projectId: string; projectName: string; total: number; count: number }>;
+    byDepartment: Array<{
+      departmentId: string;
+      departmentName: string;
+      total: number;
+      count: number;
+    }>;
+    byCostCenter: Array<{
+      costCenterId: string;
+      costCenterName: string;
+      total: number;
+      count: number;
+    }>;
+    byProject: Array<{
+      projectId: string;
+      projectName: string;
+      total: number;
+      count: number;
+    }>;
   }> {
-    // Query allocation statistics grouped by target
-    const departmentAllocations = await this.prisma.expenseAllocation.groupBy({
-      by: ['departmentId'],
-      where: {
-        workspaceId,
-        departmentId: { not: null },
-      },
-      _sum: { amount: true },
-      _count: { id: true },
-    });
+    // Query allocation statistics via port (no direct Prisma dependency)
+    const [
+      departmentAllocations,
+      costCenterAllocations,
+      projectAllocations,
+      totalAllocations,
+    ] = await Promise.all([
+      this.allocationSummary.getByDepartment(workspaceId),
+      this.allocationSummary.getByCostCenter(workspaceId),
+      this.allocationSummary.getByProject(workspaceId),
+      this.allocationSummary.getTotalCount(workspaceId),
+    ]);
 
-    const costCenterAllocations = await this.prisma.expenseAllocation.groupBy({
-      by: ['costCenterId'],
-      where: {
-        workspaceId,
-        costCenterId: { not: null },
-      },
-      _sum: { amount: true },
-      _count: { id: true },
-    });
+    // Fetch entity names via port
+    const departmentIds = departmentAllocations.map((a) => a.targetId);
+    const costCenterIds = costCenterAllocations.map((a) => a.targetId);
+    const projectIds = projectAllocations.map((a) => a.targetId);
 
-    const projectAllocations = await this.prisma.expenseAllocation.groupBy({
-      by: ['projectId'],
-      where: {
-        workspaceId,
-        projectId: { not: null },
-      },
-      _sum: { amount: true },
-      _count: { id: true },
-    });
+    const [departments, costCenters, projects] = await Promise.all([
+      this.allocationSummary.getDepartmentNames(departmentIds),
+      this.allocationSummary.getCostCenterNames(costCenterIds),
+      this.allocationSummary.getProjectNames(projectIds),
+    ]);
 
-    // Fetch department names
-    const departmentIds = departmentAllocations
-      .map((a) => a.departmentId)
-      .filter((id): id is string => id !== null);
-    const departments = await this.prisma.department.findMany({
-      where: { id: { in: departmentIds } },
-      select: { id: true, name: true },
-    });
     const departmentMap = new Map(departments.map((d) => [d.id, d.name]));
-
-    // Fetch cost center names
-    const costCenterIds = costCenterAllocations
-      .map((a) => a.costCenterId)
-      .filter((id): id is string => id !== null);
-    const costCenters = await this.prisma.costCenter.findMany({
-      where: { id: { in: costCenterIds } },
-      select: { id: true, name: true },
-    });
     const costCenterMap = new Map(costCenters.map((c) => [c.id, c.name]));
-
-    // Fetch project names
-    const projectIds = projectAllocations
-      .map((a) => a.projectId)
-      .filter((id): id is string => id !== null);
-    const projects = await this.prisma.project.findMany({
-      where: { id: { in: projectIds } },
-      select: { id: true, name: true },
-    });
     const projectMap = new Map(projects.map((p) => [p.id, p.name]));
-
-    // Calculate total allocations
-    const totalAllocations = await this.prisma.expenseAllocation.count({
-      where: { workspaceId },
-    });
 
     return {
       totalAllocations,
       byDepartment: departmentAllocations.map((a) => ({
-        departmentId: a.departmentId!,
-        departmentName: departmentMap.get(a.departmentId!) || 'Unknown',
-        total: a._sum.amount?.toNumber() || 0,
-        count: a._count.id,
+        departmentId: a.targetId,
+        departmentName: departmentMap.get(a.targetId) || "Unknown",
+        total: a.total.toNumber(),
+        count: a.count,
       })),
       byCostCenter: costCenterAllocations.map((a) => ({
-        costCenterId: a.costCenterId!,
-        costCenterName: costCenterMap.get(a.costCenterId!) || 'Unknown',
-        total: a._sum.amount?.toNumber() || 0,
-        count: a._count.id,
+        costCenterId: a.targetId,
+        costCenterName: costCenterMap.get(a.targetId) || "Unknown",
+        total: a.total.toNumber(),
+        count: a.count,
       })),
       byProject: projectAllocations.map((a) => ({
-        projectId: a.projectId!,
-        projectName: projectMap.get(a.projectId!) || 'Unknown',
-        total: a._sum.amount?.toNumber() || 0,
-        count: a._count.id,
+        projectId: a.targetId,
+        projectName: projectMap.get(a.targetId) || "Unknown",
+        total: a.total.toNumber(),
+        count: a.count,
       })),
     };
   }

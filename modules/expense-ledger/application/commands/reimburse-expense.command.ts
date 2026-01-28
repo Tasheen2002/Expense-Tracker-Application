@@ -1,17 +1,19 @@
-export class ReimburseExpenseCommand {
-  constructor(
-    public readonly expenseId: string,
-    public readonly workspaceId: string
-  ) {}
+import { ExpenseService } from "../services/expense.service";
+
+export interface ReimburseExpenseCommand {
+  expenseId: string;
+  workspaceId: string;
+  processedBy: string;
 }
 
 export class ReimburseExpenseHandler {
-  constructor(private readonly expenseService: any) {}
+  constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(command: ReimburseExpenseCommand) {
     return await this.expenseService.markExpenseAsReimbursed(
       command.expenseId,
-      command.workspaceId
-    )
+      command.workspaceId,
+      command.processedBy,
+    );
   }
 }

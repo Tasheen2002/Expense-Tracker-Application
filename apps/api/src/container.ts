@@ -10,17 +10,18 @@ import { WorkspaceManagementService } from "../../../modules/identity-workspace/
 import { WorkspaceMembershipService } from "../../../modules/identity-workspace/application/services/workspace-membership.service";
 import { WorkspaceInvitationService } from "../../../modules/identity-workspace/application/services/workspace-invitation.service";
 
-// Expense-Ledger Module - Repositories
 import { ExpenseRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl";
 import { CategoryRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl";
 import { TagRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl";
 import { AttachmentRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl";
+import { ExpenseSplitRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl";
+import { SplitSettlementRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl";
 
-// Expense-Ledger Module - Services
 import { ExpenseService } from "../../../modules/expense-ledger/application/services/expense.service";
 import { CategoryService } from "../../../modules/expense-ledger/application/services/category.service";
 import { TagService } from "../../../modules/expense-ledger/application/services/tag.service";
 import { AttachmentService } from "../../../modules/expense-ledger/application/services/attachment.service";
+import { ExpenseSplitService } from "../../../modules/expense-ledger/application/services/expense-split.service";
 
 // Expense-Ledger Module - Command Handlers
 import { CreateExpenseHandler } from "../../../modules/expense-ledger/application/commands/create-expense.command";
@@ -51,11 +52,11 @@ import { ListTagsHandler } from "../../../modules/expense-ledger/application/que
 import { GetAttachmentHandler } from "../../../modules/expense-ledger/application/queries/get-attachment.query";
 import { ListAttachmentsHandler } from "../../../modules/expense-ledger/application/queries/list-attachments.query";
 
-// Expense-Ledger Module - Controllers
 import { ExpenseController } from "../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller";
 import { CategoryController } from "../../../modules/expense-ledger/infrastructure/http/controllers/category.controller";
 import { TagController } from "../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller";
 import { AttachmentController } from "../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller";
+import { ExpenseSplitController } from "../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller";
 
 // Recurring Expense
 import { PrismaRecurringExpenseRepository } from "../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl";
@@ -170,6 +171,10 @@ import { ExpenseAllocationRepositoryImpl } from "../../../modules/cost-allocatio
 // Cost Allocation Module - Services
 import { AllocationManagementService } from "../../../modules/cost-allocation/application/services/allocation-management.service";
 import { ExpenseAllocationService } from "../../../modules/cost-allocation/application/services/expense-allocation.service";
+
+// Cost Allocation Module - Adapters
+import { PrismaExpenseLookupAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-expense-lookup.adapter";
+import { PrismaAllocationSummaryAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-allocation-summary.adapter";
 
 // Cost Allocation Module - Command Handlers
 import { CreateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/create-department.command";
@@ -349,12 +354,16 @@ export class Container {
     const recurringExpenseRepository = new PrismaRecurringExpenseRepository(
       prisma,
     );
+    const expenseSplitRepository = new ExpenseSplitRepositoryImpl(prisma);
+    const splitSettlementRepository = new SplitSettlementRepositoryImpl(prisma);
 
     this.services.set("expenseRepository", expenseRepository);
     this.services.set("categoryRepository", categoryRepository);
     this.services.set("tagRepository", tagRepository);
     this.services.set("attachmentRepository", attachmentRepository);
     this.services.set("recurringExpenseRepository", recurringExpenseRepository);
+    this.services.set("expenseSplitRepository", expenseSplitRepository);
+    this.services.set("splitSettlementRepository", splitSettlementRepository);
 
     // Services
     const expenseService = new ExpenseService(
@@ -372,12 +381,18 @@ export class Container {
       recurringExpenseRepository,
       expenseService,
     );
+    const expenseSplitService = new ExpenseSplitService(
+      expenseSplitRepository,
+      splitSettlementRepository,
+      expenseRepository,
+    );
 
     this.services.set("expenseService", expenseService);
     this.services.set("categoryService", categoryService);
     this.services.set("tagService", tagService);
     this.services.set("attachmentService", attachmentService);
     this.services.set("recurringExpenseService", recurringExpenseService);
+    this.services.set("expenseSplitService", expenseSplitService);
 
     // Command Handlers
     const createExpenseHandler = new CreateExpenseHandler(expenseService);
@@ -464,11 +479,16 @@ export class Container {
       recurringExpenseService,
     );
 
+    const expenseSplitController = new ExpenseSplitController(
+      expenseSplitService,
+    );
+
     this.services.set("expenseController", expenseController);
     this.services.set("categoryController", categoryController);
     this.services.set("tagController", tagController);
     this.services.set("attachmentController", attachmentController);
     this.services.set("recurringExpenseController", recurringExpenseController);
+    this.services.set("expenseSplitController", expenseSplitController);
 
     // ============================================
     // Budget Management Module
@@ -768,9 +788,12 @@ export class Container {
       costCenterRepository,
       projectRepository,
     );
+    const expenseLookupAdapter = new PrismaExpenseLookupAdapter(prisma);
+    const allocationSummaryAdapter = new PrismaAllocationSummaryAdapter(prisma);
     const expenseAllocationService = new ExpenseAllocationService(
       expenseAllocationRepository,
-      prisma,
+      expenseLookupAdapter,
+      allocationSummaryAdapter,
     );
 
     this.services.set(
@@ -1146,6 +1169,9 @@ export class Container {
       ),
       recurringExpenseController: this.get<RecurringExpenseController>(
         "recurringExpenseController",
+      ),
+      expenseSplitController: this.get<ExpenseSplitController>(
+        "expenseSplitController",
       ),
       prisma: this.get<PrismaClient>("prisma"),
     };

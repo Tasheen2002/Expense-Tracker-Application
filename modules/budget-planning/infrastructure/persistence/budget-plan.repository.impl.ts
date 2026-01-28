@@ -4,6 +4,10 @@ import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repo
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -54,31 +58,46 @@ export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
   async findAll(
     workspaceId: WorkspaceId,
     status?: PlanStatus,
-  ): Promise<BudgetPlan[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetPlan>> {
     const where: any = { workspaceId: workspaceId.getValue() };
     if (status) {
       where.status = status;
     }
 
-    const raws = await this.prisma.budgetPlan.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
 
-    return raws.map((raw: any) =>
-      BudgetPlan.reconstitute({
-        id: raw.id,
-        workspaceId: raw.workspaceId,
-        name: raw.name,
-        description: raw.description,
-        startDate: raw.startDate,
-        endDate: raw.endDate,
-        status: raw.status as PlanStatus,
-        createdBy: raw.createdBy,
-        createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
+    const [rows, total] = await Promise.all([
+      this.prisma.budgetPlan.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
       }),
-    );
+      this.prisma.budgetPlan.count({ where }),
+    ]);
+
+    return {
+      items: rows.map((raw: any) =>
+        BudgetPlan.reconstitute({
+          id: raw.id,
+          workspaceId: raw.workspaceId,
+          name: raw.name,
+          description: raw.description,
+          startDate: raw.startDate,
+          endDate: raw.endDate,
+          status: raw.status as PlanStatus,
+          createdBy: raw.createdBy,
+          createdAt: raw.createdAt,
+          updatedAt: raw.updatedAt,
+        }),
+      ),
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+    };
   }
 
   async delete(id: PlanId): Promise<void> {

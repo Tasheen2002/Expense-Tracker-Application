@@ -1,6 +1,7 @@
 import {
   ExpenseRepository,
   ExpenseFilters,
+  PaginatedResult,
 } from "../../domain/repositories/expense.repository";
 import { CategoryRepository } from "../../domain/repositories/category.repository";
 import { TagRepository } from "../../domain/repositories/tag.repository";
@@ -246,7 +247,9 @@ export class ExpenseService {
     return await this.expenseRepository.findByStatus(status, workspaceId);
   }
 
-  async getExpensesWithFilters(filters: ExpenseFilters): Promise<Expense[]> {
+  async getExpensesWithFilters(
+    filters: ExpenseFilters,
+  ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findWithFilters(filters);
   }
 
@@ -278,6 +281,7 @@ export class ExpenseService {
   async approveExpense(
     expenseId: string,
     workspaceId: string,
+    approverId: string,
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
@@ -286,6 +290,15 @@ export class ExpenseService {
 
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+
+    // Authorization Check: Self-approval not allowed
+    if (expense.userId === approverId) {
+      throw new UnauthorizedExpenseAccessError(
+        expenseId,
+        approverId,
+        "approve (self-approval)",
+      );
     }
 
     expense.approve();
@@ -298,6 +311,8 @@ export class ExpenseService {
   async rejectExpense(
     expenseId: string,
     workspaceId: string,
+    rejecterId: string,
+    reason?: string,
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
@@ -306,6 +321,15 @@ export class ExpenseService {
 
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+
+    // Authorization Check: Self-rejection not allowed (or redundancy check)
+    if (expense.userId === rejecterId) {
+      throw new UnauthorizedExpenseAccessError(
+        expenseId,
+        rejecterId,
+        "reject (self-rejection)",
+      );
     }
 
     expense.reject();
@@ -343,6 +367,7 @@ export class ExpenseService {
   async markExpenseAsReimbursed(
     expenseId: string,
     workspaceId: string,
+    processedBy: string,
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
@@ -351,6 +376,15 @@ export class ExpenseService {
 
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+
+    // Authorization Check: Self-reimbursement not allowed
+    if (expense.userId === processedBy) {
+      throw new UnauthorizedExpenseAccessError(
+        expenseId,
+        processedBy,
+        "reimburse (self-reimbursement)",
+      );
     }
 
     expense.markAsReimbursed();

@@ -901,3 +901,81 @@ model ForecastItem {
   @@map("forecast_items")
   @@schema("budget_planning")
 }
+
+model ExpenseSplit {
+  id           String             @id @default(uuid()) @db.Uuid
+  expenseId    String             @unique @map("expense_id") @db.Uuid
+  workspaceId  String             @map("workspace_id") @db.Uuid
+  paidBy       String             @map("paid_by") @db.Uuid
+  totalAmount  Decimal            @map("total_amount") @db.Decimal(12, 2)
+  currency     String             @default("USD") @db.VarChar(3)
+  splitType    SplitType          @map("split_type")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  participants SplitParticipant[]
+  settlements  SplitSettlement[]
+
+  @@index([workspaceId])
+  @@index([paidBy])
+  @@index([expenseId])
+  @@map("expense_splits")
+  @@schema("expense_ledger")
+}
+
+model SplitParticipant {
+  id              String       @id @default(uuid()) @db.Uuid
+  splitId         String       @map("split_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  shareAmount     Decimal      @map("share_amount") @db.Decimal(12, 2)
+  sharePercentage Decimal?     @map("share_percentage") @db.Decimal(5, 2)
+  isPaid          Boolean      @default(false) @map("is_paid")
+  paidAt          DateTime?    @map("paid_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  split           ExpenseSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, userId])
+  @@index([splitId])
+  @@index([userId])
+  @@map("split_participants")
+  @@schema("expense_ledger")
+}
+
+model SplitSettlement {
+  id              String           @id @default(uuid()) @db.Uuid
+  splitId         String           @map("split_id") @db.Uuid
+  fromUserId      String           @map("from_user_id") @db.Uuid
+  toUserId        String           @map("to_user_id") @db.Uuid
+  totalOwedAmount Decimal          @map("total_owed_amount") @db.Decimal(12, 2)
+  paidAmount      Decimal          @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  currency        String           @default("USD") @db.VarChar(3)
+  status          SettlementStatus @default(PENDING)
+  settledAt       DateTime?        @map("settled_at") @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  split           ExpenseSplit     @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, fromUserId, toUserId])
+  @@index([splitId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+  @@map("split_settlements")
+  @@schema("expense_ledger")
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+
+  @@schema("expense_ledger")
+}
+
+enum SettlementStatus {
+  PENDING
+  PARTIAL
+  SETTLED
+
+  @@schema("expense_ledger")
+}

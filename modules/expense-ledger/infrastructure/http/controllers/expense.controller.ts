@@ -99,7 +99,7 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -168,7 +168,7 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -201,7 +201,7 @@ export class ExpenseController {
         message: "Expense deleted successfully",
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -246,50 +246,64 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listExpenses(
     request: FastifyRequest<{
       Params: { workspaceId: string };
-      Querystring: { userId?: string };
+      Querystring: {
+        userId?: string;
+        limit?: string;
+        offset?: string;
+      };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { userId } = request.query;
+      const { userId, limit, offset } = request.query;
 
-      const expenses = await this.listExpensesHandler.handle({
+      const result = await this.listExpensesHandler.handle({
         workspaceId,
         userId: userId || request.user?.userId, // Default to own expenses if no specific user requested (Privacy Fix)
+        limit: limit ? parseInt(limit) : undefined,
+        offset: offset ? parseInt(offset) : undefined,
       });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Expenses retrieved successfully",
-        data: expenses.map((expense: Expense) => ({
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        })),
+        data: {
+          items: result.items.map((expense: Expense) => ({
+            expenseId: expense.id.getValue(),
+            workspaceId: expense.workspaceId,
+            userId: expense.userId,
+            title: expense.title,
+            description: expense.description,
+            amount: expense.amount.getAmount().toString(),
+            currency: expense.amount.getCurrency(),
+            expenseDate: expense.expenseDate.toDateString(),
+            categoryId: expense.categoryId?.getValue(),
+            merchant: expense.merchant,
+            paymentMethod: expense.paymentMethod,
+            isReimbursable: expense.isReimbursable,
+            status: expense.status,
+            createdAt: expense.createdAt.toISOString(),
+            updatedAt: expense.updatedAt.toISOString(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -308,6 +322,8 @@ export class ExpenseController {
         maxAmount?: string;
         currency?: string;
         searchText?: string;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
@@ -316,7 +332,7 @@ export class ExpenseController {
       const { workspaceId } = request.params;
       const query = request.query;
 
-      const expenses = await this.filterExpensesHandler.handle({
+      const result = await this.filterExpensesHandler.handle({
         workspaceId,
         userId: query.userId,
         categoryId: query.categoryId,
@@ -329,32 +345,42 @@ export class ExpenseController {
         maxAmount: query.maxAmount ? parseFloat(query.maxAmount) : undefined,
         currency: query.currency,
         searchText: query.searchText,
+        limit: query.limit ? parseInt(query.limit) : undefined,
+        offset: query.offset ? parseInt(query.offset) : undefined,
       });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Expenses filtered successfully",
-        data: expenses.map((expense: Expense) => ({
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        })),
+        data: {
+          items: result.items.map((expense: Expense) => ({
+            expenseId: expense.id.getValue(),
+            workspaceId: expense.workspaceId,
+            userId: expense.userId,
+            title: expense.title,
+            description: expense.description,
+            amount: expense.amount.getAmount().toString(),
+            currency: expense.amount.getCurrency(),
+            expenseDate: expense.expenseDate.toDateString(),
+            categoryId: expense.categoryId?.getValue(),
+            merchant: expense.merchant,
+            paymentMethod: expense.paymentMethod,
+            isReimbursable: expense.isReimbursable,
+            status: expense.status,
+            createdAt: expense.createdAt.toISOString(),
+            updatedAt: expense.updatedAt.toISOString(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -382,7 +408,7 @@ export class ExpenseController {
         data: statistics,
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -420,7 +446,7 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -431,11 +457,21 @@ export class ExpenseController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, expenseId } = request.params;
 
       const expense = await this.approveExpenseHandler.handle({
         expenseId,
         workspaceId,
+        approverId: userId,
       });
 
       return reply.status(200).send({
@@ -449,22 +485,35 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async rejectExpense(
     request: FastifyRequest<{
       Params: { workspaceId: string; expenseId: string };
+      Body?: { reason?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, expenseId } = request.params;
+      const reason = (request.body as { reason?: string })?.reason;
 
       const expense = await this.rejectExpenseHandler.handle({
         expenseId,
         workspaceId,
+        rejecterId: userId,
+        reason,
       });
 
       return reply.status(200).send({
@@ -478,7 +527,7 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -489,11 +538,21 @@ export class ExpenseController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, expenseId } = request.params;
 
       const expense = await this.reimburseExpenseHandler.handle({
         expenseId,
         workspaceId,
+        processedBy: userId,
       });
 
       return reply.status(200).send({
@@ -507,7 +566,7 @@ export class ExpenseController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 }

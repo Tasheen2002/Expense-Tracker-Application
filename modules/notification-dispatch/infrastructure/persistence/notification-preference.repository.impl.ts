@@ -17,7 +17,7 @@ export class NotificationPreferenceRepositoryImpl implements INotificationPrefer
 
   async save(preference: NotificationPreference): Promise<void> {
     const id = preference.getId().getValue();
-    const typeSettings = preference["props"].typeSettings;
+    const typeSettings = preference.getTypeSettings();
 
     const data = {
       userId: preference.getUserId().getValue(),

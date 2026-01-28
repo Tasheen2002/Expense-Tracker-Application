@@ -69,6 +69,19 @@ export class ForecastRepositoryImpl implements ForecastRepository {
     });
   }
 
+  async deleteWithItems(id: ForecastId): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Delete all forecast items first
+      await tx.forecastItem.deleteMany({
+        where: { forecastId: id.getValue() },
+      });
+      // Then delete the forecast
+      await tx.forecast.delete({
+        where: { id: id.getValue() },
+      });
+    });
+  }
+
   async findByName(planId: PlanId, name: string): Promise<Forecast | null> {
     const raw = await this.prisma.forecast.findFirst({
       where: {

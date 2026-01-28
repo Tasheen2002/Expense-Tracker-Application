@@ -89,7 +89,12 @@ export class BudgetPlanController {
 
   async list(
     req: FastifyRequest<{
-      Querystring: { workspaceId: string; status?: string };
+      Querystring: {
+        workspaceId: string;
+        status?: string;
+        limit?: string;
+        offset?: string;
+      };
     }>,
     reply: FastifyReply,
   ) {
@@ -99,10 +104,21 @@ export class BudgetPlanController {
     }
     const query = new ListBudgetPlansQuery(
       req.query.workspaceId,
-      req.query.status as PlanStatus, // Casting for simplicity, schema validation handles enum check if used
+      req.query.status as PlanStatus,
+      req.query.limit ? parseInt(req.query.limit) : 50,
+      req.query.offset ? parseInt(req.query.offset) : 0,
     );
     const result = await this.listHandler.handle(query);
-    return reply.send(result);
+
+    return reply.send({
+      items: result.items, // Or map if serialization needed
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      },
+    });
   }
 
   async delete(
