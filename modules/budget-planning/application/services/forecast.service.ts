@@ -3,6 +3,7 @@ import { ForecastRepository } from "../../domain/repositories/forecast.repositor
 import { ForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
+import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
 import { ForecastItem } from "../../domain/entities/forecast-item.entity";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
@@ -83,10 +84,7 @@ export class ForecastService {
     amount?: number;
     notes?: string;
   }): Promise<ForecastItem> {
-    const itemId =
-      require("../../domain/value-objects/forecast-item-id").ForecastItemId.fromString(
-        params.itemId,
-      );
+    const itemId = ForecastItemId.fromString(params.itemId);
     const item = await this.forecastItemRepository.findById(itemId);
 
     if (!item) {
@@ -104,10 +102,7 @@ export class ForecastService {
   }
 
   async deleteForecastItem(itemId: string): Promise<void> {
-    const id =
-      require("../../domain/value-objects/forecast-item-id").ForecastItemId.fromString(
-        itemId,
-      );
+    const id = ForecastItemId.fromString(itemId);
     await this.forecastItemRepository.delete(id);
   }
 
@@ -137,8 +132,7 @@ export class ForecastService {
       throw new ForecastNotFoundError(id);
     }
 
-    // Cascade delete items first (though database cascade might handle this, explicit is safer for domain logic)
-    await this.forecastItemRepository.deleteByForecastId(forecastId);
-    await this.forecastRepository.delete(forecastId);
+    // Use transactional delete to ensure data integrity
+    await this.forecastRepository.deleteWithItems(forecastId);
   }
 }
