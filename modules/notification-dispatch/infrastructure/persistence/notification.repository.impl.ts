@@ -18,6 +18,10 @@ import { NotificationType } from "../../domain/enums/notification-type.enum";
 import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
 import { NotificationPriority } from "../../domain/enums/notification-priority.enum";
 import { NotificationStatus } from "../../domain/enums/notification-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class NotificationRepositoryImpl implements INotificationRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -80,19 +84,32 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async findByRecipient(
     recipientId: UserId,
     workspaceId: WorkspaceId,
-    options?: { limit?: number; offset?: number },
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: {
-        recipientId: recipientId.getValue(),
-        workspaceId: workspaceId.getValue(),
-      },
-      orderBy: { createdAt: "desc" },
-      take: options?.limit || 50,
-      skip: options?.offset || 0,
-    });
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const where = {
+      recipientId: recipientId.getValue(),
+      workspaceId: workspaceId.getValue(),
+    };
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
 
-    return records.map((record) => this.toDomain(record));
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toDomain(record)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async countUnread(
