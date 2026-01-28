@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ExpenseAllocationController } from "../controllers/expense-allocation.controller";
+import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
 
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
@@ -11,7 +12,8 @@ export async function expenseAllocationRoutes(
     {
       schema: {
         tags: ["Cost Allocation - Expense Allocations"],
-        description: "Allocate expense to departments, cost centers, or projects",
+        description:
+          "Allocate expense to departments, cost centers, or projects",
         params: {
           type: "object",
           required: ["workspaceId", "expenseId"],
@@ -43,6 +45,13 @@ export async function expenseAllocationRoutes(
           },
         },
       },
+      preHandler: async (request, reply) => {
+        await workspaceAuthorizationMiddleware(
+          request as any,
+          reply,
+          (fastify as any).prisma,
+        );
+      },
     },
     (request, reply) => controller.allocateExpense(request as any, reply),
   );
@@ -62,6 +71,13 @@ export async function expenseAllocationRoutes(
             expenseId: { type: "string", format: "uuid" },
           },
         },
+      },
+      preHandler: async (request, reply) => {
+        await workspaceAuthorizationMiddleware(
+          request as any,
+          reply,
+          (fastify as any).prisma,
+        );
       },
     },
     (request, reply) => controller.getAllocations(request as any, reply),
@@ -83,6 +99,13 @@ export async function expenseAllocationRoutes(
           },
         },
       },
+      preHandler: async (request, reply) => {
+        await workspaceAuthorizationMiddleware(
+          request as any,
+          reply,
+          (fastify as any).prisma,
+        );
+      },
     },
     (request, reply) => controller.deleteAllocations(request as any, reply),
   );
@@ -101,6 +124,13 @@ export async function expenseAllocationRoutes(
             workspaceId: { type: "string", format: "uuid" },
           },
         },
+      },
+      preHandler: async (request, reply) => {
+        await workspaceAuthorizationMiddleware(
+          request as any,
+          reply,
+          (fastify as any).prisma,
+        );
       },
     },
     (request, reply) => controller.getAllocationSummary(request as any, reply),
