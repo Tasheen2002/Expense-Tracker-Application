@@ -74,6 +74,10 @@ export class NotificationPreference {
     return this.props.pushEnabled;
   }
 
+  getTypeSettings(): Record<string, TypeSettingValue> {
+    return this.props.typeSettings;
+  }
+
   isChannelEnabledForType(
     type: NotificationType,
     channel: "email" | "inApp" | "push",
