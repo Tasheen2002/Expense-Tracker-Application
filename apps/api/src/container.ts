@@ -171,6 +171,10 @@ import { ExpenseAllocationRepositoryImpl } from "../../../modules/cost-allocatio
 import { AllocationManagementService } from "../../../modules/cost-allocation/application/services/allocation-management.service";
 import { ExpenseAllocationService } from "../../../modules/cost-allocation/application/services/expense-allocation.service";
 
+// Cost Allocation Module - Adapters
+import { PrismaExpenseLookupAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-expense-lookup.adapter";
+import { PrismaAllocationSummaryAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-allocation-summary.adapter";
+
 // Cost Allocation Module - Command Handlers
 import { CreateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/create-department.command";
 import { UpdateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/update-department.command";
@@ -768,9 +772,12 @@ export class Container {
       costCenterRepository,
       projectRepository,
     );
+    const expenseLookupAdapter = new PrismaExpenseLookupAdapter(prisma);
+    const allocationSummaryAdapter = new PrismaAllocationSummaryAdapter(prisma);
     const expenseAllocationService = new ExpenseAllocationService(
       expenseAllocationRepository,
-      prisma,
+      expenseLookupAdapter,
+      allocationSummaryAdapter,
     );
 
     this.services.set(
