@@ -1,10 +1,12 @@
+import { InvalidPlanPeriodError } from "../errors/budget-planning.errors";
+
 export class PlanPeriod {
   private constructor(
     private readonly startDate: Date,
     private readonly endDate: Date,
   ) {
     if (endDate <= startDate) {
-      throw new Error("End date must be after start date");
+      throw new InvalidPlanPeriodError("End date must be after start date");
     }
   }
 
