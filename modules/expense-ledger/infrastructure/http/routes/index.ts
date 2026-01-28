@@ -5,11 +5,13 @@ import { categoryRoutes } from "./category.routes";
 import { tagRoutes } from "./tag.routes";
 import { attachmentRoutes } from "./attachment.routes";
 import { recurringExpenseRoutes } from "./recurring-expense.routes";
+import { expenseSplitRoutes } from "./expense-split.routes";
 import { ExpenseController } from "../controllers/expense.controller";
 import { CategoryController } from "../controllers/category.controller";
 import { TagController } from "../controllers/tag.controller";
 import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
+import { ExpenseSplitController } from "../controllers/expense-split.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
 
 export async function registerExpenseLedgerRoutes(
@@ -20,6 +22,7 @@ export async function registerExpenseLedgerRoutes(
     tagController: TagController;
     attachmentController: AttachmentController;
     recurringExpenseController: RecurringExpenseController;
+    expenseSplitController: ExpenseSplitController;
   },
   prisma: PrismaClient,
 ) {
@@ -38,6 +41,7 @@ export async function registerExpenseLedgerRoutes(
         instance,
         controllers.recurringExpenseController,
       );
+      await expenseSplitRoutes(instance, controllers.expenseSplitController);
     },
     { prefix: "/api/v1" },
   );
