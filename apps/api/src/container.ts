@@ -240,6 +240,37 @@ import { CategoryRuleController } from "../../../modules/categorization-rules/in
 import { RuleExecutionController } from "../../../modules/categorization-rules/infrastructure/http/controllers/rule-execution.controller";
 import { CategorySuggestionController } from "../../../modules/categorization-rules/infrastructure/http/controllers/category-suggestion.controller";
 
+// Budget Planning Module - Repositories
+import { BudgetPlanRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/budget-plan.repository.impl";
+import { ForecastRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/forecast.repository.impl";
+import { ScenarioRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/scenario.repository.impl";
+import { ForecastItemRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/forecast-item.repository.impl";
+
+// Budget Planning Module - Services
+import { BudgetPlanService } from "../../../modules/budget-planning/application/services/budget-plan.service";
+import { ForecastService } from "../../../modules/budget-planning/application/services/forecast.service";
+import { ScenarioService } from "../../../modules/budget-planning/application/services/scenario.service";
+
+// Budget Planning Module - Command Handlers
+import { CreateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/create-budget-plan.command";
+import { UpdateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/update-budget-plan.command";
+import { ActivateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/activate-budget-plan.command";
+import { CreateForecastHandler } from "../../../modules/budget-planning/application/commands/create-forecast.command";
+import { AddForecastItemHandler } from "../../../modules/budget-planning/application/commands/add-forecast-item.command";
+import { CreateScenarioHandler } from "../../../modules/budget-planning/application/commands/create-scenario.command";
+
+// Budget Planning Module - Query Handlers
+import { GetBudgetPlanHandler } from "../../../modules/budget-planning/application/queries/get-budget-plan.query";
+import { ListBudgetPlansHandler } from "../../../modules/budget-planning/application/queries/list-budget-plans.query";
+import { GetForecastHandler } from "../../../modules/budget-planning/application/queries/get-forecast.query";
+import { ListForecastsHandler } from "../../../modules/budget-planning/application/queries/list-forecasts.query";
+import { GetForecastItemsHandler } from "../../../modules/budget-planning/application/queries/get-forecast-items.query";
+
+// Budget Planning Module - Controllers
+import { BudgetPlanController } from "../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller";
+import { ForecastController } from "../../../modules/budget-planning/infrastructure/http/controllers/forecast.controller";
+import { ScenarioController } from "../../../modules/budget-planning/infrastructure/http/controllers/scenario.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -719,12 +750,17 @@ export class Container {
     const departmentRepository = new DepartmentRepositoryImpl(prisma);
     const costCenterRepository = new CostCenterRepositoryImpl(prisma);
     const projectRepository = new ProjectRepositoryImpl(prisma);
-    const expenseAllocationRepository = new ExpenseAllocationRepositoryImpl(prisma);
+    const expenseAllocationRepository = new ExpenseAllocationRepositoryImpl(
+      prisma,
+    );
 
     this.services.set("departmentRepository", departmentRepository);
     this.services.set("costCenterRepository", costCenterRepository);
     this.services.set("projectRepository", projectRepository);
-    this.services.set("expenseAllocationRepository", expenseAllocationRepository);
+    this.services.set(
+      "expenseAllocationRepository",
+      expenseAllocationRepository,
+    );
 
     // Services
     const allocationManagementService = new AllocationManagementService(
@@ -737,34 +773,81 @@ export class Container {
       prisma,
     );
 
-    this.services.set("allocationManagementService", allocationManagementService);
+    this.services.set(
+      "allocationManagementService",
+      allocationManagementService,
+    );
     this.services.set("expenseAllocationService", expenseAllocationService);
 
     // Command Handlers
-    const createDepartmentHandler = new CreateDepartmentHandler(allocationManagementService);
-    const updateDepartmentHandler = new UpdateDepartmentHandler(allocationManagementService);
-    const deleteDepartmentHandler = new DeleteDepartmentHandler(allocationManagementService);
-    const activateDepartmentHandler = new ActivateDepartmentHandler(allocationManagementService);
-    const createCostCenterHandler = new CreateCostCenterHandler(allocationManagementService);
-    const updateCostCenterHandler = new UpdateCostCenterHandler(allocationManagementService);
-    const deleteCostCenterHandler = new DeleteCostCenterHandler(allocationManagementService);
-    const activateCostCenterHandler = new ActivateCostCenterHandler(allocationManagementService);
-    const createProjectHandler = new CreateProjectHandler(allocationManagementService);
-    const updateProjectHandler = new UpdateProjectHandler(allocationManagementService);
-    const deleteProjectHandler = new DeleteProjectHandler(allocationManagementService);
-    const activateProjectHandler = new ActivateProjectHandler(allocationManagementService);
-    const allocateExpenseHandler = new AllocateExpenseHandler(expenseAllocationService);
-    const deleteAllocationsHandler = new DeleteAllocationsHandler(expenseAllocationService);
+    const createDepartmentHandler = new CreateDepartmentHandler(
+      allocationManagementService,
+    );
+    const updateDepartmentHandler = new UpdateDepartmentHandler(
+      allocationManagementService,
+    );
+    const deleteDepartmentHandler = new DeleteDepartmentHandler(
+      allocationManagementService,
+    );
+    const activateDepartmentHandler = new ActivateDepartmentHandler(
+      allocationManagementService,
+    );
+    const createCostCenterHandler = new CreateCostCenterHandler(
+      allocationManagementService,
+    );
+    const updateCostCenterHandler = new UpdateCostCenterHandler(
+      allocationManagementService,
+    );
+    const deleteCostCenterHandler = new DeleteCostCenterHandler(
+      allocationManagementService,
+    );
+    const activateCostCenterHandler = new ActivateCostCenterHandler(
+      allocationManagementService,
+    );
+    const createProjectHandler = new CreateProjectHandler(
+      allocationManagementService,
+    );
+    const updateProjectHandler = new UpdateProjectHandler(
+      allocationManagementService,
+    );
+    const deleteProjectHandler = new DeleteProjectHandler(
+      allocationManagementService,
+    );
+    const activateProjectHandler = new ActivateProjectHandler(
+      allocationManagementService,
+    );
+    const allocateExpenseHandler = new AllocateExpenseHandler(
+      expenseAllocationService,
+    );
+    const deleteAllocationsHandler = new DeleteAllocationsHandler(
+      expenseAllocationService,
+    );
 
     // Query Handlers
-    const getDepartmentHandler = new GetDepartmentHandler(allocationManagementService);
-    const listDepartmentsHandler = new ListDepartmentsHandler(allocationManagementService);
-    const getCostCenterHandler = new GetCostCenterHandler(allocationManagementService);
-    const listCostCentersHandler = new ListCostCentersHandler(allocationManagementService);
-    const getProjectHandler = new GetProjectHandler(allocationManagementService);
-    const listProjectsHandler = new ListProjectsHandler(allocationManagementService);
-    const getExpenseAllocationsHandler = new GetExpenseAllocationsHandler(expenseAllocationService);
-    const getAllocationSummaryHandler = new GetAllocationSummaryHandler(expenseAllocationService);
+    const getDepartmentHandler = new GetDepartmentHandler(
+      allocationManagementService,
+    );
+    const listDepartmentsHandler = new ListDepartmentsHandler(
+      allocationManagementService,
+    );
+    const getCostCenterHandler = new GetCostCenterHandler(
+      allocationManagementService,
+    );
+    const listCostCentersHandler = new ListCostCentersHandler(
+      allocationManagementService,
+    );
+    const getProjectHandler = new GetProjectHandler(
+      allocationManagementService,
+    );
+    const listProjectsHandler = new ListProjectsHandler(
+      allocationManagementService,
+    );
+    const getExpenseAllocationsHandler = new GetExpenseAllocationsHandler(
+      expenseAllocationService,
+    );
+    const getAllocationSummaryHandler = new GetAllocationSummaryHandler(
+      expenseAllocationService,
+    );
 
     // Controllers
     const allocationManagementController = new AllocationManagementController(
@@ -794,8 +877,94 @@ export class Container {
       getAllocationSummaryHandler,
     );
 
-    this.services.set("allocationManagementController", allocationManagementController);
-    this.services.set("expenseAllocationController", expenseAllocationController);
+    this.services.set(
+      "allocationManagementController",
+      allocationManagementController,
+    );
+    this.services.set(
+      "expenseAllocationController",
+      expenseAllocationController,
+    );
+
+    // ============================================
+    // Budget Planning Module
+    // ============================================
+
+    // Repositories
+    const budgetPlanRepository = new BudgetPlanRepositoryImpl(prisma);
+    const forecastRepository = new ForecastRepositoryImpl(prisma);
+    const scenarioRepository = new ScenarioRepositoryImpl(prisma);
+    const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
+
+    this.services.set("budgetPlanRepository", budgetPlanRepository);
+    this.services.set("forecastRepository", forecastRepository);
+    this.services.set("scenarioRepository", scenarioRepository);
+    this.services.set("forecastItemRepository", forecastItemRepository);
+
+    // Services
+    const budgetPlanService = new BudgetPlanService(budgetPlanRepository);
+    const forecastService = new ForecastService(
+      forecastRepository,
+      forecastItemRepository,
+    );
+    const scenarioService = new ScenarioService(scenarioRepository);
+
+    this.services.set("budgetPlanService", budgetPlanService);
+    this.services.set("forecastService", forecastService);
+    this.services.set("scenarioService", scenarioService);
+
+    // Command Handlers
+    const createBudgetPlanHandler = new CreateBudgetPlanHandler(
+      budgetPlanService,
+    );
+    const updateBudgetPlanHandler = new UpdateBudgetPlanHandler(
+      budgetPlanService,
+    );
+    const activateBudgetPlanHandler = new ActivateBudgetPlanHandler(
+      budgetPlanService,
+    );
+    const createForecastHandler = new CreateForecastHandler(forecastService);
+    const addForecastItemHandler = new AddForecastItemHandler(forecastService);
+    const createScenarioHandler = new CreateScenarioHandler(scenarioService);
+
+    // Query Handlers
+    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
+    const listBudgetPlansHandler = new ListBudgetPlansHandler(
+      budgetPlanService,
+    );
+    const getForecastHandler = new GetForecastHandler(forecastService);
+    const listForecastsHandler = new ListForecastsHandler(forecastService);
+    const getForecastItemsHandler = new GetForecastItemsHandler(
+      forecastService,
+    );
+
+    // Controllers
+    const budgetPlanController = new BudgetPlanController(
+      createBudgetPlanHandler,
+      updateBudgetPlanHandler,
+      activateBudgetPlanHandler,
+      getBudgetPlanHandler,
+      listBudgetPlansHandler,
+      budgetPlanService,
+    );
+
+    const forecastController = new ForecastController(
+      createForecastHandler,
+      addForecastItemHandler,
+      getForecastHandler,
+      listForecastsHandler,
+      getForecastItemsHandler,
+      forecastService,
+    );
+
+    const scenarioController = new ScenarioController(
+      createScenarioHandler,
+      scenarioService,
+    );
+
+    this.services.set("budgetPlanController", budgetPlanController);
+    this.services.set("forecastController", forecastController);
+    this.services.set("scenarioController", scenarioController);
 
     // ============================================
     // Categorization Rules Module
@@ -804,20 +973,25 @@ export class Container {
     // Repositories
     const categoryRuleRepository = new PrismaCategoryRuleRepository(prisma);
     const ruleExecutionRepository = new PrismaRuleExecutionRepository(prisma);
-    const categorySuggestionRepository = new PrismaCategorySuggestionRepository(prisma);
+    const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
+      prisma,
+    );
 
     this.services.set("categoryRuleRepository", categoryRuleRepository);
     this.services.set("ruleExecutionRepository", ruleExecutionRepository);
-    this.services.set("categorySuggestionRepository", categorySuggestionRepository);
+    this.services.set(
+      "categorySuggestionRepository",
+      categorySuggestionRepository,
+    );
 
     // Services
     const categoryRuleService = new CategoryRuleService(categoryRuleRepository);
     const ruleExecutionService = new RuleExecutionService(
       categoryRuleRepository,
-      ruleExecutionRepository
+      ruleExecutionRepository,
     );
     const categorySuggestionService = new CategorySuggestionService(
-      categorySuggestionRepository
+      categorySuggestionRepository,
     );
 
     this.services.set("categoryRuleService", categoryRuleService);
@@ -825,28 +999,61 @@ export class Container {
     this.services.set("categorySuggestionService", categorySuggestionService);
 
     // Command Handlers
-    const createCategoryRuleHandler = new CreateCategoryRuleHandler(categoryRuleService);
-    const updateCategoryRuleHandler = new UpdateCategoryRuleHandler(categoryRuleService);
-    const deleteCategoryRuleHandler = new DeleteCategoryRuleHandler(categoryRuleService);
-    const activateCategoryRuleHandler = new ActivateCategoryRuleHandler(categoryRuleService);
-    const deactivateCategoryRuleHandler = new DeactivateCategoryRuleHandler(categoryRuleService);
+    const createCategoryRuleHandler = new CreateCategoryRuleHandler(
+      categoryRuleService,
+    );
+    const updateCategoryRuleHandler = new UpdateCategoryRuleHandler(
+      categoryRuleService,
+    );
+    const deleteCategoryRuleHandler = new DeleteCategoryRuleHandler(
+      categoryRuleService,
+    );
+    const activateCategoryRuleHandler = new ActivateCategoryRuleHandler(
+      categoryRuleService,
+    );
+    const deactivateCategoryRuleHandler = new DeactivateCategoryRuleHandler(
+      categoryRuleService,
+    );
     const evaluateRulesHandler = new EvaluateRulesHandler(ruleExecutionService);
-    const createSuggestionHandler = new CreateSuggestionHandler(categorySuggestionService);
-    const acceptSuggestionHandler = new AcceptSuggestionHandler(categorySuggestionService);
-    const rejectSuggestionHandler = new RejectSuggestionHandler(categorySuggestionService);
-    const deleteSuggestionHandler = new DeleteSuggestionHandler(categorySuggestionService);
+    const createSuggestionHandler = new CreateSuggestionHandler(
+      categorySuggestionService,
+    );
+    const acceptSuggestionHandler = new AcceptSuggestionHandler(
+      categorySuggestionService,
+    );
+    const rejectSuggestionHandler = new RejectSuggestionHandler(
+      categorySuggestionService,
+    );
+    const deleteSuggestionHandler = new DeleteSuggestionHandler(
+      categorySuggestionService,
+    );
 
     // Query Handlers
     const getRuleByIdHandler = new GetRuleByIdHandler(categoryRuleService);
-    const getRulesByWorkspaceHandler = new GetRulesByWorkspaceHandler(categoryRuleService);
-    const getActiveRulesByWorkspaceHandler = new GetActiveRulesByWorkspaceHandler(categoryRuleService);
-    const getExecutionsByRuleHandler = new GetExecutionsByRuleHandler(ruleExecutionService);
-    const getExecutionsByExpenseHandler = new GetExecutionsByExpenseHandler(ruleExecutionService);
-    const getExecutionsByWorkspaceHandler = new GetExecutionsByWorkspaceHandler(ruleExecutionService);
-    const getSuggestionByIdHandler = new GetSuggestionByIdHandler(categorySuggestionService);
-    const getSuggestionsByExpenseHandler = new GetSuggestionsByExpenseHandler(categorySuggestionService);
-    const getPendingSuggestionsByWorkspaceHandler = new GetPendingSuggestionsByWorkspaceHandler(categorySuggestionService);
-    const getSuggestionsByWorkspaceHandler = new GetSuggestionsByWorkspaceHandler(categorySuggestionService);
+    const getRulesByWorkspaceHandler = new GetRulesByWorkspaceHandler(
+      categoryRuleService,
+    );
+    const getActiveRulesByWorkspaceHandler =
+      new GetActiveRulesByWorkspaceHandler(categoryRuleService);
+    const getExecutionsByRuleHandler = new GetExecutionsByRuleHandler(
+      ruleExecutionService,
+    );
+    const getExecutionsByExpenseHandler = new GetExecutionsByExpenseHandler(
+      ruleExecutionService,
+    );
+    const getExecutionsByWorkspaceHandler = new GetExecutionsByWorkspaceHandler(
+      ruleExecutionService,
+    );
+    const getSuggestionByIdHandler = new GetSuggestionByIdHandler(
+      categorySuggestionService,
+    );
+    const getSuggestionsByExpenseHandler = new GetSuggestionsByExpenseHandler(
+      categorySuggestionService,
+    );
+    const getPendingSuggestionsByWorkspaceHandler =
+      new GetPendingSuggestionsByWorkspaceHandler(categorySuggestionService);
+    const getSuggestionsByWorkspaceHandler =
+      new GetSuggestionsByWorkspaceHandler(categorySuggestionService);
 
     // Controllers
     const categoryRuleController = new CategoryRuleController(
@@ -858,12 +1065,12 @@ export class Container {
       getRuleByIdHandler,
       getRulesByWorkspaceHandler,
       getActiveRulesByWorkspaceHandler,
-      getExecutionsByRuleHandler
+      getExecutionsByRuleHandler,
     );
     const ruleExecutionController = new RuleExecutionController(
       evaluateRulesHandler,
       getExecutionsByExpenseHandler,
-      getExecutionsByWorkspaceHandler
+      getExecutionsByWorkspaceHandler,
     );
     const categorySuggestionController = new CategorySuggestionController(
       createSuggestionHandler,
@@ -873,12 +1080,15 @@ export class Container {
       getSuggestionByIdHandler,
       getSuggestionsByExpenseHandler,
       getPendingSuggestionsByWorkspaceHandler,
-      getSuggestionsByWorkspaceHandler
+      getSuggestionsByWorkspaceHandler,
     );
 
     this.services.set("categoryRuleController", categoryRuleController);
     this.services.set("ruleExecutionController", ruleExecutionController);
-    this.services.set("categorySuggestionController", categorySuggestionController);
+    this.services.set(
+      "categorySuggestionController",
+      categorySuggestionController,
+    );
 
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
@@ -1023,6 +1233,20 @@ export class Container {
       categorySuggestionController: this.get<CategorySuggestionController>(
         "categorySuggestionController",
       ),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all budget-planning services for route registration
+   */
+  getBudgetPlanningServices() {
+    return {
+      budgetPlanController: this.get<BudgetPlanController>(
+        "budgetPlanController",
+      ),
+      forecastController: this.get<ForecastController>("forecastController"),
+      scenarioController: this.get<ScenarioController>("scenarioController"),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }
