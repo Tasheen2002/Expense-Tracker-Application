@@ -1,0 +1,6 @@
+export enum ForecastType {
+  BASELINE = "BASELINE",
+  OPTIMISTIC = "OPTIMISTIC",
+  PESSIMISTIC = "PESSIMISTIC",
+  CUSTOM = "CUSTOM",
+}
