@@ -2,7 +2,6 @@ import { FastifyInstance } from "fastify";
 import { BudgetController } from "../controllers/budget.controller";
 
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
-import { FastifyInstance } from "fastify";
 
 export async function budgetRoutes(
   fastify: FastifyInstance,
