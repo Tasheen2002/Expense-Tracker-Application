@@ -1,6 +1,3 @@
-// Expense Tracker - Multi-Schema Prisma Configuration
-// Following your e-commerce pattern with schema-per-module
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["multiSchema"]
@@ -9,23 +6,18 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity_workspace", "expense_ledger", "budget_management", "receipt_vault", "approval_workflow", "notification_dispatch", "cost_allocation"]
+  schemas  = ["approval_workflow", "budget_management", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "receipt_vault"]
 }
 
-// ============================================
-// SCHEMA: identity_workspace
-// ============================================
-
 model UserAccount {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  fullName      String?  @map("full_name")
-  isActive      Boolean  @default(true) @map("is_active")
-  emailVerified Boolean  @default(false) @map("email_verified")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
+  id                   String                @id @default(uuid())
+  email                String                @unique
+  passwordHash         String                @map("password_hash")
+  fullName             String?               @map("full_name")
+  isActive             Boolean               @default(true) @map("is_active")
+  emailVerified        Boolean               @default(false) @map("email_verified")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
   workspaceMemberships WorkspaceMembership[]
 
   @@map("user_account")
@@ -33,30 +25,28 @@ model UserAccount {
 }
 
 model Workspace {
-  id        String   @id @default(uuid())
+  id        String                @id @default(uuid())
   name      String
-  slug      String   @unique
-  ownerId   String   @map("owner_id")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  members WorkspaceMembership[]
+  slug      String                @unique
+  ownerId   String                @map("owner_id")
+  isActive  Boolean               @default(true) @map("is_active")
+  createdAt DateTime              @default(now()) @map("created_at")
+  updatedAt DateTime              @updatedAt @map("updated_at")
+  members   WorkspaceMembership[]
 
   @@map("workspace")
   @@schema("identity_workspace")
 }
 
 model WorkspaceMembership {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  workspaceId String   @map("workspace_id")
-  role        String // owner, admin, member
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  user      UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  workspaceId String      @map("workspace_id")
+  role        String
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  user        UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
   @@index([workspaceId])
@@ -93,9 +83,517 @@ model AuthSession {
   @@schema("identity_workspace")
 }
 
-// ============================================
-// SCHEMA: expense_ledger
-// ============================================
+model Expense {
+  id             String        @id @default(uuid()) @db.Uuid
+  workspaceId    String        @map("workspace_id") @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  title          String        @db.VarChar(255)
+  description    String?
+  amount         Decimal       @db.Decimal(12, 2)
+  currency       String        @default("USD") @db.VarChar(3)
+  expenseDate    DateTime      @map("expense_date") @db.Date
+  categoryId     String?       @map("category_id") @db.Uuid
+  merchant       String?       @db.VarChar(255)
+  paymentMethod  PaymentMethod @default(CASH) @map("payment_method")
+  isReimbursable Boolean       @default(false) @map("is_reimbursable")
+  status         ExpenseStatus @default(SUBMITTED)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  attachments    Attachment[]
+  tags           ExpenseTag[]
+  category       Category?     @relation(fields: [categoryId], references: [id])
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([expenseDate])
+  @@index([status])
+  @@index([createdAt])
+  @@map("expenses")
+  @@schema("expense_ledger")
+}
+
+model Category {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  name        String    @db.VarChar(100)
+  description String?   @db.VarChar(500)
+  color       String?   @db.VarChar(7)
+  icon        String?   @db.VarChar(50)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  expenses    Expense[]
+
+  @@unique([workspaceId, name], map: "category_workspace_name")
+  @@index([workspaceId])
+  @@map("categories")
+  @@schema("expense_ledger")
+}
+
+model Tag {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
+  name        String       @db.VarChar(50)
+  color       String?      @db.VarChar(7)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  expenses    ExpenseTag[]
+
+  @@unique([workspaceId, name], map: "tag_workspace_name")
+  @@index([workspaceId])
+  @@map("tags")
+  @@schema("expense_ledger")
+}
+
+model ExpenseTag {
+  expenseId String   @map("expense_id") @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expense   Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([expenseId, tagId])
+  @@index([expenseId])
+  @@index([tagId])
+  @@map("expense_tags")
+  @@schema("expense_ledger")
+}
+
+model Attachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  expenseId  String   @map("expense_id") @db.Uuid
+  fileName   String   @map("file_name") @db.VarChar(255)
+  filePath   String   @map("file_path") @db.VarChar(500)
+  fileSize   Int      @map("file_size")
+  mimeType   String   @map("mime_type") @db.VarChar(100)
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+  @@map("attachments")
+  @@schema("expense_ledger")
+}
+
+model RecurringExpense {
+  id          String              @id @default(uuid()) @db.Uuid
+  workspaceId String              @map("workspace_id") @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  frequency   RecurrenceFrequency
+  interval    Int                 @default(1)
+  startDate   DateTime            @map("start_date") @db.Date
+  endDate     DateTime?           @map("end_date") @db.Date
+  nextRunDate DateTime            @map("next_run_date") @db.Date
+  status      RecurrenceStatus    @default(ACTIVE)
+  template    Json
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([nextRunDate])
+  @@index([status])
+  @@map("recurring_expenses")
+  @@schema("expense_ledger")
+}
+
+model Budget {
+  id             String             @id @default(uuid()) @db.Uuid
+  workspaceId    String             @map("workspace_id") @db.Uuid
+  name           String             @db.VarChar(255)
+  description    String?
+  totalAmount    Decimal            @map("total_amount") @db.Decimal(12, 2)
+  currency       String             @default("USD") @db.VarChar(3)
+  periodType     BudgetPeriodType   @map("period_type")
+  startDate      DateTime           @map("start_date") @db.Date
+  endDate        DateTime           @map("end_date") @db.Date
+  status         BudgetStatus       @default(DRAFT)
+  createdBy      String             @map("created_by") @db.Uuid
+  isRecurring    Boolean            @default(false) @map("is_recurring")
+  rolloverUnused Boolean            @default(false) @map("rollover_unused")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  alerts         BudgetAlert[]
+  allocations    BudgetAllocation[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([createdBy])
+  @@map("budgets")
+  @@schema("budget_management")
+}
+
+model BudgetAllocation {
+  id              String   @id @default(uuid()) @db.Uuid
+  budgetId        String   @map("budget_id") @db.Uuid
+  categoryId      String?  @map("category_id") @db.Uuid
+  allocatedAmount Decimal  @map("allocated_amount") @db.Decimal(12, 2)
+  spentAmount     Decimal  @default(0) @map("spent_amount") @db.Decimal(12, 2)
+  description     String?  @db.VarChar(500)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  budget          Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetId, categoryId], map: "budget_category_allocation")
+  @@index([budgetId])
+  @@index([categoryId])
+  @@map("budget_allocations")
+  @@schema("budget_management")
+}
+
+model BudgetAlert {
+  id              String     @id @default(uuid()) @db.Uuid
+  budgetId        String     @map("budget_id") @db.Uuid
+  allocationId    String?    @map("allocation_id") @db.Uuid
+  level           AlertLevel
+  threshold       Decimal    @db.Decimal(5, 2)
+  currentSpent    Decimal    @map("current_spent") @db.Decimal(12, 2)
+  allocatedAmount Decimal    @map("allocated_amount") @db.Decimal(12, 2)
+  message         String
+  isRead          Boolean    @default(false) @map("is_read")
+  notifiedAt      DateTime?  @map("notified_at") @db.Timestamptz(6)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  budget          Budget     @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  @@index([budgetId])
+  @@index([allocationId])
+  @@index([level])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("budget_alerts")
+  @@schema("budget_management")
+}
+
+model SpendingLimit {
+  id          String           @id @default(uuid()) @db.Uuid
+  workspaceId String           @map("workspace_id") @db.Uuid
+  userId      String?          @map("user_id") @db.Uuid
+  categoryId  String?          @map("category_id") @db.Uuid
+  limitAmount Decimal          @map("limit_amount") @db.Decimal(12, 2)
+  currency    String           @default("USD") @db.VarChar(3)
+  periodType  BudgetPeriodType @map("period_type")
+  isActive    Boolean          @default(true) @map("is_active")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([categoryId])
+  @@index([isActive])
+  @@map("spending_limits")
+  @@schema("budget_management")
+}
+
+model Receipt {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  expenseId       String?          @map("expense_id") @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  fileName        String           @map("file_name") @db.VarChar(255)
+  originalName    String           @map("original_name") @db.VarChar(255)
+  filePath        String           @map("file_path") @db.VarChar(1000)
+  fileSize        Int              @map("file_size")
+  mimeType        String           @map("mime_type") @db.VarChar(100)
+  fileHash        String?          @map("file_hash") @db.VarChar(64)
+  receiptType     ReceiptType      @default(EXPENSE) @map("receipt_type")
+  status          ReceiptStatus    @default(PENDING)
+  storageProvider StorageProvider  @default(LOCAL) @map("storage_provider")
+  storageBucket   String?          @map("storage_bucket") @db.VarChar(255)
+  storageKey      String?          @map("storage_key") @db.VarChar(500)
+  thumbnailPath   String?          @map("thumbnail_path") @db.VarChar(1000)
+  ocrText         String?          @map("ocr_text")
+  ocrConfidence   Decimal?         @map("ocr_confidence") @db.Decimal(5, 2)
+  processedAt     DateTime?        @map("processed_at") @db.Timestamptz(6)
+  failureReason   String?          @map("failure_reason")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  metadata        ReceiptMetadata?
+  tags            ReceiptTag[]
+
+  @@index([workspaceId])
+  @@index([expenseId])
+  @@index([userId])
+  @@index([status])
+  @@index([receiptType])
+  @@index([createdAt])
+  @@index([fileHash])
+  @@map("receipts")
+  @@schema("receipt_vault")
+}
+
+model ReceiptMetadata {
+  id              String    @id @default(uuid()) @db.Uuid
+  receiptId       String    @unique @map("receipt_id") @db.Uuid
+  merchantName    String?   @map("merchant_name") @db.VarChar(255)
+  merchantAddress String?   @map("merchant_address")
+  merchantPhone   String?   @map("merchant_phone") @db.VarChar(50)
+  merchantTaxId   String?   @map("merchant_tax_id") @db.VarChar(50)
+  transactionDate DateTime? @map("transaction_date") @db.Date
+  transactionTime String?   @map("transaction_time") @db.VarChar(20)
+  subtotal        Decimal?  @db.Decimal(12, 2)
+  taxAmount       Decimal?  @map("tax_amount") @db.Decimal(12, 2)
+  tipAmount       Decimal?  @map("tip_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  currency        String?   @db.VarChar(3)
+  paymentMethod   String?   @map("payment_method") @db.VarChar(50)
+  lastFourDigits  String?   @map("last_four_digits") @db.VarChar(4)
+  invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
+  poNumber        String?   @map("po_number") @db.VarChar(100)
+  lineItems       Json?     @map("line_items")
+  notes           String?
+  customFields    Json?     @map("custom_fields")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  receipt         Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([merchantName])
+  @@index([transactionDate])
+  @@index([invoiceNumber])
+  @@map("receipt_metadata")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTagDefinition {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
+  name        String       @db.VarChar(50)
+  color       String?      @db.VarChar(7)
+  description String?      @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  receipts    ReceiptTag[]
+
+  @@unique([workspaceId, name], map: "receipt_tag_workspace_name")
+  @@index([workspaceId])
+  @@map("receipt_tag_definitions")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTag {
+  receiptId String               @map("receipt_id") @db.Uuid
+  tagId     String               @map("tag_id") @db.Uuid
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  receipt   Receipt              @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  tag       ReceiptTagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([receiptId, tagId])
+  @@index([receiptId])
+  @@index([tagId])
+  @@map("receipt_tags")
+  @@schema("receipt_vault")
+}
+
+model ApprovalChain {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @map("workspace_id") @db.Uuid
+  name             String            @db.VarChar(100)
+  description      String?
+  minAmount        Decimal?          @map("min_amount") @db.Decimal(12, 2)
+  maxAmount        Decimal?          @map("max_amount") @db.Decimal(12, 2)
+  categoryIds      String[]          @map("category_ids") @db.Uuid
+  requiresReceipt  Boolean           @default(false) @map("requires_receipt")
+  approverSequence String[]          @map("approver_sequence") @db.Uuid
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workflows        ExpenseWorkflow[]
+
+  @@index([workspaceId])
+  @@index([isActive])
+  @@map("approval_chains")
+  @@schema("approval_workflow")
+}
+
+model ExpenseWorkflow {
+  id                String         @id @default(uuid()) @db.Uuid
+  expenseId         String         @unique @map("expense_id") @db.Uuid
+  workspaceId       String         @map("workspace_id") @db.Uuid
+  userId            String         @map("user_id") @db.Uuid
+  chainId           String         @map("chain_id") @db.Uuid
+  status            WorkflowStatus @default(PENDING)
+  currentStepNumber Int            @default(1) @map("current_step_number")
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  completedAt       DateTime?      @map("completed_at") @db.Timestamptz(6)
+  steps             ApprovalStep[]
+  chain             ApprovalChain  @relation(fields: [chainId], references: [id])
+
+  @@index([expenseId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([chainId])
+  @@index([status])
+  @@map("expense_workflows")
+  @@schema("approval_workflow")
+}
+
+model ApprovalStep {
+  id          String          @id @default(uuid()) @db.Uuid
+  workflowId  String          @map("workflow_id") @db.Uuid
+  stepNumber  Int             @map("step_number")
+  approverId  String          @map("approver_id") @db.Uuid
+  delegatedTo String?         @map("delegated_to") @db.Uuid
+  status      ApprovalStatus  @default(PENDING)
+  comments    String?
+  processedAt DateTime?       @map("processed_at") @db.Timestamptz(6)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  workflow    ExpenseWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, stepNumber])
+  @@index([workflowId])
+  @@index([approverId])
+  @@index([delegatedTo])
+  @@index([status])
+  @@map("approval_steps")
+  @@schema("approval_workflow")
+}
+
+model Notification {
+  id          String               @id @default(uuid()) @db.Uuid
+  workspaceId String               @map("workspace_id") @db.Uuid
+  recipientId String               @map("recipient_id") @db.Uuid
+  type        NotificationType
+  channel     NotificationChannel
+  priority    NotificationPriority @default(MEDIUM)
+  title       String               @db.VarChar(255)
+  content     String
+  data        Json?
+  status      NotificationStatus   @default(PENDING)
+  error       String?
+  readAt      DateTime?            @map("read_at") @db.Timestamptz(6)
+  sentAt      DateTime?            @map("sent_at") @db.Timestamptz(6)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([recipientId, workspaceId])
+  @@index([recipientId, readAt])
+  @@index([status])
+  @@index([type])
+  @@map("notifications")
+  @@schema("notification_dispatch")
+}
+
+model NotificationTemplate {
+  id              String              @id @default(uuid()) @db.Uuid
+  workspaceId     String?             @map("workspace_id") @db.Uuid
+  name            String              @db.VarChar(100)
+  type            NotificationType
+  channel         NotificationChannel
+  subjectTemplate String              @map("subject_template") @db.VarChar(255)
+  bodyTemplate    String              @map("body_template")
+  isActive        Boolean             @default(true) @map("is_active")
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([workspaceId, type, channel])
+  @@index([type, channel, isActive])
+  @@map("notification_templates")
+  @@schema("notification_dispatch")
+}
+
+model NotificationPreference {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  emailEnabled Boolean  @default(true) @map("email_enabled")
+  inAppEnabled Boolean  @default(true) @map("in_app_enabled")
+  pushEnabled  Boolean  @default(false) @map("push_enabled")
+  typeSettings Json?    @map("type_settings")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@map("notification_preferences")
+  @@schema("notification_dispatch")
+}
+
+model Department {
+  id                 String              @id @default(uuid()) @db.Uuid
+  workspaceId        String              @map("workspace_id") @db.Uuid
+  name               String              @db.VarChar(100)
+  code               String              @db.VarChar(20)
+  description        String?
+  managerId          String?             @map("manager_id") @db.Uuid
+  parentDepartmentId String?             @map("parent_department_id") @db.Uuid
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  parent             Department?         @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
+  children           Department[]        @relation("DepartmentHierarchy")
+  allocations        ExpenseAllocation[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId])
+  @@map("departments")
+  @@schema("cost_allocation")
+}
+
+model CostCenter {
+  id          String              @id @default(uuid()) @db.Uuid
+  workspaceId String              @map("workspace_id") @db.Uuid
+  name        String              @db.VarChar(100)
+  code        String              @db.VarChar(20)
+  description String?
+  isActive    Boolean             @default(true) @map("is_active")
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  allocations ExpenseAllocation[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId])
+  @@map("cost_centers")
+  @@schema("cost_allocation")
+}
+
+model Project {
+  id          String              @id @default(uuid()) @db.Uuid
+  workspaceId String              @map("workspace_id") @db.Uuid
+  name        String              @db.VarChar(100)
+  code        String              @db.VarChar(20)
+  description String?
+  startDate   DateTime            @map("start_date") @db.Date
+  endDate     DateTime?           @map("end_date") @db.Date
+  managerId   String?             @map("manager_id") @db.Uuid
+  isActive    Boolean             @default(true) @map("is_active")
+  budget      Decimal?            @db.Decimal(12, 2)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  allocations ExpenseAllocation[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId])
+  @@map("projects")
+  @@schema("cost_allocation")
+}
+
+model ExpenseAllocation {
+  id           String      @id @default(uuid()) @db.Uuid
+  workspaceId  String      @map("workspace_id") @db.Uuid
+  expenseId    String      @map("expense_id") @db.Uuid
+  amount       Decimal     @db.Decimal(12, 2)
+  percentage   Decimal?    @db.Decimal(5, 2)
+  departmentId String?     @map("department_id") @db.Uuid
+  costCenterId String?     @map("cost_center_id") @db.Uuid
+  projectId    String?     @map("project_id") @db.Uuid
+  notes        String?
+  createdBy    String      @map("created_by") @db.Uuid
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  costCenter   CostCenter? @relation(fields: [costCenterId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  project      Project?    @relation(fields: [projectId], references: [id])
+
+  @@index([expenseId])
+  @@index([workspaceId])
+  @@index([departmentId])
+  @@index([costCenterId])
+  @@index([projectId])
+  @@index([createdBy])
+  @@map("expense_allocations")
+  @@schema("cost_allocation")
+}
 
 enum PaymentMethod {
   CASH
@@ -119,103 +617,6 @@ enum ExpenseStatus {
   @@schema("expense_ledger")
 }
 
-model Expense {
-  id             String        @id @default(uuid()) @db.Uuid
-  workspaceId    String        @map("workspace_id") @db.Uuid
-  userId         String        @map("user_id") @db.Uuid
-  title          String        @db.VarChar(255)
-  description    String?       @db.Text
-  amount         Decimal       @db.Decimal(12, 2)
-  currency       String        @default("USD") @db.VarChar(3)
-  expenseDate    DateTime      @map("expense_date") @db.Date
-  categoryId     String?       @map("category_id") @db.Uuid
-  merchant       String?       @db.VarChar(255)
-  paymentMethod  PaymentMethod @default(CASH) @map("payment_method")
-  isReimbursable Boolean       @default(false) @map("is_reimbursable")
-  status         ExpenseStatus @default(SUBMITTED)
-  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz
-
-  category    Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  tags        ExpenseTag[]
-  attachments Attachment[]
-
-  @@index([workspaceId])
-  @@index([userId])
-  @@index([categoryId])
-  @@index([expenseDate])
-  @@index([status])
-  @@index([createdAt])
-  @@map("expenses")
-  @@schema("expense_ledger")
-}
-
-model Category {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  name        String   @db.VarChar(100)
-  description String?  @db.VarChar(500)
-  color       String?  @db.VarChar(7)
-  icon        String?  @db.VarChar(50)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  expenses Expense[]
-
-  @@unique([workspaceId, name], map: "category_workspace_name")
-  @@index([workspaceId])
-  @@map("categories")
-  @@schema("expense_ledger")
-}
-
-model Tag {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  name        String   @db.VarChar(50)
-  color       String?  @db.VarChar(7)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  expenses ExpenseTag[]
-
-  @@unique([workspaceId, name], map: "tag_workspace_name")
-  @@index([workspaceId])
-  @@map("tags")
-  @@schema("expense_ledger")
-}
-
-model ExpenseTag {
-  expenseId String   @map("expense_id") @db.Uuid
-  tagId     String   @map("tag_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([expenseId, tagId])
-  @@index([expenseId])
-  @@index([tagId])
-  @@map("expense_tags")
-  @@schema("expense_ledger")
-}
-
-model Attachment {
-  id         String   @id @default(uuid()) @db.Uuid
-  expenseId  String   @map("expense_id") @db.Uuid
-  fileName   String   @map("file_name") @db.VarChar(255)
-  filePath   String   @map("file_path") @db.VarChar(500)
-  fileSize   Int      @map("file_size")
-  mimeType   String   @map("mime_type") @db.VarChar(100)
-  uploadedBy String   @map("uploaded_by") @db.Uuid
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-
-  @@index([expenseId])
-  @@map("attachments")
-  @@schema("expense_ledger")
-}
-
 enum RecurrenceFrequency {
   DAILY
   WEEKLY
@@ -232,32 +633,6 @@ enum RecurrenceStatus {
 
   @@schema("expense_ledger")
 }
-
-model RecurringExpense {
-  id          String              @id @default(uuid()) @db.Uuid
-  workspaceId String              @map("workspace_id") @db.Uuid
-  userId      String              @map("user_id") @db.Uuid
-  frequency   RecurrenceFrequency
-  interval    Int                 @default(1)
-  startDate   DateTime            @map("start_date") @db.Date
-  endDate     DateTime?           @map("end_date") @db.Date
-  nextRunDate DateTime            @map("next_run_date") @db.Date
-  status      RecurrenceStatus    @default(ACTIVE)
-  template    Json // Stores { title, amount, currency, categoryId, etc. }
-  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([workspaceId])
-  @@index([userId])
-  @@index([nextRunDate])
-  @@index([status])
-  @@map("recurring_expenses")
-  @@schema("expense_ledger")
-}
-
-// ============================================
-// SCHEMA: budget_management
-// ============================================
 
 enum BudgetPeriodType {
   MONTHLY
@@ -278,275 +653,43 @@ enum BudgetStatus {
 }
 
 enum AlertLevel {
-  INFO // 50% threshold
-  WARNING // 75% threshold
-  CRITICAL // 90% threshold
-  EXCEEDED // 100% threshold
+  INFO
+  WARNING
+  CRITICAL
+  EXCEEDED
 
   @@schema("budget_management")
 }
-
-model Budget {
-  id             String           @id @default(uuid()) @db.Uuid
-  workspaceId    String           @map("workspace_id") @db.Uuid
-  name           String           @db.VarChar(255)
-  description    String?          @db.Text
-  totalAmount    Decimal          @map("total_amount") @db.Decimal(12, 2)
-  currency       String           @default("USD") @db.VarChar(3)
-  periodType     BudgetPeriodType @map("period_type")
-  startDate      DateTime         @map("start_date") @db.Date
-  endDate        DateTime         @map("end_date") @db.Date
-  status         BudgetStatus     @default(DRAFT)
-  createdBy      String           @map("created_by") @db.Uuid
-  isRecurring    Boolean          @default(false) @map("is_recurring")
-  rolloverUnused Boolean          @default(false) @map("rollover_unused")
-  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz
-
-  allocations BudgetAllocation[]
-  alerts      BudgetAlert[]
-
-  @@index([workspaceId])
-  @@index([status])
-  @@index([startDate, endDate])
-  @@index([createdBy])
-  @@map("budgets")
-  @@schema("budget_management")
-}
-
-model BudgetAllocation {
-  id              String   @id @default(uuid()) @db.Uuid
-  budgetId        String   @map("budget_id") @db.Uuid
-  categoryId      String?  @map("category_id") @db.Uuid
-  allocatedAmount Decimal  @map("allocated_amount") @db.Decimal(12, 2)
-  spentAmount     Decimal  @default(0) @map("spent_amount") @db.Decimal(12, 2)
-  description     String?  @db.VarChar(500)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-
-  @@unique([budgetId, categoryId], map: "budget_category_allocation")
-  @@index([budgetId])
-  @@index([categoryId])
-  @@map("budget_allocations")
-  @@schema("budget_management")
-}
-
-model BudgetAlert {
-  id              String     @id @default(uuid()) @db.Uuid
-  budgetId        String     @map("budget_id") @db.Uuid
-  allocationId    String?    @map("allocation_id") @db.Uuid
-  level           AlertLevel
-  threshold       Decimal    @db.Decimal(5, 2) // Percentage (0-100)
-  currentSpent    Decimal    @map("current_spent") @db.Decimal(12, 2)
-  allocatedAmount Decimal    @map("allocated_amount") @db.Decimal(12, 2)
-  message         String     @db.Text
-  isRead          Boolean    @default(false) @map("is_read")
-  notifiedAt      DateTime?  @map("notified_at") @db.Timestamptz
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz
-
-  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
-
-  @@index([budgetId])
-  @@index([allocationId])
-  @@index([level])
-  @@index([isRead])
-  @@index([createdAt])
-  @@map("budget_alerts")
-  @@schema("budget_management")
-}
-
-model SpendingLimit {
-  id          String           @id @default(uuid()) @db.Uuid
-  workspaceId String           @map("workspace_id") @db.Uuid
-  userId      String?          @map("user_id") @db.Uuid // null = applies to all users
-  categoryId  String?          @map("category_id") @db.Uuid // null = applies to all categories
-  limitAmount Decimal          @map("limit_amount") @db.Decimal(12, 2)
-  currency    String           @default("USD") @db.VarChar(3)
-  periodType  BudgetPeriodType @map("period_type")
-  isActive    Boolean          @default(true) @map("is_active")
-  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@index([workspaceId])
-  @@index([userId])
-  @@index([categoryId])
-  @@index([isActive])
-  @@map("spending_limits")
-  @@schema("budget_management")
-}
-
-// ============================================
-// SCHEMA: receipt_vault
-// ============================================
 
 enum ReceiptStatus {
-  PENDING // Uploaded, waiting for processing
-  PROCESSING // OCR in progress
-  PROCESSED // OCR completed successfully
-  FAILED // OCR or processing failed
-  VERIFIED // Manually verified by user
-  REJECTED // Rejected as invalid
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  VERIFIED
+  REJECTED
 
   @@schema("receipt_vault")
 }
 
 enum ReceiptType {
-  EXPENSE // General expense receipt
-  INVOICE // Invoice document
-  BILL // Utility or service bill
-  TICKET // Travel ticket (flight, train, etc.)
-  OTHER // Other types
+  EXPENSE
+  INVOICE
+  BILL
+  TICKET
+  OTHER
 
   @@schema("receipt_vault")
 }
 
 enum StorageProvider {
-  LOCAL // Local file system
-  S3 // AWS S3
-  AZURE_BLOB // Azure Blob Storage
-  GCS // Google Cloud Storage
+  LOCAL
+  S3
+  AZURE_BLOB
+  GCS
 
   @@schema("receipt_vault")
 }
-
-model Receipt {
-  id          String  @id @default(uuid()) @db.Uuid
-  workspaceId String  @map("workspace_id") @db.Uuid
-  expenseId   String? @map("expense_id") @db.Uuid // Can be null if not yet linked
-  userId      String  @map("user_id") @db.Uuid // Who uploaded the receipt
-
-  // File information
-  fileName     String  @map("file_name") @db.VarChar(255)
-  originalName String  @map("original_name") @db.VarChar(255)
-  filePath     String  @map("file_path") @db.VarChar(1000) // Storage path/URL
-  fileSize     Int     @map("file_size") // Size in bytes
-  mimeType     String  @map("mime_type") @db.VarChar(100)
-  fileHash     String? @map("file_hash") @db.VarChar(64) // SHA-256 for deduplication
-
-  // Receipt metadata
-  receiptType ReceiptType   @default(EXPENSE) @map("receipt_type")
-  status      ReceiptStatus @default(PENDING)
-
-  // Storage information
-  storageProvider StorageProvider @default(LOCAL) @map("storage_provider")
-  storageBucket   String?         @map("storage_bucket") @db.VarChar(255) // For cloud storage
-  storageKey      String?         @map("storage_key") @db.VarChar(500) // Cloud storage key
-
-  // Thumbnail
-  thumbnailPath String? @map("thumbnail_path") @db.VarChar(1000)
-
-  // OCR and extracted data (optional)
-  ocrText       String?  @map("ocr_text") @db.Text // Full OCR extracted text
-  ocrConfidence Decimal? @map("ocr_confidence") @db.Decimal(5, 2) // 0-100
-
-  // Processing metadata
-  processedAt   DateTime? @map("processed_at") @db.Timestamptz
-  failureReason String?   @map("failure_reason") @db.Text
-
-  // Audit
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz // Soft delete
-
-  // Relations
-  metadata ReceiptMetadata?
-  tags     ReceiptTag[]
-
-  @@index([workspaceId])
-  @@index([expenseId])
-  @@index([userId])
-  @@index([status])
-  @@index([receiptType])
-  @@index([createdAt])
-  @@index([fileHash])
-  @@map("receipts")
-  @@schema("receipt_vault")
-}
-
-model ReceiptMetadata {
-  id        String @id @default(uuid()) @db.Uuid
-  receiptId String @unique @map("receipt_id") @db.Uuid
-
-  // Extracted financial data
-  merchantName    String? @map("merchant_name") @db.VarChar(255)
-  merchantAddress String? @map("merchant_address") @db.Text
-  merchantPhone   String? @map("merchant_phone") @db.VarChar(50)
-  merchantTaxId   String? @map("merchant_tax_id") @db.VarChar(50) // VAT/Tax ID
-
-  // Transaction details
-  transactionDate DateTime? @map("transaction_date") @db.Date
-  transactionTime String?   @map("transaction_time") @db.VarChar(20)
-
-  // Financial amounts
-  subtotal    Decimal? @db.Decimal(12, 2)
-  taxAmount   Decimal? @map("tax_amount") @db.Decimal(12, 2)
-  tipAmount   Decimal? @map("tip_amount") @db.Decimal(12, 2)
-  totalAmount Decimal? @map("total_amount") @db.Decimal(12, 2)
-  currency    String?  @db.VarChar(3)
-
-  // Payment details
-  paymentMethod  String? @map("payment_method") @db.VarChar(50)
-  lastFourDigits String? @map("last_four_digits") @db.VarChar(4) // Last 4 digits of card
-
-  // Invoice specific
-  invoiceNumber String? @map("invoice_number") @db.VarChar(100)
-  poNumber      String? @map("po_number") @db.VarChar(100) // Purchase Order Number
-
-  // Line items (stored as JSON array)
-  lineItems Json? @map("line_items") // [{ description, quantity, unitPrice, amount }]
-
-  // Additional data
-  notes        String? @db.Text
-  customFields Json?   @map("custom_fields") // Flexible key-value pairs
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-
-  @@index([merchantName])
-  @@index([transactionDate])
-  @@index([invoiceNumber])
-  @@map("receipt_metadata")
-  @@schema("receipt_vault")
-}
-
-model ReceiptTagDefinition {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  name        String   @db.VarChar(50)
-  color       String?  @db.VarChar(7) // Hex color code
-  description String?  @db.VarChar(255)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  receipts ReceiptTag[]
-
-  @@unique([workspaceId, name], map: "receipt_tag_workspace_name")
-  @@index([workspaceId])
-  @@map("receipt_tag_definitions")
-  @@schema("receipt_vault")
-}
-
-model ReceiptTag {
-  receiptId String   @map("receipt_id") @db.Uuid
-  tagId     String   @map("tag_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  receipt Receipt              @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-  tag     ReceiptTagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([receiptId, tagId])
-  @@index([receiptId])
-  @@index([tagId])
-  @@map("receipt_tags")
-  @@schema("receipt_vault")
-}
-
-// ============================================
-// SCHEMA: approval_workflow
-// ============================================
 
 enum ApprovalStatus {
   PENDING       @map("pending")
@@ -567,79 +710,6 @@ enum WorkflowStatus {
 
   @@schema("approval_workflow")
 }
-
-model ApprovalChain {
-  id               String   @id @default(uuid()) @db.Uuid
-  workspaceId      String   @map("workspace_id") @db.Uuid
-  name             String   @db.VarChar(100)
-  description      String?  @db.Text
-  minAmount        Decimal? @map("min_amount") @db.Decimal(12, 2)
-  maxAmount        Decimal? @map("max_amount") @db.Decimal(12, 2)
-  categoryIds      String[] @map("category_ids") @db.Uuid
-  requiresReceipt  Boolean  @default(false) @map("requires_receipt")
-  approverSequence String[] @map("approver_sequence") @db.Uuid
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  workflows ExpenseWorkflow[]
-
-  @@index([workspaceId])
-  @@index([isActive])
-  @@map("approval_chains")
-  @@schema("approval_workflow")
-}
-
-model ExpenseWorkflow {
-  id                String         @id @default(uuid()) @db.Uuid
-  expenseId         String         @unique @map("expense_id") @db.Uuid
-  workspaceId       String         @map("workspace_id") @db.Uuid
-  userId            String         @map("user_id") @db.Uuid
-  chainId           String         @map("chain_id") @db.Uuid
-  status            WorkflowStatus @default(PENDING)
-  currentStepNumber Int            @default(1) @map("current_step_number")
-  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  completedAt       DateTime?      @map("completed_at") @db.Timestamptz
-
-  chain ApprovalChain  @relation(fields: [chainId], references: [id])
-  steps ApprovalStep[]
-
-  @@index([expenseId])
-  @@index([workspaceId])
-  @@index([userId])
-  @@index([chainId])
-  @@index([status])
-  @@map("expense_workflows")
-  @@schema("approval_workflow")
-}
-
-model ApprovalStep {
-  id          String         @id @default(uuid()) @db.Uuid
-  workflowId  String         @map("workflow_id") @db.Uuid
-  stepNumber  Int            @map("step_number")
-  approverId  String         @map("approver_id") @db.Uuid
-  delegatedTo String?        @map("delegated_to") @db.Uuid
-  status      ApprovalStatus @default(PENDING)
-  comments    String?        @db.Text
-  processedAt DateTime?      @map("processed_at") @db.Timestamptz
-  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-
-  workflow ExpenseWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@unique([workflowId, stepNumber])
-  @@index([workflowId])
-  @@index([approverId])
-  @@index([delegatedTo])
-  @@index([status])
-  @@map("approval_steps")
-  @@schema("approval_workflow")
-}
-
-// ============================================
-// SCHEMA: notification_dispatch
-// ============================================
 
 enum NotificationType {
   EXPENSE_APPROVED
@@ -678,160 +748,63 @@ enum NotificationStatus {
   @@schema("notification_dispatch")
 }
 
-model Notification {
-  id          String               @id @default(uuid()) @db.Uuid
-  workspaceId String               @map("workspace_id") @db.Uuid
-  recipientId String               @map("recipient_id") @db.Uuid
-  type        NotificationType
-  channel     NotificationChannel
-  priority    NotificationPriority @default(MEDIUM)
-  title       String               @db.VarChar(255)
-  content     String               @db.Text
-  data        Json?
-  status      NotificationStatus   @default(PENDING)
-  error       String?              @db.Text
-  readAt      DateTime?            @map("read_at") @db.Timestamptz
-  sentAt      DateTime?            @map("sent_at") @db.Timestamptz
-  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+// ==========================================
+// Categorization Rules Module
+// ==========================================
 
-  @@index([recipientId, workspaceId])
-  @@index([recipientId, readAt])
-  @@index([status])
-  @@index([type])
-  @@map("notifications")
-  @@schema("notification_dispatch")
+enum RuleConditionType {
+  MERCHANT_CONTAINS
+  MERCHANT_EQUALS
+  AMOUNT_GREATER_THAN
+  AMOUNT_LESS_THAN
+  AMOUNT_EQUALS
+  DESCRIPTION_CONTAINS
+  PAYMENT_METHOD_EQUALS
+
+  @@schema("categorization_rules")
 }
 
-model NotificationTemplate {
-  id              String              @id @default(uuid()) @db.Uuid
-  workspaceId     String?             @map("workspace_id") @db.Uuid
-  name            String              @db.VarChar(100)
-  type            NotificationType
-  channel         NotificationChannel
-  subjectTemplate String              @map("subject_template") @db.VarChar(255)
-  bodyTemplate    String              @map("body_template") @db.Text
-  isActive        Boolean             @default(true) @map("is_active")
-  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+model CategoryRule {
+  id                String            @id @default(uuid()) @db.Uuid
+  workspaceId       String            @map("workspace_id") @db.Uuid
+  name              String            @db.VarChar(100)
+  description       String?           @db.VarChar(500)
+  priority          Int               @default(0)
+  isActive          Boolean           @default(true) @map("is_active")
+  conditionType     RuleConditionType @map("condition_type")
+  conditionValue    String            @map("condition_value") @db.VarChar(255)
+  targetCategoryId  String            @map("target_category_id") @db.Uuid
+  createdBy         String            @map("created_by") @db.Uuid
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@unique([workspaceId, type, channel])
-  @@index([type, channel, isActive])
-  @@map("notification_templates")
-  @@schema("notification_dispatch")
+  @@map("category_rules")
+  @@schema("categorization_rules")
 }
 
-model NotificationPreference {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  workspaceId  String   @map("workspace_id") @db.Uuid
-  emailEnabled Boolean  @default(true) @map("email_enabled")
-  inAppEnabled Boolean  @default(true) @map("in_app_enabled")
-  pushEnabled  Boolean  @default(false) @map("push_enabled")
-  typeSettings Json?    @map("type_settings")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@unique([userId, workspaceId])
-  @@index([userId])
-  @@map("notification_preferences")
-  @@schema("notification_dispatch")
-}
-
-// ============================================
-// SCHEMA: cost_allocation
-// ============================================
-
-model Department {
+model RuleExecution {
   id                 String   @id @default(uuid()) @db.Uuid
+  ruleId             String   @map("rule_id") @db.Uuid
+  expenseId          String   @map("expense_id") @db.Uuid
   workspaceId        String   @map("workspace_id") @db.Uuid
-  name               String   @db.VarChar(100)
-  code               String   @db.VarChar(20) // Removed global @unique
-  description        String?  @db.Text
-  managerId          String?  @map("manager_id") @db.Uuid
-  parentDepartmentId String?  @map("parent_department_id") @db.Uuid
-  isActive           Boolean  @default(true) @map("is_active")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  appliedCategoryId  String   @map("applied_category_id") @db.Uuid
+  executedAt         DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
 
-  parent      Department?         @relation("DepartmentHierarchy", fields: [parentDepartmentId], references: [id])
-  children    Department[]        @relation("DepartmentHierarchy")
-  allocations ExpenseAllocation[]
-
-  @@unique([workspaceId, code]) // Workspace-scoped uniqueness
-  @@index([workspaceId])
-  @@map("departments")
-  @@schema("cost_allocation")
+  @@map("rule_executions")
+  @@schema("categorization_rules")
 }
 
-model CostCenter {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  name        String   @db.VarChar(100)
-  code        String   @db.VarChar(20) // Removed global @unique
-  description String?  @db.Text
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+model CategorySuggestion {
+  id                   String    @id @default(uuid()) @db.Uuid
+  workspaceId          String    @map("workspace_id") @db.Uuid
+  expenseId            String    @map("expense_id") @db.Uuid
+  suggestedCategoryId  String    @map("suggested_category_id") @db.Uuid
+  confidence           Float
+  reason               String?   @db.VarChar(500)
+  isAccepted           Boolean?  @map("is_accepted")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondedAt          DateTime? @map("responded_at") @db.Timestamptz(6)
 
-  allocations ExpenseAllocation[]
-
-  @@unique([workspaceId, code]) // Workspace-scoped uniqueness
-  @@index([workspaceId])
-  @@map("cost_centers")
-  @@schema("cost_allocation")
-}
-
-model Project {
-  id          String    @id @default(uuid()) @db.Uuid
-  workspaceId String    @map("workspace_id") @db.Uuid
-  name        String    @db.VarChar(100)
-  code        String    @db.VarChar(20) // Removed global @unique
-  description String?   @db.Text
-  startDate   DateTime  @map("start_date") @db.Date
-  endDate     DateTime? @map("end_date") @db.Date
-  managerId   String?   @map("manager_id") @db.Uuid
-  isActive    Boolean   @default(true) @map("is_active")
-  budget      Decimal?  @db.Decimal(12, 2)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-
-  allocations ExpenseAllocation[]
-
-  @@unique([workspaceId, code]) // Workspace-scoped uniqueness
-  @@index([workspaceId])
-  @@map("projects")
-  @@schema("cost_allocation")
-}
-
-model ExpenseAllocation {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  expenseId   String   @map("expense_id") @db.Uuid
-  amount      Decimal  @db.Decimal(12, 2)
-  percentage  Decimal? @db.Decimal(5, 2)
-
-  // Targets
-  departmentId String? @map("department_id") @db.Uuid
-  costCenterId String? @map("cost_center_id") @db.Uuid
-  projectId    String? @map("project_id") @db.Uuid
-
-  // Audit & Metadata
-  notes     String? @db.Text
-  createdBy String  @map("created_by") @db.Uuid
-
-  department Department? @relation(fields: [departmentId], references: [id])
-  costCenter CostCenter? @relation(fields: [costCenterId], references: [id])
-  project    Project?    @relation(fields: [projectId], references: [id])
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  @@index([expenseId])
-  @@index([workspaceId])
-  @@index([departmentId])
-  @@index([costCenterId])
-  @@index([projectId])
-  @@index([createdBy])
-  @@map("expense_allocations")
-  @@schema("cost_allocation")
+  @@map("category_suggestions")
+  @@schema("categorization_rules")
 }

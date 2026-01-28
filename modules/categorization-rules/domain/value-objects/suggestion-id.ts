@@ -1,21 +1,21 @@
 import { randomUUID } from 'crypto'
 
-export class ProjectId {
+export class SuggestionId {
   private constructor(private readonly value: string) {
     if (!value || value.trim() === '') {
-      throw new Error('ProjectId cannot be empty')
+      throw new Error('SuggestionId cannot be empty')
     }
-    if (!ProjectId.isValid(value)) {
-      throw new Error('ProjectId must be a valid UUID v4')
+    if (!SuggestionId.isValid(value)) {
+      throw new Error('SuggestionId must be a valid UUID v4')
     }
   }
 
-  static create(): ProjectId {
-    return new ProjectId(randomUUID())
+  static create(): SuggestionId {
+    return new SuggestionId(randomUUID())
   }
 
-  static fromString(id: string): ProjectId {
-    return new ProjectId(id)
+  static fromString(id: string): SuggestionId {
+    return new SuggestionId(id)
   }
 
   static isValid(id: string): boolean {
@@ -27,7 +27,7 @@ export class ProjectId {
     return this.value
   }
 
-  equals(other: ProjectId): boolean {
+  equals(other: SuggestionId): boolean {
     return this.value === other.value
   }
 

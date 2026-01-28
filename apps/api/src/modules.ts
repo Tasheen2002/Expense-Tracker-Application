@@ -7,6 +7,7 @@ import { registerReceiptVaultRoutes } from "../../../modules/receipt-vault/infra
 import { registerApprovalWorkflowRoutes } from "../../../modules/approval-workflow/infrastructure/http/routes/index";
 import { registerNotificationDispatchRoutes } from "../../../modules/notification-dispatch/infrastructure/http/routes/index";
 import { registerCostAllocationRoutes } from "../../../modules/cost-allocation/infrastructure/http/routes/index";
+import { registerCategorizationRulesRoutes } from "../../../modules/categorization-rules/infrastructure/http/routes/main";
 
 export default fp(
   async (fastify) => {
@@ -81,6 +82,17 @@ export default fp(
       costAllocationServices.prisma,
     );
     fastify.log.info("✓ Cost Allocation module registered");
+
+    // ============================================
+    // Categorization Rules Module
+    // ============================================
+    const categorizationRulesServices = container.getCategorizationRulesServices();
+    await registerCategorizationRulesRoutes(
+      fastify,
+      categorizationRulesServices,
+      categorizationRulesServices.prisma,
+    );
+    fastify.log.info("✓ Categorization Rules module registered");
 
     fastify.log.info("All modules registered successfully");
   },

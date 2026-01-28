@@ -1,40 +1,37 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'crypto'
 
 export class AllocationId {
-  private readonly _value: string;
-
-  private constructor(value: string) {
-    this._value = value;
+  private constructor(private readonly value: string) {
+    if (!value || value.trim() === '') {
+      throw new Error('AllocationId cannot be empty')
+    }
+    if (!AllocationId.isValid(value)) {
+      throw new Error('AllocationId must be a valid UUID v4')
+    }
   }
 
   static create(): AllocationId {
-    return new AllocationId(randomUUID());
+    return new AllocationId(randomUUID())
   }
 
-  static fromString(value: string): AllocationId {
-    if (!value || typeof value !== 'string') {
-      throw new Error('Allocation ID must be a non-empty string');
-    }
-
-    // Basic UUID format validation
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(value)) {
-      throw new Error('Allocation ID must be a valid UUID');
-    }
-
-    return new AllocationId(value);
+  static fromString(id: string): AllocationId {
+    return new AllocationId(id)
   }
 
-  get value(): string {
-    return this._value;
+  static isValid(id: string): boolean {
+    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidV4Regex.test(id)
+  }
+
+  getValue(): string {
+    return this.value
   }
 
   equals(other: AllocationId): boolean {
-    if (!other) return false;
-    return this._value === other._value;
+    return this.value === other.value
   }
 
   toString(): string {
-    return this._value;
+    return this.value
   }
 }
