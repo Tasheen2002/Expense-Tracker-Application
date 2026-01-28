@@ -8,6 +8,7 @@ import { registerApprovalWorkflowRoutes } from "../../../modules/approval-workfl
 import { registerNotificationDispatchRoutes } from "../../../modules/notification-dispatch/infrastructure/http/routes/index";
 import { registerCostAllocationRoutes } from "../../../modules/cost-allocation/infrastructure/http/routes/index";
 import { registerCategorizationRulesRoutes } from "../../../modules/categorization-rules/infrastructure/http/routes/main";
+import { registerBudgetPlanningRoutes } from "../../../modules/budget-planning/infrastructure/http/routes/index";
 
 export default fp(
   async (fastify) => {
@@ -86,13 +87,25 @@ export default fp(
     // ============================================
     // Categorization Rules Module
     // ============================================
-    const categorizationRulesServices = container.getCategorizationRulesServices();
+    const categorizationRulesServices =
+      container.getCategorizationRulesServices();
     await registerCategorizationRulesRoutes(
       fastify,
       categorizationRulesServices,
       categorizationRulesServices.prisma,
     );
     fastify.log.info("✓ Categorization Rules module registered");
+
+    // ============================================
+    // Budget Planning Module
+    // ============================================
+    const budgetPlanningServices = container.getBudgetPlanningServices();
+    await registerBudgetPlanningRoutes(
+      fastify,
+      budgetPlanningServices,
+      budgetPlanningServices.prisma,
+    );
+    fastify.log.info("✓ Budget Planning module registered");
 
     fastify.log.info("All modules registered successfully");
   },
