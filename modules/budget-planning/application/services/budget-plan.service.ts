@@ -5,10 +5,7 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { PlanPeriod } from "../../domain/value-objects/plan-period";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
-import {
-  BudgetPlanNotFoundError,
-  InvalidPlanPeriodError,
-} from "../../domain/errors/budget-planning.errors";
+import { BudgetPlanNotFoundError } from "../../domain/errors/budget-planning.errors";
 
 export class BudgetPlanService {
   constructor(private readonly budgetPlanRepository: BudgetPlanRepository) {}
