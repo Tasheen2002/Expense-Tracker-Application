@@ -1,22 +1,22 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { UploadReceiptHandler } from '../../../application/commands/upload-receipt.command'
-import { LinkReceiptToExpenseHandler } from '../../../application/commands/link-receipt-to-expense.command'
-import { UnlinkReceiptFromExpenseHandler } from '../../../application/commands/unlink-receipt-from-expense.command'
-import { ProcessReceiptHandler } from '../../../application/commands/process-receipt.command'
-import { VerifyReceiptHandler } from '../../../application/commands/verify-receipt.command'
-import { RejectReceiptHandler } from '../../../application/commands/reject-receipt.command'
-import { DeleteReceiptHandler } from '../../../application/commands/delete-receipt.command'
-import { AddReceiptMetadataHandler } from '../../../application/commands/add-receipt-metadata.command'
-import { UpdateReceiptMetadataHandler } from '../../../application/commands/update-receipt-metadata.command'
-import { AddReceiptTagHandler } from '../../../application/commands/add-receipt-tag.command'
-import { RemoveReceiptTagHandler } from '../../../application/commands/remove-receipt-tag.command'
-import { GetReceiptHandler } from '../../../application/queries/get-receipt.query'
-import { ListReceiptsHandler } from '../../../application/queries/list-receipts.query'
-import { GetReceiptsByExpenseHandler } from '../../../application/queries/get-receipts-by-expense.query'
-import { GetReceiptMetadataHandler } from '../../../application/queries/get-receipt-metadata.query'
-import { GetReceiptStatsHandler } from '../../../application/queries/get-receipt-stats.query'
-import { Receipt } from '../../../domain/entities/receipt.entity'
-import { ReceiptMetadata } from '../../../domain/entities/receipt-metadata.entity'
+import { FastifyRequest, FastifyReply } from "fastify";
+import { UploadReceiptHandler } from "../../../application/commands/upload-receipt.command";
+import { LinkReceiptToExpenseHandler } from "../../../application/commands/link-receipt-to-expense.command";
+import { UnlinkReceiptFromExpenseHandler } from "../../../application/commands/unlink-receipt-from-expense.command";
+import { ProcessReceiptHandler } from "../../../application/commands/process-receipt.command";
+import { VerifyReceiptHandler } from "../../../application/commands/verify-receipt.command";
+import { RejectReceiptHandler } from "../../../application/commands/reject-receipt.command";
+import { DeleteReceiptHandler } from "../../../application/commands/delete-receipt.command";
+import { AddReceiptMetadataHandler } from "../../../application/commands/add-receipt-metadata.command";
+import { UpdateReceiptMetadataHandler } from "../../../application/commands/update-receipt-metadata.command";
+import { AddReceiptTagHandler } from "../../../application/commands/add-receipt-tag.command";
+import { RemoveReceiptTagHandler } from "../../../application/commands/remove-receipt-tag.command";
+import { GetReceiptHandler } from "../../../application/queries/get-receipt.query";
+import { ListReceiptsHandler } from "../../../application/queries/list-receipts.query";
+import { GetReceiptsByExpenseHandler } from "../../../application/queries/get-receipts-by-expense.query";
+import { GetReceiptMetadataHandler } from "../../../application/queries/get-receipt-metadata.query";
+import { GetReceiptStatsHandler } from "../../../application/queries/get-receipt-stats.query";
+import { Receipt } from "../../../domain/entities/receipt.entity";
+import { ReceiptMetadata } from "../../../domain/entities/receipt-metadata.entity";
 import type {
   UploadReceiptInput,
   LinkToExpenseInput,
@@ -24,9 +24,12 @@ import type {
   RejectReceiptInput,
   ListReceiptsQuery,
   DeleteReceiptQuery,
-} from '../validation/receipt.schema'
-import type { AddMetadataInput, UpdateMetadataInput } from '../validation/metadata.schema'
-import type { AddTagToReceiptInput } from '../validation/tag.schema'
+} from "../validation/receipt.schema";
+import type {
+  AddMetadataInput,
+  UpdateMetadataInput,
+} from "../validation/metadata.schema";
+import type { AddTagToReceiptInput } from "../validation/tag.schema";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class ReceiptController {
@@ -46,84 +49,87 @@ export class ReceiptController {
     private readonly listReceiptsHandler: ListReceiptsHandler,
     private readonly getReceiptsByExpenseHandler: GetReceiptsByExpenseHandler,
     private readonly getMetadataHandler: GetReceiptMetadataHandler,
-    private readonly getStatsHandler: GetReceiptStatsHandler
+    private readonly getStatsHandler: GetReceiptStatsHandler,
   ) {}
 
   async uploadReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string }
-      Body: UploadReceiptInput
+      Params: { workspaceId: string };
+      Body: UploadReceiptInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const userId = request.user?.userId
+    const userId = request.user?.userId;
     if (!userId) {
       return reply.status(401).send({
         success: false,
         statusCode: 401,
-        message: 'User not authenticated',
-      })
+        message: "User not authenticated",
+      });
     }
 
-    const { workspaceId } = request.params
+    const { workspaceId } = request.params;
 
     try {
       const receipt = await this.uploadReceiptHandler.handle({
         workspaceId,
         userId,
         ...request.body,
-      })
+      });
 
       return reply.status(201).send({
         success: true,
         statusCode: 201,
-        message: 'Receipt uploaded successfully',
+        message: "Receipt uploaded successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
+      Params: { workspaceId: string; receiptId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const { workspaceId, receiptId } = request.params;
 
     try {
-      const receipt = await this.getReceiptHandler.handle({ receiptId, workspaceId })
+      const receipt = await this.getReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+      });
 
       if (!receipt) {
         return reply.status(404).send({
           success: false,
           statusCode: 404,
-          message: 'Receipt not found',
-        })
+          message: "Receipt not found",
+        });
       }
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt retrieved successfully',
+        message: "Receipt retrieved successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listReceipts(
     request: FastifyRequest<{
-      Params: { workspaceId: string }
-      Querystring: ListReceiptsQuery
+      Params: { workspaceId: string };
+      Querystring: ListReceiptsQuery;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId } = request.params
-    const query = request.query
+    const { workspaceId } = request.params;
+    const query = request.query;
 
     try {
       const result = await this.listReceiptsHandler.handle({
@@ -138,103 +144,133 @@ export class ReceiptController {
         toDate: query.toDate,
         page: query.page,
         pageSize: query.pageSize,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipts retrieved successfully',
+        message: "Receipts retrieved successfully",
         data: result.data.map((receipt) => this.serializeReceipt(receipt)),
         pagination: result.pagination,
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getReceiptsByExpense(
     request: FastifyRequest<{
-      Params: { workspaceId: string; expenseId: string }
+      Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, expenseId } = request.params
+    const { workspaceId, expenseId } = request.params;
 
     try {
-      const receipts = await this.getReceiptsByExpenseHandler.handle({ expenseId, workspaceId })
+      const receipts = await this.getReceiptsByExpenseHandler.handle({
+        expenseId,
+        workspaceId,
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipts retrieved successfully',
+        message: "Receipts retrieved successfully",
         data: receipts.map((receipt) => this.serializeReceipt(receipt)),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async linkToExpense(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: LinkToExpenseInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: LinkToExpenseInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
-    const { expenseId } = request.body
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
+    const { expenseId } = request.body;
 
     try {
       const receipt = await this.linkReceiptHandler.handle({
         receiptId,
         expenseId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt linked to expense successfully',
+        message: "Receipt linked to expense successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async unlinkFromExpense(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
+      Params: { workspaceId: string; receiptId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const receipt = await this.unlinkReceiptHandler.handle({
         receiptId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt unlinked from expense successfully',
+        message: "Receipt unlinked from expense successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async processReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: ProcessReceiptInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: ProcessReceiptInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const receipt = await this.processReceiptHandler.handle({
@@ -242,251 +278,319 @@ export class ReceiptController {
         workspaceId,
         ocrText: request.body.ocrText,
         ocrConfidence: request.body.ocrConfidence,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt processed successfully',
+        message: "Receipt processed successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async verifyReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
+      Params: { workspaceId: string; receiptId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const receipt = await this.verifyReceiptHandler.handle({
         receiptId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt verified successfully',
+        message: "Receipt verified successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async rejectReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: RejectReceiptInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: RejectReceiptInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const receipt = await this.rejectReceiptHandler.handle({
         receiptId,
         workspaceId,
         reason: request.body.reason,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt rejected successfully',
+        message: "Receipt rejected successfully",
         data: this.serializeReceipt(receipt),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteReceipt(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Querystring: DeleteReceiptQuery
+      Params: { workspaceId: string; receiptId: string };
+      Querystring: DeleteReceiptQuery;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
-    const { permanent } = request.query
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
+    const { permanent } = request.query;
 
     try {
       await this.deleteReceiptHandler.handle({
         receiptId,
         workspaceId,
         permanent,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: permanent ? 'Receipt permanently deleted' : 'Receipt deleted successfully',
-      })
+        message: permanent
+          ? "Receipt permanently deleted"
+          : "Receipt deleted successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async addMetadata(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: AddMetadataInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: AddMetadataInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const metadata = await this.addMetadataHandler.handle({
         receiptId,
         workspaceId,
         ...request.body,
-      })
+      });
 
       return reply.status(201).send({
         success: true,
         statusCode: 201,
-        message: 'Metadata added successfully',
+        message: "Metadata added successfully",
         data: this.serializeMetadata(metadata),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateMetadata(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: UpdateMetadataInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: UpdateMetadataInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const metadata = await this.updateMetadataHandler.handle({
         receiptId,
         workspaceId,
         ...request.body,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Metadata updated successfully',
+        message: "Metadata updated successfully",
         data: this.serializeMetadata(metadata),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getMetadata(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
+      Params: { workspaceId: string; receiptId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
+    const { workspaceId, receiptId } = request.params;
 
     try {
-      const metadata = await this.getMetadataHandler.handle({ receiptId, workspaceId })
+      const metadata = await this.getMetadataHandler.handle({
+        receiptId,
+        workspaceId,
+      });
 
       if (!metadata) {
         return reply.status(404).send({
           success: false,
           statusCode: 404,
-          message: 'Metadata not found',
-        })
+          message: "Metadata not found",
+        });
       }
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Metadata retrieved successfully',
+        message: "Metadata retrieved successfully",
         data: this.serializeMetadata(metadata),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async addTag(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string }
-      Body: AddTagToReceiptInput
+      Params: { workspaceId: string; receiptId: string };
+      Body: AddTagToReceiptInput;
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId } = request.params
-    const { tagId } = request.body
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId } = request.params;
+    const { tagId } = request.body;
 
     try {
-      await this.addTagHandler.handle({ receiptId, tagId, workspaceId })
+      await this.addTagHandler.handle({ receiptId, tagId, workspaceId });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tag added to receipt successfully',
-      })
+        message: "Tag added to receipt successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async removeTag(
     request: FastifyRequest<{
-      Params: { workspaceId: string; receiptId: string; tagId: string }
+      Params: { workspaceId: string; receiptId: string; tagId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId, receiptId, tagId } = request.params
+    const userId = request.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: "User not authenticated",
+      });
+    }
+
+    const { workspaceId, receiptId, tagId } = request.params;
 
     try {
-      await this.removeTagHandler.handle({ receiptId, tagId, workspaceId })
+      await this.removeTagHandler.handle({ receiptId, tagId, workspaceId });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tag removed from receipt successfully',
-      })
+        message: "Tag removed from receipt successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getStats(
     request: FastifyRequest<{
-      Params: { workspaceId: string }
+      Params: { workspaceId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
-    const { workspaceId } = request.params
+    const { workspaceId } = request.params;
 
     try {
-      const stats = await this.getStatsHandler.handle({ workspaceId })
+      const stats = await this.getStatsHandler.handle({ workspaceId });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Receipt statistics retrieved successfully',
+        message: "Receipt statistics retrieved successfully",
         data: stats,
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   private serializeReceipt(receipt: Receipt) {
-    const fileInfo = receipt.getFileInfo()
-    const storageLocation = receipt.getStorageLocation()
+    const fileInfo = receipt.getFileInfo();
+    const storageLocation = receipt.getStorageLocation();
 
     return {
       receiptId: receipt.getId().getValue(),
@@ -514,7 +618,7 @@ export class ReceiptController {
       createdAt: receipt.getCreatedAt().toISOString(),
       updatedAt: receipt.getUpdatedAt().toISOString(),
       deletedAt: receipt.getDeletedAt()?.toISOString(),
-    }
+    };
   }
 
   private serializeMetadata(metadata: ReceiptMetadata) {
@@ -541,6 +645,6 @@ export class ReceiptController {
       customFields: metadata.getCustomFields(),
       createdAt: metadata.getCreatedAt().toISOString(),
       updatedAt: metadata.getUpdatedAt().toISOString(),
-    }
+    };
   }
 }
