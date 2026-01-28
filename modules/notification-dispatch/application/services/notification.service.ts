@@ -10,8 +10,13 @@ import { NotificationId } from "../../domain/value-objects/notification-id";
 import { UserId, WorkspaceId } from "../../domain/value-objects";
 import {
   NotificationNotFoundError,
-  NotificationTemplateNotFoundError,
+  UnauthorizedNotificationAccessError,
 } from "../../domain/errors/notification.errors";
+import { IChannelProvider } from "../providers/channel-provider.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface SendNotificationParams {
   workspaceId: string;
@@ -26,6 +31,7 @@ export class NotificationService {
     private readonly notificationRepository: INotificationRepository,
     private readonly templateRepository: INotificationTemplateRepository,
     private readonly preferenceRepository: INotificationPreferenceRepository,
+    private readonly emailProvider?: IChannelProvider,
   ) {}
 
   async send(params: SendNotificationParams): Promise<Notification[]> {
@@ -126,12 +132,21 @@ export class NotificationService {
     return sentNotifications;
   }
 
-  async markAsRead(notificationId: string): Promise<Notification> {
+  async markAsRead(
+    notificationId: string,
+    userId: string,
+  ): Promise<Notification> {
     const id = NotificationId.fromString(notificationId);
+    const recipientId = UserId.fromString(userId);
     const notification = await this.notificationRepository.findById(id);
 
     if (!notification) {
       throw new NotificationNotFoundError(notificationId);
+    }
+
+    // Verify the user owns this notification
+    if (!notification.getRecipientId().equals(recipientId)) {
+      throw new UnauthorizedNotificationAccessError(notificationId, userId);
     }
 
     notification.markAsRead();
@@ -157,8 +172,8 @@ export class NotificationService {
   async getNotifications(
     recipientId: string,
     workspaceId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<Notification[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Notification>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
     return this.notificationRepository.findByRecipient(userId, wsId, options);
@@ -221,14 +236,29 @@ export class NotificationService {
     }
   }
 
+  /**
+   * Escape HTML special characters to prevent XSS attacks
+   */
+  private escapeHtml(unsafe: string): string {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   private renderTemplate(
     template: string,
     data: Record<string, unknown>,
   ): string {
     // Simple Mustache-like replacement: {{key}} -> value
+    // XSS PROTECTION: Escape all values before inserting
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       const value = data[key];
-      return value !== undefined ? String(value) : "";
+      if (value === undefined) return "";
+      // Escape HTML to prevent XSS attacks
+      return this.escapeHtml(String(value));
     });
   }
 
@@ -270,11 +300,22 @@ export class NotificationService {
     subject: string,
     body: string,
   ): Promise<void> {
-    // TODO: Integrate with email provider (Nodemailer)
-    // For now, log the email attempt
-    console.log(
-      `[EMAIL] To: ${recipientId}, Subject: ${subject}, Body: ${body.substring(0, 100)}...`,
-    );
-    // Future: Use EmailProvider interface
+    if (!this.emailProvider) {
+      console.warn(
+        `[EMAIL] No email provider configured. Email not sent to: ${recipientId}`,
+      );
+      return;
+    }
+
+    const result = await this.emailProvider.send({
+      recipientId,
+      recipientEmail: recipientId, // TODO: Resolve user email from user service
+      subject,
+      content: body,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || "Failed to send email");
+    }
   }
 }
