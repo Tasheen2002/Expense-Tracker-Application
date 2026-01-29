@@ -1,38 +1,16 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class AllocationId {
-  private constructor(private readonly value: string) {
-    if (!value) {
-      throw new Error('Allocation ID cannot be empty')
-    }
-
-    if (!this.isValidUuid(value)) {
-      throw new Error('Allocation ID must be a valid UUID')
-    }
+export class AllocationId extends UuidId {
+  private constructor(value: string) {
+    super(value, "AllocationId");
   }
 
   static create(): AllocationId {
-    return new AllocationId(randomUUID())
+    return new AllocationId(randomUUID());
   }
 
   static fromString(value: string): AllocationId {
-    return new AllocationId(value)
-  }
-
-  getValue(): string {
-    return this.value
-  }
-
-  equals(other: AllocationId): boolean {
-    return this.value === other.value
-  }
-
-  toString(): string {
-    return this.value
-  }
-
-  private isValidUuid(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    return uuidRegex.test(uuid)
+    return new AllocationId(value);
   }
 }

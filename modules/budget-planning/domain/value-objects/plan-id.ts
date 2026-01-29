@@ -1,13 +1,9 @@
 import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class PlanId {
-  private constructor(private readonly value: string) {
-    if (!value || value.trim() === "") {
-      throw new Error("PlanId cannot be empty");
-    }
-    if (!PlanId.isValid(value)) {
-      throw new Error("PlanId must be a valid UUID v4");
-    }
+export class PlanId extends UuidId {
+  private constructor(value: string) {
+    super(value, "PlanId");
   }
 
   static create(): PlanId {
@@ -16,23 +12,5 @@ export class PlanId {
 
   static fromString(id: string): PlanId {
     return new PlanId(id);
-  }
-
-  static isValid(id: string): boolean {
-    const uuidV4Regex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidV4Regex.test(id);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: PlanId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }

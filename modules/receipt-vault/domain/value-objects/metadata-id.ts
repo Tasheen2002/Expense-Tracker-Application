@@ -1,33 +1,16 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class MetadataId {
-  private constructor(private readonly value: string) {
-    if (!value) {
-      throw new Error('Metadata ID cannot be empty')
-    }
-    if (!this.isValidUuid(value)) {
-      throw new Error('Metadata ID must be a valid UUID')
-    }
+export class MetadataId extends UuidId {
+  private constructor(value: string) {
+    super(value, "MetadataId");
   }
 
   static create(): MetadataId {
-    return new MetadataId(randomUUID())
+    return new MetadataId(randomUUID());
   }
 
-  static fromString(value: string): MetadataId {
-    return new MetadataId(value)
-  }
-
-  getValue(): string {
-    return this.value
-  }
-
-  equals(other: MetadataId): boolean {
-    return this.value === other.value
-  }
-
-  private isValidUuid(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    return uuidRegex.test(uuid)
+  static fromString(id: string): MetadataId {
+    return new MetadataId(id);
   }
 }
