@@ -318,11 +318,11 @@ export class WorkflowController {
 
   private serializeWorkflow(workflow: ExpenseWorkflow) {
     return {
-      workflowId: workflow.getId(),
-      expenseId: workflow.getExpenseId(),
-      workspaceId: workflow.getWorkspaceId(),
-      userId: workflow.getUserId(),
-      chainId: workflow.getChainId(),
+      workflowId: workflow.getId().getValue(),
+      expenseId: workflow.getExpenseId().getValue(),
+      workspaceId: workflow.getWorkspaceId().getValue(),
+      userId: workflow.getUserId().getValue(),
+      chainId: workflow.getChainId()?.getValue(),
       status: workflow.getStatus(),
       currentStepNumber: workflow.getCurrentStepNumber(),
       steps: workflow.getSteps().map((step) => this.serializeStep(step)),
@@ -335,10 +335,10 @@ export class WorkflowController {
   private serializeStep(step: ApprovalStep) {
     return {
       stepId: step.getId().getValue(),
-      workflowId: step.getWorkflowId(),
+      workflowId: step.getWorkflowId().getValue(),
       stepNumber: step.getStepNumber(),
-      approverId: step.getApproverId(),
-      delegatedTo: step.getDelegatedTo(),
+      approverId: step.getApproverId().getValue(),
+      delegatedTo: step.getDelegatedTo()?.getValue(),
       status: step.getStatus(),
       comments: step.getComments(),
       processedAt: step.getProcessedAt()?.toISOString(),
