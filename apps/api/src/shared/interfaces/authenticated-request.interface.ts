@@ -1,4 +1,4 @@
-import { FastifyRequest } from "fastify";
+import { FastifyRequest, RouteGenericInterface } from "fastify";
 
 export interface AuthenticatedUser {
   id: string;
@@ -8,6 +8,8 @@ export interface AuthenticatedUser {
   // Add other properties attached by middleware
 }
 
-export interface AuthenticatedRequest extends FastifyRequest {
+export interface AuthenticatedRequest<
+  RouteGeneric extends RouteGenericInterface = RouteGenericInterface,
+> extends FastifyRequest<RouteGeneric> {
   user: AuthenticatedUser;
 }
