@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateSplitHandler } from "../../../application/commands/create-split.command";
 import { DeleteSplitHandler } from "../../../application/commands/delete-split.command";
 import { RecordPaymentHandler } from "../../../application/commands/record-payment.command";
@@ -28,20 +29,23 @@ export class ExpenseSplitController {
     );
   }
 
-  async createSplit(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, expenseId } = request.params as {
-      workspaceId: string;
-      expenseId: string;
-    };
-    const { splitType, participants } = request.body as {
-      splitType: SplitType;
-      participants: Array<{
-        userId: string;
-        shareAmount?: number;
-        sharePercentage?: number;
-      }>;
-    };
-    const userId = (request as any).user.id;
+  async createSplit(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+      Body: {
+        splitType: SplitType;
+        participants: Array<{
+          userId: string;
+          shareAmount?: number;
+          sharePercentage?: number;
+        }>;
+      };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, expenseId } = request.params;
+    const { splitType, participants } = request.body;
+    const userId = request.user.userId;
 
     const split = await this.createSplitHandler.handle({
       expenseId,
@@ -73,12 +77,14 @@ export class ExpenseSplitController {
     });
   }
 
-  async getSplit(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, splitId } = request.params as {
-      workspaceId: string;
-      splitId: string;
-    };
-    const userId = (request as any).user.id;
+  async getSplit(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; splitId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, splitId } = request.params;
+    const userId = request.user.userId;
 
     const split = await this.getSplitHandler.handle({
       splitId,
@@ -112,12 +118,14 @@ export class ExpenseSplitController {
     });
   }
 
-  async getSplitByExpense(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, expenseId } = request.params as {
-      workspaceId: string;
-      expenseId: string;
-    };
-    const userId = (request as any).user.id;
+  async getSplitByExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, expenseId } = request.params;
+    const userId = request.user.userId;
 
     const split = await this.splitService.getSplitByExpenseId(
       expenseId,
@@ -151,13 +159,16 @@ export class ExpenseSplitController {
     });
   }
 
-  async listUserSplits(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId } = request.params as { workspaceId: string };
-    const { limit, offset } = request.query as {
-      limit?: number;
-      offset?: number;
-    };
-    const userId = (request as any).user.id;
+  async listUserSplits(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { limit?: number; offset?: number };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId } = request.params;
+    const { limit, offset } = request.query;
+    const userId = request.user.userId;
 
     const result = await this.listUserSplitsHandler.handle({
       userId,
@@ -186,12 +197,14 @@ export class ExpenseSplitController {
     });
   }
 
-  async deleteSplit(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, splitId } = request.params as {
-      workspaceId: string;
-      splitId: string;
-    };
-    const userId = (request as any).user.id;
+  async deleteSplit(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; splitId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, splitId } = request.params;
+    const userId = request.user.userId;
 
     await this.deleteSplitHandler.handle({
       splitId,
@@ -202,13 +215,16 @@ export class ExpenseSplitController {
     return reply.status(204).send();
   }
 
-  async recordPayment(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, settlementId } = request.params as {
-      workspaceId: string;
-      settlementId: string;
-    };
-    const { amount } = request.body as { amount: number };
-    const userId = (request as any).user.id;
+  async recordPayment(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; settlementId: string };
+      Body: { amount: number };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, settlementId } = request.params;
+    const { amount } = request.body;
+    const userId = request.user.userId;
 
     const settlement = await this.recordPaymentHandler.handle({
       settlementId,
@@ -231,14 +247,20 @@ export class ExpenseSplitController {
     });
   }
 
-  async listUserSettlements(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId } = request.params as { workspaceId: string };
-    const { status, limit, offset } = request.query as {
-      status?: SettlementStatus;
-      limit?: number;
-      offset?: number;
-    };
-    const userId = (request as any).user.id;
+  async listUserSettlements(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: {
+        status?: SettlementStatus;
+        limit?: number;
+        offset?: number;
+      };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId } = request.params;
+    const { status, limit, offset } = request.query;
+    const userId = request.user.userId;
 
     const result = await this.listUserSettlementsHandler.handle({
       userId,
@@ -268,12 +290,14 @@ export class ExpenseSplitController {
     });
   }
 
-  async getSplitSettlements(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, splitId } = request.params as {
-      workspaceId: string;
-      splitId: string;
-    };
-    const userId = (request as any).user.id;
+  async getSplitSettlements(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; splitId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, splitId } = request.params;
+    const userId = request.user.userId;
 
     const settlements = await this.splitService.getSplitSettlements(
       splitId,

@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import {
   CreateForecastHandler,
@@ -39,9 +40,9 @@ export class ForecastController {
     private readonly forecastService: ForecastService,
   ) {}
 
-  async create(req: FastifyRequest, reply: FastifyReply) {
+  async create(req: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -56,16 +57,24 @@ export class ForecastController {
         reply,
         201,
         "Forecast created successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          planId: result.getPlanId().getValue(),
+          name: result.getName(),
+          type: result.getType(),
+          isActive: result.getIsActive(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async addItem(req: FastifyRequest, reply: FastifyReply) {
+  async addItem(req: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -81,7 +90,15 @@ export class ForecastController {
         reply,
         201,
         "Forecast item added successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          forecastId: result.getForecastId().getValue(),
+          categoryId: result.getCategoryId().getValue(),
+          amount: result.getAmount().toNumber(),
+          notes: result.getNotes(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -89,11 +106,11 @@ export class ForecastController {
   }
 
   async get(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -104,7 +121,15 @@ export class ForecastController {
         reply,
         200,
         "Forecast retrieved successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          planId: result.getPlanId().getValue(),
+          name: result.getName(),
+          type: result.getType(),
+          isActive: result.getIsActive(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -112,11 +137,11 @@ export class ForecastController {
   }
 
   async list(
-    req: FastifyRequest<{ Params: { planId: string } }>,
+    req: AuthenticatedRequest<{ Params: { planId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -127,7 +152,15 @@ export class ForecastController {
         reply,
         200,
         "Forecasts retrieved successfully",
-        result,
+        result.map((f) => ({
+          id: f.getId().getValue(),
+          planId: f.getPlanId().getValue(),
+          name: f.getName(),
+          type: f.getType(),
+          isActive: f.getIsActive(),
+          createdAt: f.getCreatedAt().toISOString(),
+          updatedAt: f.getUpdatedAt().toISOString(),
+        })),
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -135,11 +168,11 @@ export class ForecastController {
   }
 
   async listItems(
-    req: FastifyRequest<{ Params: { forecastId: string } }>,
+    req: AuthenticatedRequest<{ Params: { forecastId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -150,7 +183,15 @@ export class ForecastController {
         reply,
         200,
         "Forecast items retrieved successfully",
-        result,
+        result.map((item) => ({
+          id: item.getId().getValue(),
+          forecastId: item.getForecastId().getValue(),
+          categoryId: item.getCategoryId().getValue(),
+          amount: item.getAmount().toNumber(),
+          notes: item.getNotes(),
+          createdAt: item.getCreatedAt().toISOString(),
+          updatedAt: item.getUpdatedAt().toISOString(),
+        })),
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -158,11 +199,11 @@ export class ForecastController {
   }
 
   async delete(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -179,11 +220,11 @@ export class ForecastController {
   }
 
   async deleteItem(
-    req: FastifyRequest<{ Params: { itemId: string } }>,
+    req: AuthenticatedRequest<{ Params: { itemId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }

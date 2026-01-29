@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import {
   CreateBudgetPlanHandler,
   CreateBudgetPlanCommand,
@@ -39,9 +40,9 @@ export class BudgetPlanController {
     private readonly budgetPlanService: BudgetPlanService, // For delete directly if no command
   ) {}
 
-  async create(req: FastifyRequest, reply: FastifyReply) {
+  async create(req: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return ResponseHelper.unauthorized(reply);
       }
@@ -59,7 +60,20 @@ export class BudgetPlanController {
         reply,
         201,
         "Budget plan created successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          workspaceId: result.getWorkspaceId().getValue(),
+          name: result.getName(),
+          description: result.getDescription(),
+          period: {
+            startDate: result.getPeriod().getStartDate().toISOString(),
+            endDate: result.getPeriod().getEndDate().toISOString(),
+          },
+          status: result.getStatus(),
+          createdBy: result.getCreatedBy().getValue(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -67,13 +81,13 @@ export class BudgetPlanController {
   }
 
   async update(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = req.params;
       const body = await validateRequest(req, updateBudgetPlanSchema);
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -88,7 +102,20 @@ export class BudgetPlanController {
         reply,
         200,
         "Budget plan updated successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          workspaceId: result.getWorkspaceId().getValue(),
+          name: result.getName(),
+          description: result.getDescription(),
+          period: {
+            startDate: result.getPeriod().getStartDate().toISOString(),
+            endDate: result.getPeriod().getEndDate().toISOString(),
+          },
+          status: result.getStatus(),
+          createdBy: result.getCreatedBy().getValue(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -96,12 +123,12 @@ export class BudgetPlanController {
   }
 
   async activate(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -111,7 +138,20 @@ export class BudgetPlanController {
         reply,
         200,
         "Budget plan activated successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          workspaceId: result.getWorkspaceId().getValue(),
+          name: result.getName(),
+          description: result.getDescription(),
+          period: {
+            startDate: result.getPeriod().getStartDate().toISOString(),
+            endDate: result.getPeriod().getEndDate().toISOString(),
+          },
+          status: result.getStatus(),
+          createdBy: result.getCreatedBy().getValue(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -119,11 +159,11 @@ export class BudgetPlanController {
   }
 
   async get(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -134,7 +174,20 @@ export class BudgetPlanController {
         reply,
         200,
         "Budget plan retrieved successfully",
-        result,
+        {
+          id: result.getId().getValue(),
+          workspaceId: result.getWorkspaceId().getValue(),
+          name: result.getName(),
+          description: result.getDescription(),
+          period: {
+            startDate: result.getPeriod().getStartDate().toISOString(),
+            endDate: result.getPeriod().getEndDate().toISOString(),
+          },
+          status: result.getStatus(),
+          createdBy: result.getCreatedBy().getValue(),
+          createdAt: result.getCreatedAt().toISOString(),
+          updatedAt: result.getUpdatedAt().toISOString(),
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -142,7 +195,7 @@ export class BudgetPlanController {
   }
 
   async list(
-    req: FastifyRequest<{
+    req: AuthenticatedRequest<{
       Querystring: {
         workspaceId: string;
         status?: string;
@@ -153,7 +206,7 @@ export class BudgetPlanController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
@@ -174,7 +227,20 @@ export class BudgetPlanController {
         200,
         "Budget plans retrieved successfully",
         {
-          items: result.items,
+          items: result.items.map((plan) => ({
+            id: plan.getId().getValue(),
+            workspaceId: plan.getWorkspaceId().getValue(),
+            name: plan.getName(),
+            description: plan.getDescription(),
+            period: {
+              startDate: plan.getPeriod().getStartDate().toISOString(),
+              endDate: plan.getPeriod().getEndDate().toISOString(),
+            },
+            status: plan.getStatus(),
+            createdBy: plan.getCreatedBy().getValue(),
+            createdAt: plan.getCreatedAt().toISOString(),
+            updatedAt: plan.getUpdatedAt().toISOString(),
+          })),
           pagination: {
             total: result.total,
             limit: result.limit,
@@ -189,12 +255,12 @@ export class BudgetPlanController {
   }
 
   async delete(
-    req: FastifyRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = req.params;
-      const userId = req.user?.userId;
+      const userId = req.user.userId;
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }

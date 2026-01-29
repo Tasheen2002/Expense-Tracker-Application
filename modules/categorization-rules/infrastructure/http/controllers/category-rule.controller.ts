@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import {
   CreateCategoryRuleBody,
@@ -59,7 +60,7 @@ export class CategoryRuleController {
   ) {}
 
   async createRule(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateCategoryRuleBody;
     }>,
@@ -67,7 +68,7 @@ export class CategoryRuleController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -100,7 +101,7 @@ export class CategoryRuleController {
   }
 
   async updateRule(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
       Body: UpdateCategoryRuleBody;
     }>,
@@ -108,7 +109,7 @@ export class CategoryRuleController {
   ) {
     try {
       const { ruleId } = request.params;
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -141,7 +142,7 @@ export class CategoryRuleController {
   }
 
   async deleteRule(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
     reply: FastifyReply,
@@ -149,7 +150,7 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -171,7 +172,7 @@ export class CategoryRuleController {
   }
 
   async activateRule(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
     reply: FastifyReply,
@@ -179,7 +180,7 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -202,7 +203,7 @@ export class CategoryRuleController {
   }
 
   async deactivateRule(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
     reply: FastifyReply,
@@ -210,7 +211,7 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -233,7 +234,7 @@ export class CategoryRuleController {
   }
 
   async getRuleById(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
     reply: FastifyReply,
@@ -241,7 +242,7 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -264,7 +265,7 @@ export class CategoryRuleController {
   }
 
   async listRules(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { activeOnly?: string };
     }>,
@@ -274,7 +275,7 @@ export class CategoryRuleController {
       const { workspaceId } = request.params;
       const { activeOnly } = request.query;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",
@@ -308,7 +309,7 @@ export class CategoryRuleController {
   }
 
   async getRuleExecutions(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
     reply: FastifyReply,
@@ -316,7 +317,7 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
-      const userId = (request as any).user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
           message: "User not authenticated",

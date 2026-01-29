@@ -1,10 +1,11 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { CreateCategoryHandler } from '../../../application/commands/create-category.command'
-import { UpdateCategoryHandler } from '../../../application/commands/update-category.command'
-import { DeleteCategoryHandler } from '../../../application/commands/delete-category.command'
-import { GetCategoryHandler } from '../../../application/queries/get-category.query'
-import { ListCategoriesHandler } from '../../../application/queries/list-categories.query'
-import { Category } from '../../../domain/entities/category.entity'
+import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { CreateCategoryHandler } from "../../../application/commands/create-category.command";
+import { UpdateCategoryHandler } from "../../../application/commands/update-category.command";
+import { DeleteCategoryHandler } from "../../../application/commands/delete-category.command";
+import { GetCategoryHandler } from "../../../application/queries/get-category.query";
+import { ListCategoriesHandler } from "../../../application/queries/list-categories.query";
+import { Category } from "../../../domain/entities/category.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class CategoryController {
@@ -13,23 +14,23 @@ export class CategoryController {
     private readonly updateCategoryHandler: UpdateCategoryHandler,
     private readonly deleteCategoryHandler: DeleteCategoryHandler,
     private readonly getCategoryHandler: GetCategoryHandler,
-    private readonly listCategoriesHandler: ListCategoriesHandler
+    private readonly listCategoriesHandler: ListCategoriesHandler,
   ) {}
 
   async createCategory(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
       Body: {
-        name: string
-        description?: string
-        color?: string
-        icon?: string
-      }
+        name: string;
+        description?: string;
+        color?: string;
+        icon?: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
+      const { workspaceId } = request.params;
 
       const category = await this.createCategoryHandler.handle({
         workspaceId,
@@ -37,12 +38,12 @@ export class CategoryController {
         description: request.body.description,
         color: request.body.color,
         icon: request.body.icon,
-      })
+      });
 
       return reply.status(201).send({
         success: true,
         statusCode: 201,
-        message: 'Category created successfully',
+        message: "Category created successfully",
         data: {
           categoryId: category.id.getValue(),
           workspaceId: category.workspaceId,
@@ -54,26 +55,26 @@ export class CategoryController {
           createdAt: category.createdAt.toISOString(),
           updatedAt: category.updatedAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateCategory(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; categoryId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; categoryId: string };
       Body: {
-        name?: string
-        description?: string
-        color?: string
-        icon?: string
-      }
+        name?: string;
+        description?: string;
+        color?: string;
+        icon?: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, categoryId } = request.params
+      const { workspaceId, categoryId } = request.params;
 
       const category = await this.updateCategoryHandler.handle({
         categoryId,
@@ -82,12 +83,12 @@ export class CategoryController {
         description: request.body.description,
         color: request.body.color,
         icon: request.body.icon,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Category updated successfully',
+        message: "Category updated successfully",
         data: {
           categoryId: category.id.getValue(),
           workspaceId: category.workspaceId,
@@ -98,54 +99,54 @@ export class CategoryController {
           isActive: category.isActive,
           updatedAt: category.updatedAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteCategory(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; categoryId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, categoryId } = request.params
+      const { workspaceId, categoryId } = request.params;
 
       await this.deleteCategoryHandler.handle({
         categoryId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Category deleted successfully',
-      })
+        message: "Category deleted successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getCategory(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; categoryId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, categoryId } = request.params
+      const { workspaceId, categoryId } = request.params;
 
       const category = await this.getCategoryHandler.handle({
         categoryId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Category retrieved successfully',
+        message: "Category retrieved successfully",
         data: {
           categoryId: category.id.getValue(),
           workspaceId: category.workspaceId,
@@ -157,32 +158,32 @@ export class CategoryController {
           createdAt: category.createdAt.toISOString(),
           updatedAt: category.updatedAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listCategories(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
-      Querystring: { activeOnly?: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { activeOnly?: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
-      const { activeOnly } = request.query
+      const { workspaceId } = request.params;
+      const { activeOnly } = request.query;
 
       const categories = await this.listCategoriesHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === 'true',
-      })
+        activeOnly: activeOnly === "true",
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Categories retrieved successfully',
+        message: "Categories retrieved successfully",
         data: categories.map((category: Category) => ({
           categoryId: category.id.getValue(),
           workspaceId: category.workspaceId,
@@ -194,9 +195,9 @@ export class CategoryController {
           createdAt: category.createdAt.toISOString(),
           updatedAt: category.updatedAt.toISOString(),
         })),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 }

@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateExpenseHandler } from "../../../application/commands/create-expense.command";
 import { UpdateExpenseHandler } from "../../../application/commands/update-expense.command";
 import { DeleteExpenseHandler } from "../../../application/commands/delete-expense.command";
@@ -33,7 +34,7 @@ export class ExpenseController {
   ) {}
 
   async createExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: {
         title: string;
@@ -51,7 +52,7 @@ export class ExpenseController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
+      const userId = request.user.userId;
       if (!userId) {
         return reply.status(401).send({
           success: false,
@@ -59,7 +60,7 @@ export class ExpenseController {
           message: "User not authenticated",
         });
       }
-      const { workspaceId } = request.params;
+      const { workspaceId } = request.params as { workspaceId: string };
 
       const expense = await this.createExpenseHandler.handle({
         workspaceId,
@@ -94,6 +95,12 @@ export class ExpenseController {
           paymentMethod: expense.paymentMethod,
           isReimbursable: expense.isReimbursable,
           status: expense.status,
+          tagIds: expense.tagIds
+            ? expense.tagIds.map((id: TagId) => id.getValue())
+            : [],
+          attachmentIds: expense.attachmentIds
+            ? expense.attachmentIds.map((id: AttachmentId) => id.getValue())
+            : [],
           createdAt: expense.createdAt.toISOString(),
           updatedAt: expense.updatedAt.toISOString(),
         },
@@ -104,7 +111,7 @@ export class ExpenseController {
   }
 
   async updateExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
       Body: {
         title?: string;
@@ -173,7 +180,7 @@ export class ExpenseController {
   }
 
   async deleteExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
@@ -206,7 +213,7 @@ export class ExpenseController {
   }
 
   async getExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
@@ -251,7 +258,7 @@ export class ExpenseController {
   }
 
   async listExpenses(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: {
         userId?: string;
@@ -308,7 +315,7 @@ export class ExpenseController {
   }
 
   async filterExpenses(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: {
         userId?: string;
