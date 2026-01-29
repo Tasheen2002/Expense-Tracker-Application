@@ -207,6 +207,7 @@ export class ReceiptController {
         receiptId,
         expenseId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -241,6 +242,7 @@ export class ReceiptController {
       const receipt = await this.unlinkReceiptHandler.handle({
         receiptId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -276,6 +278,7 @@ export class ReceiptController {
       const receipt = await this.processReceiptHandler.handle({
         receiptId,
         workspaceId,
+        userId,
         ocrText: request.body.ocrText,
         ocrConfidence: request.body.ocrConfidence,
       });
@@ -312,6 +315,7 @@ export class ReceiptController {
       const receipt = await this.verifyReceiptHandler.handle({
         receiptId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -347,6 +351,7 @@ export class ReceiptController {
       const receipt = await this.rejectReceiptHandler.handle({
         receiptId,
         workspaceId,
+        userId,
         reason: request.body.reason,
       });
 
@@ -384,6 +389,7 @@ export class ReceiptController {
       await this.deleteReceiptHandler.handle({
         receiptId,
         workspaceId,
+        userId,
         permanent,
       });
 
@@ -421,6 +427,7 @@ export class ReceiptController {
       const metadata = await this.addMetadataHandler.handle({
         receiptId,
         workspaceId,
+        userId,
         ...request.body,
       });
 
@@ -457,6 +464,7 @@ export class ReceiptController {
       const metadata = await this.updateMetadataHandler.handle({
         receiptId,
         workspaceId,
+        userId,
         ...request.body,
       });
 
@@ -524,7 +532,12 @@ export class ReceiptController {
     const { tagId } = request.body;
 
     try {
-      await this.addTagHandler.handle({ receiptId, tagId, workspaceId });
+      await this.addTagHandler.handle({
+        receiptId,
+        tagId,
+        workspaceId,
+        userId,
+      });
 
       return reply.status(200).send({
         success: true,
@@ -554,7 +567,12 @@ export class ReceiptController {
     const { workspaceId, receiptId, tagId } = request.params;
 
     try {
-      await this.removeTagHandler.handle({ receiptId, tagId, workspaceId });
+      await this.removeTagHandler.handle({
+        receiptId,
+        tagId,
+        workspaceId,
+        userId,
+      });
 
       return reply.status(200).send({
         success: true,
