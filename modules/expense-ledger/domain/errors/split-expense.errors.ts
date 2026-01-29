@@ -1,12 +1,12 @@
-export class SplitExpenseError extends Error {
+import { DomainError } from "../../../../apps/api/src/shared/domain/domain-error";
+
+export class SplitExpenseError extends DomainError {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly statusCode: number = 400,
+    statusCode: number = 400,
   ) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    super(message, statusCode);
   }
 }
 
@@ -24,11 +24,7 @@ export class InvalidSplitTypeError extends SplitExpenseError {
 
 export class InvalidSplitAmountError extends SplitExpenseError {
   constructor(reason: string) {
-    super(
-      `Invalid split amount: ${reason}`,
-      "INVALID_SPLIT_AMOUNT",
-      400,
-    );
+    super(`Invalid split amount: ${reason}`, "INVALID_SPLIT_AMOUNT", 400);
   }
 }
 

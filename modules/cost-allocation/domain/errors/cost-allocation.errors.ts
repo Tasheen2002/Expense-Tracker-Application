@@ -1,11 +1,10 @@
-export class CostAllocationDomainError extends Error {
-  public readonly statusCode: number;
+import { DomainError } from "../../../../apps/api/src/shared/domain/domain-error";
+
+export class CostAllocationDomainError extends DomainError {
   public readonly errorCode: string;
 
   constructor(message: string, errorCode: string, statusCode: number) {
-    super(message);
-    this.name = this.constructor.name;
-    this.statusCode = statusCode;
+    super(message, statusCode);
     this.errorCode = errorCode;
   }
 }
