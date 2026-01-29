@@ -5,7 +5,10 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { PlanPeriod } from "../../domain/value-objects/plan-period";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
-import { BudgetPlanNotFoundError } from "../../domain/errors/budget-planning.errors";
+import {
+  BudgetPlanNotFoundError,
+  UnauthorizedBudgetPlanAccessError,
+} from "../../domain/errors/budget-planning.errors";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -40,6 +43,7 @@ export class BudgetPlanService {
 
   async updatePlan(params: {
     id: string;
+    userId: string;
     name?: string;
     description?: string;
   }): Promise<BudgetPlan> {
@@ -50,12 +54,16 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(params.id);
     }
 
+    if (plan.getCreatedBy().getValue() !== params.userId) {
+      throw new UnauthorizedBudgetPlanAccessError("update");
+    }
+
     plan.updateDetails(params.name, params.description);
     await this.budgetPlanRepository.save(plan);
     return plan;
   }
 
-  async activatePlan(id: string): Promise<BudgetPlan> {
+  async activatePlan(id: string, userId: string): Promise<BudgetPlan> {
     const planId = PlanId.fromString(id);
     const plan = await this.budgetPlanRepository.findById(planId);
 
@@ -63,17 +71,25 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
+    if (plan.getCreatedBy().getValue() !== userId) {
+      throw new UnauthorizedBudgetPlanAccessError("activate");
+    }
+
     plan.updateStatus(PlanStatus.ACTIVE);
     await this.budgetPlanRepository.save(plan);
     return plan;
   }
 
-  async deletePlan(id: string): Promise<void> {
+  async deletePlan(id: string, userId: string): Promise<void> {
     const planId = PlanId.fromString(id);
     const plan = await this.budgetPlanRepository.findById(planId);
 
     if (!plan) {
       throw new BudgetPlanNotFoundError(id);
+    }
+
+    if (plan.getCreatedBy().getValue() !== userId) {
+      throw new UnauthorizedBudgetPlanAccessError("delete");
     }
 
     // Add validation: Cannot delete active plans? Or specific status checks.

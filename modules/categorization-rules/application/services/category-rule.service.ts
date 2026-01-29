@@ -1,35 +1,36 @@
-import { CategoryRuleRepository } from '../../domain/repositories/category-rule.repository'
-import { CategoryRule } from '../../domain/entities/category-rule.entity'
-import { RuleId } from '../../domain/value-objects/rule-id'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo'
-import { RuleCondition } from '../../domain/value-objects/rule-condition'
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
+import { CategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
+import { CategoryRule } from "../../domain/entities/category-rule.entity";
+import { RuleId } from "../../domain/value-objects/rule-id";
+import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { RuleCondition } from "../../domain/value-objects/rule-condition";
+import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import {
   CategoryRuleNotFoundError,
   DuplicateRuleNameError,
-} from '../../domain/errors/categorization-rules.errors'
+  UnauthorizedRuleAccessError,
+} from "../../domain/errors/categorization-rules.errors";
 
 export class CategoryRuleService {
   constructor(private readonly ruleRepository: CategoryRuleRepository) {}
 
   async createRule(params: {
-    workspaceId: WorkspaceId
-    name: string
-    description?: string
-    priority?: number
-    condition: RuleCondition
-    targetCategoryId: CategoryId
-    createdBy: UserId
+    workspaceId: WorkspaceId;
+    name: string;
+    description?: string;
+    priority?: number;
+    condition: RuleCondition;
+    targetCategoryId: CategoryId;
+    createdBy: UserId;
   }): Promise<CategoryRule> {
     // Check for duplicate name
     const existingRule = await this.ruleRepository.findByName(
       params.name,
-      params.workspaceId
-    )
+      params.workspaceId,
+    );
 
     if (existingRule) {
-      throw new DuplicateRuleNameError(params.name)
+      throw new DuplicateRuleNameError(params.name);
     }
 
     const rule = CategoryRule.create({
@@ -40,111 +41,132 @@ export class CategoryRuleService {
       condition: params.condition,
       targetCategoryId: params.targetCategoryId,
       createdBy: params.createdBy,
-    })
+    });
 
-    await this.ruleRepository.save(rule)
-    return rule
+    await this.ruleRepository.save(rule);
+    return rule;
   }
 
   async updateRule(params: {
-    ruleId: RuleId
-    name?: string
-    description?: string | null
-    priority?: number
-    condition?: RuleCondition
-    targetCategoryId?: CategoryId
+    ruleId: RuleId;
+    userId: string;
+    name?: string;
+    description?: string | null;
+    priority?: number;
+    condition?: RuleCondition;
+    targetCategoryId?: CategoryId;
   }): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(params.ruleId)
+    const rule = await this.ruleRepository.findById(params.ruleId);
 
     if (!rule) {
-      throw new CategoryRuleNotFoundError(params.ruleId.getValue())
+      throw new CategoryRuleNotFoundError(params.ruleId.getValue());
+    }
+
+    if (rule.getCreatedBy().getValue() !== params.userId) {
+      throw new UnauthorizedRuleAccessError("update");
     }
 
     // Check for duplicate name if name is being changed
     if (params.name && params.name !== rule.getName()) {
       const existingRule = await this.ruleRepository.findByName(
         params.name,
-        rule.getWorkspaceId()
-      )
+        rule.getWorkspaceId(),
+      );
 
       if (existingRule && !existingRule.getId().equals(params.ruleId)) {
-        throw new DuplicateRuleNameError(params.name)
+        throw new DuplicateRuleNameError(params.name);
       }
     }
 
     if (params.name) {
-      rule.updateName(params.name)
+      rule.updateName(params.name);
     }
 
     if (params.description !== undefined) {
-      rule.updateDescription(params.description)
+      rule.updateDescription(params.description);
     }
 
     if (params.priority !== undefined) {
-      rule.updatePriority(params.priority)
+      rule.updatePriority(params.priority);
     }
 
     if (params.condition) {
-      rule.updateCondition(params.condition)
+      rule.updateCondition(params.condition);
     }
 
     if (params.targetCategoryId) {
-      rule.updateTargetCategory(params.targetCategoryId)
+      rule.updateTargetCategory(params.targetCategoryId);
     }
 
-    await this.ruleRepository.save(rule)
-    return rule
+    await this.ruleRepository.save(rule);
+    return rule;
   }
 
-  async deleteRule(ruleId: RuleId): Promise<void> {
-    const rule = await this.ruleRepository.findById(ruleId)
+  async deleteRule(ruleId: RuleId, userId: string): Promise<void> {
+    const rule = await this.ruleRepository.findById(ruleId);
 
     if (!rule) {
-      throw new CategoryRuleNotFoundError(ruleId.getValue())
+      throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    await this.ruleRepository.delete(ruleId)
+    if (rule.getCreatedBy().getValue() !== userId) {
+      throw new UnauthorizedRuleAccessError("delete");
+    }
+
+    await this.ruleRepository.delete(ruleId);
   }
 
-  async activateRule(ruleId: RuleId): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId)
+  async activateRule(ruleId: RuleId, userId: string): Promise<CategoryRule> {
+    const rule = await this.ruleRepository.findById(ruleId);
 
     if (!rule) {
-      throw new CategoryRuleNotFoundError(ruleId.getValue())
+      throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    rule.activate()
-    await this.ruleRepository.save(rule)
-    return rule
+    if (rule.getCreatedBy().getValue() !== userId) {
+      throw new UnauthorizedRuleAccessError("activate");
+    }
+
+    rule.activate();
+    await this.ruleRepository.save(rule);
+    return rule;
   }
 
-  async deactivateRule(ruleId: RuleId): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId)
+  async deactivateRule(ruleId: RuleId, userId: string): Promise<CategoryRule> {
+    const rule = await this.ruleRepository.findById(ruleId);
 
     if (!rule) {
-      throw new CategoryRuleNotFoundError(ruleId.getValue())
+      throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    rule.deactivate()
-    await this.ruleRepository.save(rule)
-    return rule
+    if (rule.getCreatedBy().getValue() !== userId) {
+      throw new UnauthorizedRuleAccessError("deactivate");
+    }
+
+    rule.deactivate();
+    await this.ruleRepository.save(rule);
+    return rule;
   }
 
   async getRuleById(ruleId: RuleId): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId)
+    const rule = await this.ruleRepository.findById(ruleId);
 
     if (!rule) {
-      throw new CategoryRuleNotFoundError(ruleId.getValue())
+      throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    return rule
+    return rule;
   }
 
-  async getRulesByWorkspaceId(workspaceId: WorkspaceId): Promise<CategoryRule[]> {
-    return this.ruleRepository.findByWorkspaceId(workspaceId)
+  async getRulesByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<CategoryRule[]> {
+    return this.ruleRepository.findByWorkspaceId(workspaceId);
   }
 
-  async getActiveRulesByWorkspaceId(workspaceId: WorkspaceId): Promise<CategoryRule[]> {
-    return this.ruleRepository.findActiveByWorkspaceId(workspaceId)
+  async getActiveRulesByWorkspaceId(
+    workspaceId: WorkspaceId,
+  ): Promise<CategoryRule[]> {
+    return this.ruleRepository.findActiveByWorkspaceId(workspaceId);
   }
 }

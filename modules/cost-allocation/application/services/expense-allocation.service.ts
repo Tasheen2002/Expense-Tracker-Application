@@ -12,6 +12,7 @@ import {
   InvalidAllocationTargetError,
   ExpenseNotFoundError,
   ExpenseWorkspaceMismatchError,
+  UnauthorizedAllocationAccessError,
 } from "../../domain/errors/cost-allocation.errors";
 import { Decimal } from "@prisma/client/runtime/library";
 import { IExpenseLookupPort } from "../ports/expense-lookup.port";
@@ -53,6 +54,10 @@ export class ExpenseAllocationService {
         params.expenseId,
         params.workspaceId,
       );
+    }
+
+    if (expense.userId !== params.createdBy) {
+      throw new UnauthorizedAllocationAccessError("create");
     }
 
     const expenseTotal = expense.amount;
@@ -148,6 +153,7 @@ export class ExpenseAllocationService {
   async deleteAllocations(
     expenseId: string,
     workspaceId: string,
+    userId: string,
   ): Promise<void> {
     // Verify expense exists and belongs to workspace via port
     const expense =
@@ -159,6 +165,10 @@ export class ExpenseAllocationService {
 
     if (expense.workspaceId !== workspaceId) {
       throw new ExpenseWorkspaceMismatchError(expenseId, workspaceId);
+    }
+
+    if (expense.userId !== userId) {
+      throw new UnauthorizedAllocationAccessError("delete");
     }
 
     await this.allocationRepository.deleteByExpenseId(
