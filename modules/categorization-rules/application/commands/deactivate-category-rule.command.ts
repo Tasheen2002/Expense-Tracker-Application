@@ -1,15 +1,19 @@
-import { CategoryRuleService } from '../services/category-rule.service'
-import { RuleId } from '../../domain/value-objects/rule-id'
+import { CategoryRuleService } from "../services/category-rule.service";
+import { RuleId } from "../../domain/value-objects/rule-id";
 
 export interface DeactivateCategoryRuleCommand {
-  ruleId: string
+  ruleId: string;
+  userId: string;
 }
 
 export class DeactivateCategoryRuleHandler {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async execute(command: DeactivateCategoryRuleCommand) {
-    const rule = await this.ruleService.deactivateRule(RuleId.fromString(command.ruleId))
+    const rule = await this.ruleService.deactivateRule(
+      RuleId.fromString(command.ruleId),
+      command.userId,
+    );
 
     return {
       id: rule.getId().getValue(),
@@ -26,6 +30,6 @@ export class DeactivateCategoryRuleHandler {
       createdBy: rule.getCreatedBy().getValue(),
       createdAt: rule.getCreatedAt(),
       updatedAt: rule.getUpdatedAt(),
-    }
+    };
   }
 }
