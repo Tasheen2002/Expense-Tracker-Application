@@ -115,3 +115,32 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
     };
   }
 }
+
+/**
+ * Emitted when an approval workflow is cancelled.
+ */
+export class ApprovalWorkflowCancelledEvent extends DomainEvent {
+  constructor(
+    public readonly workflowId: string,
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly cancelledBy: string,
+    public readonly reason?: string,
+  ) {
+    super(workflowId, "ApprovalWorkflow");
+  }
+
+  get eventType(): string {
+    return "approval.workflow_cancelled";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      workflowId: this.workflowId,
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      cancelledBy: this.cancelledBy,
+      reason: this.reason,
+    };
+  }
+}
