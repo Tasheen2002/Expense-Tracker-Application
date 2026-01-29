@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { BudgetAllocation } from "../../domain/entities/budget-allocation.entity";
 import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { BudgetId } from "../../domain/value-objects/budget-id";
+import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
 import { IBudgetAllocationRepository } from "../../domain/repositories/budget-allocation.repository";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -27,6 +28,53 @@ export class BudgetAllocationRepositoryImpl implements IBudgetAllocationReposito
         description: allocation.getDescription(),
         updatedAt: allocation.getUpdatedAt(),
       },
+    });
+  }
+
+  async saveWithAlerts(
+    allocation: BudgetAllocation,
+    alerts: BudgetAlert[],
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Save Allocation
+      await tx.budgetAllocation.upsert({
+        where: { id: allocation.getId().getValue() },
+        create: {
+          id: allocation.getId().getValue(),
+          budgetId: allocation.getBudgetId().getValue(),
+          categoryId: allocation.getCategoryId(),
+          allocatedAmount: allocation.getAllocatedAmount(),
+          spentAmount: allocation.getSpentAmount(),
+          description: allocation.getDescription(),
+          createdAt: allocation.getCreatedAt(),
+          updatedAt: allocation.getUpdatedAt(),
+        },
+        update: {
+          allocatedAmount: allocation.getAllocatedAmount(),
+          spentAmount: allocation.getSpentAmount(),
+          description: allocation.getDescription(),
+          updatedAt: allocation.getUpdatedAt(),
+        },
+      });
+
+      // 2. Save Alerts
+      for (const alert of alerts) {
+        await tx.budgetAlert.create({
+          data: {
+            id: alert.getId().getValue(),
+            budgetId: alert.getBudgetId().getValue(),
+            allocationId: alert.getAllocationId()?.getValue(),
+            level: alert.getLevel(),
+            threshold: alert.getThreshold(),
+            currentSpent: alert.getCurrentSpent(),
+            allocatedAmount: alert.getAllocatedAmount(),
+            message: alert.getMessage(),
+            isRead: alert.isRead(),
+            notifiedAt: alert.getNotifiedAt(),
+            createdAt: alert.getCreatedAt(),
+          },
+        });
+      }
     });
   }
 
