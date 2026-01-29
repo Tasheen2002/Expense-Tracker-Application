@@ -1,21 +1,22 @@
-import { ReceiptService } from '../services/receipt.service'
-import { Receipt } from '../../domain/entities/receipt.entity'
-import { StorageLocation } from '../../domain/value-objects/storage-location'
-import { ReceiptType } from '../../domain/enums/receipt-type'
+import { ReceiptService } from "../services/receipt.service";
+import { Receipt } from "../../domain/entities/receipt.entity";
+import { StorageLocation } from "../../domain/value-objects/storage-location";
+import { ReceiptType } from "../../domain/enums/receipt-type";
+import { StorageProvider } from "../../domain/enums/storage-provider";
 
 export interface UploadReceiptDto {
-  workspaceId: string
-  userId: string
-  fileName: string
-  originalName: string
-  filePath: string
-  fileSize: number
-  mimeType: string
-  fileHash?: string
-  receiptType?: ReceiptType
-  storageProvider: string
-  storageBucket?: string
-  storageKey?: string
+  workspaceId: string;
+  userId: string;
+  fileName: string;
+  originalName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  fileHash?: string;
+  receiptType?: ReceiptType;
+  storageProvider: string;
+  storageBucket?: string;
+  storageKey?: string;
 }
 
 export class UploadReceiptHandler {
@@ -23,10 +24,10 @@ export class UploadReceiptHandler {
 
   async handle(dto: UploadReceiptDto): Promise<Receipt> {
     const storageLocation = StorageLocation.create({
-      provider: dto.storageProvider as any,
+      provider: dto.storageProvider as StorageProvider,
       bucket: dto.storageBucket,
       key: dto.storageKey,
-    })
+    });
 
     return await this.receiptService.uploadReceipt({
       workspaceId: dto.workspaceId,
@@ -39,6 +40,6 @@ export class UploadReceiptHandler {
       fileHash: dto.fileHash,
       receiptType: dto.receiptType,
       storageLocation,
-    })
+    });
   }
 }
