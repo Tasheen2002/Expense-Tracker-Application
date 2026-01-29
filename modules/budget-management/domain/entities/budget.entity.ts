@@ -1,6 +1,7 @@
 import { BudgetId } from "../value-objects/budget-id";
 import { BudgetPeriod } from "../value-objects/budget-period";
 import { BudgetStatus, isValidStatusTransition } from "../enums/budget-status";
+import { BudgetAllocationExceededError } from "../errors/budget-allocation-exceeded.error";
 import { BudgetPeriodType } from "../enums/budget-period-type";
 import { Decimal } from "@prisma/client/runtime/library";
 import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
@@ -386,6 +387,22 @@ export class Budget extends AggregateRoot {
 
   hasExpired(): boolean {
     return this.props.period.hasEnded();
+  }
+
+  validateAllocationAmount(amount: Decimal, currentAllocated: Decimal): void {
+    if (amount.isNegative()) {
+      throw new Error("Allocation amount cannot be negative");
+    }
+
+    const projectedTotal = currentAllocated.plus(amount);
+
+    if (projectedTotal.gt(this.props.totalAmount)) {
+      throw new BudgetAllocationExceededError(
+        this.props.id.getValue(),
+        this.props.totalAmount.toNumber(),
+        projectedTotal.toNumber(),
+      );
+    }
   }
 
   equals(other: Budget): boolean {
