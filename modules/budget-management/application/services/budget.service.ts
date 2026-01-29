@@ -10,13 +10,13 @@ import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
 import { BudgetId } from "../../domain/value-objects/budget-id";
 import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { AlertId } from "../../domain/value-objects/alert-id";
-import { BudgetStatus } from "../../domain/enums/budget-status";
 import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
-import { Decimal } from "@prisma/client/runtime/library";
+
 import {
   BudgetNotFoundError,
   AllocationNotFoundError,
   AlertNotFoundError,
+  UnauthorizedBudgetAccessError,
 } from "../../domain/errors/budget.errors";
 
 export class BudgetService {
@@ -61,6 +61,7 @@ export class BudgetService {
   async updateBudget(
     budgetId: string,
     workspaceId: string,
+    userId: string,
     updates: {
       name?: string;
       description?: string | null;
@@ -74,6 +75,10 @@ export class BudgetService {
 
     if (!budget) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("update");
     }
 
     if (updates.name) {
@@ -93,7 +98,11 @@ export class BudgetService {
     return budget;
   }
 
-  async activateBudget(budgetId: string, workspaceId: string): Promise<Budget> {
+  async activateBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Budget> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId,
@@ -101,6 +110,10 @@ export class BudgetService {
 
     if (!budget) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("activate");
     }
 
     budget.activate();
@@ -110,7 +123,11 @@ export class BudgetService {
     return budget;
   }
 
-  async archiveBudget(budgetId: string, workspaceId: string): Promise<Budget> {
+  async archiveBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Budget> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId,
@@ -120,6 +137,10 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("archive");
+    }
+
     budget.archive();
 
     await this.budgetRepository.save(budget);
@@ -127,12 +148,24 @@ export class BudgetService {
     return budget;
   }
 
-  async deleteBudget(budgetId: string, workspaceId: string): Promise<void> {
+  async deleteBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
     const budgetIdObj = BudgetId.fromString(budgetId);
 
     const exists = await this.budgetRepository.exists(budgetIdObj, workspaceId);
     if (!exists) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    const budget = await this.budgetRepository.findById(
+      budgetIdObj,
+      workspaceId,
+    );
+    if (budget && budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("delete");
     }
 
     // Delete associated allocations and alerts
@@ -167,10 +200,26 @@ export class BudgetService {
   // Allocation methods
   async addAllocation(params: {
     budgetId: string;
+    workspaceId: string;
+    userId: string;
     categoryId?: string;
     allocatedAmount: number | string;
     description?: string;
   }): Promise<BudgetAllocation> {
+    // Verify parent budget ownership first
+    const budget = await this.budgetRepository.findById(
+      BudgetId.fromString(params.budgetId),
+      params.workspaceId,
+    );
+
+    if (!budget) {
+      throw new BudgetNotFoundError(params.budgetId, params.workspaceId);
+    }
+
+    if (budget.getCreatedBy() !== params.userId) {
+      throw new UnauthorizedBudgetAccessError("add allocation to");
+    }
+
     const allocation = BudgetAllocation.create({
       budgetId: params.budgetId,
       categoryId: params.categoryId,
@@ -185,6 +234,8 @@ export class BudgetService {
 
   async updateAllocation(
     allocationId: string,
+    workspaceId: string, // Need workspaceID to look up budget securely
+    userId: string,
     updates: {
       allocatedAmount?: number | string;
       description?: string | null;
@@ -196,6 +247,24 @@ export class BudgetService {
 
     if (!allocation) {
       throw new AllocationNotFoundError(allocationId);
+    }
+
+    // Verify ownership via parent budget
+    const budget = await this.budgetRepository.findById(
+      allocation.getBudgetId(),
+      workspaceId,
+    );
+
+    // If budget is not found (maybe in another workspace), we treat it as unauthorized/not found
+    if (!budget) {
+      throw new BudgetNotFoundError(
+        allocation.getBudgetId().getValue(),
+        workspaceId,
+      );
+    }
+
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("update allocation in");
     }
 
     if (updates.allocatedAmount) {
@@ -215,6 +284,11 @@ export class BudgetService {
     allocationId: string,
     spentAmount: number | string,
   ): Promise<BudgetAllocation> {
+    // NOTE: This usually comes from internal system events (Expense creation),
+    // so strictly checking user ID might not be needed if it's an automated process.
+    // However, if called via API, we might need to add it.
+    // For now, assuming this is an internal domain service method triggered by expenses.
+
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId),
     );
@@ -233,7 +307,29 @@ export class BudgetService {
     return allocation;
   }
 
-  async deleteAllocation(allocationId: string): Promise<void> {
+  async deleteAllocation(
+    allocationId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    const allocation = await this.allocationRepository.findById(
+      AllocationId.fromString(allocationId), // Assuming we need to fetch to check auth
+    );
+
+    if (!allocation) {
+      // Idempotent success or throw not found
+      return;
+    }
+
+    // Check Auth
+    const budget = await this.budgetRepository.findById(
+      allocation.getBudgetId(),
+      workspaceId,
+    );
+    if (budget && budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("delete allocation in");
+    }
+
     await this.allocationRepository.delete(
       AllocationId.fromString(allocationId),
     );
