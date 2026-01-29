@@ -1,19 +1,22 @@
-import { PrismaClient } from '@prisma/client'
-import { Receipt } from '../../domain/entities/receipt.entity'
-import { ReceiptId } from '../../domain/value-objects/receipt-id'
-import { FileInfo } from '../../domain/value-objects/file-info'
-import { StorageLocation } from '../../domain/value-objects/storage-location'
-import { IReceiptRepository, ReceiptFilters } from '../../domain/repositories/receipt.repository'
-import { ReceiptStatus } from '../../domain/enums/receipt-status'
-import { ReceiptType } from '../../domain/enums/receipt-type'
-import { StorageProvider } from '../../domain/enums/storage-provider'
+import { PrismaClient } from "@prisma/client";
+import { Receipt } from "../../domain/entities/receipt.entity";
+import { ReceiptId } from "../../domain/value-objects/receipt-id";
+import { FileInfo } from "../../domain/value-objects/file-info";
+import { StorageLocation } from "../../domain/value-objects/storage-location";
+import {
+  IReceiptRepository,
+  ReceiptFilters,
+} from "../../domain/repositories/receipt.repository";
+import { ReceiptStatus } from "../../domain/enums/receipt-status";
+import { ReceiptType } from "../../domain/enums/receipt-type";
+import { StorageProvider } from "../../domain/enums/storage-provider";
 
 export class ReceiptRepositoryImpl implements IReceiptRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(receipt: Receipt): Promise<void> {
-    const fileInfo = receipt.getFileInfo()
-    const storageLocation = receipt.getStorageLocation()
+    const fileInfo = receipt.getFileInfo();
+    const storageLocation = receipt.getStorageLocation();
 
     await this.prisma.receipt.upsert({
       where: { id: receipt.getId().getValue() },
@@ -56,7 +59,7 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         updatedAt: receipt.getUpdatedAt(),
         deletedAt: receipt.getDeletedAt(),
       },
-    })
+    });
   }
 
   async findById(id: ReceiptId, workspaceId: string): Promise<Receipt | null> {
@@ -65,22 +68,25 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    return row ? this.toDomain(row) : null
+    return row ? this.toDomain(row) : null;
   }
 
-  async findByExpenseId(expenseId: string, workspaceId: string): Promise<Receipt[]> {
+  async findByExpenseId(
+    expenseId: string,
+    workspaceId: string,
+  ): Promise<Receipt[]> {
     const rows = await this.prisma.receipt.findMany({
       where: {
         expenseId,
         workspaceId,
         deletedAt: null,
       },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByWorkspace(workspaceId: string): Promise<Receipt[]> {
@@ -89,10 +95,10 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         workspaceId,
         deletedAt: null,
       },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByUserId(userId: string, workspaceId: string): Promise<Receipt[]> {
@@ -102,83 +108,86 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         workspaceId,
         deletedAt: null,
       },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByFilters(filters: ReceiptFilters): Promise<Receipt[]> {
-    const where = this.buildWhereClause(filters)
+    const where = this.buildWhereClause(filters);
 
     const rows = await this.prisma.receipt.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       skip: filters.skip,
       take: filters.take,
-    })
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async countByFilters(filters: ReceiptFilters): Promise<number> {
-    const where = this.buildWhereClause(filters)
+    const where = this.buildWhereClause(filters);
 
-    return await this.prisma.receipt.count({ where })
+    return await this.prisma.receipt.count({ where });
   }
 
   private buildWhereClause(filters: ReceiptFilters): any {
     const where: any = {
       workspaceId: filters.workspaceId,
-    }
+    };
 
     if (filters.userId) {
-      where.userId = filters.userId
+      where.userId = filters.userId;
     }
 
     if (filters.expenseId) {
-      where.expenseId = filters.expenseId
+      where.expenseId = filters.expenseId;
     }
 
     if (filters.status) {
-      where.status = filters.status
+      where.status = filters.status;
     }
 
     if (filters.receiptType) {
-      where.receiptType = filters.receiptType
+      where.receiptType = filters.receiptType;
     }
 
     if (filters.isLinked !== undefined) {
-      where.expenseId = filters.isLinked ? { not: null } : null
+      where.expenseId = filters.isLinked ? { not: null } : null;
     }
 
     if (filters.isDeleted !== undefined) {
-      where.deletedAt = filters.isDeleted ? { not: null } : null
+      where.deletedAt = filters.isDeleted ? { not: null } : null;
     } else {
-      where.deletedAt = null
+      where.deletedAt = null;
     }
 
     if (filters.fromDate) {
-      where.createdAt = { ...where.createdAt, gte: filters.fromDate }
+      where.createdAt = { ...where.createdAt, gte: filters.fromDate };
     }
 
     if (filters.toDate) {
-      where.createdAt = { ...where.createdAt, lte: filters.toDate }
+      where.createdAt = { ...where.createdAt, lte: filters.toDate };
     }
 
-    return where
+    return where;
   }
 
-  async findByFileHash(fileHash: string, workspaceId: string): Promise<Receipt | null> {
+  async findByFileHash(
+    fileHash: string,
+    workspaceId: string,
+  ): Promise<Receipt | null> {
     const row = await this.prisma.receipt.findFirst({
       where: {
         fileHash,
         workspaceId,
         deletedAt: null,
       },
-    })
+    });
 
-    return row ? this.toDomain(row) : null
+    return row ? this.toDomain(row) : null;
   }
 
   async findPendingReceipts(workspaceId: string): Promise<Receipt[]> {
@@ -188,10 +197,10 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         status: ReceiptStatus.PENDING,
         deletedAt: null,
       },
-      orderBy: { createdAt: 'asc' },
-    })
+      orderBy: { createdAt: "asc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findFailedReceipts(workspaceId: string): Promise<Receipt[]> {
@@ -201,10 +210,10 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         status: ReceiptStatus.FAILED,
         deletedAt: null,
       },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async exists(id: ReceiptId, workspaceId: string): Promise<boolean> {
@@ -213,9 +222,9 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    return count > 0
+    return count > 0;
   }
 
   async delete(id: ReceiptId, workspaceId: string): Promise<void> {
@@ -223,7 +232,7 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
       where: {
         id: id.getValue(),
       },
-    })
+    });
   }
 
   async countByWorkspace(workspaceId: string): Promise<number> {
@@ -232,17 +241,20 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         workspaceId,
         deletedAt: null,
       },
-    })
+    });
   }
 
-  async countByStatus(workspaceId: string, status: ReceiptStatus): Promise<number> {
+  async countByStatus(
+    workspaceId: string,
+    status: ReceiptStatus,
+  ): Promise<number> {
     return await this.prisma.receipt.count({
       where: {
         workspaceId,
         status,
         deletedAt: null,
       },
-    })
+    });
   }
 
   private toDomain(row: any): Receipt {
@@ -253,13 +265,13 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
       fileSize: row.fileSize,
       mimeType: row.mimeType,
       fileHash: row.fileHash,
-    })
+    });
 
     const storageLocation = StorageLocation.create({
       provider: row.storageProvider as StorageProvider,
       bucket: row.storageBucket,
       key: row.storageKey,
-    })
+    });
 
     return Receipt.fromPersistence({
       id: ReceiptId.fromString(row.id),
@@ -278,6 +290,25 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       deletedAt: row.deletedAt,
-    })
+    });
+  }
+  async deleteWithDependencies(
+    id: ReceiptId,
+    workspaceId: string,
+  ): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.receiptMetadata.deleteMany({
+        where: { receiptId: id.getValue() },
+      }),
+      this.prisma.receiptTag.deleteMany({
+        where: { receiptId: id.getValue() },
+      }),
+      this.prisma.receipt.delete({
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
+      }),
+    ]);
   }
 }
