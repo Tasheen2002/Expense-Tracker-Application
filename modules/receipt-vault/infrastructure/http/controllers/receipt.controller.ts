@@ -203,6 +203,27 @@ export class ReceiptController {
     const { expenseId } = request.body;
 
     try {
+      const existingReceipt = await this.getReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+      });
+
+      if (!existingReceipt) {
+        return reply.status(404).send({
+          success: false,
+          statusCode: 404,
+          message: "Receipt not found",
+        });
+      }
+
+      if (existingReceipt.getUserId() !== userId) {
+        return reply.status(403).send({
+          success: false,
+          statusCode: 403,
+          message: "You don't have permission to access this resource",
+        });
+      }
+
       const receipt = await this.linkReceiptHandler.handle({
         receiptId,
         expenseId,
@@ -239,6 +260,27 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params;
 
     try {
+      const existingReceipt = await this.getReceiptHandler.handle({
+        receiptId,
+        workspaceId,
+      });
+
+      if (!existingReceipt) {
+        return reply.status(404).send({
+          success: false,
+          statusCode: 404,
+          message: "Receipt not found",
+        });
+      }
+
+      if (existingReceipt.getUserId() !== userId) {
+        return reply.status(403).send({
+          success: false,
+          statusCode: 403,
+          message: "You don't have permission to access this resource",
+        });
+      }
+
       const receipt = await this.unlinkReceiptHandler.handle({
         receiptId,
         workspaceId,
