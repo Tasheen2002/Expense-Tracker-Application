@@ -1,4 +1,5 @@
 import { FastifyReply } from "fastify";
+import { ZodError } from "zod";
 
 /**
  * Standard success response format
@@ -58,6 +59,16 @@ export class ResponseHelper {
    * @param error - Error object (preferably a domain error with statusCode)
    */
   static error(reply: FastifyReply, error: unknown): FastifyReply {
+    // Handle ZodError
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        success: false,
+        statusCode: 400,
+        message: "Validation failed",
+        error: error.format(),
+      });
+    }
+
     // Extract statusCode from domain errors
     const statusCode =
       error && typeof error === "object" && "statusCode" in error
