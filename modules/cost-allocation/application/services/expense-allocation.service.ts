@@ -113,11 +113,11 @@ export class ExpenseAllocationService {
     }
 
     // 4. Persistence
-    await this.allocationRepository.deleteByExpenseId(
+    await this.allocationRepository.replaceAllocs(
       params.expenseId,
       workspaceId,
+      allocationEntities,
     );
-    await this.allocationRepository.saveBatch(allocationEntities);
   }
 
   private validateAllocationTarget(
