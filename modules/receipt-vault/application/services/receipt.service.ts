@@ -19,6 +19,7 @@ import {
   DeletedReceiptError,
 } from "../../domain/errors/receipt.errors";
 import { UnauthorizedAccessError } from "../../domain/errors/unauthorized-access.error";
+import { UpdateReceiptMetadataDto } from "../commands/update-receipt-metadata.command";
 
 export class ReceiptService {
   constructor(
@@ -432,7 +433,7 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    updates: any,
+    updates: UpdateReceiptMetadataDto,
   ): Promise<ReceiptMetadata> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
@@ -462,7 +463,12 @@ export class ReceiptService {
       updates.merchantPhone !== undefined ||
       updates.merchantTaxId !== undefined
     ) {
-      metadata.updateMerchantInfo(updates);
+      metadata.updateMerchantInfo({
+        name: updates.merchantName,
+        address: updates.merchantAddress,
+        phone: updates.merchantPhone,
+        taxId: updates.merchantTaxId,
+      });
     }
 
     if (
@@ -472,7 +478,13 @@ export class ReceiptService {
       updates.totalAmount !== undefined ||
       updates.currency !== undefined
     ) {
-      metadata.updateFinancialAmounts(updates);
+      metadata.updateFinancialAmounts({
+        subtotal: updates.subtotal,
+        taxAmount: updates.taxAmount,
+        tipAmount: updates.tipAmount,
+        totalAmount: updates.totalAmount,
+        currency: updates.currency,
+      });
     }
 
     if (
