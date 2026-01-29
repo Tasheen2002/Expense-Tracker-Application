@@ -350,12 +350,11 @@ export class ReceiptService {
     }
 
     if (permanent) {
-      // Delete metadata and tags first
-      await this.metadataRepository.deleteByReceiptId(receipt.getId());
-      await this.tagRepository.removeAllTagsFromReceipt(receipt.getId());
-
-      // Permanently delete the receipt
-      await this.receiptRepository.delete(receipt.getId(), workspaceId);
+      // Transactional delete of receipt and dependencies
+      await this.receiptRepository.deleteWithDependencies(
+        receipt.getId(),
+        workspaceId,
+      );
     } else {
       // Soft delete
       receipt.softDelete();
