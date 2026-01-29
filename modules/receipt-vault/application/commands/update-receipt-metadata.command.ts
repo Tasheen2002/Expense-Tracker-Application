@@ -4,6 +4,7 @@ import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
 export interface UpdateReceiptMetadataDto {
   receiptId: string;
   workspaceId: string;
+  userId: string;
   merchantName?: string;
   merchantAddress?: string;
   merchantPhone?: string;
@@ -32,6 +33,7 @@ export class UpdateReceiptMetadataHandler {
     return await this.receiptService.updateMetadata(
       dto.receiptId,
       dto.workspaceId,
+      dto.userId,
       dto,
     );
   }

@@ -1,9 +1,10 @@
-import { ReceiptService } from '../services/receipt.service'
+import { ReceiptService } from "../services/receipt.service";
 
 export interface DeleteReceiptDto {
-  receiptId: string
-  workspaceId: string
-  permanent?: boolean
+  receiptId: string;
+  workspaceId: string;
+  userId: string;
+  permanent?: boolean;
 }
 
 export class DeleteReceiptHandler {
@@ -13,7 +14,8 @@ export class DeleteReceiptHandler {
     return await this.receiptService.deleteReceipt(
       dto.receiptId,
       dto.workspaceId,
-      dto.permanent || false
-    )
+      dto.userId,
+      dto.permanent || false,
+    );
   }
 }

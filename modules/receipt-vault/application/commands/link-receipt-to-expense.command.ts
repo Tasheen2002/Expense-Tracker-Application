@@ -1,10 +1,11 @@
-import { ReceiptService } from '../services/receipt.service'
-import { Receipt } from '../../domain/entities/receipt.entity'
+import { ReceiptService } from "../services/receipt.service";
+import { Receipt } from "../../domain/entities/receipt.entity";
 
 export interface LinkReceiptToExpenseDto {
-  receiptId: string
-  expenseId: string
-  workspaceId: string
+  receiptId: string;
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
 }
 
 export class LinkReceiptToExpenseHandler {
@@ -14,7 +15,8 @@ export class LinkReceiptToExpenseHandler {
     return await this.receiptService.linkToExpense(
       dto.receiptId,
       dto.expenseId,
-      dto.workspaceId
-    )
+      dto.workspaceId,
+      dto.userId,
+    );
   }
 }
