@@ -73,3 +73,13 @@ export class InvalidPlanPeriodError extends BudgetPlanningDomainError {
     super(`Invalid plan period: ${message}`, "INVALID_PLAN_PERIOD", 400);
   }
 }
+
+export class UnauthorizedBudgetPlanAccessError extends BudgetPlanningDomainError {
+  constructor(action: string) {
+    super(
+      `You are not authorized to ${action} this budget plan`,
+      "UNAUTHORIZED_BUDGET_PLAN_ACCESS",
+      403,
+    );
+  }
+}

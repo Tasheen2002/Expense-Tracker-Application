@@ -16,7 +16,7 @@ export class PrismaExpenseLookupAdapter implements IExpenseLookupPort {
   ): Promise<ExpenseAllocationData | null> {
     const expense = await this.prisma.expense.findUnique({
       where: { id: expenseId },
-      select: { id: true, amount: true, workspaceId: true },
+      select: { id: true, amount: true, workspaceId: true, userId: true },
     });
 
     if (!expense) {
@@ -26,6 +26,7 @@ export class PrismaExpenseLookupAdapter implements IExpenseLookupPort {
     return {
       id: expense.id,
       workspaceId: expense.workspaceId,
+      userId: expense.userId,
       amount: expense.amount,
     };
   }

@@ -1,4 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  SettlementStatus as PrismaSettlementStatus,
+} from "@prisma/client";
 import { SplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
 import { SplitSettlement } from "../../domain/entities/split-settlement.entity";
 import { SettlementId } from "../../domain/value-objects/settlement-id";
@@ -24,14 +27,14 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
         totalOwedAmount: settlement.getTotalOwedAmount().getAmount(),
         paidAmount: settlement.getPaidAmount().getAmount(),
         currency: settlement.getTotalOwedAmount().getCurrency(),
-        status: settlement.getStatus() as any,
+        status: settlement.getStatus() as PrismaSettlementStatus,
         settledAt: settlement.getSettledAt(),
         createdAt: settlement.getCreatedAt(),
         updatedAt: settlement.getUpdatedAt(),
       },
       update: {
         paidAmount: settlement.getPaidAmount().getAmount(),
-        status: settlement.getStatus() as any,
+        status: settlement.getStatus() as PrismaSettlementStatus,
         settledAt: settlement.getSettledAt(),
         updatedAt: settlement.getUpdatedAt(),
       },
@@ -137,7 +140,10 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
       splitId: SplitId.fromString(data.splitId),
       fromUserId: data.fromUserId,
       toUserId: data.toUserId,
-      totalOwedAmount: Money.create(Number(data.totalOwedAmount), data.currency),
+      totalOwedAmount: Money.create(
+        Number(data.totalOwedAmount),
+        data.currency,
+      ),
       paidAmount: Money.create(Number(data.paidAmount), data.currency),
       status: data.status as SettlementStatus,
       settledAt: data.settledAt,

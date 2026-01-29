@@ -115,6 +115,7 @@ export class BudgetController {
       const budget = await this.updateBudgetHandler.handle({
         budgetId,
         workspaceId,
+        userId,
         name: request.body.name,
         description: request.body.description,
         totalAmount: request.body.totalAmount,
@@ -152,6 +153,7 @@ export class BudgetController {
       const budget = await this.activateBudgetHandler.handle({
         budgetId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -186,6 +188,7 @@ export class BudgetController {
       const budget = await this.archiveBudgetHandler.handle({
         budgetId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -220,6 +223,7 @@ export class BudgetController {
       await this.deleteBudgetHandler.handle({
         budgetId,
         workspaceId,
+        userId,
       });
 
       return reply.status(200).send({
@@ -322,10 +326,12 @@ export class BudgetController {
         });
       }
 
-      const { budgetId } = request.params;
+      const { workspaceId, budgetId } = request.params;
 
       const allocation = await this.addAllocationHandler.handle({
         budgetId,
+        workspaceId,
+        userId,
         categoryId: request.body.categoryId,
         allocatedAmount: request.body.allocatedAmount,
         description: request.body.description,
@@ -362,10 +368,12 @@ export class BudgetController {
         });
       }
 
-      const { allocationId } = request.params;
+      const { workspaceId, allocationId } = request.params;
 
       const allocation = await this.updateAllocationHandler.handle({
         allocationId,
+        workspaceId,
+        userId,
         allocatedAmount: request.body.allocatedAmount,
         description: request.body.description,
       });
@@ -397,10 +405,12 @@ export class BudgetController {
         });
       }
 
-      const { allocationId } = request.params;
+      const { workspaceId, allocationId } = request.params;
 
       await this.deleteAllocationHandler.handle({
         allocationId,
+        workspaceId,
+        userId,
       });
 
       return reply.status(200).send({

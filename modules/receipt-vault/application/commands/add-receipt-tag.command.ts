@@ -1,15 +1,21 @@
-import { ReceiptService } from '../services/receipt.service'
+import { ReceiptService } from "../services/receipt.service";
 
 export interface AddReceiptTagDto {
-  receiptId: string
-  tagId: string
-  workspaceId: string
+  receiptId: string;
+  tagId: string;
+  workspaceId: string;
+  userId: string;
 }
 
 export class AddReceiptTagHandler {
   constructor(private readonly receiptService: ReceiptService) {}
 
   async handle(dto: AddReceiptTagDto): Promise<void> {
-    return await this.receiptService.addTag(dto.receiptId, dto.tagId, dto.workspaceId)
+    return await this.receiptService.addTag(
+      dto.receiptId,
+      dto.tagId,
+      dto.workspaceId,
+      dto.userId,
+    );
   }
 }

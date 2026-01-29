@@ -28,6 +28,10 @@ export abstract class UuidId {
     return this.value;
   }
 
+  toJSON(): string {
+    return this.value;
+  }
+
   getTypeName(): string {
     return this.typeName;
   }

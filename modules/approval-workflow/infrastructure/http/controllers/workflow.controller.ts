@@ -277,7 +277,6 @@ export class WorkflowController {
     request: FastifyRequest<{
       Params: { workspaceId: string };
       Querystring: {
-        userId: string;
         limit?: string;
         offset?: string;
       };
@@ -285,8 +284,17 @@ export class WorkflowController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
-      const { userId, limit, offset } = request.query;
+      const { limit, offset } = request.query;
 
       const result = await this.workflowService.listUserWorkflows(
         userId,
@@ -318,11 +326,11 @@ export class WorkflowController {
 
   private serializeWorkflow(workflow: ExpenseWorkflow) {
     return {
-      workflowId: workflow.getId(),
-      expenseId: workflow.getExpenseId(),
-      workspaceId: workflow.getWorkspaceId(),
-      userId: workflow.getUserId(),
-      chainId: workflow.getChainId(),
+      workflowId: workflow.getId().getValue(),
+      expenseId: workflow.getExpenseId().getValue(),
+      workspaceId: workflow.getWorkspaceId().getValue(),
+      userId: workflow.getUserId().getValue(),
+      chainId: workflow.getChainId()?.getValue(),
       status: workflow.getStatus(),
       currentStepNumber: workflow.getCurrentStepNumber(),
       steps: workflow.getSteps().map((step) => this.serializeStep(step)),
@@ -335,10 +343,10 @@ export class WorkflowController {
   private serializeStep(step: ApprovalStep) {
     return {
       stepId: step.getId().getValue(),
-      workflowId: step.getWorkflowId(),
+      workflowId: step.getWorkflowId().getValue(),
       stepNumber: step.getStepNumber(),
-      approverId: step.getApproverId(),
-      delegatedTo: step.getDelegatedTo(),
+      approverId: step.getApproverId().getValue(),
+      delegatedTo: step.getDelegatedTo()?.getValue(),
       status: step.getStatus(),
       comments: step.getComments(),
       processedAt: step.getProcessedAt()?.toISOString(),

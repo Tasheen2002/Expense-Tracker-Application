@@ -1,10 +1,11 @@
-import { ReceiptService } from '../services/receipt.service'
-import { Receipt } from '../../domain/entities/receipt.entity'
+import { ReceiptService } from "../services/receipt.service";
+import { Receipt } from "../../domain/entities/receipt.entity";
 
 export interface RejectReceiptDto {
-  receiptId: string
-  workspaceId: string
-  reason?: string
+  receiptId: string;
+  workspaceId: string;
+  userId: string;
+  reason?: string;
 }
 
 export class RejectReceiptHandler {
@@ -14,7 +15,8 @@ export class RejectReceiptHandler {
     return await this.receiptService.rejectReceipt(
       dto.receiptId,
       dto.workspaceId,
-      dto.reason
-    )
+      dto.userId,
+      dto.reason,
+    );
   }
 }

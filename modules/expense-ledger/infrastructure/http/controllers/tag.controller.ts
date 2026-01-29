@@ -1,10 +1,11 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { CreateTagHandler } from '../../../application/commands/create-tag.command'
-import { UpdateTagHandler } from '../../../application/commands/update-tag.command'
-import { DeleteTagHandler } from '../../../application/commands/delete-tag.command'
-import { GetTagHandler } from '../../../application/queries/get-tag.query'
-import { ListTagsHandler } from '../../../application/queries/list-tags.query'
-import { Tag } from '../../../domain/entities/tag.entity'
+import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { CreateTagHandler } from "../../../application/commands/create-tag.command";
+import { UpdateTagHandler } from "../../../application/commands/update-tag.command";
+import { DeleteTagHandler } from "../../../application/commands/delete-tag.command";
+import { GetTagHandler } from "../../../application/queries/get-tag.query";
+import { ListTagsHandler } from "../../../application/queries/list-tags.query";
+import { Tag } from "../../../domain/entities/tag.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class TagController {
@@ -13,32 +14,32 @@ export class TagController {
     private readonly updateTagHandler: UpdateTagHandler,
     private readonly deleteTagHandler: DeleteTagHandler,
     private readonly getTagHandler: GetTagHandler,
-    private readonly listTagsHandler: ListTagsHandler
+    private readonly listTagsHandler: ListTagsHandler,
   ) {}
 
   async createTag(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
       Body: {
-        name: string
-        color?: string
-      }
+        name: string;
+        color?: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
+      const { workspaceId } = request.params;
 
       const tag = await this.createTagHandler.handle({
         workspaceId,
         name: request.body.name,
         color: request.body.color,
-      })
+      });
 
       return reply.status(201).send({
         success: true,
         statusCode: 201,
-        message: 'Tag created successfully',
+        message: "Tag created successfully",
         data: {
           tagId: tag.id.getValue(),
           workspaceId: tag.workspaceId,
@@ -46,36 +47,36 @@ export class TagController {
           color: tag.color,
           createdAt: tag.createdAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateTag(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; tagId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; tagId: string };
       Body: {
-        name?: string
-        color?: string
-      }
+        name?: string;
+        color?: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, tagId } = request.params
+      const { workspaceId, tagId } = request.params;
 
       const tag = await this.updateTagHandler.handle({
         tagId,
         workspaceId,
         name: request.body.name,
         color: request.body.color,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tag updated successfully',
+        message: "Tag updated successfully",
         data: {
           tagId: tag.id.getValue(),
           workspaceId: tag.workspaceId,
@@ -83,54 +84,54 @@ export class TagController {
           color: tag.color,
           createdAt: tag.createdAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteTag(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; tagId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; tagId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, tagId } = request.params
+      const { workspaceId, tagId } = request.params;
 
       await this.deleteTagHandler.handle({
         tagId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tag deleted successfully',
-      })
+        message: "Tag deleted successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getTag(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; tagId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; tagId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, tagId } = request.params
+      const { workspaceId, tagId } = request.params;
 
       const tag = await this.getTagHandler.handle({
         tagId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tag retrieved successfully',
+        message: "Tag retrieved successfully",
         data: {
           tagId: tag.id.getValue(),
           workspaceId: tag.workspaceId,
@@ -138,29 +139,29 @@ export class TagController {
           color: tag.color,
           createdAt: tag.createdAt.toISOString(),
         },
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listTags(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
+      const { workspaceId } = request.params;
 
       const tags = await this.listTagsHandler.handle({
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Tags retrieved successfully',
+        message: "Tags retrieved successfully",
         data: tags.map((tag: Tag) => ({
           tagId: tag.id.getValue(),
           workspaceId: tag.workspaceId,
@@ -168,9 +169,9 @@ export class TagController {
           color: tag.color,
           createdAt: tag.createdAt.toISOString(),
         })),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 }

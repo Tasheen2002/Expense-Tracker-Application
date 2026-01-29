@@ -1,11 +1,10 @@
-export class CostAllocationDomainError extends Error {
-  public readonly statusCode: number;
+import { DomainError } from "../../../../apps/api/src/shared/domain/domain-error";
+
+export class CostAllocationDomainError extends DomainError {
   public readonly errorCode: string;
 
   constructor(message: string, errorCode: string, statusCode: number) {
-    super(message);
-    this.name = this.constructor.name;
-    this.statusCode = statusCode;
+    super(message, statusCode);
     this.errorCode = errorCode;
   }
 }
@@ -103,5 +102,15 @@ export class InvalidAllocationTargetError extends CostAllocationDomainError {
 export class AllocationExceedsExpenseError extends CostAllocationDomainError {
   constructor(message: string) {
     super(message, "ALLOCATION_EXCEEDS_EXPENSE", 400);
+  }
+}
+
+export class UnauthorizedAllocationAccessError extends CostAllocationDomainError {
+  constructor(action: string) {
+    super(
+      `You are not authorized to ${action} allocations for this expense.`,
+      "UNAUTHORIZED_ALLOCATION_ACCESS",
+      403,
+    );
   }
 }

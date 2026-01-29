@@ -127,7 +127,11 @@ export class ExpenseAllocationController {
       }
 
       const { workspaceId, expenseId } = request.params;
-      const command = new DeleteAllocationsCommand(expenseId, workspaceId);
+      const command = new DeleteAllocationsCommand(
+        expenseId,
+        workspaceId,
+        userId,
+      );
       await this.deleteAllocationsHandler.handle(command);
 
       return ResponseHelper.success(

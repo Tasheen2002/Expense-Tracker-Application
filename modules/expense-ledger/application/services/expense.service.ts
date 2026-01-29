@@ -271,7 +271,7 @@ export class ExpenseService {
       throw new UnauthorizedExpenseAccessError(expenseId, userId);
     }
 
-    expense.submit();
+    expense.submit(userId);
 
     await this.expenseRepository.update(expense);
 
@@ -301,7 +301,7 @@ export class ExpenseService {
       );
     }
 
-    expense.approve();
+    expense.approve(approverId);
 
     await this.expenseRepository.update(expense);
 
@@ -332,7 +332,7 @@ export class ExpenseService {
       );
     }
 
-    expense.reject();
+    expense.reject(rejecterId, reason);
 
     await this.expenseRepository.update(expense);
 
@@ -357,7 +357,7 @@ export class ExpenseService {
       throw new UnauthorizedExpenseAccessError(expenseId, userId);
     }
 
-    expense.revertToDraft();
+    expense.revertToDraft(userId);
 
     await this.expenseRepository.update(expense);
 
@@ -387,7 +387,7 @@ export class ExpenseService {
       );
     }
 
-    expense.markAsReimbursed();
+    expense.markAsReimbursed(processedBy);
 
     await this.expenseRepository.update(expense);
 

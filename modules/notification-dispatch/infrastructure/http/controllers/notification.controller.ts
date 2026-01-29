@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { NotificationService } from "../../../application/services/notification.service";
 import { Notification } from "../../../domain/entities/notification.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
@@ -6,17 +7,14 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async getNotifications(
-    request: FastifyRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async getNotifications(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
-      const userId = (request as any).user?.id;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { limit, offset } = request.query as {
+        limit?: string;
+        offset?: string;
+      };
+      const userId = request.user.id;
 
       if (!userId) {
         return ResponseHelper.unauthorized(reply);
@@ -56,14 +54,10 @@ export class NotificationController {
     }
   }
 
-  async markAsRead(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; notificationId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async markAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const userId = request.user?.userId;
+      const { notificationId } = request.params as { notificationId: string };
+      const userId = request.user.id;
       if (!userId) {
         return reply.status(401).send({
           success: false,
@@ -71,8 +65,6 @@ export class NotificationController {
           message: "User not authenticated",
         });
       }
-
-      const { notificationId } = request.params;
 
       const notification = await this.notificationService.markAsRead(
         notificationId,
@@ -90,15 +82,10 @@ export class NotificationController {
     }
   }
 
-  async markAllAsRead(
-    request: FastifyRequest<{
-      Params: { workspaceId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async markAllAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
-      const userId = (request as any).user?.id;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const userId = request.user.id;
 
       if (!userId) {
         return ResponseHelper.unauthorized(reply);
@@ -116,15 +103,10 @@ export class NotificationController {
     }
   }
 
-  async getPreferences(
-    request: FastifyRequest<{
-      Params: { workspaceId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async getPreferences(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
-      const userId = (request as any).user?.id;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const userId = request.user.id;
 
       if (!userId) {
         return ResponseHelper.unauthorized(reply);
@@ -156,17 +138,15 @@ export class NotificationController {
     }
   }
 
-  async updatePreferences(
-    request: FastifyRequest<{
-      Params: { workspaceId: string };
-      Body: { email?: boolean; inApp?: boolean; push?: boolean };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async updatePreferences(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
-      const { email, inApp, push } = request.body;
-      const userId = (request as any).user?.id;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { email, inApp, push } = request.body as {
+        email?: boolean;
+        inApp?: boolean;
+        push?: boolean;
+      };
+      const userId = request.user.id;
 
       if (!userId) {
         return ResponseHelper.unauthorized(reply);

@@ -10,14 +10,17 @@ import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
 import { BudgetId } from "../../domain/value-objects/budget-id";
 import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { AlertId } from "../../domain/value-objects/alert-id";
-import { BudgetStatus } from "../../domain/enums/budget-status";
 import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
 import { Decimal } from "@prisma/client/runtime/library";
+
 import {
   BudgetNotFoundError,
   AllocationNotFoundError,
   AlertNotFoundError,
+  UnauthorizedBudgetAccessError,
 } from "../../domain/errors/budget.errors";
+
+import { BudgetAllocationExceededError } from "../../domain/errors/budget-allocation-exceeded.error";
 
 export class BudgetService {
   constructor(
@@ -61,6 +64,7 @@ export class BudgetService {
   async updateBudget(
     budgetId: string,
     workspaceId: string,
+    userId: string,
     updates: {
       name?: string;
       description?: string | null;
@@ -76,6 +80,10 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("update");
+    }
+
     if (updates.name) {
       budget.updateName(updates.name);
     }
@@ -85,6 +93,17 @@ export class BudgetService {
     }
 
     if (updates.totalAmount) {
+      const newTotal = new Decimal(updates.totalAmount);
+      const currentAllocated =
+        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+
+      if (newTotal.lt(currentAllocated)) {
+        throw new BudgetAllocationExceededError(
+          budget.getId().getValue(),
+          newTotal.toNumber(),
+          currentAllocated.toNumber(),
+        );
+      }
       budget.updateTotalAmount(updates.totalAmount);
     }
 
@@ -93,7 +112,11 @@ export class BudgetService {
     return budget;
   }
 
-  async activateBudget(budgetId: string, workspaceId: string): Promise<Budget> {
+  async activateBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Budget> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId,
@@ -101,6 +124,10 @@ export class BudgetService {
 
     if (!budget) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("activate");
     }
 
     budget.activate();
@@ -110,7 +137,11 @@ export class BudgetService {
     return budget;
   }
 
-  async archiveBudget(budgetId: string, workspaceId: string): Promise<Budget> {
+  async archiveBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<Budget> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId,
@@ -120,6 +151,10 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("archive");
+    }
+
     budget.archive();
 
     await this.budgetRepository.save(budget);
@@ -127,7 +162,11 @@ export class BudgetService {
     return budget;
   }
 
-  async deleteBudget(budgetId: string, workspaceId: string): Promise<void> {
+  async deleteBudget(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
     const budgetIdObj = BudgetId.fromString(budgetId);
 
     const exists = await this.budgetRepository.exists(budgetIdObj, workspaceId);
@@ -135,10 +174,15 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
-    // Delete associated allocations and alerts
-    await this.allocationRepository.deleteByBudget(budgetIdObj);
-    await this.alertRepository.deleteByBudget(budgetIdObj);
+    const budget = await this.budgetRepository.findById(
+      budgetIdObj,
+      workspaceId,
+    );
+    if (budget && budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("delete");
+    }
 
+    // Delete budget (cascade will handle allocations and alerts)
     await this.budgetRepository.delete(budgetIdObj, workspaceId);
   }
 
@@ -167,10 +211,34 @@ export class BudgetService {
   // Allocation methods
   async addAllocation(params: {
     budgetId: string;
+    workspaceId: string;
+    userId: string;
     categoryId?: string;
     allocatedAmount: number | string;
     description?: string;
   }): Promise<BudgetAllocation> {
+    // Verify parent budget ownership first
+    const budget = await this.budgetRepository.findById(
+      BudgetId.fromString(params.budgetId),
+      params.workspaceId,
+    );
+
+    if (!budget) {
+      throw new BudgetNotFoundError(params.budgetId, params.workspaceId);
+    }
+
+    if (budget.getCreatedBy() !== params.userId) {
+      throw new UnauthorizedBudgetAccessError("add allocation to");
+    }
+
+    // Validate budget limits
+    const currentAllocated =
+      await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+    const newAmount = new Decimal(params.allocatedAmount);
+
+    // Delegate validation to the aggregate root
+    budget.validateAllocationAmount(newAmount, currentAllocated);
+
     const allocation = BudgetAllocation.create({
       budgetId: params.budgetId,
       categoryId: params.categoryId,
@@ -185,6 +253,8 @@ export class BudgetService {
 
   async updateAllocation(
     allocationId: string,
+    workspaceId: string, // Need workspaceID to look up budget securely
+    userId: string,
     updates: {
       allocatedAmount?: number | string;
       description?: string | null;
@@ -198,7 +268,36 @@ export class BudgetService {
       throw new AllocationNotFoundError(allocationId);
     }
 
+    // Verify ownership via parent budget
+    const budget = await this.budgetRepository.findById(
+      allocation.getBudgetId(),
+      workspaceId,
+    );
+
+    if (!budget) {
+      throw new BudgetNotFoundError(
+        allocation.getBudgetId().getValue(),
+        workspaceId,
+      );
+    }
+
+    if (budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("update allocation in");
+    }
+
     if (updates.allocatedAmount) {
+      const newAmount = new Decimal(updates.allocatedAmount);
+      const currentAllocated =
+        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+      const oldAmount = allocation.getAllocatedAmount(); // This is a Decimal
+
+      // Calculate projected total BEFORE this specific allocation was made
+      // effectively backing out the old amount to validate the new amount against the remaining pool
+      const currentAllocatedWithoutThis = currentAllocated.minus(oldAmount);
+
+      // Delegate validation to the aggregate root
+      budget.validateAllocationAmount(newAmount, currentAllocatedWithoutThis);
+
       allocation.updateAllocatedAmount(updates.allocatedAmount);
     }
 
@@ -226,14 +325,36 @@ export class BudgetService {
     allocation.updateSpentAmount(spentAmount);
 
     // Check if we need to create alerts
-    await this.checkAndCreateAlerts(allocation);
+    const alerts = await this.checkAndCreateAlerts(allocation);
 
-    await this.allocationRepository.save(allocation);
+    await this.allocationRepository.saveWithAlerts(allocation, alerts);
 
     return allocation;
   }
 
-  async deleteAllocation(allocationId: string): Promise<void> {
+  async deleteAllocation(
+    allocationId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<void> {
+    const allocation = await this.allocationRepository.findById(
+      AllocationId.fromString(allocationId), // Assuming we need to fetch to check auth
+    );
+
+    if (!allocation) {
+      // Idempotent success or throw not found
+      return;
+    }
+
+    // Check Auth
+    const budget = await this.budgetRepository.findById(
+      allocation.getBudgetId(),
+      workspaceId,
+    );
+    if (budget && budget.getCreatedBy() !== userId) {
+      throw new UnauthorizedBudgetAccessError("delete allocation in");
+    }
+
     await this.allocationRepository.delete(
       AllocationId.fromString(allocationId),
     );
@@ -248,7 +369,8 @@ export class BudgetService {
   // Alert management
   private async checkAndCreateAlerts(
     allocation: BudgetAllocation,
-  ): Promise<void> {
+  ): Promise<BudgetAlert[]> {
+    const alerts: BudgetAlert[] = [];
     const percentage = allocation.getSpentPercentage();
 
     // Only create alerts if threshold is met (50%, 75%, 90%, 100%+)
@@ -261,7 +383,7 @@ export class BudgetService {
           allocatedAmount: allocation.getAllocatedAmount(),
         });
 
-        await this.alertRepository.save(alert);
+        alerts.push(alert);
       } catch (error) {
         // Log the error instead of silently swallowing it
         // Duplicate alerts (constraint violations) are expected and can be ignored
@@ -277,6 +399,7 @@ export class BudgetService {
         }
       }
     }
+    return alerts;
   }
 
   async getUnreadAlerts(workspaceId: string): Promise<BudgetAlert[]> {

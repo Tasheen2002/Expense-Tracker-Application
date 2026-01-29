@@ -1,308 +1,580 @@
-import { ExpenseId } from '../value-objects/expense-id'
-import { CategoryId } from '../value-objects/category-id'
-import { TagId } from '../value-objects/tag-id'
-import { AttachmentId } from '../value-objects/attachment-id'
-import { Money } from '../value-objects/money'
-import { ExpenseDate } from '../value-objects/expense-date'
-import { PaymentMethod } from '../enums/payment-method'
-import { ExpenseStatus, canTransitionTo } from '../enums/expense-status'
+import { ExpenseId } from "../value-objects/expense-id";
+import { CategoryId } from "../value-objects/category-id";
+import { TagId } from "../value-objects/tag-id";
+import { AttachmentId } from "../value-objects/attachment-id";
+import { Money } from "../value-objects/money";
+import { ExpenseDate } from "../value-objects/expense-date";
+import { PaymentMethod } from "../enums/payment-method";
+import { ExpenseStatus, canTransitionTo } from "../enums/expense-status";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
 
-export interface ExpenseProps {
-  id: ExpenseId
-  workspaceId: string
-  userId: string
-  title: string
-  description?: string
-  amount: Money
-  expenseDate: ExpenseDate
-  categoryId?: CategoryId
-  merchant?: string
-  paymentMethod: PaymentMethod
-  isReimbursable: boolean
-  status: ExpenseStatus
-  tagIds: TagId[]
-  attachmentIds: AttachmentId[]
-  createdAt: Date
-  updatedAt: Date
-}
+// ============================================================================
+// DOMAIN EVENTS
+// ============================================================================
 
-export class Expense {
-  private readonly props: ExpenseProps
-
-  private constructor(props: ExpenseProps) {
-    this.props = props
+/**
+ * Emitted when a new expense is created.
+ */
+export class ExpenseCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly userId: string,
+    public readonly amount: number,
+    public readonly currency: string,
+    public readonly title: string,
+  ) {
+    super(expenseId, "Expense");
   }
 
-  static create(props: Omit<ExpenseProps, 'id' | 'createdAt' | 'updatedAt'>): Expense {
-    this.validateTitle(props.title)
-    this.validateDescription(props.description)
-    this.validateMerchant(props.merchant)
+  get eventType(): string {
+    return "expense.created";
+  }
 
-    return new Expense({
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      amount: this.amount,
+      currency: this.currency,
+      title: this.title,
+    };
+  }
+}
+
+/**
+ * Emitted when an expense is submitted for approval.
+ */
+export class ExpenseSubmittedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly submittedBy: string,
+    public readonly amount: number,
+    public readonly currency: string,
+  ) {
+    super(expenseId, "Expense");
+  }
+
+  get eventType(): string {
+    return "expense.submitted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      submittedBy: this.submittedBy,
+      amount: this.amount,
+      currency: this.currency,
+    };
+  }
+}
+
+/**
+ * Emitted when an expense is approved.
+ */
+export class ExpenseApprovedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly approvedBy: string,
+    public readonly amount: number,
+    public readonly currency: string,
+  ) {
+    super(expenseId, "Expense");
+  }
+
+  get eventType(): string {
+    return "expense.approved";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      approvedBy: this.approvedBy,
+      amount: this.amount,
+      currency: this.currency,
+    };
+  }
+}
+
+/**
+ * Emitted when an expense is rejected.
+ */
+export class ExpenseRejectedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly rejectedBy: string,
+    public readonly reason?: string,
+  ) {
+    super(expenseId, "Expense");
+  }
+
+  get eventType(): string {
+    return "expense.rejected";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      rejectedBy: this.rejectedBy,
+      reason: this.reason,
+    };
+  }
+}
+
+/**
+ * Emitted when an expense is reimbursed.
+ */
+export class ExpenseReimbursedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly userId: string,
+    public readonly amount: number,
+    public readonly currency: string,
+  ) {
+    super(expenseId, "Expense");
+  }
+
+  get eventType(): string {
+    return "expense.reimbursed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      amount: this.amount,
+      currency: this.currency,
+    };
+  }
+}
+
+/**
+ * Emitted when an expense status changes.
+ */
+export class ExpenseStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly oldStatus: string,
+    public readonly newStatus: string,
+    public readonly changedBy: string = "system",
+    public readonly expenseOwnerId: string,
+  ) {
+    super(expenseId, "Expense");
+  }
+
+  get eventType(): string {
+    return "expense.status_changed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      oldStatus: this.oldStatus,
+      newStatus: this.newStatus,
+      changedBy: this.changedBy,
+      expenseOwnerId: this.expenseOwnerId,
+    };
+  }
+}
+
+// ============================================================================
+// ENTITY
+// ============================================================================
+
+export interface ExpenseProps{
+  id: ExpenseId;
+  workspaceId: string;
+  userId: string;
+  title: string;
+  description?: string;
+  amount: Money;
+  expenseDate: ExpenseDate;
+  categoryId?: CategoryId;
+  merchant?: string;
+  paymentMethod: PaymentMethod;
+  isReimbursable: boolean;
+  status: ExpenseStatus;
+  tagIds: TagId[];
+  attachmentIds: AttachmentId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class Expense extends AggregateRoot {
+  private readonly props: ExpenseProps;
+
+  private constructor(props: ExpenseProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(
+    props: Omit<ExpenseProps, "id" | "createdAt" | "updatedAt">,
+  ): Expense {
+    this.validateTitle(props.title);
+    this.validateDescription(props.description);
+    this.validateMerchant(props.merchant);
+
+    const expense = new Expense({
       ...props,
       id: ExpenseId.create(),
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
+    });
+
+    expense.addDomainEvent(
+      new ExpenseCreatedEvent(
+        expense.id.getValue(),
+        expense.workspaceId,
+        expense.userId,
+        expense.amount.getAmount().toNumber(),
+        expense.amount.getCurrency(),
+        expense.title,
+      ),
+    );
+
+    return expense;
   }
 
   static fromPersistence(props: ExpenseProps): Expense {
-    return new Expense(props)
+    return new Expense(props);
   }
 
   // Validation methods
   private static validateTitle(title: string): void {
     if (!title || title.trim().length === 0) {
-      throw new Error('Expense title is required')
+      throw new Error("Expense title is required");
     }
     if (title.length > 255) {
-      throw new Error('Expense title cannot exceed 255 characters')
+      throw new Error("Expense title cannot exceed 255 characters");
     }
   }
 
   private static validateDescription(description?: string): void {
     if (description && description.length > 5000) {
-      throw new Error('Expense description cannot exceed 5000 characters')
+      throw new Error("Expense description cannot exceed 5000 characters");
     }
   }
 
   private static validateMerchant(merchant?: string): void {
     if (merchant && merchant.length > 255) {
-      throw new Error('Merchant name cannot exceed 255 characters')
+      throw new Error("Merchant name cannot exceed 255 characters");
     }
   }
 
   // Getters
   get id(): ExpenseId {
-    return this.props.id
+    return this.props.id;
   }
 
   get workspaceId(): string {
-    return this.props.workspaceId
+    return this.props.workspaceId;
   }
 
   get userId(): string {
-    return this.props.userId
+    return this.props.userId;
   }
 
   get title(): string {
-    return this.props.title
+    return this.props.title;
   }
 
   get description(): string | undefined {
-    return this.props.description
+    return this.props.description;
   }
 
   get amount(): Money {
-    return this.props.amount
+    return this.props.amount;
   }
 
   get expenseDate(): ExpenseDate {
-    return this.props.expenseDate
+    return this.props.expenseDate;
   }
 
   get categoryId(): CategoryId | undefined {
-    return this.props.categoryId
+    return this.props.categoryId;
   }
 
   get merchant(): string | undefined {
-    return this.props.merchant
+    return this.props.merchant;
   }
 
   get paymentMethod(): PaymentMethod {
-    return this.props.paymentMethod
+    return this.props.paymentMethod;
   }
 
   get isReimbursable(): boolean {
-    return this.props.isReimbursable
+    return this.props.isReimbursable;
   }
 
   get status(): ExpenseStatus {
-    return this.props.status
+    return this.props.status;
   }
 
   get tagIds(): TagId[] {
-    return [...this.props.tagIds]
+    return [...this.props.tagIds];
   }
 
   get attachmentIds(): AttachmentId[] {
-    return [...this.props.attachmentIds]
+    return [...this.props.attachmentIds];
   }
 
   get createdAt(): Date {
-    return this.props.createdAt
+    return this.props.createdAt;
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt
+    return this.props.updatedAt;
   }
 
   // Business logic methods
   updateTitle(title: string): void {
-    Expense.validateTitle(title)
-    this.props.title = title
-    this.props.updatedAt = new Date()
+    Expense.validateTitle(title);
+    this.props.title = title;
+    this.props.updatedAt = new Date();
   }
 
   updateDescription(description?: string): void {
-    Expense.validateDescription(description)
-    this.props.description = description
-    this.props.updatedAt = new Date()
+    Expense.validateDescription(description);
+    this.props.description = description;
+    this.props.updatedAt = new Date();
   }
 
   updateAmount(amount: Money): void {
-    this.props.amount = amount
-    this.props.updatedAt = new Date()
+    this.props.amount = amount;
+    this.props.updatedAt = new Date();
   }
 
   updateExpenseDate(expenseDate: ExpenseDate): void {
-    this.props.expenseDate = expenseDate
-    this.props.updatedAt = new Date()
+    this.props.expenseDate = expenseDate;
+    this.props.updatedAt = new Date();
   }
 
   updateCategory(categoryId?: CategoryId): void {
-    this.props.categoryId = categoryId
-    this.props.updatedAt = new Date()
+    this.props.categoryId = categoryId;
+    this.props.updatedAt = new Date();
   }
 
   updateMerchant(merchant?: string): void {
-    Expense.validateMerchant(merchant)
-    this.props.merchant = merchant
-    this.props.updatedAt = new Date()
+    Expense.validateMerchant(merchant);
+    this.props.merchant = merchant;
+    this.props.updatedAt = new Date();
   }
 
   updatePaymentMethod(paymentMethod: PaymentMethod): void {
-    this.props.paymentMethod = paymentMethod
-    this.props.updatedAt = new Date()
+    this.props.paymentMethod = paymentMethod;
+    this.props.updatedAt = new Date();
   }
 
   setReimbursable(isReimbursable: boolean): void {
-    this.props.isReimbursable = isReimbursable
-    this.props.updatedAt = new Date()
+    this.props.isReimbursable = isReimbursable;
+    this.props.updatedAt = new Date();
   }
 
   // Tag management
   addTag(tagId: TagId): void {
     if (!this.hasTag(tagId)) {
-      this.props.tagIds.push(tagId)
-      this.props.updatedAt = new Date()
+      this.props.tagIds.push(tagId);
+      this.props.updatedAt = new Date();
     }
   }
 
   removeTag(tagId: TagId): void {
-    const index = this.props.tagIds.findIndex((id) => id.equals(tagId))
+    const index = this.props.tagIds.findIndex((id) => id.equals(tagId));
     if (index !== -1) {
-      this.props.tagIds.splice(index, 1)
-      this.props.updatedAt = new Date()
+      this.props.tagIds.splice(index, 1);
+      this.props.updatedAt = new Date();
     }
   }
 
   hasTag(tagId: TagId): boolean {
-    return this.props.tagIds.some((id) => id.equals(tagId))
+    return this.props.tagIds.some((id) => id.equals(tagId));
   }
 
   // Attachment management
   addAttachment(attachmentId: AttachmentId): void {
     if (!this.hasAttachment(attachmentId)) {
-      this.props.attachmentIds.push(attachmentId)
-      this.props.updatedAt = new Date()
+      this.props.attachmentIds.push(attachmentId);
+      this.props.updatedAt = new Date();
     }
   }
 
   removeAttachment(attachmentId: AttachmentId): void {
-    const index = this.props.attachmentIds.findIndex((id) => id.equals(attachmentId))
+    const index = this.props.attachmentIds.findIndex((id) =>
+      id.equals(attachmentId),
+    );
     if (index !== -1) {
-      this.props.attachmentIds.splice(index, 1)
-      this.props.updatedAt = new Date()
+      this.props.attachmentIds.splice(index, 1);
+      this.props.updatedAt = new Date();
     }
   }
 
   hasAttachment(attachmentId: AttachmentId): boolean {
-    return this.props.attachmentIds.some((id) => id.equals(attachmentId))
+    return this.props.attachmentIds.some((id) => id.equals(attachmentId));
   }
 
   // Status transition methods
   canTransitionToStatus(newStatus: ExpenseStatus): boolean {
-    return canTransitionTo(this.props.status, newStatus)
+    return canTransitionTo(this.props.status, newStatus);
   }
 
   private transitionToStatus(newStatus: ExpenseStatus): void {
     if (!this.canTransitionToStatus(newStatus)) {
       throw new Error(
-        `Cannot transition from ${this.props.status} to ${newStatus}`
-      )
+        `Cannot transition from ${this.props.status} to ${newStatus}`,
+      );
     }
-    this.props.status = newStatus
-    this.props.updatedAt = new Date()
+    this.props.status = newStatus;
+    this.props.updatedAt = new Date();
   }
 
-  submit(): void {
+  submit(userId: string): void {
     if (this.props.status !== ExpenseStatus.DRAFT) {
-      throw new Error('Only draft expenses can be submitted')
+      throw new Error("Only draft expenses can be submitted");
     }
-    this.transitionToStatus(ExpenseStatus.SUBMITTED)
+    const oldStatus = this.props.status;
+    this.transitionToStatus(ExpenseStatus.SUBMITTED);
+
+    this.addDomainEvent(
+      new ExpenseStatusChangedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldStatus,
+        ExpenseStatus.SUBMITTED,
+        userId,
+        this.props.userId,
+      ),
+    );
   }
 
-  approve(): void {
+  approve(userId: string): void {
     if (this.props.status !== ExpenseStatus.SUBMITTED) {
-      throw new Error('Only submitted expenses can be approved')
+      throw new Error("Only submitted expenses can be approved");
     }
-    this.transitionToStatus(ExpenseStatus.APPROVED)
+    const oldStatus = this.props.status;
+    this.transitionToStatus(ExpenseStatus.APPROVED);
+
+    this.addDomainEvent(
+      new ExpenseStatusChangedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldStatus,
+        ExpenseStatus.APPROVED,
+        userId,
+        this.props.userId,
+      ),
+    );
   }
 
-  reject(): void {
+  reject(userId: string, reason?: string): void {
     if (this.props.status !== ExpenseStatus.SUBMITTED) {
-      throw new Error('Only submitted expenses can be rejected')
+      throw new Error("Only submitted expenses can be rejected");
     }
-    this.transitionToStatus(ExpenseStatus.REJECTED)
+    const oldStatus = this.props.status;
+    this.transitionToStatus(ExpenseStatus.REJECTED);
+
+    this.addDomainEvent(
+      new ExpenseStatusChangedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldStatus,
+        ExpenseStatus.REJECTED,
+        userId,
+        this.props.userId,
+      ),
+    );
   }
 
-  revertToDraft(): void {
+  revertToDraft(userId: string): void {
     if (
       this.props.status !== ExpenseStatus.SUBMITTED &&
       this.props.status !== ExpenseStatus.REJECTED
     ) {
-      throw new Error('Only submitted or rejected expenses can be reverted to draft')
+      throw new Error(
+        "Only submitted or rejected expenses can be reverted to draft",
+      );
     }
-    this.transitionToStatus(ExpenseStatus.DRAFT)
+    const oldStatus = this.props.status;
+    this.transitionToStatus(ExpenseStatus.DRAFT);
+
+    this.addDomainEvent(
+      new ExpenseStatusChangedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldStatus,
+        ExpenseStatus.DRAFT,
+        userId,
+        this.props.userId,
+      ),
+    );
   }
 
-  markAsReimbursed(): void {
+  markAsReimbursed(userId: string): void {
     if (this.props.status !== ExpenseStatus.APPROVED) {
-      throw new Error('Only approved expenses can be marked as reimbursed')
+      throw new Error("Only approved expenses can be marked as reimbursed");
     }
     if (!this.props.isReimbursable) {
-      throw new Error('Cannot reimburse a non-reimbursable expense')
+      throw new Error("Cannot reimburse a non-reimbursable expense");
     }
-    this.transitionToStatus(ExpenseStatus.REIMBURSED)
+    const oldStatus = this.props.status;
+    this.transitionToStatus(ExpenseStatus.REIMBURSED);
+
+    this.addDomainEvent(
+      new ExpenseStatusChangedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldStatus,
+        ExpenseStatus.REIMBURSED,
+        userId,
+        this.props.userId,
+      ),
+    );
   }
 
   // Query methods
   isDraft(): boolean {
-    return this.props.status === ExpenseStatus.DRAFT
+    return this.props.status === ExpenseStatus.DRAFT;
   }
 
   isSubmitted(): boolean {
-    return this.props.status === ExpenseStatus.SUBMITTED
+    return this.props.status === ExpenseStatus.SUBMITTED;
   }
 
   isApproved(): boolean {
-    return this.props.status === ExpenseStatus.APPROVED
+    return this.props.status === ExpenseStatus.APPROVED;
   }
 
   isRejected(): boolean {
-    return this.props.status === ExpenseStatus.REJECTED
+    return this.props.status === ExpenseStatus.REJECTED;
   }
 
   isReimbursed(): boolean {
-    return this.props.status === ExpenseStatus.REIMBURSED
+    return this.props.status === ExpenseStatus.REIMBURSED;
   }
 
   canBeEdited(): boolean {
-    return this.props.status === ExpenseStatus.DRAFT || this.props.status === ExpenseStatus.REJECTED
+    return (
+      this.props.status === ExpenseStatus.DRAFT ||
+      this.props.status === ExpenseStatus.REJECTED
+    );
   }
 
   canBeDeleted(): boolean {
-    return this.props.status === ExpenseStatus.DRAFT || this.props.status === ExpenseStatus.REJECTED
+    return (
+      this.props.status === ExpenseStatus.DRAFT ||
+      this.props.status === ExpenseStatus.REJECTED
+    );
   }
 }

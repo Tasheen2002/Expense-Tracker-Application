@@ -4,6 +4,7 @@ import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
 export interface AddReceiptMetadataDto {
   receiptId: string;
   workspaceId: string;
+  userId: string;
   merchantName?: string;
   merchantAddress?: string;
   merchantPhone?: string;
