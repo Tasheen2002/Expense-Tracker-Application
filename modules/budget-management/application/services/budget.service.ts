@@ -11,6 +11,7 @@ import { BudgetId } from "../../domain/value-objects/budget-id";
 import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { AlertId } from "../../domain/value-objects/alert-id";
 import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
+import { Decimal } from "@prisma/client/runtime/library";
 
 import {
   BudgetNotFoundError,
@@ -18,6 +19,8 @@ import {
   AlertNotFoundError,
   UnauthorizedBudgetAccessError,
 } from "../../domain/errors/budget.errors";
+
+import { BudgetAllocationExceededError } from "../../domain/errors/budget-allocation-exceeded.error";
 
 export class BudgetService {
   constructor(
@@ -90,6 +93,17 @@ export class BudgetService {
     }
 
     if (updates.totalAmount) {
+      const newTotal = new Decimal(updates.totalAmount);
+      const currentAllocated =
+        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+
+      if (newTotal.lt(currentAllocated)) {
+        throw new BudgetAllocationExceededError(
+          budget.getId().getValue(),
+          newTotal.toNumber(),
+          currentAllocated.toNumber(),
+        );
+      }
       budget.updateTotalAmount(updates.totalAmount);
     }
 
@@ -220,6 +234,20 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError("add allocation to");
     }
 
+    // Validate budget limits
+    const currentAllocated =
+      await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+    const newAmount = new Decimal(params.allocatedAmount);
+    const budgetTotal = budget.getTotalAmount();
+
+    if (currentAllocated.plus(newAmount).gt(budgetTotal)) {
+      throw new BudgetAllocationExceededError(
+        budget.getId().getValue(),
+        budgetTotal.toNumber(),
+        currentAllocated.plus(newAmount).toNumber(),
+      );
+    }
+
     const allocation = BudgetAllocation.create({
       budgetId: params.budgetId,
       categoryId: params.categoryId,
@@ -255,7 +283,6 @@ export class BudgetService {
       workspaceId,
     );
 
-    // If budget is not found (maybe in another workspace), we treat it as unauthorized/not found
     if (!budget) {
       throw new BudgetNotFoundError(
         allocation.getBudgetId().getValue(),
@@ -268,6 +295,23 @@ export class BudgetService {
     }
 
     if (updates.allocatedAmount) {
+      const newAmount = new Decimal(updates.allocatedAmount);
+      const currentAllocated =
+        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+      const oldAmount = allocation.getAllocatedAmount(); // This is a Decimal
+
+      // Calculate projected total: (currentTotal - oldAmount + newAmount)
+      const projectedTotal = currentAllocated.minus(oldAmount).plus(newAmount);
+      const budgetTotal = budget.getTotalAmount();
+
+      if (projectedTotal.gt(budgetTotal)) {
+        throw new BudgetAllocationExceededError(
+          budget.getId().getValue(),
+          budgetTotal.toNumber(),
+          projectedTotal.toNumber(),
+        );
+      }
+
       allocation.updateAllocatedAmount(updates.allocatedAmount);
     }
 
@@ -284,11 +328,6 @@ export class BudgetService {
     allocationId: string,
     spentAmount: number | string,
   ): Promise<BudgetAllocation> {
-    // NOTE: This usually comes from internal system events (Expense creation),
-    // so strictly checking user ID might not be needed if it's an automated process.
-    // However, if called via API, we might need to add it.
-    // For now, assuming this is an internal domain service method triggered by expenses.
-
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId),
     );
