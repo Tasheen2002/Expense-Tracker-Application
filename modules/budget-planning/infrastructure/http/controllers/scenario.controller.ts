@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import {
   CreateScenarioHandler,
   CreateScenarioCommand,
@@ -14,42 +15,93 @@ export class ScenarioController {
   ) {}
 
   async create(req: FastifyRequest, reply: FastifyReply) {
-    const body = await validateRequest(req, createScenarioSchema);
-    const command = new CreateScenarioCommand(
-      body.planId,
-      body.name,
-      body.createdBy,
-      body.description,
-      body.assumptions,
-    );
-    const result = await this.createScenarioHandler.handle(command);
-    return reply.status(201).send(result);
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "User not authenticated" });
+      }
+      const body = await validateRequest(req, createScenarioSchema);
+      const command = new CreateScenarioCommand(
+        body.planId,
+        body.name,
+        userId,
+        body.description,
+        body.assumptions,
+      );
+      const result = await this.createScenarioHandler.handle(command);
+      return ResponseHelper.success(
+        reply,
+        201,
+        "Scenario created successfully",
+        result,
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async get(
     req: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
-    const { id } = req.params;
-    const result = await this.scenarioService.getScenario(id);
-    return reply.send(result);
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "User not authenticated" });
+      }
+      const { id } = req.params;
+      const result = await this.scenarioService.getScenario(id);
+      return ResponseHelper.success(
+        reply,
+        200,
+        "Scenario retrieved successfully",
+        result,
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async list(
     req: FastifyRequest<{ Params: { planId: string } }>,
     reply: FastifyReply,
   ) {
-    const { planId } = req.params;
-    const result = await this.scenarioService.listScenarios(planId);
-    return reply.send(result);
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "User not authenticated" });
+      }
+      const { planId } = req.params;
+      const result = await this.scenarioService.listScenarios(planId);
+      return ResponseHelper.success(
+        reply,
+        200,
+        "Scenarios retrieved successfully",
+        result,
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async delete(
     req: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
-    const { id } = req.params;
-    await this.scenarioService.deleteScenario(id);
-    return reply.status(204).send();
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({ message: "User not authenticated" });
+      }
+      const { id } = req.params;
+      await this.scenarioService.deleteScenario(id);
+      return ResponseHelper.success(
+        reply,
+        200,
+        "Scenario deleted successfully",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

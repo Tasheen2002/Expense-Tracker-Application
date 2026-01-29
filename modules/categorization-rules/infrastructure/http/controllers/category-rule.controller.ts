@@ -68,6 +68,12 @@ export class CategoryRuleController {
     try {
       const { workspaceId } = request.params;
       const userId = (request as any).user?.userId;
+      if (!userId) {
+        return ResponseHelper.error(reply, {
+          message: "User not authenticated",
+          statusCode: 401,
+        });
+      }
 
       const command: CreateCategoryRuleCommand = {
         workspaceId,
@@ -235,6 +241,14 @@ export class CategoryRuleController {
     try {
       const { ruleId } = request.params;
 
+      const userId = (request as any).user?.userId;
+      if (!userId) {
+        return ResponseHelper.error(reply, {
+          message: "User not authenticated",
+          statusCode: 401,
+        });
+      }
+
       const query: GetRuleByIdQuery = { ruleId };
       const rule = await this.getRuleByIdHandler.execute(query);
 
@@ -259,6 +273,14 @@ export class CategoryRuleController {
     try {
       const { workspaceId } = request.params;
       const { activeOnly } = request.query;
+
+      const userId = (request as any).user?.userId;
+      if (!userId) {
+        return ResponseHelper.error(reply, {
+          message: "User not authenticated",
+          statusCode: 401,
+        });
+      }
 
       if (activeOnly === "true") {
         const query: GetActiveRulesByWorkspaceQuery = { workspaceId };
@@ -293,6 +315,14 @@ export class CategoryRuleController {
   ) {
     try {
       const { ruleId } = request.params;
+
+      const userId = (request as any).user?.userId;
+      if (!userId) {
+        return ResponseHelper.error(reply, {
+          message: "User not authenticated",
+          statusCode: 401,
+        });
+      }
 
       const query: GetExecutionsByRuleQuery = { ruleId };
       const executions = await this.getExecutionsByRuleHandler.execute(query);

@@ -14,26 +14,80 @@ import {
 } from "../validation/project.schema";
 
 // Command Handlers
-import { CreateDepartmentCommand, CreateDepartmentHandler } from "../../../application/commands/create-department.command";
-import { UpdateDepartmentCommand, UpdateDepartmentHandler } from "../../../application/commands/update-department.command";
-import { DeleteDepartmentCommand, DeleteDepartmentHandler } from "../../../application/commands/delete-department.command";
-import { ActivateDepartmentCommand, ActivateDepartmentHandler } from "../../../application/commands/activate-department.command";
-import { CreateCostCenterCommand, CreateCostCenterHandler } from "../../../application/commands/create-cost-center.command";
-import { UpdateCostCenterCommand, UpdateCostCenterHandler } from "../../../application/commands/update-cost-center.command";
-import { DeleteCostCenterCommand, DeleteCostCenterHandler } from "../../../application/commands/delete-cost-center.command";
-import { ActivateCostCenterCommand, ActivateCostCenterHandler } from "../../../application/commands/activate-cost-center.command";
-import { CreateProjectCommand, CreateProjectHandler } from "../../../application/commands/create-project.command";
-import { UpdateProjectCommand, UpdateProjectHandler } from "../../../application/commands/update-project.command";
-import { DeleteProjectCommand, DeleteProjectHandler } from "../../../application/commands/delete-project.command";
-import { ActivateProjectCommand, ActivateProjectHandler } from "../../../application/commands/activate-project.command";
+import {
+  CreateDepartmentCommand,
+  CreateDepartmentHandler,
+} from "../../../application/commands/create-department.command";
+import {
+  UpdateDepartmentCommand,
+  UpdateDepartmentHandler,
+} from "../../../application/commands/update-department.command";
+import {
+  DeleteDepartmentCommand,
+  DeleteDepartmentHandler,
+} from "../../../application/commands/delete-department.command";
+import {
+  ActivateDepartmentCommand,
+  ActivateDepartmentHandler,
+} from "../../../application/commands/activate-department.command";
+import {
+  CreateCostCenterCommand,
+  CreateCostCenterHandler,
+} from "../../../application/commands/create-cost-center.command";
+import {
+  UpdateCostCenterCommand,
+  UpdateCostCenterHandler,
+} from "../../../application/commands/update-cost-center.command";
+import {
+  DeleteCostCenterCommand,
+  DeleteCostCenterHandler,
+} from "../../../application/commands/delete-cost-center.command";
+import {
+  ActivateCostCenterCommand,
+  ActivateCostCenterHandler,
+} from "../../../application/commands/activate-cost-center.command";
+import {
+  CreateProjectCommand,
+  CreateProjectHandler,
+} from "../../../application/commands/create-project.command";
+import {
+  UpdateProjectCommand,
+  UpdateProjectHandler,
+} from "../../../application/commands/update-project.command";
+import {
+  DeleteProjectCommand,
+  DeleteProjectHandler,
+} from "../../../application/commands/delete-project.command";
+import {
+  ActivateProjectCommand,
+  ActivateProjectHandler,
+} from "../../../application/commands/activate-project.command";
 
 // Query Handlers
-import { GetDepartmentQuery, GetDepartmentHandler } from "../../../application/queries/get-department.query";
-import { ListDepartmentsQuery, ListDepartmentsHandler } from "../../../application/queries/list-departments.query";
-import { GetCostCenterQuery, GetCostCenterHandler } from "../../../application/queries/get-cost-center.query";
-import { ListCostCentersQuery, ListCostCentersHandler } from "../../../application/queries/list-cost-centers.query";
-import { GetProjectQuery, GetProjectHandler } from "../../../application/queries/get-project.query";
-import { ListProjectsQuery, ListProjectsHandler } from "../../../application/queries/list-projects.query";
+import {
+  GetDepartmentQuery,
+  GetDepartmentHandler,
+} from "../../../application/queries/get-department.query";
+import {
+  ListDepartmentsQuery,
+  ListDepartmentsHandler,
+} from "../../../application/queries/list-departments.query";
+import {
+  GetCostCenterQuery,
+  GetCostCenterHandler,
+} from "../../../application/queries/get-cost-center.query";
+import {
+  ListCostCentersQuery,
+  ListCostCentersHandler,
+} from "../../../application/queries/list-cost-centers.query";
+import {
+  GetProjectQuery,
+  GetProjectHandler,
+} from "../../../application/queries/get-project.query";
+import {
+  ListProjectsQuery,
+  ListProjectsHandler,
+} from "../../../application/queries/list-projects.query";
 
 export class AllocationManagementController {
   constructor(
@@ -69,6 +123,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const command = new CreateDepartmentCommand(
         workspaceId,
@@ -101,6 +164,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const query = new ListDepartmentsQuery(workspaceId);
       const departments = await this.listDepartmentsHandler.handle(query);
@@ -131,6 +203,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { departmentId } = request.params;
       const query = new GetDepartmentQuery(departmentId);
       const department = await this.getDepartmentHandler.handle(query);
@@ -164,6 +245,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, departmentId } = request.params;
       const command = new UpdateDepartmentCommand(
         departmentId,
@@ -203,6 +293,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, departmentId } = request.params;
       const command = new DeleteDepartmentCommand(departmentId, workspaceId);
       await this.deleteDepartmentHandler.handle(command);
@@ -225,6 +324,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { departmentId } = request.params;
       const command = new ActivateDepartmentCommand(departmentId);
       const department = await this.activateDepartmentHandler.handle(command);
@@ -263,6 +371,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const command = new CreateCostCenterCommand(
         workspaceId,
@@ -293,6 +410,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const query = new ListCostCentersQuery(workspaceId);
       const costCenters = await this.listCostCentersHandler.handle(query);
@@ -321,6 +447,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { costCenterId } = request.params;
       const query = new GetCostCenterQuery(costCenterId);
       const costCenter = await this.getCostCenterHandler.handle(query);
@@ -352,6 +487,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, costCenterId } = request.params;
       const command = new UpdateCostCenterCommand(
         costCenterId,
@@ -387,6 +531,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, costCenterId } = request.params;
       const command = new DeleteCostCenterCommand(costCenterId, workspaceId);
       await this.deleteCostCenterHandler.handle(command);
@@ -409,6 +562,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { costCenterId } = request.params;
       const command = new ActivateCostCenterCommand(costCenterId);
       const costCenter = await this.activateCostCenterHandler.handle(command);
@@ -443,6 +605,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
 
       // Handle potential date parsing if raw JSON comes as strings
@@ -484,6 +655,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
       const query = new ListProjectsQuery(workspaceId);
       const projects = await this.listProjectsHandler.handle(query);
@@ -516,6 +696,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { projectId } = request.params;
       const query = new GetProjectQuery(projectId);
       const project = await this.getProjectHandler.handle(query);
@@ -551,6 +740,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, projectId } = request.params;
       const command = new UpdateProjectCommand(
         projectId,
@@ -594,6 +792,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId, projectId } = request.params;
       const command = new DeleteProjectCommand(projectId, workspaceId);
       await this.deleteProjectHandler.handle(command);
@@ -616,6 +823,15 @@ export class AllocationManagementController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { projectId } = request.params;
       const command = new ActivateProjectCommand(projectId);
       const project = await this.activateProjectHandler.handle(command);
