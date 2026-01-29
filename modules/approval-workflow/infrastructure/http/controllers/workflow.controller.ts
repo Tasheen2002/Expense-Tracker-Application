@@ -277,7 +277,6 @@ export class WorkflowController {
     request: FastifyRequest<{
       Params: { workspaceId: string };
       Querystring: {
-        userId: string;
         limit?: string;
         offset?: string;
       };
@@ -285,8 +284,17 @@ export class WorkflowController {
     reply: FastifyReply,
   ) {
     try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+
       const { workspaceId } = request.params;
-      const { userId, limit, offset } = request.query;
+      const { limit, offset } = request.query;
 
       const result = await this.workflowService.listUserWorkflows(
         userId,
