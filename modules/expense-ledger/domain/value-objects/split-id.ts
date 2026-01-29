@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class SplitId {
-  private constructor(private readonly value: string) {
-    if (!SplitId.isValid(value)) {
-      throw new Error(`Invalid SplitId format: ${value}`);
-    }
+export class SplitId extends UuidId {
+  private constructor(value: string) {
+    super(value, "SplitId");
   }
 
   static create(): SplitId {
@@ -13,23 +12,5 @@ export class SplitId {
 
   static fromString(id: string): SplitId {
     return new SplitId(id);
-  }
-
-  static isValid(id: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      id,
-    );
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: SplitId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }

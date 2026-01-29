@@ -1,11 +1,9 @@
 import { randomUUID } from "crypto";
-import { InvalidIdFormatError } from "../errors/notification.errors";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class PreferenceId {
-  private readonly value: string;
-
+export class PreferenceId extends UuidId {
   private constructor(value: string) {
-    this.value = value;
+    super(value, "PreferenceId");
   }
 
   static create(): PreferenceId {
@@ -13,27 +11,6 @@ export class PreferenceId {
   }
 
   static fromString(id: string): PreferenceId {
-    if (!this.isValid(id)) {
-      throw new InvalidIdFormatError("preference ID", id);
-    }
     return new PreferenceId(id);
-  }
-
-  static isValid(id: string): boolean {
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(id);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: PreferenceId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }

@@ -1,10 +1,9 @@
 import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class SettlementId {
-  private constructor(private readonly value: string) {
-    if (!SettlementId.isValid(value)) {
-      throw new Error(`Invalid SettlementId format: ${value}`);
-    }
+export class SettlementId extends UuidId {
+  private constructor(value: string) {
+    super(value, "SettlementId");
   }
 
   static create(): SettlementId {
@@ -13,23 +12,5 @@ export class SettlementId {
 
   static fromString(id: string): SettlementId {
     return new SettlementId(id);
-  }
-
-  static isValid(id: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      id,
-    );
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: SettlementId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }

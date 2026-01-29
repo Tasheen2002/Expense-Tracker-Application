@@ -5,6 +5,7 @@ import { NotificationChannel } from "../../domain/enums/notification-channel.enu
 import { TemplateId } from "../../domain/value-objects/template-id";
 import { WorkspaceId } from "../../domain/value-objects";
 import { TemplateNotFoundByIdError } from "../../domain/errors/notification.errors";
+import sanitizeHtml from "sanitize-html";
 
 export interface CreateTemplateParams {
   workspaceId?: string;
@@ -32,13 +33,27 @@ export class TemplateService {
       ? WorkspaceId.fromString(params.workspaceId)
       : undefined;
 
+    // SECURITY: Sanitize HTML content to prevent XSS
+    const sanitizedSubject = sanitizeHtml(params.subjectTemplate, {
+      allowedTags: [], // Subject should not have HTML tags
+      allowedAttributes: {},
+    });
+
+    const sanitizedBody = sanitizeHtml(params.bodyTemplate, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
+      allowedAttributes: {
+        ...sanitizeHtml.defaults.allowedAttributes,
+        img: ["src", "alt", "width", "height"],
+      },
+    });
+
     const template = NotificationTemplate.create({
       workspaceId,
       name: params.name,
       type: params.type,
       channel: params.channel,
-      subjectTemplate: params.subjectTemplate,
-      bodyTemplate: params.bodyTemplate,
+      subjectTemplate: sanitizedSubject,
+      bodyTemplate: sanitizedBody,
     });
 
     await this.templateRepository.save(template);
@@ -71,14 +86,24 @@ export class TemplateService {
   ): Promise<NotificationTemplate> {
     const template = await this.getTemplateById(id);
 
-    if (
-      params.subjectTemplate !== undefined ||
-      params.bodyTemplate !== undefined
-    ) {
-      template.updateTemplates(
-        params.subjectTemplate ?? template.getSubjectTemplate(),
-        params.bodyTemplate ?? template.getBodyTemplate(),
-      );
+    // SECURITY: Sanitize HTML content to prevent XSS
+    if (params.subjectTemplate !== undefined) {
+      const sanitizedSubject = sanitizeHtml(params.subjectTemplate, {
+        allowedTags: [], // Subject should not have HTML tags
+        allowedAttributes: {},
+      });
+      template.updateTemplates(sanitizedSubject, template.getBodyTemplate());
+    }
+
+    if (params.bodyTemplate !== undefined) {
+      const sanitizedBody = sanitizeHtml(params.bodyTemplate, {
+        allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
+        allowedAttributes: {
+          ...sanitizeHtml.defaults.allowedAttributes,
+          img: ["src", "alt", "width", "height"],
+        },
+      });
+      template.updateTemplates(template.getSubjectTemplate(), sanitizedBody);
     }
 
     await this.templateRepository.save(template);

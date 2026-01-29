@@ -741,6 +741,7 @@ export class Container {
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
+      userRepository,
     );
     const templateService = new TemplateService(notificationTemplateRepository);
     const preferenceService = new PreferenceService(

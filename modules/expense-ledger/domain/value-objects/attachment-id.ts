@@ -1,37 +1,16 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from "crypto";
+import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
 
-export class AttachmentId {
-  private readonly value: string
-
+export class AttachmentId extends UuidId {
   private constructor(value: string) {
-    this.value = value
+    super(value, "AttachmentId");
   }
 
   static create(): AttachmentId {
-    return new AttachmentId(randomUUID())
+    return new AttachmentId(randomUUID());
   }
 
   static fromString(id: string): AttachmentId {
-    if (!this.isValid(id)) {
-      throw new Error('Invalid attachment ID format')
-    }
-    return new AttachmentId(id)
-  }
-
-  static isValid(id: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    return uuidRegex.test(id)
-  }
-
-  getValue(): string {
-    return this.value
-  }
-
-  equals(other: AttachmentId): boolean {
-    return this.value === other.value
-  }
-
-  toString(): string {
-    return this.value
+    return new AttachmentId(id);
   }
 }
