@@ -182,10 +182,7 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError("delete");
     }
 
-    // Delete associated allocations and alerts
-    await this.allocationRepository.deleteByBudget(budgetIdObj);
-    await this.alertRepository.deleteByBudget(budgetIdObj);
-
+    // Delete budget (cascade will handle allocations and alerts)
     await this.budgetRepository.delete(budgetIdObj, workspaceId);
   }
 
@@ -238,15 +235,9 @@ export class BudgetService {
     const currentAllocated =
       await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
     const newAmount = new Decimal(params.allocatedAmount);
-    const budgetTotal = budget.getTotalAmount();
 
-    if (currentAllocated.plus(newAmount).gt(budgetTotal)) {
-      throw new BudgetAllocationExceededError(
-        budget.getId().getValue(),
-        budgetTotal.toNumber(),
-        currentAllocated.plus(newAmount).toNumber(),
-      );
-    }
+    // Delegate validation to the aggregate root
+    budget.validateAllocationAmount(newAmount, currentAllocated);
 
     const allocation = BudgetAllocation.create({
       budgetId: params.budgetId,
@@ -300,17 +291,12 @@ export class BudgetService {
         await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
       const oldAmount = allocation.getAllocatedAmount(); // This is a Decimal
 
-      // Calculate projected total: (currentTotal - oldAmount + newAmount)
-      const projectedTotal = currentAllocated.minus(oldAmount).plus(newAmount);
-      const budgetTotal = budget.getTotalAmount();
+      // Calculate projected total BEFORE this specific allocation was made
+      // effectively backing out the old amount to validate the new amount against the remaining pool
+      const currentAllocatedWithoutThis = currentAllocated.minus(oldAmount);
 
-      if (projectedTotal.gt(budgetTotal)) {
-        throw new BudgetAllocationExceededError(
-          budget.getId().getValue(),
-          budgetTotal.toNumber(),
-          projectedTotal.toNumber(),
-        );
-      }
+      // Delegate validation to the aggregate root
+      budget.validateAllocationAmount(newAmount, currentAllocatedWithoutThis);
 
       allocation.updateAllocatedAmount(updates.allocatedAmount);
     }
@@ -339,9 +325,9 @@ export class BudgetService {
     allocation.updateSpentAmount(spentAmount);
 
     // Check if we need to create alerts
-    await this.checkAndCreateAlerts(allocation);
+    const alerts = await this.checkAndCreateAlerts(allocation);
 
-    await this.allocationRepository.save(allocation);
+    await this.allocationRepository.saveWithAlerts(allocation, alerts);
 
     return allocation;
   }
@@ -383,7 +369,8 @@ export class BudgetService {
   // Alert management
   private async checkAndCreateAlerts(
     allocation: BudgetAllocation,
-  ): Promise<void> {
+  ): Promise<BudgetAlert[]> {
+    const alerts: BudgetAlert[] = [];
     const percentage = allocation.getSpentPercentage();
 
     // Only create alerts if threshold is met (50%, 75%, 90%, 100%+)
@@ -396,7 +383,7 @@ export class BudgetService {
           allocatedAmount: allocation.getAllocatedAmount(),
         });
 
-        await this.alertRepository.save(alert);
+        alerts.push(alert);
       } catch (error) {
         // Log the error instead of silently swallowing it
         // Duplicate alerts (constraint violations) are expected and can be ignored
@@ -412,6 +399,7 @@ export class BudgetService {
         }
       }
     }
+    return alerts;
   }
 
   async getUnreadAlerts(workspaceId: string): Promise<BudgetAlert[]> {
