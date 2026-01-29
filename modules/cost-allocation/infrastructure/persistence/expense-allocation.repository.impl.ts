@@ -42,6 +42,41 @@ export class ExpenseAllocationRepositoryImpl implements ExpenseAllocationReposit
     });
   }
 
+  async replaceAllocs(
+    expenseId: string,
+    workspaceId: WorkspaceId,
+    newAllocations: ExpenseAllocation[],
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // 1. Delete existing allocations
+      await tx.expenseAllocation.deleteMany({
+        where: {
+          expenseId,
+          workspaceId: workspaceId.getValue(),
+        },
+      });
+
+      // 2. Insert new allocations
+      if (newAllocations.length > 0) {
+        await tx.expenseAllocation.createMany({
+          data: newAllocations.map((a) => ({
+            id: a.getId(),
+            workspaceId: a.getWorkspaceId().getValue(),
+            expenseId: a.getExpenseId(),
+            amount: a.getAmount().getValue(),
+            percentage: a.getPercentage(),
+            departmentId: a.getDepartmentId()?.getValue() || null,
+            costCenterId: a.getCostCenterId()?.getValue() || null,
+            projectId: a.getProjectId()?.getValue() || null,
+            notes: a.getNotes(),
+            createdBy: a.getCreatedBy().getValue(),
+            createdAt: a.getCreatedAt(),
+          })),
+        });
+      }
+    });
+  }
+
   async findByExpenseId(
     expenseId: string,
     workspaceId: WorkspaceId,

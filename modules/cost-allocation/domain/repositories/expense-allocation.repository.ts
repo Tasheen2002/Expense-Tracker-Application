@@ -9,4 +9,9 @@ export interface ExpenseAllocationRepository {
     workspaceId: WorkspaceId,
   ): Promise<ExpenseAllocation[]>;
   deleteByExpenseId(expenseId: string, workspaceId: WorkspaceId): Promise<void>;
+  replaceAllocs(
+    expenseId: string,
+    workspaceId: WorkspaceId,
+    newAllocations: ExpenseAllocation[],
+  ): Promise<void>;
 }
