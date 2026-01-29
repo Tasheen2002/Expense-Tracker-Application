@@ -763,6 +763,35 @@ export class Container {
     this.services.set("templateController", templateController);
     this.services.set("preferenceController", preferenceController);
 
+    // Event Handlers & Subscriptions
+    const {
+      getEventBus,
+    } = require("../../apps/api/src/shared/domain/events/event-bus");
+    const {
+      NotificationEventHandler,
+    } = require("../../../modules/notification-dispatch/application/handlers/notification.handler");
+
+    const eventBus = getEventBus();
+    const notificationEventHandler = new NotificationEventHandler(
+      notificationService,
+    );
+
+    // Subscribe to events
+    eventBus.subscribe(
+      "expense.status_changed",
+      notificationEventHandler.handleExpenseStatusChanged,
+    );
+    eventBus.subscribe(
+      "budget.threshold_exceeded",
+      notificationEventHandler.handleBudgetExceeded,
+    );
+    eventBus.subscribe(
+      "approval.workflow_started",
+      notificationEventHandler.handleApprovalStarted,
+    );
+
+    console.log("[Container] Notification Event Handlers registered");
+
     // ============================================
     // Cost Allocation Module
     // ============================================
