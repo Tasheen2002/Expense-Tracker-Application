@@ -105,3 +105,13 @@ export class AllocationExceedsExpenseError extends CostAllocationDomainError {
     super(message, "ALLOCATION_EXCEEDS_EXPENSE", 400);
   }
 }
+
+export class UnauthorizedAllocationAccessError extends CostAllocationDomainError {
+  constructor(action: string) {
+    super(
+      `You are not authorized to ${action} allocations for this expense.`,
+      "UNAUTHORIZED_ALLOCATION_ACCESS",
+      403,
+    );
+  }
+}
