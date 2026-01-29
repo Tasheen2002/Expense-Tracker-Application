@@ -1,6 +1,7 @@
 import { INotificationRepository } from "../../domain/repositories/notification.repository";
 import { INotificationTemplateRepository } from "../../domain/repositories/notification-template.repository";
 import { INotificationPreferenceRepository } from "../../domain/repositories/notification-preference.repository";
+import { IUserRepository } from "../../../identity-workspace/domain/repositories/user.repository";
 import { Notification } from "../../domain/entities/notification.entity";
 import { NotificationPreference } from "../../domain/entities/notification-preference.entity";
 import { NotificationType } from "../../domain/enums/notification-type.enum";
@@ -31,6 +32,7 @@ export class NotificationService {
     private readonly notificationRepository: INotificationRepository,
     private readonly templateRepository: INotificationTemplateRepository,
     private readonly preferenceRepository: INotificationPreferenceRepository,
+    private readonly userRepository: IUserRepository,
     private readonly emailProvider?: IChannelProvider,
   ) {}
 
@@ -307,15 +309,32 @@ export class NotificationService {
       return;
     }
 
-    const result = await this.emailProvider.send({
-      recipientId,
-      recipientEmail: recipientId, // TODO: Resolve user email from user service
-      subject,
-      content: body,
-    });
+    try {
+      const user = await this.userRepository.findById(
+        UserId.fromString(recipientId),
+      );
 
-    if (!result.success) {
-      throw new Error(result.error || "Failed to send email");
+      if (!user) {
+        console.warn(`[EMAIL] User not found: ${recipientId}. Email not sent.`);
+        return;
+      }
+
+      const email = user.getEmail().getValue();
+
+      const result = await this.emailProvider.send({
+        recipientId,
+        recipientEmail: email,
+        subject,
+        content: body,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to send email");
+      }
+    } catch (error) {
+      console.error(`[EMAIL] Failed to resolve user/send email:`, error);
+      // We don't throw here to avoid failing the entire notification process if email fails
+      // But we should probably mark the notification as partially failed or log it securely
     }
   }
 }
