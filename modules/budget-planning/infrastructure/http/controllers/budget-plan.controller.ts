@@ -58,8 +58,13 @@ export class BudgetPlanController {
   ) {
     const { id } = req.params;
     const body = await validateRequest(req, updateBudgetPlanSchema);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "User not authenticated" });
+    }
     const command = new UpdateBudgetPlanCommand(
       id,
+      userId,
       body.name,
       body.description,
     );
@@ -72,7 +77,11 @@ export class BudgetPlanController {
     reply: FastifyReply,
   ) {
     const { id } = req.params;
-    const command = new ActivateBudgetPlanCommand(id);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "User not authenticated" });
+    }
+    const command = new ActivateBudgetPlanCommand(id, userId);
     const result = await this.activateHandler.handle(command);
     return reply.send(result);
   }
@@ -126,7 +135,11 @@ export class BudgetPlanController {
     reply: FastifyReply,
   ) {
     const { id } = req.params;
-    await this.budgetPlanService.deletePlan(id);
+    const userId = req.user?.userId;
+    if (!userId) {
+      return reply.status(401).send({ message: "User not authenticated" });
+    }
+    await this.budgetPlanService.deletePlan(id, userId);
     return reply.status(204).send();
   }
 }
