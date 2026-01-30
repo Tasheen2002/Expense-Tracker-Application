@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { UploadReceiptHandler } from "../../../application/commands/upload-receipt.command";
 import { LinkReceiptToExpenseHandler } from "../../../application/commands/link-receipt-to-expense.command";
 import { UnlinkReceiptFromExpenseHandler } from "../../../application/commands/unlink-receipt-from-expense.command";
@@ -53,20 +54,13 @@ export class ReceiptController {
   ) {}
 
   async uploadReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: UploadReceiptInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId } = request.params;
 
@@ -89,7 +83,7 @@ export class ReceiptController {
   }
 
   async getReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
     }>,
     reply: FastifyReply,
@@ -122,7 +116,7 @@ export class ReceiptController {
   }
 
   async listReceipts(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: ListReceiptsQuery;
     }>,
@@ -159,7 +153,7 @@ export class ReceiptController {
   }
 
   async getReceiptsByExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
@@ -184,20 +178,13 @@ export class ReceiptController {
   }
 
   async linkToExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: LinkToExpenseInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
     const { expenseId } = request.body;
@@ -243,19 +230,12 @@ export class ReceiptController {
   }
 
   async unlinkFromExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -299,20 +279,13 @@ export class ReceiptController {
   }
 
   async processReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: ProcessReceiptInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -337,19 +310,12 @@ export class ReceiptController {
   }
 
   async verifyReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -372,20 +338,13 @@ export class ReceiptController {
   }
 
   async rejectReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: RejectReceiptInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -409,20 +368,13 @@ export class ReceiptController {
   }
 
   async deleteReceipt(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Querystring: DeleteReceiptQuery;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
     const { permanent } = request.query;
@@ -448,20 +400,13 @@ export class ReceiptController {
   }
 
   async addMetadata(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: AddMetadataInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -485,20 +430,13 @@ export class ReceiptController {
   }
 
   async updateMetadata(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: UpdateMetadataInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
 
@@ -522,7 +460,7 @@ export class ReceiptController {
   }
 
   async getMetadata(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
     }>,
     reply: FastifyReply,
@@ -555,20 +493,13 @@ export class ReceiptController {
   }
 
   async addTag(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string };
       Body: AddTagToReceiptInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId } = request.params;
     const { tagId } = request.body;
@@ -592,19 +523,12 @@ export class ReceiptController {
   }
 
   async removeTag(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; receiptId: string; tagId: string };
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, receiptId, tagId } = request.params;
 
@@ -627,7 +551,7 @@ export class ReceiptController {
   }
 
   async getStats(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
     reply: FastifyReply,

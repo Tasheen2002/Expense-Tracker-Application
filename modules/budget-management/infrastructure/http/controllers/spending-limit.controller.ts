@@ -1,10 +1,11 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { CreateSpendingLimitHandler } from '../../../application/commands/create-spending-limit.command'
-import { UpdateSpendingLimitHandler } from '../../../application/commands/update-spending-limit.command'
-import { DeleteSpendingLimitHandler } from '../../../application/commands/delete-spending-limit.command'
-import { ListSpendingLimitsHandler } from '../../../application/queries/list-spending-limits.query'
-import { SpendingLimit } from '../../../domain/entities/spending-limit.entity'
-import { BudgetPeriodType } from '../../../domain/enums/budget-period-type'
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { CreateSpendingLimitHandler } from "../../../application/commands/create-spending-limit.command";
+import { UpdateSpendingLimitHandler } from "../../../application/commands/update-spending-limit.command";
+import { DeleteSpendingLimitHandler } from "../../../application/commands/delete-spending-limit.command";
+import { ListSpendingLimitsHandler } from "../../../application/queries/list-spending-limits.query";
+import { SpendingLimit } from "../../../domain/entities/spending-limit.entity";
+import { BudgetPeriodType } from "../../../domain/enums/budget-period-type";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class SpendingLimitController {
@@ -12,24 +13,24 @@ export class SpendingLimitController {
     private readonly createLimitHandler: CreateSpendingLimitHandler,
     private readonly updateLimitHandler: UpdateSpendingLimitHandler,
     private readonly deleteLimitHandler: DeleteSpendingLimitHandler,
-    private readonly listLimitsHandler: ListSpendingLimitsHandler
+    private readonly listLimitsHandler: ListSpendingLimitsHandler,
   ) {}
 
   async createLimit(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
       Body: {
-        userId?: string
-        categoryId?: string
-        limitAmount: number | string
-        currency: string
-        periodType: string
-      }
+        userId?: string;
+        categoryId?: string;
+        limitAmount: number | string;
+        currency: string;
+        periodType: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
+      const { workspaceId } = request.params;
 
       const limit = await this.createLimitHandler.handle({
         workspaceId,
@@ -38,104 +39,105 @@ export class SpendingLimitController {
         limitAmount: request.body.limitAmount,
         currency: request.body.currency,
         periodType: request.body.periodType as BudgetPeriodType,
-      })
+      });
 
       return reply.status(201).send({
         success: true,
         statusCode: 201,
-        message: 'Spending limit created successfully',
+        message: "Spending limit created successfully",
         data: this.serializeLimit(limit),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateLimit(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; limitId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; limitId: string };
       Body: {
-        limitAmount?: number | string
-      }
+        limitAmount?: number | string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, limitId } = request.params
+      const { workspaceId, limitId } = request.params;
 
       const limit = await this.updateLimitHandler.handle({
         limitId,
         workspaceId,
         limitAmount: request.body.limitAmount,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Spending limit updated successfully',
+        message: "Spending limit updated successfully",
         data: this.serializeLimit(limit),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteLimit(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; limitId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; limitId: string };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId, limitId } = request.params
+      const { workspaceId, limitId } = request.params;
 
       await this.deleteLimitHandler.handle({
         limitId,
         workspaceId,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Spending limit deleted successfully',
-      })
+        message: "Spending limit deleted successfully",
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listLimits(
-    request: FastifyRequest<{
-      Params: { workspaceId: string }
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
       Querystring: {
-        userId?: string
-        categoryId?: string
-        isActive?: string
-        periodType?: string
-      }
+        userId?: string;
+        categoryId?: string;
+        isActive?: string;
+        periodType?: string;
+      };
     }>,
-    reply: FastifyReply
+    reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params
-      const { userId, categoryId, isActive, periodType } = request.query
+      const { workspaceId } = request.params;
+      const { userId, categoryId, isActive, periodType } = request.query;
 
       const limits = await this.listLimitsHandler.handle({
         workspaceId,
         userId,
         categoryId,
-        isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+        isActive:
+          isActive === "true" ? true : isActive === "false" ? false : undefined,
         periodType: periodType as BudgetPeriodType | undefined,
-      })
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: 'Spending limits retrieved successfully',
+        message: "Spending limits retrieved successfully",
         data: limits.map((limit) => this.serializeLimit(limit)),
-      })
+      });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -150,12 +152,12 @@ export class SpendingLimitController {
       periodType: limit.getPeriodType(),
       isActive: limit.isActive(),
       scope: limit.isWorkspaceWide()
-        ? 'workspace'
+        ? "workspace"
         : limit.isUserSpecific()
-          ? 'user'
-          : 'category',
+          ? "user"
+          : "category",
       createdAt: limit.getCreatedAt().toISOString(),
       updatedAt: limit.getUpdatedAt().toISOString(),
-    }
+    };
   }
 }

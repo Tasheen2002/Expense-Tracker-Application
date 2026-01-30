@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ApprovalChainService } from "../../../application/services/approval-chain.service";
 import { ApprovalChain } from "../../../domain/entities/approval-chain.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
@@ -7,7 +8,7 @@ export class ApprovalChainController {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async createChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: {
         name: string;
@@ -41,7 +42,7 @@ export class ApprovalChainController {
   }
 
   async updateChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
       Body: {
         name?: string;
@@ -74,7 +75,7 @@ export class ApprovalChainController {
   }
 
   async getChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
     reply: FastifyReply,
@@ -99,7 +100,7 @@ export class ApprovalChainController {
   }
 
   async listChains(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { activeOnly?: string };
     }>,
@@ -126,7 +127,7 @@ export class ApprovalChainController {
   }
 
   async activateChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
     reply: FastifyReply,
@@ -151,7 +152,7 @@ export class ApprovalChainController {
   }
 
   async deactivateChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
     reply: FastifyReply,
@@ -176,7 +177,7 @@ export class ApprovalChainController {
   }
 
   async deleteChain(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
     reply: FastifyReply,

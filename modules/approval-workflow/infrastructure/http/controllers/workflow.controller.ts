@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { WorkflowService } from "../../../application/services/workflow.service";
 import { ExpenseWorkflow } from "../../../domain/entities/expense-workflow.entity";
 import { ApprovalStep } from "../../../domain/entities/approval-step.entity";
@@ -8,7 +9,7 @@ export class WorkflowController {
   constructor(private readonly workflowService: WorkflowService) {}
 
   async initiateWorkflow(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: {
         expenseId: string;
@@ -20,14 +21,7 @@ export class WorkflowController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
 
@@ -49,7 +43,7 @@ export class WorkflowController {
   }
 
   async getWorkflow(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
@@ -74,7 +68,7 @@ export class WorkflowController {
   }
 
   async approveStep(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
       Body: {
         comments?: string;
@@ -84,14 +78,7 @@ export class WorkflowController {
   ) {
     try {
       // SECURITY FIX: Use authenticated user as approver instead of trusting body
-      const approverId = request.user?.userId;
-      if (!approverId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const approverId = request.user.userId;
 
       const { expenseId } = request.params;
 
@@ -113,7 +100,7 @@ export class WorkflowController {
   }
 
   async rejectStep(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
       Body: {
         comments: string;
@@ -123,14 +110,7 @@ export class WorkflowController {
   ) {
     try {
       // SECURITY FIX: Use authenticated user as approver instead of trusting body
-      const approverId = request.user?.userId;
-      if (!approverId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const approverId = request.user.userId;
 
       const { expenseId } = request.params;
 
@@ -152,7 +132,7 @@ export class WorkflowController {
   }
 
   async delegateStep(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
       Body: {
         toUserId: string;
@@ -162,14 +142,7 @@ export class WorkflowController {
   ) {
     try {
       // SECURITY FIX: Use authenticated user as the delegating user
-      const fromUserId = request.user?.userId;
-      if (!fromUserId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const fromUserId = request.user.userId;
 
       const { expenseId } = request.params;
 
@@ -191,20 +164,13 @@ export class WorkflowController {
   }
 
   async cancelWorkflow(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, expenseId } = request.params;
 
@@ -225,7 +191,7 @@ export class WorkflowController {
   }
 
   async listPendingApprovals(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
@@ -233,14 +199,7 @@ export class WorkflowController {
   ) {
     try {
       // SECURITY FIX: Use authenticated user ID instead of query param
-      const approverId = request.user?.userId;
-      if (!approverId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const approverId = request.user.userId;
 
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
@@ -274,7 +233,7 @@ export class WorkflowController {
   }
 
   async listUserWorkflows(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: {
         limit?: string;
@@ -284,14 +243,7 @@ export class WorkflowController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;

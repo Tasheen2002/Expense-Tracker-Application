@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateTagHandler } from "../../../application/commands/create-tag.command";
 import { UpdateTagHandler } from "../../../application/commands/update-tag.command";
 import { DeleteTagHandler } from "../../../application/commands/delete-tag.command";
@@ -16,20 +17,13 @@ export class TagController {
   ) {}
 
   async createTag(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateTagInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId } = request.params;
 
@@ -51,20 +45,13 @@ export class TagController {
   }
 
   async updateTag(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; tagId: string };
       Body: UpdateTagInput;
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, tagId } = request.params;
 
@@ -87,19 +74,12 @@ export class TagController {
   }
 
   async deleteTag(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; tagId: string };
     }>,
     reply: FastifyReply,
   ) {
-    const userId = request.user?.userId;
-    if (!userId) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        message: "User not authenticated",
-      });
-    }
+    const userId = request.user.userId;
 
     const { workspaceId, tagId } = request.params;
 
@@ -117,7 +97,7 @@ export class TagController {
   }
 
   async listTags(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
     reply: FastifyReply,

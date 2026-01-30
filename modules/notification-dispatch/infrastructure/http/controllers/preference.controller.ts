@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import {
   PreferenceService,
   GlobalPreferenceSettings,
@@ -14,18 +15,14 @@ export class PreferenceController {
   constructor(private readonly preferenceService: PreferenceService) {}
 
   async getPreferences(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const userId = (request as any).user?.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const userId = request.user.userId;
 
       const preferences = await this.preferenceService.getOrCreatePreferences(
         userId,
@@ -44,7 +41,7 @@ export class PreferenceController {
   }
 
   async updateGlobalPreferences(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: GlobalPreferenceSettings;
     }>,
@@ -52,12 +49,8 @@ export class PreferenceController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const userId = (request as any).user?.id;
+      const userId = request.user.userId;
       const settings = request.body;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
 
       const preferences = await this.preferenceService.updateGlobalPreferences(
         userId,
@@ -77,7 +70,7 @@ export class PreferenceController {
   }
 
   async updateTypePreference(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; type: string };
       Body: TypeSettingValue;
     }>,
@@ -85,12 +78,8 @@ export class PreferenceController {
   ) {
     try {
       const { workspaceId, type } = request.params;
-      const userId = (request as any).user?.id;
+      const userId = request.user.userId;
       const settings = request.body;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
 
       const preferences = await this.preferenceService.updateTypePreference(
         userId,
@@ -111,7 +100,7 @@ export class PreferenceController {
   }
 
   async checkChannelEnabled(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { type: string; channel: "email" | "inApp" | "push" };
     }>,
@@ -120,11 +109,7 @@ export class PreferenceController {
     try {
       const { workspaceId } = request.params;
       const { type, channel } = request.query;
-      const userId = (request as any).user?.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const userId = request.user.userId;
 
       const isEnabled = await this.preferenceService.isChannelEnabled(
         userId,

@@ -3,7 +3,8 @@ import { MemberController } from "../infrastructure/http/controllers/member.cont
 import { WorkspaceMembershipService } from "../application/services/workspace-membership.service";
 import { WorkspaceAuthHelper } from "../infrastructure/http/middleware/workspace-auth.helper";
 import { WorkspaceRole } from "../domain/entities/workspace-membership.entity";
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 // Mock dependencies
 const mockMembershipService = {
@@ -39,12 +40,17 @@ describe("MemberController (Unit)", () => {
     it("should successfully remove a member after name lookup", async () => {
       const req = {
         params: { workspaceId: "ws-1", userId: "user-2" },
-      } as unknown as FastifyRequest;
+        user: {
+          id: "user-1",
+          userId: "user-1",
+          email: "test@example.com",
+          workspaceId: "ws-1",
+        },
+      } as unknown as AuthenticatedRequest<{
+        Params: { workspaceId: string; userId: string };
+      }>;
 
       // Mock Auth
-      vi.mocked(mockAuthHelper.getUserFromRequest).mockReturnValue({
-        userId: "user-1",
-      } as any);
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
 
       // Mock Lookup
@@ -70,11 +76,16 @@ describe("MemberController (Unit)", () => {
     it("should fail if member not found", async () => {
       const req = {
         params: { workspaceId: "ws-1", userId: "user-unknown" },
-      } as unknown as FastifyRequest;
+        user: {
+          id: "user-1",
+          userId: "user-1",
+          email: "test@example.com",
+          workspaceId: "ws-1",
+        },
+      } as unknown as AuthenticatedRequest<{
+        Params: { workspaceId: string; userId: string };
+      }>;
 
-      vi.mocked(mockAuthHelper.getUserFromRequest).mockReturnValue({
-        userId: "user-1",
-      } as any);
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
       vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(
         null,
