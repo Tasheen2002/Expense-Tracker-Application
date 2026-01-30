@@ -158,3 +158,9 @@ export class UnauthorizedBudgetAccessError extends BudgetManagementError {
     );
   }
 }
+
+export class NegativeAmountError extends BudgetManagementError {
+  constructor(amount: number) {
+    super(`Amount cannot be negative: ${amount}`, "NEGATIVE_AMOUNT", 400);
+  }
+}
