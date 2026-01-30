@@ -8,10 +8,14 @@ import { PaymentMethod } from "../enums/payment-method";
 import { ExpenseStatus, canTransitionTo } from "../enums/expense-status";
 import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-
-// ============================================================================
-// DOMAIN EVENTS
-// ============================================================================
+import {
+  ExpenseTitleRequiredError,
+  ExpenseTitleTooLongError,
+  ExpenseDescriptionTooLongError,
+  MerchantNameTooLongError,
+  InvalidExpenseStatusError,
+  NonReimbursableError,
+} from "../errors/expense.errors";
 
 /**
  * Emitted when a new expense is created.
@@ -193,7 +197,7 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
 // ENTITY
 // ============================================================================
 
-export interface ExpenseProps{
+export interface ExpenseProps {
   id: ExpenseId;
   workspaceId: string;
   userId: string;
@@ -255,22 +259,22 @@ export class Expense extends AggregateRoot {
   // Validation methods
   private static validateTitle(title: string): void {
     if (!title || title.trim().length === 0) {
-      throw new Error("Expense title is required");
+      throw new ExpenseTitleRequiredError();
     }
     if (title.length > 255) {
-      throw new Error("Expense title cannot exceed 255 characters");
+      throw new ExpenseTitleTooLongError(255);
     }
   }
 
   private static validateDescription(description?: string): void {
     if (description && description.length > 5000) {
-      throw new Error("Expense description cannot exceed 5000 characters");
+      throw new ExpenseDescriptionTooLongError(5000);
     }
   }
 
   private static validateMerchant(merchant?: string): void {
     if (merchant && merchant.length > 255) {
-      throw new Error("Merchant name cannot exceed 255 characters");
+      throw new MerchantNameTooLongError(255);
     }
   }
 
@@ -432,8 +436,10 @@ export class Expense extends AggregateRoot {
 
   private transitionToStatus(newStatus: ExpenseStatus): void {
     if (!this.canTransitionToStatus(newStatus)) {
-      throw new Error(
-        `Cannot transition from ${this.props.status} to ${newStatus}`,
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        `transition to ${newStatus}`,
       );
     }
     this.props.status = newStatus;
@@ -442,7 +448,11 @@ export class Expense extends AggregateRoot {
 
   submit(userId: string): void {
     if (this.props.status !== ExpenseStatus.DRAFT) {
-      throw new Error("Only draft expenses can be submitted");
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        "submit",
+      );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.SUBMITTED);
@@ -461,7 +471,11 @@ export class Expense extends AggregateRoot {
 
   approve(userId: string): void {
     if (this.props.status !== ExpenseStatus.SUBMITTED) {
-      throw new Error("Only submitted expenses can be approved");
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        "approve",
+      );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.APPROVED);
@@ -480,7 +494,11 @@ export class Expense extends AggregateRoot {
 
   reject(userId: string, reason?: string): void {
     if (this.props.status !== ExpenseStatus.SUBMITTED) {
-      throw new Error("Only submitted expenses can be rejected");
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        "reject",
+      );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.REJECTED);
@@ -502,8 +520,10 @@ export class Expense extends AggregateRoot {
       this.props.status !== ExpenseStatus.SUBMITTED &&
       this.props.status !== ExpenseStatus.REJECTED
     ) {
-      throw new Error(
-        "Only submitted or rejected expenses can be reverted to draft",
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        "revert to draft",
       );
     }
     const oldStatus = this.props.status;
@@ -523,10 +543,14 @@ export class Expense extends AggregateRoot {
 
   markAsReimbursed(userId: string): void {
     if (this.props.status !== ExpenseStatus.APPROVED) {
-      throw new Error("Only approved expenses can be marked as reimbursed");
+      throw new InvalidExpenseStatusError(
+        this.id.getValue(),
+        this.props.status,
+        "mark as reimbursed",
+      );
     }
     if (!this.props.isReimbursable) {
-      throw new Error("Cannot reimburse a non-reimbursable expense");
+      throw new NonReimbursableError(this.id.getValue());
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.REIMBURSED);
