@@ -21,6 +21,7 @@ export function getAlertLevel(spentPercentage: number): AlertLevel {
     return AlertLevel.CRITICAL;
   } else if (spentPercentage >= 75) {
     return AlertLevel.WARNING;
+  } else if (spentPercentage >= 50) {
     return AlertLevel.INFO;
   }
 
