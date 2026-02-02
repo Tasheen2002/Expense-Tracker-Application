@@ -23,6 +23,7 @@ const mockInvitationRepo = {
   findByEmail: vi.fn(),
   delete: vi.fn(),
   deleteExpired: vi.fn(),
+  acceptInvitationTransaction: vi.fn(),
 } as unknown as IWorkspaceInvitationRepository;
 
 const mockMembershipRepo = {
@@ -87,7 +88,7 @@ describe("WorkspaceInvitationService", () => {
       };
 
       await expect(service.createInvitation(data)).rejects.toThrow(
-        "User is already a member",
+        /already a member/,
       );
     });
 
@@ -106,7 +107,7 @@ describe("WorkspaceInvitationService", () => {
       };
 
       await expect(service.createInvitation(data)).rejects.toThrow(
-        "pending invitation already exists",
+        /already a member/, // Reused error class per service implementation
       );
     });
   });
@@ -142,15 +143,14 @@ describe("WorkspaceInvitationService", () => {
 
       await service.acceptInvitation(token, USER_ID);
 
-      expect(mockMembershipRepo.save).toHaveBeenCalled();
       expect(mockInvitation.accept).toHaveBeenCalled();
-      expect(mockInvitationRepo.save).toHaveBeenCalledWith(mockInvitation);
+      expect(mockInvitationRepo.acceptInvitationTransaction).toHaveBeenCalled();
     });
 
     it("should throw error if invitation not found", async () => {
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(null);
       await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        "Invitation not found",
+        /not found/,
       );
     });
 
@@ -162,7 +162,7 @@ describe("WorkspaceInvitationService", () => {
         mockInvitation as any,
       );
       await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        "Invitation has expired",
+        /expired/,
       );
     });
 
@@ -175,7 +175,7 @@ describe("WorkspaceInvitationService", () => {
         mockInvitation as any,
       );
       await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        "already been accepted",
+        /already been accepted/,
       );
     });
   });

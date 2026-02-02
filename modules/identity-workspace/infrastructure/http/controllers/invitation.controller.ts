@@ -57,11 +57,19 @@ export class InvitationController {
         expiryHours,
       });
 
+      if (!result.success || !result.data) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          message: result.error || "Failed to create invitation",
+        });
+      }
+
       return reply.status(201).send({
         success: true,
         statusCode: 201,
         message: "Invitation created successfully",
-        data: result,
+        data: result.data,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
