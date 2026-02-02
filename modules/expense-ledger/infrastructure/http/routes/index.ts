@@ -28,8 +28,11 @@ export async function registerExpenseLedgerRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add workspace authorization middleware to all routes
+      // First authenticate, then authorize workspace access
       instance.addHook("onRequest", async (request, reply) => {
+        await fastify.authenticate(request);
+      });
+      instance.addHook("preHandler", async (request, reply) => {
         await workspaceAuthorizationMiddleware(request as any, reply, prisma);
       });
 
