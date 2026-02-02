@@ -1,75 +1,77 @@
-import { RuleConditionType } from '../enums/rule-condition-type'
+import { RuleConditionType } from "../enums/rule-condition-type";
+import { InvalidRuleConditionError } from "../errors/categorization-rules.errors";
 
 export class RuleCondition {
   private constructor(
     private readonly conditionType: RuleConditionType,
-    private readonly conditionValue: string
+    private readonly conditionValue: string,
   ) {
-    if (!conditionValue || conditionValue.trim() === '') {
-      throw new Error('Condition value cannot be empty')
+    if (!conditionValue || conditionValue.trim() === "") {
+      throw new InvalidRuleConditionError("Condition value cannot be empty");
     }
 
     // Validate based on condition type
-    this.validateConditionValue(conditionType, conditionValue)
+    this.validateConditionValue(conditionType, conditionValue);
   }
 
   static create(
     conditionType: RuleConditionType,
-    conditionValue: string
+    conditionValue: string,
   ): RuleCondition {
-    return new RuleCondition(conditionType, conditionValue)
+    return new RuleCondition(conditionType, conditionValue);
   }
 
-  private validateConditionValue(
-    type: RuleConditionType,
-    value: string
-  ): void {
+  private validateConditionValue(type: RuleConditionType, value: string): void {
     switch (type) {
       case RuleConditionType.AMOUNT_GREATER_THAN:
       case RuleConditionType.AMOUNT_LESS_THAN:
       case RuleConditionType.AMOUNT_EQUALS:
-        const numValue = parseFloat(value)
+        const numValue = parseFloat(value);
         if (isNaN(numValue) || numValue < 0) {
-          throw new Error('Amount condition value must be a non-negative number')
+          throw new InvalidRuleConditionError(
+            "Amount condition value must be a non-negative number",
+          );
         }
-        break
+        break;
 
       case RuleConditionType.MERCHANT_CONTAINS:
       case RuleConditionType.MERCHANT_EQUALS:
       case RuleConditionType.DESCRIPTION_CONTAINS:
       case RuleConditionType.PAYMENT_METHOD_EQUALS:
         if (value.length > 255) {
-          throw new Error('Condition value cannot exceed 255 characters')
+          throw new InvalidRuleConditionError(
+            "Condition value cannot exceed 255 characters",
+          );
         }
-        break
+        break;
 
       default:
-        throw new Error(`Unknown condition type: ${type}`)
+        throw new InvalidRuleConditionError(`Unknown condition type: ${type}`);
     }
   }
 
   getConditionType(): RuleConditionType {
-    return this.conditionType
+    return this.conditionType;
   }
 
   getConditionValue(): string {
-    return this.conditionValue
+    return this.conditionValue;
   }
 
   // Alias methods for consistency
   getType(): RuleConditionType {
-    return this.conditionType
+    return this.conditionType;
   }
 
   getValue(): string {
-    return this.conditionValue
+    return this.conditionValue;
   }
 
   matches(expenseData: {
-    merchant?: string
-    description?: string
-    amount: number
-    paymentMethod?: string
+    merchant?: string;
+    description?: string;
+    amount: number;
+    paymentMethod?: string;
   }): boolean {
     switch (this.conditionType) {
       case RuleConditionType.MERCHANT_CONTAINS:
@@ -77,38 +79,38 @@ export class RuleCondition {
           expenseData.merchant
             ?.toLowerCase()
             .includes(this.conditionValue.toLowerCase()) || false
-        )
+        );
 
       case RuleConditionType.MERCHANT_EQUALS:
         return (
           expenseData.merchant?.toLowerCase() ===
           this.conditionValue.toLowerCase()
-        )
+        );
 
       case RuleConditionType.DESCRIPTION_CONTAINS:
         return (
           expenseData.description
             ?.toLowerCase()
             .includes(this.conditionValue.toLowerCase()) || false
-        )
+        );
 
       case RuleConditionType.AMOUNT_GREATER_THAN:
-        return expenseData.amount > parseFloat(this.conditionValue)
+        return expenseData.amount > parseFloat(this.conditionValue);
 
       case RuleConditionType.AMOUNT_LESS_THAN:
-        return expenseData.amount < parseFloat(this.conditionValue)
+        return expenseData.amount < parseFloat(this.conditionValue);
 
       case RuleConditionType.AMOUNT_EQUALS:
-        return expenseData.amount === parseFloat(this.conditionValue)
+        return expenseData.amount === parseFloat(this.conditionValue);
 
       case RuleConditionType.PAYMENT_METHOD_EQUALS:
         return (
           expenseData.paymentMethod?.toLowerCase() ===
           this.conditionValue.toLowerCase()
-        )
+        );
 
       default:
-        return false
+        return false;
     }
   }
 
@@ -116,10 +118,10 @@ export class RuleCondition {
     return (
       this.conditionType === other.conditionType &&
       this.conditionValue === other.conditionValue
-    )
+    );
   }
 
   toString(): string {
-    return `${this.conditionType}: ${this.conditionValue}`
+    return `${this.conditionType}: ${this.conditionValue}`;
   }
 }
