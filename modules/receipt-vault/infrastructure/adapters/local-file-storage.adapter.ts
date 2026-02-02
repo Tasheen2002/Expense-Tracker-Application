@@ -1,4 +1,5 @@
 import { IFileStorageService } from "../../domain/ports/file-storage.port";
+import { InvalidStorageConfigurationError } from "../../domain/errors/receipt.errors";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as crypto from "crypto";
@@ -48,7 +49,9 @@ export class LocalFileStorageAdapter implements IFileStorageService {
 
   async download(key: string, bucket: string): Promise<Buffer> {
     if (bucket !== "local") {
-      throw new Error(`Invalid bucket for local storage: ${bucket}`);
+      throw new InvalidStorageConfigurationError(
+        `Invalid bucket for local storage: ${bucket}`,
+      );
     }
     const filePath = path.join(this.uploadDir, key);
     return await fs.readFile(filePath);
@@ -56,7 +59,9 @@ export class LocalFileStorageAdapter implements IFileStorageService {
 
   async delete(key: string, bucket: string): Promise<void> {
     if (bucket !== "local") {
-      throw new Error(`Invalid bucket for local storage: ${bucket}`);
+      throw new InvalidStorageConfigurationError(
+        `Invalid bucket for local storage: ${bucket}`,
+      );
     }
     const filePath = path.join(this.uploadDir, key);
     try {
@@ -71,10 +76,11 @@ export class LocalFileStorageAdapter implements IFileStorageService {
 
   async generateSignedUrl(key: string, bucket: string): Promise<string> {
     if (bucket !== "local") {
-      throw new Error(`Invalid bucket for local storage: ${bucket}`);
+      throw new InvalidStorageConfigurationError(
+        `Invalid bucket for local storage: ${bucket}`,
+      );
     }
-    // For local storage, we just return the public URL, maybe with a token query param if needed
-    // But simplest is just the static serve path
+
     return `${this.baseUrl}/${key}`;
   }
 }
