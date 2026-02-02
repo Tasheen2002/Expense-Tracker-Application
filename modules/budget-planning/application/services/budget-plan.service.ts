@@ -14,8 +14,20 @@ import {
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
+import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+
 export class BudgetPlanService {
-  constructor(private readonly budgetPlanRepository: BudgetPlanRepository) {}
+  constructor(
+    private readonly budgetPlanRepository: BudgetPlanRepository,
+    private readonly workspaceAccess: IWorkspaceAccessPort,
+  ) {}
+
+  private async checkWorkspaceAccess(
+    userId: string,
+    workspaceId: string,
+  ): Promise<boolean> {
+    return this.workspaceAccess.isAdminOrOwner(userId, workspaceId);
+  }
 
   async createPlan(params: {
     workspaceId: string;
@@ -25,6 +37,14 @@ export class BudgetPlanService {
     endDate: Date;
     createdBy: string;
   }): Promise<BudgetPlan> {
+    const hasAccess = await this.checkWorkspaceAccess(
+      params.createdBy,
+      params.workspaceId,
+    );
+    if (!hasAccess) {
+      throw new UnauthorizedBudgetPlanAccessError("create");
+    }
+
     const period = PlanPeriod.create(params.startDate, params.endDate);
 
     // Check for overlapping active plans if needed (business rule dependent)
@@ -54,7 +74,13 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(params.id);
     }
 
-    if (plan.getCreatedBy().getValue() !== params.userId) {
+    const isCreator = plan.getCreatedBy().getValue() === params.userId;
+    const isAdminOrOwner = await this.checkWorkspaceAccess(
+      params.userId,
+      plan.getWorkspaceId().getValue(),
+    );
+
+    if (!isCreator && !isAdminOrOwner) {
       throw new UnauthorizedBudgetPlanAccessError("update");
     }
 
@@ -71,7 +97,13 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
-    if (plan.getCreatedBy().getValue() !== userId) {
+    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isAdminOrOwner = await this.checkWorkspaceAccess(
+      userId,
+      plan.getWorkspaceId().getValue(),
+    );
+
+    if (!isCreator && !isAdminOrOwner) {
       throw new UnauthorizedBudgetPlanAccessError("activate");
     }
 
@@ -88,7 +120,13 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
-    if (plan.getCreatedBy().getValue() !== userId) {
+    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isAdminOrOwner = await this.checkWorkspaceAccess(
+      userId,
+      plan.getWorkspaceId().getValue(),
+    );
+
+    if (!isCreator && !isAdminOrOwner) {
       throw new UnauthorizedBudgetPlanAccessError("delete");
     }
 
@@ -97,7 +135,7 @@ export class BudgetPlanService {
     await this.budgetPlanRepository.delete(planId);
   }
 
-  async getPlan(id: string): Promise<BudgetPlan> {
+  async getPlan(id: string, userId: string): Promise<BudgetPlan> {
     const planId = PlanId.fromString(id);
     const plan = await this.budgetPlanRepository.findById(planId);
 
@@ -105,18 +143,35 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
+    const hasAccess = await this.checkWorkspaceAccess(
+      userId,
+      plan.getWorkspaceId().getValue(),
+    );
+
+    if (!hasAccess) {
+      throw new UnauthorizedBudgetPlanAccessError("view");
+    }
+
     return plan;
   }
 
   async listPlans(
+    userId: string,
     workspaceId: string,
     status?: PlanStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<BudgetPlan>> {
-    return this.budgetPlanRepository.findAll(
+    const hasAccess = await this.checkWorkspaceAccess(userId, workspaceId);
+
+    if (!hasAccess) {
+      throw new UnauthorizedBudgetPlanAccessError("list");
+    }
+
+    const plans = await this.budgetPlanRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       status,
       options,
     );
+    return plans;
   }
 }
