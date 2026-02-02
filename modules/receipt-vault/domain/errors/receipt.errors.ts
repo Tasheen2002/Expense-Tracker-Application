@@ -87,6 +87,19 @@ export class InvalidReceiptOperationError extends ReceiptVaultError {
 }
 
 /**
+ * Receipt missing storage key error
+ */
+export class ReceiptMissingStorageKeyError extends ReceiptVaultError {
+  constructor(receiptId: string) {
+    super(
+      `Receipt ${receiptId} has no storage key`,
+      "RECEIPT_MISSING_STORAGE_KEY",
+      400,
+    );
+  }
+}
+
+/**
  * Receipt tag not found error
  */
 export class ReceiptTagNotFoundError extends ReceiptVaultError {
