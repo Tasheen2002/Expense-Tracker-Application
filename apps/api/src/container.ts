@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+// Event Bus
+import { getEventBus } from "./shared/domain/events/event-bus";
+import { NotificationEventHandler } from "../../../modules/notification-dispatch/application/handlers/notification.handler";
+
 // Identity-Workspace Module
 import { UserRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl";
 import { WorkspaceRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/workspace.repository.impl";
@@ -300,12 +304,14 @@ export class Container {
    * Register all services with dependencies
    */
   register(prisma: PrismaClient): void {
+    const eventBus = getEventBus();
+
     // ============================================
     // Identity-Workspace Module
     // ============================================
 
     // Repositories
-    const userRepository = new UserRepositoryImpl(prisma);
+    const userRepository = new UserRepositoryImpl(prisma, eventBus);
     const workspaceRepository = new WorkspaceRepositoryImpl(prisma);
     const workspaceMembershipRepository = new WorkspaceMembershipRepositoryImpl(
       prisma,
@@ -774,14 +780,6 @@ export class Container {
     this.services.set("preferenceController", preferenceController);
 
     // Event Handlers & Subscriptions
-    const {
-      getEventBus,
-    } = require("../../apps/api/src/shared/domain/events/event-bus");
-    const {
-      NotificationEventHandler,
-    } = require("../../../modules/notification-dispatch/application/handlers/notification.handler");
-
-    const eventBus = getEventBus();
     const notificationEventHandler = new NotificationEventHandler(
       notificationService,
     );
@@ -798,6 +796,10 @@ export class Container {
     eventBus.subscribe(
       "approval.workflow_started",
       notificationEventHandler.handleApprovalStarted,
+    );
+    eventBus.subscribe(
+      "UserCreated",
+      notificationEventHandler.handleUserCreated,
     );
 
     console.log("[Container] Notification Event Handlers registered");
