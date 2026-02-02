@@ -1,8 +1,88 @@
 import { UserId } from "../value-objects/user-id.vo";
 import { Email } from "../value-objects/email.vo";
 import { InvalidPasswordHashError } from "../errors/identity.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
-export class User {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class UserCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly email: string,
+    public readonly fullName: string | null,
+  ) {
+    super(userId, "User");
+  }
+
+  get eventType(): string {
+    return "UserCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      userId: this.userId,
+      email: this.email,
+      fullName: this.fullName,
+    };
+  }
+}
+
+export class UserEmailVerifiedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly email: string,
+  ) {
+    super(userId, "User");
+  }
+
+  get eventType(): string {
+    return "UserEmailVerified";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      userId: this.userId,
+      email: this.email,
+    };
+  }
+}
+
+export class UserDeactivatedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, "User");
+  }
+
+  get eventType(): string {
+    return "UserDeactivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+export class UserPasswordChangedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, "User");
+  }
+
+  get eventType(): string {
+    return "UserPasswordChanged";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class User extends AggregateRoot {
   private constructor(
     private readonly id: UserId,
     private email: Email,
@@ -12,14 +92,16 @@ export class User {
     private emailVerified: boolean,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(data: CreateUserData): User {
     const userId = UserId.create();
     const email = Email.create(data.email);
     const now = new Date();
 
-    return new User(
+    const user = new User(
       userId,
       email,
       data.passwordHash,
@@ -29,6 +111,16 @@ export class User {
       now,
       now,
     );
+
+    user.addDomainEvent(
+      new UserCreatedEvent(
+        userId.getValue(),
+        email.getValue(),
+        data.fullName || null,
+      ),
+    );
+
+    return user;
   }
 
   static reconstitute(data: UserData): User {
@@ -108,16 +200,21 @@ export class User {
     }
     this.passwordHash = passwordHash;
     this.updatedAt = new Date();
+    this.addDomainEvent(new UserPasswordChangedEvent(this.id.getValue()));
   }
 
   verifyEmail(): void {
     this.emailVerified = true;
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserEmailVerifiedEvent(this.id.getValue(), this.email.getValue()),
+    );
   }
 
   deactivate(): void {
     this.isActive = false;
     this.updatedAt = new Date();
+    this.addDomainEvent(new UserDeactivatedEvent(this.id.getValue()));
   }
 
   activate(): void {
