@@ -1,16 +1,19 @@
-import { PrismaClient } from '@prisma/client'
-import { Budget } from '../../domain/entities/budget.entity'
-import { BudgetId } from '../../domain/value-objects/budget-id'
-import { BudgetPeriod } from '../../domain/value-objects/budget-period'
-import { BudgetStatus } from '../../domain/enums/budget-status'
-import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
-import { IBudgetRepository, BudgetFilters } from '../../domain/repositories/budget.repository'
+import { PrismaClient } from "@prisma/client";
+import { Budget } from "../../domain/entities/budget.entity";
+import { BudgetId } from "../../domain/value-objects/budget-id";
+import { BudgetPeriod } from "../../domain/value-objects/budget-period";
+import { BudgetStatus } from "../../domain/enums/budget-status";
+import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
+import {
+  IBudgetRepository,
+  BudgetFilters,
+} from "../../domain/repositories/budget.repository";
 
 export class BudgetRepositoryImpl implements IBudgetRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(budget: Budget): Promise<void> {
-    const period = budget.getPeriod()
+    const period = budget.getPeriod();
 
     await this.prisma.budget.upsert({
       where: { id: budget.getId().getValue() },
@@ -44,7 +47,7 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         rolloverUnused: budget.shouldRolloverUnused(),
         updatedAt: budget.getUpdatedAt(),
       },
-    })
+    });
   }
 
   async findById(id: BudgetId, workspaceId: string): Promise<Budget | null> {
@@ -53,58 +56,58 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    if (!row) return null
+    if (!row) return null;
 
-    return this.toDomain(row)
+    return this.toDomain(row);
   }
 
   async findByWorkspace(workspaceId: string): Promise<Budget[]> {
     const rows = await this.prisma.budget.findMany({
       where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByFilters(filters: BudgetFilters): Promise<Budget[]> {
     const where: any = {
       workspaceId: filters.workspaceId,
-    }
+    };
 
     if (filters.status) {
-      where.status = filters.status
+      where.status = filters.status;
     }
 
     if (filters.createdBy) {
-      where.createdBy = filters.createdBy
+      where.createdBy = filters.createdBy;
     }
 
     if (filters.currency) {
-      where.currency = filters.currency
+      where.currency = filters.currency;
     }
 
     if (filters.isActive !== undefined) {
-      const now = new Date()
+      const now = new Date();
       if (filters.isActive) {
-        where.status = BudgetStatus.ACTIVE
-        where.startDate = { lte: now }
-        where.endDate = { gte: now }
+        where.status = BudgetStatus.ACTIVE;
+        where.startDate = { lte: now };
+        where.endDate = { gte: now };
       }
     }
 
     const rows = await this.prisma.budget.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findActiveBudgets(workspaceId: string): Promise<Budget[]> {
-    const now = new Date()
+    const now = new Date();
 
     const rows = await this.prisma.budget.findMany({
       where: {
@@ -113,14 +116,14 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         startDate: { lte: now },
         endDate: { gte: now },
       },
-      orderBy: { startDate: 'desc' },
-    })
+      orderBy: { startDate: "desc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findExpiredBudgets(workspaceId: string): Promise<Budget[]> {
-    const now = new Date()
+    const now = new Date();
 
     const rows = await this.prisma.budget.findMany({
       where: {
@@ -128,10 +131,10 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         status: BudgetStatus.ACTIVE,
         endDate: { lt: now },
       },
-      orderBy: { endDate: 'asc' },
-    })
+      orderBy: { endDate: "asc" },
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: BudgetId, workspaceId: string): Promise<void> {
@@ -140,7 +143,7 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
   }
 
   async exists(id: BudgetId, workspaceId: string): Promise<boolean> {
@@ -149,17 +152,28 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    return count > 0
+    return count > 0;
+  }
+
+  async existsByName(name: string, workspaceId: string): Promise<boolean> {
+    const count = await this.prisma.budget.count({
+      where: {
+        name,
+        workspaceId,
+      },
+    });
+
+    return count > 0;
   }
 
   private toDomain(row: any): Budget {
     const period = BudgetPeriod.fromDates(
       row.startDate,
       row.endDate,
-      row.periodType as BudgetPeriodType
-    )
+      row.periodType as BudgetPeriodType,
+    );
 
     return Budget.fromPersistence({
       id: BudgetId.fromString(row.id),
@@ -175,6 +189,6 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
       rolloverUnused: row.rolloverUnused,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    })
+    });
   }
 }

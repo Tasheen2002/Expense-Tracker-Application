@@ -2,8 +2,62 @@ import { ForecastItemId } from "../value-objects/forecast-item-id";
 import { ForecastId } from "../value-objects/forecast-id";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { ForecastAmount } from "../value-objects/forecast-amount";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class ForecastItem {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class ForecastItemCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly forecastItemId: string,
+    public readonly forecastId: string,
+    public readonly categoryId: string,
+    public readonly amount: string,
+  ) {
+    super(forecastItemId, "ForecastItem");
+  }
+
+  get eventType(): string {
+    return "ForecastItemCreated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      forecastItemId: this.forecastItemId,
+      forecastId: this.forecastId,
+      categoryId: this.categoryId,
+      amount: this.amount,
+    };
+  }
+}
+
+export class ForecastItemUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly forecastItemId: string,
+    public readonly changes: Record<string, unknown>,
+  ) {
+    super(forecastItemId, "ForecastItem");
+  }
+
+  get eventType(): string {
+    return "ForecastItemUpdated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      forecastItemId: this.forecastItemId,
+      changes: this.changes,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class ForecastItem extends AggregateRoot {
   private constructor(
     private readonly id: ForecastItemId,
     private readonly forecastId: ForecastId,
@@ -12,7 +66,9 @@ export class ForecastItem {
     private notes: string | null,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(params: {
     forecastId: ForecastId;
@@ -20,7 +76,7 @@ export class ForecastItem {
     amount: ForecastAmount;
     notes?: string | null;
   }): ForecastItem {
-    return new ForecastItem(
+    const item = new ForecastItem(
       ForecastItemId.create(),
       params.forecastId,
       params.categoryId,
@@ -29,6 +85,17 @@ export class ForecastItem {
       new Date(),
       new Date(),
     );
+
+    item.addDomainEvent(
+      new ForecastItemCreatedEvent(
+        item.id.getValue(),
+        params.forecastId.getValue(),
+        params.categoryId.getValue(),
+        params.amount.getValue().toString(),
+      ),
+    );
+
+    return item;
   }
 
   static reconstitute(params: {
@@ -80,8 +147,21 @@ export class ForecastItem {
   }
 
   updateDetails(amount?: ForecastAmount, notes?: string | null): void {
-    if (amount) this.amount = amount;
-    if (notes !== undefined) this.notes = notes;
+    const changes: Record<string, unknown> = {};
+    if (amount) {
+      this.amount = amount;
+      changes.amount = amount.getValue().toString();
+    }
+    if (notes !== undefined) {
+      this.notes = notes;
+      changes.notes = notes;
+    }
     this.updatedAt = new Date();
+
+    if (Object.keys(changes).length > 0) {
+      this.addDomainEvent(
+        new ForecastItemUpdatedEvent(this.id.getValue(), changes),
+      );
+    }
   }
 }

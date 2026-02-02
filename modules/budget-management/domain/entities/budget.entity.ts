@@ -237,6 +237,10 @@ export class Budget extends AggregateRoot {
     });
   }
 
+  static fromPersistence(props: BudgetProps): Budget {
+    return new Budget(props);
+  }
+
   updateName(newName: string): void {
     if (!newName || newName.trim().length === 0) {
       throw new InvalidBudgetDataError("Budget name is required");
@@ -326,6 +330,10 @@ export class Budget extends AggregateRoot {
     return this.props.name;
   }
 
+  getDescription(): string | null {
+    return this.props.description;
+  }
+
   getTotalAmount(): Decimal {
     return this.props.totalAmount;
   }
@@ -366,6 +374,22 @@ export class Budget extends AggregateRoot {
 
   hasExpired(): boolean {
     return this.props.period.hasEnded();
+  }
+
+  isRecurring(): boolean {
+    return this.props.isRecurring;
+  }
+
+  shouldRolloverUnused(): boolean {
+    return this.props.rolloverUnused;
+  }
+
+  getCreatedAt(): Date {
+    return this.props.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   validateAllocationAmount(amount: Decimal, currentAllocated: Decimal): void {

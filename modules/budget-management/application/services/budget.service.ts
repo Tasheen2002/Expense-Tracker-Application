@@ -15,6 +15,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 import {
   BudgetNotFoundError,
+  BudgetAlreadyExistsError,
   AllocationNotFoundError,
   AlertNotFoundError,
   UnauthorizedBudgetAccessError,
@@ -42,6 +43,15 @@ export class BudgetService {
     isRecurring?: boolean;
     rolloverUnused?: boolean;
   }): Promise<Budget> {
+    // Check for duplicate budget name in workspace
+    const nameExists = await this.budgetRepository.existsByName(
+      params.name,
+      params.workspaceId,
+    );
+    if (nameExists) {
+      throw new BudgetAlreadyExistsError(params.name, params.workspaceId);
+    }
+
     const budget = Budget.create({
       workspaceId: params.workspaceId,
       name: params.name,

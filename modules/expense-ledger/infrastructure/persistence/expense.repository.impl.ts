@@ -281,9 +281,7 @@ export class ExpenseRepositoryImpl implements ExpenseRepository {
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
-      throw new Error(
-        "Currency is required for financial aggregations to prevent mixing currencies",
-      );
+      throw new CurrencyRequiredError();
     }
 
     const result = await this.prisma.expense.aggregate({
@@ -306,9 +304,7 @@ export class ExpenseRepositoryImpl implements ExpenseRepository {
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
-      throw new Error(
-        "Currency is required for financial aggregations to prevent mixing currencies",
-      );
+      throw new CurrencyRequiredError();
     }
 
     const result = await this.prisma.expense.aggregate({

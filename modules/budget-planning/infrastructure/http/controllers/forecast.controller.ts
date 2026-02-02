@@ -51,6 +51,7 @@ export class ForecastController {
         body.planId,
         body.name,
         body.type as ForecastType,
+        userId,
       );
       const result = await this.createForecastHandler.handle(command);
       return ResponseHelper.success(
@@ -83,6 +84,7 @@ export class ForecastController {
         body.forecastId,
         body.categoryId,
         body.amount,
+        userId,
         body.notes,
       );
       const result = await this.addForecastItemHandler.handle(command);

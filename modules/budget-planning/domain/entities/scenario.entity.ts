@@ -1,8 +1,62 @@
 import { ScenarioId } from "../value-objects/scenario-id";
 import { PlanId } from "../value-objects/plan-id";
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class Scenario {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class ScenarioCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly scenarioId: string,
+    public readonly planId: string,
+    public readonly name: string,
+    public readonly createdBy: string,
+  ) {
+    super(scenarioId, "Scenario");
+  }
+
+  get eventType(): string {
+    return "ScenarioCreated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      scenarioId: this.scenarioId,
+      planId: this.planId,
+      name: this.name,
+      createdBy: this.createdBy,
+    };
+  }
+}
+
+export class ScenarioUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly scenarioId: string,
+    public readonly changes: Record<string, unknown>,
+  ) {
+    super(scenarioId, "Scenario");
+  }
+
+  get eventType(): string {
+    return "ScenarioUpdated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      scenarioId: this.scenarioId,
+      changes: this.changes,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class Scenario extends AggregateRoot {
   private constructor(
     private readonly id: ScenarioId,
     private readonly planId: PlanId,
@@ -12,7 +66,9 @@ export class Scenario {
     private readonly createdBy: UserId,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(params: {
     planId: PlanId;
@@ -21,7 +77,7 @@ export class Scenario {
     assumptions?: Record<string, any> | null;
     createdBy: UserId;
   }): Scenario {
-    return new Scenario(
+    const scenario = new Scenario(
       ScenarioId.create(),
       params.planId,
       params.name,
@@ -31,6 +87,17 @@ export class Scenario {
       new Date(),
       new Date(),
     );
+
+    scenario.addDomainEvent(
+      new ScenarioCreatedEvent(
+        scenario.id.getValue(),
+        params.planId.getValue(),
+        params.name,
+        params.createdBy.getValue(),
+      ),
+    );
+
+    return scenario;
   }
 
   static reconstitute(params: {
@@ -92,9 +159,25 @@ export class Scenario {
     description?: string | null;
     assumptions?: Record<string, any> | null;
   }): void {
-    if (params.name) this.name = params.name;
-    if (params.description !== undefined) this.description = params.description;
-    if (params.assumptions !== undefined) this.assumptions = params.assumptions;
+    const changes: Record<string, unknown> = {};
+    if (params.name) {
+      this.name = params.name;
+      changes.name = params.name;
+    }
+    if (params.description !== undefined) {
+      this.description = params.description;
+      changes.description = params.description;
+    }
+    if (params.assumptions !== undefined) {
+      this.assumptions = params.assumptions;
+      changes.assumptions = params.assumptions;
+    }
     this.updatedAt = new Date();
+
+    if (Object.keys(changes).length > 0) {
+      this.addDomainEvent(
+        new ScenarioUpdatedEvent(this.id.getValue(), changes),
+      );
+    }
   }
 }
