@@ -250,7 +250,7 @@ export class CategoryRuleController {
         });
       }
 
-      const query: GetRuleByIdQuery = { ruleId };
+      const query: GetRuleByIdQuery = { ruleId, userId };
       const rule = await this.getRuleByIdHandler.execute(query);
 
       return ResponseHelper.success(
@@ -284,7 +284,7 @@ export class CategoryRuleController {
       }
 
       if (activeOnly === "true") {
-        const query: GetActiveRulesByWorkspaceQuery = { workspaceId };
+        const query: GetActiveRulesByWorkspaceQuery = { workspaceId, userId };
         const rules =
           await this.getActiveRulesByWorkspaceHandler.execute(query);
         return ResponseHelper.success(
@@ -294,7 +294,7 @@ export class CategoryRuleController {
           rules,
         );
       } else {
-        const query: GetRulesByWorkspaceQuery = { workspaceId };
+        const query: GetRulesByWorkspaceQuery = { workspaceId, userId };
         const rules = await this.getRulesByWorkspaceHandler.execute(query);
         return ResponseHelper.success(
           reply,

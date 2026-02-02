@@ -115,7 +115,7 @@ export class ForecastController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { id } = req.params;
-      const query = new GetForecastQuery(id);
+      const query = new GetForecastQuery(id, userId);
       const result = await this.getForecastHandler.handle(query);
       return ResponseHelper.success(
         reply,
@@ -146,7 +146,7 @@ export class ForecastController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { planId } = req.params;
-      const query = new ListForecastsQuery(planId);
+      const query = new ListForecastsQuery(planId, userId);
       const result = await this.listForecastsHandler.handle(query);
       return ResponseHelper.success(
         reply,
@@ -177,7 +177,7 @@ export class ForecastController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { forecastId } = req.params;
-      const query = new GetForecastItemsQuery(forecastId);
+      const query = new GetForecastItemsQuery(forecastId, userId);
       const result = await this.getForecastItemsHandler.handle(query);
       return ResponseHelper.success(
         reply,
@@ -208,7 +208,7 @@ export class ForecastController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { id } = req.params;
-      await this.forecastService.deleteForecast(id);
+      await this.forecastService.deleteForecast(id, userId);
       return ResponseHelper.success(
         reply,
         200,
@@ -229,7 +229,7 @@ export class ForecastController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { itemId } = req.params;
-      await this.forecastService.deleteForecastItem(itemId);
+      await this.forecastService.deleteForecastItem(itemId, userId);
       return ResponseHelper.success(
         reply,
         200,

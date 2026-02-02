@@ -168,7 +168,7 @@ export class BudgetPlanController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { id } = req.params;
-      const query = new GetBudgetPlanQuery(id);
+      const query = new GetBudgetPlanQuery(id, userId);
       const result = await this.getHandler.handle(query);
       return ResponseHelper.success(
         reply,
@@ -215,6 +215,7 @@ export class BudgetPlanController {
         return reply.status(400).send({ message: "workspaceId is required" });
       }
       const query = new ListBudgetPlansQuery(
+        userId,
         req.query.workspaceId,
         req.query.status as PlanStatus,
         req.query.limit ? parseInt(req.query.limit) : 50,

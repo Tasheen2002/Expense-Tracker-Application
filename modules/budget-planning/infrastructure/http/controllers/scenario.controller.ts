@@ -60,7 +60,7 @@ export class ScenarioController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { id } = req.params;
-      const result = await this.scenarioService.getScenario(id);
+      const result = await this.scenarioService.getScenario(id, userId);
       return ResponseHelper.success(
         reply,
         200,
@@ -91,7 +91,7 @@ export class ScenarioController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { planId } = req.params;
-      const result = await this.scenarioService.listScenarios(planId);
+      const result = await this.scenarioService.listScenarios(planId, userId);
       return ResponseHelper.success(
         reply,
         200,
@@ -122,7 +122,7 @@ export class ScenarioController {
         return reply.status(401).send({ message: "User not authenticated" });
       }
       const { id } = req.params;
-      await this.scenarioService.deleteScenario(id);
+      await this.scenarioService.deleteScenario(id, userId);
       return ResponseHelper.success(
         reply,
         200,
