@@ -25,6 +25,8 @@ export interface SendNotificationParams {
   recipientId: string;
   type: NotificationType;
   priority?: NotificationPriority;
+  title?: string;
+  content?: string;
   data: Record<string, unknown>;
 }
 
@@ -75,20 +77,38 @@ export class NotificationService {
       );
 
       if (!template) {
-        // For IN_APP, generate default notification
-        if (channel === NotificationChannel.IN_APP) {
+        const useExplicitOrDefault =
+          (params.title && params.content) ||
+          channel === NotificationChannel.IN_APP;
+
+        if (useExplicitOrDefault) {
+          const title = params.title || this.getDefaultTitle(params.type);
+          const content =
+            params.content || this.getDefaultContent(params.type, params.data);
+
           const notification = Notification.create({
             workspaceId,
             recipientId,
             type: params.type,
             channel,
             priority: params.priority,
-            title: this.getDefaultTitle(params.type),
-            content: this.getDefaultContent(params.type, params.data),
+            title,
+            content,
             data: params.data,
           });
 
-          notification.markAsSent();
+          // Dispatch based on channel
+          try {
+            if (channel === NotificationChannel.EMAIL) {
+              await this.sendEmail(recipientId.getValue(), title, content);
+            }
+            notification.markAsSent();
+          } catch (error) {
+            notification.markAsFailed(
+              error instanceof Error ? error.message : "Unknown error",
+            );
+          }
+
           await this.notificationRepository.save(notification);
           sentNotifications.push(notification);
         }
