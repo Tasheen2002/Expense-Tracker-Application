@@ -1,23 +1,10 @@
 import { FastifyInstance } from "fastify";
 import { BudgetController } from "../controllers/budget.controller";
 
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
-
 export async function budgetRoutes(
   fastify: FastifyInstance,
   controller: BudgetController,
 ) {
-  // Apply workspace authorization to all routes with workspaceId param
-  fastify.addHook("preHandler", async (request, reply) => {
-    const params = request.params as { workspaceId?: string };
-    if (params && params.workspaceId) {
-      await workspaceAuthorizationMiddleware(
-        request as any,
-        reply,
-        (fastify as any).prisma,
-      );
-    }
-  });
   // Create budget
   fastify.post(
     "/:workspaceId/budgets",
