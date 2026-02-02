@@ -5,6 +5,7 @@ import { ProjectId } from "../value-objects/project-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { Decimal } from "@prisma/client/runtime/library";
+import { InvalidAllocationTargetError } from "../errors/cost-allocation.errors";
 
 export class ExpenseAllocation {
   private constructor(
@@ -39,7 +40,7 @@ export class ExpenseAllocation {
       params.projectId,
     ].filter(Boolean);
     if (targets.length !== 1) {
-      throw new Error(
+      throw new InvalidAllocationTargetError(
         "ExpenseAllocation must target exactly one of Department, CostCenter, or Project.",
       );
     }

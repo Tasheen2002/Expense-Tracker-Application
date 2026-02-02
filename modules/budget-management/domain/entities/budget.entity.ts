@@ -7,6 +7,7 @@ import {
   InvalidCurrencyError,
   InvalidBudgetStatusError,
   NegativeAmountError,
+  InvalidBudgetDataError,
 } from "../errors/budget.errors";
 import { BudgetPeriodType } from "../enums/budget-period-type";
 import { Decimal } from "@prisma/client/runtime/library";
@@ -179,10 +180,12 @@ export class Budget extends AggregateRoot {
   static create(data: CreateBudgetData): Budget {
     // Validate name
     if (!data.name || data.name.trim().length === 0) {
-      throw new Error("Budget name is required");
+      throw new InvalidBudgetDataError("Budget name is required");
     }
     if (data.name.length > 255) {
-      throw new Error("Budget name cannot exceed 255 characters");
+      throw new InvalidBudgetDataError(
+        "Budget name cannot exceed 255 characters",
+      );
     }
 
     // Validate total amount
@@ -191,37 +194,6 @@ export class Budget extends AggregateRoot {
       typeof data.totalAmount === "string"
         ? new Decimal(data.totalAmount)
         : data.totalAmount;
-
-    // ... (in create)
-    // Validate name
-    if (!data.name || data.name.trim().length === 0) {
-      throw new Error("Budget name is required"); // Maintaining generic error for simple required fields? Plan says 10 errors. Let's stick to consistent domain errors or standarized validation. Implementation plan mapped everything. Let's use InvalidAmountError for amounts, maybe InvalidBudgetPeriodError for logic. Wait, simple validation like 'required' might be better as ValidationError or similar common error. But plan says replace 36.
-      // Re-reading plan: InvalidAmountError, InvalidCurrencyError, etc.
-      // For name required: 'Budget name is required' -> maybe just keep Error for simple validation or make a DomainError?
-      // Plan listed "Budget Entity (10 errors)".
-      // Let's use `InvalidAmountError` for amounts.
-      // For name: `InvalidBudgetStatusError` is for status.
-      // Maybe I missed `InvalidBudgetPropsError`?
-      // Let's use Error for now for simple validation if not in plan, but wait, count was 10.
-      // 1. name required
-      // 2. name length
-      // 3. total amount > 0 -> InvalidAmountError
-      // 4. total amount decimal -> InvalidAmountError
-      // 5. currency -> InvalidCurrencyError
-      // 6. update name required
-      // 7. update name length
-      // 8. update total > 0 -> InvalidAmountError
-      // 9. update total decimal -> InvalidAmountError
-      // 10. activate transition -> InvalidBudgetStatusError
-      // 11. mark exceeded active -> InvalidBudgetStatusError
-      // 12. archive transition -> InvalidBudgetStatusError
-      // The name ones are simple validation. I'll focus on the specific domain logic ones first or add a generic Validation error if I can.
-      // Let's use `InvalidAmountError` for amounts and `InvalidBudgetStatusError` for status.
-      // For name validation, I will check if I can use a standard error or if I should create `InvalidBudgetDataError`.
-      // Let's create `InvalidBudgetDataError` in the same file to be safe and clean.
-    }
-
-    // ...
 
     // ...
     if (totalAmount.isNegative() || totalAmount.isZero()) {
@@ -267,7 +239,7 @@ export class Budget extends AggregateRoot {
 
   updateName(newName: string): void {
     if (!newName || newName.trim().length === 0) {
-      throw new Error("Budget name is required");
+      throw new InvalidBudgetDataError("Budget name is required");
     }
     this.props.name = newName;
     this.props.updatedAt = new Date();
