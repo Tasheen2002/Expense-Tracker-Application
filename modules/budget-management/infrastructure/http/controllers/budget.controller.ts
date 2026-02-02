@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateBudgetHandler } from "../../../application/commands/create-budget.command";
 import { UpdateBudgetHandler } from "../../../application/commands/update-budget.command";
 import { DeleteBudgetHandler } from "../../../application/commands/delete-budget.command";
@@ -34,7 +35,7 @@ export class BudgetController {
   ) {}
 
   async createBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: {
         name: string;
@@ -51,14 +52,7 @@ export class BudgetController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
 
@@ -90,7 +84,7 @@ export class BudgetController {
   }
 
   async updateBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
       Body: {
         name?: string;
@@ -101,14 +95,7 @@ export class BudgetController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
@@ -133,20 +120,13 @@ export class BudgetController {
   }
 
   async activateBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
@@ -168,20 +148,13 @@ export class BudgetController {
   }
 
   async archiveBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
@@ -203,20 +176,13 @@ export class BudgetController {
   }
 
   async deleteBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
@@ -237,7 +203,7 @@ export class BudgetController {
   }
 
   async getBudget(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
     reply: FastifyReply,
@@ -270,7 +236,7 @@ export class BudgetController {
   }
 
   async listBudgets(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: {
         status?: string;
@@ -306,7 +272,7 @@ export class BudgetController {
   }
 
   async addAllocation(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
       Body: {
         categoryId?: string;
@@ -317,14 +283,7 @@ export class BudgetController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
@@ -349,7 +308,7 @@ export class BudgetController {
   }
 
   async updateAllocation(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string; allocationId: string };
       Body: {
         allocatedAmount?: number | string;
@@ -359,14 +318,7 @@ export class BudgetController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, allocationId } = request.params;
 
@@ -390,20 +342,13 @@ export class BudgetController {
   }
 
   async deleteAllocation(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string; allocationId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, allocationId } = request.params;
 
@@ -424,7 +369,7 @@ export class BudgetController {
   }
 
   async getAllocations(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
     reply: FastifyReply,
@@ -450,7 +395,7 @@ export class BudgetController {
   }
 
   async getUnreadAlerts(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
     reply: FastifyReply,

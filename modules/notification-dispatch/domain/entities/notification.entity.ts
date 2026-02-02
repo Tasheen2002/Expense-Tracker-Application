@@ -5,6 +5,126 @@ import { NotificationStatus } from "../enums/notification-status.enum";
 import { NotificationId } from "../value-objects/notification-id";
 import { WorkspaceId } from "../value-objects";
 import { UserId } from "../value-objects";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+/**
+ * Emitted when a notification is created.
+ */
+export class NotificationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly notificationId: string,
+    public readonly workspaceId: string,
+    public readonly recipientId: string,
+    public readonly type: NotificationType,
+    public readonly channel: NotificationChannel,
+    public readonly priority: NotificationPriority,
+  ) {
+    super(notificationId, "Notification");
+  }
+
+  get eventType(): string {
+    return "notification.created";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      notificationId: this.notificationId,
+      workspaceId: this.workspaceId,
+      recipientId: this.recipientId,
+      type: this.type,
+      channel: this.channel,
+      priority: this.priority,
+    };
+  }
+}
+
+/**
+ * Emitted when a notification is successfully sent.
+ */
+export class NotificationSentEvent extends DomainEvent {
+  constructor(
+    public readonly notificationId: string,
+    public readonly workspaceId: string,
+    public readonly recipientId: string,
+    public readonly channel: NotificationChannel,
+    public readonly sentAt: Date,
+  ) {
+    super(notificationId, "Notification");
+  }
+
+  get eventType(): string {
+    return "notification.sent";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      notificationId: this.notificationId,
+      workspaceId: this.workspaceId,
+      recipientId: this.recipientId,
+      channel: this.channel,
+      sentAt: this.sentAt.toISOString(),
+    };
+  }
+}
+
+/**
+ * Emitted when a notification fails to send.
+ */
+export class NotificationFailedEvent extends DomainEvent {
+  constructor(
+    public readonly notificationId: string,
+    public readonly workspaceId: string,
+    public readonly recipientId: string,
+    public readonly channel: NotificationChannel,
+    public readonly error: string,
+    public readonly failedAt: Date,
+  ) {
+    super(notificationId, "Notification");
+  }
+
+  get eventType(): string {
+    return "notification.failed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      notificationId: this.notificationId,
+      workspaceId: this.workspaceId,
+      recipientId: this.recipientId,
+      channel: this.channel,
+      error: this.error,
+      failedAt: this.failedAt.toISOString(),
+    };
+  }
+}
+
+/**
+ * Emitted when a notification is read by the recipient.
+ */
+export class NotificationReadEvent extends DomainEvent {
+  constructor(
+    public readonly notificationId: string,
+    public readonly workspaceId: string,
+    public readonly recipientId: string,
+    public readonly readAt: Date,
+  ) {
+    super(notificationId, "Notification");
+  }
+
+  get eventType(): string {
+    return "notification.read";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      notificationId: this.notificationId,
+      workspaceId: this.workspaceId,
+      recipientId: this.recipientId,
+      readAt: this.readAt.toISOString(),
+    };
+  }
+}
 
 export interface NotificationProps {
   id: NotificationId;
@@ -24,10 +144,11 @@ export interface NotificationProps {
   updatedAt: Date;
 }
 
-export class Notification {
+export class Notification extends AggregateRoot {
   private props: NotificationProps;
 
   private constructor(props: NotificationProps) {
+    super();
     this.props = props;
   }
 
@@ -41,7 +162,7 @@ export class Notification {
     content: string;
     data?: Record<string, unknown>;
   }): Notification {
-    return new Notification({
+    const notification = new Notification({
       id: NotificationId.create(),
       workspaceId: params.workspaceId,
       recipientId: params.recipientId,
@@ -55,6 +176,19 @@ export class Notification {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    notification.addDomainEvent(
+      new NotificationCreatedEvent(
+        notification.getId().getValue(),
+        notification.getWorkspaceId().getValue(),
+        notification.getRecipientId().getValue(),
+        notification.getType(),
+        notification.getChannel(),
+        notification.getPriority(),
+      ),
+    );
+
+    return notification;
   }
 
   static reconstitute(props: NotificationProps): Notification {
@@ -125,12 +259,33 @@ export class Notification {
     this.props.status = NotificationStatus.SENT;
     this.props.sentAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new NotificationSentEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getRecipientId().getValue(),
+        this.getChannel(),
+        this.props.sentAt,
+      ),
+    );
   }
 
   markAsFailed(error: string): void {
     this.props.status = NotificationStatus.FAILED;
     this.props.error = error;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new NotificationFailedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getRecipientId().getValue(),
+        this.getChannel(),
+        error,
+        this.props.updatedAt,
+      ),
+    );
   }
 
   markAsRead(): void {
@@ -138,5 +293,14 @@ export class Notification {
     this.props.readAt = new Date();
     this.props.status = NotificationStatus.READ;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new NotificationReadEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getRecipientId().getValue(),
+        this.props.readAt,
+      ),
+    );
   }
 }

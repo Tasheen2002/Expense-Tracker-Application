@@ -1,5 +1,6 @@
-import { UserId } from '../value-objects/user-id.vo'
-import { Email } from '../value-objects/email.vo'
+import { UserId } from "../value-objects/user-id.vo";
+import { Email } from "../value-objects/email.vo";
+import { InvalidPasswordHashError } from "../errors/identity.errors";
 
 export class User {
   private constructor(
@@ -10,13 +11,13 @@ export class User {
     private isActive: boolean,
     private emailVerified: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date
+    private updatedAt: Date,
   ) {}
 
   static create(data: CreateUserData): User {
-    const userId = UserId.create()
-    const email = Email.create(data.email)
-    const now = new Date()
+    const userId = UserId.create();
+    const email = Email.create(data.email);
+    const now = new Date();
 
     return new User(
       userId,
@@ -26,8 +27,8 @@ export class User {
       true, // Active by default
       false, // Email not verified by default
       now,
-      now
-    )
+      now,
+    );
   }
 
   static reconstitute(data: UserData): User {
@@ -39,8 +40,8 @@ export class User {
       data.isActive,
       data.emailVerified,
       data.createdAt,
-      data.updatedAt
-    )
+      data.updatedAt,
+    );
   }
 
   static fromDatabaseRow(row: UserRow): User {
@@ -52,76 +53,76 @@ export class User {
       row.is_active,
       row.email_verified,
       row.created_at,
-      row.updated_at
-    )
+      row.updated_at,
+    );
   }
 
   // Getters
   getId(): UserId {
-    return this.id
+    return this.id;
   }
 
   getEmail(): Email {
-    return this.email
+    return this.email;
   }
 
   getPasswordHash(): string {
-    return this.passwordHash
+    return this.passwordHash;
   }
 
   getFullName(): string | null {
-    return this.fullName
+    return this.fullName;
   }
 
   getIsActive(): boolean {
-    return this.isActive
+    return this.isActive;
   }
 
   getEmailVerified(): boolean {
-    return this.emailVerified
+    return this.emailVerified;
   }
 
   getCreatedAt(): Date {
-    return this.createdAt
+    return this.createdAt;
   }
 
   getUpdatedAt(): Date {
-    return this.updatedAt
+    return this.updatedAt;
   }
 
   // Business logic methods
   updateFullName(fullName: string | null): void {
-    this.fullName = fullName ? fullName.trim() : null
-    this.updatedAt = new Date()
+    this.fullName = fullName ? fullName.trim() : null;
+    this.updatedAt = new Date();
   }
 
   updateEmail(email: string): void {
-    this.email = Email.create(email)
-    this.emailVerified = false // Reset verification when email changes
-    this.updatedAt = new Date()
+    this.email = Email.create(email);
+    this.emailVerified = false; // Reset verification when email changes
+    this.updatedAt = new Date();
   }
 
   updatePassword(passwordHash: string): void {
     if (!passwordHash) {
-      throw new Error('Password hash cannot be empty')
+      throw new InvalidPasswordHashError();
     }
-    this.passwordHash = passwordHash
-    this.updatedAt = new Date()
+    this.passwordHash = passwordHash;
+    this.updatedAt = new Date();
   }
 
   verifyEmail(): void {
-    this.emailVerified = true
-    this.updatedAt = new Date()
+    this.emailVerified = true;
+    this.updatedAt = new Date();
   }
 
   deactivate(): void {
-    this.isActive = false
-    this.updatedAt = new Date()
+    this.isActive = false;
+    this.updatedAt = new Date();
   }
 
   activate(): void {
-    this.isActive = true
-    this.updatedAt = new Date()
+    this.isActive = true;
+    this.updatedAt = new Date();
   }
 
   // Convert to data for persistence
@@ -135,7 +136,7 @@ export class User {
       emailVerified: this.emailVerified,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
-    }
+    };
   }
 
   toDatabaseRow(): UserRow {
@@ -148,39 +149,39 @@ export class User {
       email_verified: this.emailVerified,
       created_at: this.createdAt,
       updated_at: this.updatedAt,
-    }
+    };
   }
 
   equals(other: User): boolean {
-    return this.id.equals(other.id)
+    return this.id.equals(other.id);
   }
 }
 
 // Supporting types and interfaces
 export interface CreateUserData {
-  email: string
-  passwordHash: string
-  fullName?: string
+  email: string;
+  passwordHash: string;
+  fullName?: string;
 }
 
 export interface UserData {
-  id: string
-  email: string
-  passwordHash: string
-  fullName: string | null
-  isActive: boolean
-  emailVerified: boolean
-  createdAt: Date
-  updatedAt: Date
+  id: string;
+  email: string;
+  passwordHash: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface UserRow {
-  id: string
-  email: string
-  password_hash: string
-  full_name: string | null
-  is_active: boolean
-  email_verified: boolean
-  created_at: Date
-  updated_at: Date
+  id: string;
+  email: string;
+  password_hash: string;
+  full_name: string | null;
+  is_active: boolean;
+  email_verified: boolean;
+  created_at: Date;
+  updated_at: Date;
 }

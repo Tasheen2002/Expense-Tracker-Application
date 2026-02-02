@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { WorkspaceMembershipService } from "../../../application/services/workspace-membership.service";
 import { WorkspaceAuthHelper } from "../middleware/workspace-auth.helper";
 import { WorkspaceRole } from "../../../domain/entities/workspace-membership.entity";
@@ -10,18 +11,12 @@ export class MemberController {
     private readonly authHelper: WorkspaceAuthHelper,
   ) {}
 
-  async listMembers(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId } = request.params as { workspaceId: string };
-    const user = this.authHelper.getUserFromRequest(request);
-
-    if (!user) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        error: "Unauthorized",
-        message: "User not authenticated",
-      });
-    }
+  async listMembers(
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId } = request.params;
+    const user = request.user;
 
     // Check if user is a member of the workspace
     const isMember = await this.authHelper.verifyMembership(
@@ -50,21 +45,14 @@ export class MemberController {
     });
   }
 
-  async removeMember(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, userId } = request.params as {
-      workspaceId: string;
-      userId: string;
-    };
-    const currentUser = this.authHelper.getUserFromRequest(request);
-
-    if (!currentUser) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        error: "Unauthorized",
-        message: "User not authenticated",
-      });
-    }
+  async removeMember(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; userId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, userId } = request.params;
+    const currentUser = request.user;
 
     // Check if current user can manage members (owner or admin)
     const canManage = await this.authHelper.verifyCanManageMembers(
@@ -108,26 +96,20 @@ export class MemberController {
         message: "Member removed successfully",
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  async changeRole(request: FastifyRequest, reply: FastifyReply) {
-    const { workspaceId, userId } = request.params as {
-      workspaceId: string;
-      userId: string;
-    };
-    const { role } = request.body as { role: WorkspaceRole };
-    const currentUser = this.authHelper.getUserFromRequest(request);
-
-    if (!currentUser) {
-      return reply.status(401).send({
-        success: false,
-        statusCode: 401,
-        error: "Unauthorized",
-        message: "User not authenticated",
-      });
-    }
+  async changeRole(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; userId: string };
+      Body: { role: WorkspaceRole };
+    }>,
+    reply: FastifyReply,
+  ) {
+    const { workspaceId, userId } = request.params;
+    const { role } = request.body;
+    const currentUser = request.user;
 
     // Check if current user can manage members (owner or admin)
     const canManage = await this.authHelper.verifyCanManageMembers(
@@ -198,7 +180,7 @@ export class MemberController {
         },
       });
     } catch (error: unknown) {
-      return ResponseHelper.error(reply, error)
+      return ResponseHelper.error(reply, error);
     }
   }
 }

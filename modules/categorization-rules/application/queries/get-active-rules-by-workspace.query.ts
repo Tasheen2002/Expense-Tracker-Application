@@ -1,8 +1,9 @@
-import { CategoryRuleService } from '../services/category-rule.service'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
+import { CategoryRuleService } from "../services/category-rule.service";
+import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 
 export interface GetActiveRulesByWorkspaceQuery {
-  workspaceId: string
+  workspaceId: string;
+  userId: string;
 }
 
 export class GetActiveRulesByWorkspaceHandler {
@@ -10,8 +11,9 @@ export class GetActiveRulesByWorkspaceHandler {
 
   async execute(query: GetActiveRulesByWorkspaceQuery) {
     const rules = await this.ruleService.getActiveRulesByWorkspaceId(
-      WorkspaceId.fromString(query.workspaceId)
-    )
+      WorkspaceId.fromString(query.workspaceId),
+      query.userId,
+    );
 
     return rules.map((rule) => ({
       id: rule.getId().getValue(),
@@ -28,6 +30,6 @@ export class GetActiveRulesByWorkspaceHandler {
       createdBy: rule.getCreatedBy().getValue(),
       createdAt: rule.getCreatedAt(),
       updatedAt: rule.getUpdatedAt(),
-    }))
+    }));
   }
 }

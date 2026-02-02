@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import {
   CreateDepartmentBody,
@@ -116,25 +117,19 @@ export class AllocationManagementController {
   // ==========================================
 
   async createDepartment(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateDepartmentBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const command = new CreateDepartmentCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -160,18 +155,11 @@ export class AllocationManagementController {
   }
 
   async listDepartments(
-    request: FastifyRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const query = new ListDepartmentsQuery(workspaceId);
@@ -197,20 +185,13 @@ export class AllocationManagementController {
   }
 
   async getDepartment(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { departmentId } = request.params;
       const query = new GetDepartmentQuery(departmentId);
@@ -238,26 +219,20 @@ export class AllocationManagementController {
   }
 
   async updateDepartment(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
       Body: UpdateDepartmentBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
       const command = new UpdateDepartmentCommand(
         departmentId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -287,23 +262,20 @@ export class AllocationManagementController {
   }
 
   async deleteDepartment(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
-      const command = new DeleteDepartmentCommand(departmentId, workspaceId);
+      const command = new DeleteDepartmentCommand(
+        departmentId,
+        workspaceId,
+        userId,
+      );
       await this.deleteDepartmentHandler.handle(command);
 
       return ResponseHelper.success(
@@ -318,23 +290,20 @@ export class AllocationManagementController {
   }
 
   async activateDepartment(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
-      const { departmentId } = request.params;
-      const command = new ActivateDepartmentCommand(departmentId);
+      const { workspaceId, departmentId } = request.params;
+      const command = new ActivateDepartmentCommand(
+        departmentId,
+        workspaceId,
+        userId,
+      );
       const department = await this.activateDepartmentHandler.handle(command);
 
       return ResponseHelper.success(
@@ -364,25 +333,19 @@ export class AllocationManagementController {
   // ==========================================
 
   async createCostCenter(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateCostCenterBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const command = new CreateCostCenterCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -406,18 +369,11 @@ export class AllocationManagementController {
   }
 
   async listCostCenters(
-    request: FastifyRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const query = new ListCostCentersQuery(workspaceId);
@@ -441,20 +397,13 @@ export class AllocationManagementController {
   }
 
   async getCostCenter(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { costCenterId } = request.params;
       const query = new GetCostCenterQuery(costCenterId);
@@ -480,26 +429,20 @@ export class AllocationManagementController {
   }
 
   async updateCostCenter(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
       Body: UpdateCostCenterBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
       const command = new UpdateCostCenterCommand(
         costCenterId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -525,23 +468,20 @@ export class AllocationManagementController {
   }
 
   async deleteCostCenter(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
-      const command = new DeleteCostCenterCommand(costCenterId, workspaceId);
+      const command = new DeleteCostCenterCommand(
+        costCenterId,
+        workspaceId,
+        userId,
+      );
       await this.deleteCostCenterHandler.handle(command);
 
       return ResponseHelper.success(
@@ -556,23 +496,20 @@ export class AllocationManagementController {
   }
 
   async activateCostCenter(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
-      const { costCenterId } = request.params;
-      const command = new ActivateCostCenterCommand(costCenterId);
+      const { workspaceId, costCenterId } = request.params;
+      const command = new ActivateCostCenterCommand(
+        costCenterId,
+        workspaceId,
+        userId,
+      );
       const costCenter = await this.activateCostCenterHandler.handle(command);
 
       return ResponseHelper.success(
@@ -598,21 +535,14 @@ export class AllocationManagementController {
   // ==========================================
 
   async createProject(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateProjectBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
 
@@ -624,6 +554,7 @@ export class AllocationManagementController {
 
       const command = new CreateProjectCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         startDate,
@@ -651,18 +582,11 @@ export class AllocationManagementController {
   }
 
   async listProjects(
-    request: FastifyRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const query = new ListProjectsQuery(workspaceId);
@@ -690,20 +614,13 @@ export class AllocationManagementController {
   }
 
   async getProject(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { projectId } = request.params;
       const query = new GetProjectQuery(projectId);
@@ -733,26 +650,20 @@ export class AllocationManagementController {
   }
 
   async updateProject(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
       Body: UpdateProjectBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
       const command = new UpdateProjectCommand(
         projectId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -786,23 +697,16 @@ export class AllocationManagementController {
   }
 
   async deleteProject(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
-      const command = new DeleteProjectCommand(projectId, workspaceId);
+      const command = new DeleteProjectCommand(projectId, workspaceId, userId);
       await this.deleteProjectHandler.handle(command);
 
       return ResponseHelper.success(
@@ -817,23 +721,20 @@ export class AllocationManagementController {
   }
 
   async activateProject(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const userId = request.user.userId;
 
-      const { projectId } = request.params;
-      const command = new ActivateProjectCommand(projectId);
+      const { workspaceId, projectId } = request.params;
+      const command = new ActivateProjectCommand(
+        projectId,
+        workspaceId,
+        userId,
+      );
       const project = await this.activateProjectHandler.handle(command);
 
       return ResponseHelper.success(

@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import { EvaluateRulesBody } from "../validation/rule-execution.schema";
 
@@ -26,20 +27,14 @@ export class RuleExecutionController {
   ) {}
 
   async evaluateRules(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: EvaluateRulesBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId } = request.params;
 
       const command: EvaluateRulesCommand = {
@@ -62,19 +57,13 @@ export class RuleExecutionController {
   }
 
   async getExecutionsByExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
       const query: GetExecutionsByExpenseQuery = { workspaceId, expenseId };
@@ -93,20 +82,14 @@ export class RuleExecutionController {
   }
 
   async getExecutionsByWorkspace(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { limit?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId } = request.params;
       const limit = request.query.limit
         ? parseInt(request.query.limit)

@@ -83,3 +83,9 @@ export class UnauthorizedBudgetPlanAccessError extends BudgetPlanningDomainError
     );
   }
 }
+
+export class InvalidForecastAmountError extends BudgetPlanningDomainError {
+  constructor(message: string) {
+    super(message, "INVALID_FORECAST_AMOUNT", 400);
+  }
+}

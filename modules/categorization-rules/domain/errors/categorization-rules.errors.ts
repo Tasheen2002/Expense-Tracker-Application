@@ -5,6 +5,44 @@ export class CategoryRuleNotFoundError extends Error {
   }
 }
 
+class DomainError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+  ) {
+    super(message);
+    this.name = "DomainError";
+  }
+}
+
+// Rule Condition Errors
+export class InvalidRuleConditionError extends DomainError {
+  constructor(message: string) {
+    super(message, "INVALID_RULE_CONDITION");
+  }
+}
+
+// Confidence Score Errors
+export class InvalidConfidenceScoreError extends DomainError {
+  constructor(message: string) {
+    super(message, "INVALID_CONFIDENCE_SCORE");
+  }
+}
+
+// Category Suggestion Errors
+export class InvalidSuggestionError extends DomainError {
+  constructor(message: string) {
+    super(message, "INVALID_SUGGESTION");
+  }
+}
+
+// Category Rule Errors
+export class InvalidRuleError extends DomainError {
+  constructor(message: string) {
+    super(message, "INVALID_RULE");
+  }
+}
+
 export class DuplicateRuleNameError extends Error {
   constructor(name: string) {
     super(`A rule with name "${name}" already exists in this workspace`);
@@ -37,20 +75,6 @@ export class SuggestionAlreadyRespondedError extends Error {
   constructor(suggestionId: string) {
     super(`Suggestion ${suggestionId} has already been accepted or rejected`);
     this.name = "SuggestionAlreadyRespondedError";
-  }
-}
-
-export class InvalidRuleConditionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidRuleConditionError";
-  }
-}
-
-export class InvalidConfidenceScoreError extends Error {
-  constructor(value: number) {
-    super(`Confidence score must be between 0 and 1, got ${value}`);
-    this.name = "InvalidConfidenceScoreError";
   }
 }
 

@@ -13,6 +13,9 @@ import { Money } from "../../domain/value-objects/money";
 import { ExpenseDate } from "../../domain/value-objects/expense-date";
 import { ExpenseStatus } from "../../domain/enums/expense-status";
 import { PaymentMethod } from "../../domain/enums/payment-method";
+import { CurrencyRequiredError } from "../../domain/errors/expense.errors";
+
+// ...
 
 export class ExpenseRepositoryImpl implements ExpenseRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -329,9 +332,7 @@ export class ExpenseRepositoryImpl implements ExpenseRepository {
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
-      throw new Error(
-        "Currency is required for financial aggregations to prevent mixing currencies",
-      );
+      throw new CurrencyRequiredError();
     }
 
     const result = await this.prisma.expense.aggregate({

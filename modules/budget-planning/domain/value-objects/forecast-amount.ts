@@ -1,15 +1,16 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { PLANNING_CONSTANTS } from "../constants/planning.constants";
+import { InvalidForecastAmountError } from "../errors/budget-planning.errors";
 
 export class ForecastAmount {
   private constructor(private readonly value: Decimal) {
     if (value.lessThan(PLANNING_CONSTANTS.MIN_AMOUNT)) {
-      throw new Error(
+      throw new InvalidForecastAmountError(
         `ForecastAmount cannot be less than ${PLANNING_CONSTANTS.MIN_AMOUNT}`,
       );
     }
     if (value.greaterThan(PLANNING_CONSTANTS.MAX_AMOUNT)) {
-      throw new Error(
+      throw new InvalidForecastAmountError(
         `ForecastAmount cannot be greater than ${PLANNING_CONSTANTS.MAX_AMOUNT}`,
       );
     }

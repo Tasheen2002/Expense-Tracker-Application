@@ -12,6 +12,7 @@ import { UserId, WorkspaceId } from "../../domain/value-objects";
 import {
   NotificationNotFoundError,
   UnauthorizedNotificationAccessError,
+  NotificationSendFailedError,
 } from "../../domain/errors/notification.errors";
 import { IChannelProvider } from "../providers/channel-provider.interface";
 import {
@@ -309,32 +310,29 @@ export class NotificationService {
       return;
     }
 
-    try {
-      const user = await this.userRepository.findById(
-        UserId.fromString(recipientId),
+    const user = await this.userRepository.findById(
+      UserId.fromString(recipientId),
+    );
+
+    if (!user) {
+      console.warn(`[EMAIL] User not found: ${recipientId}. Email not sent.`);
+      return;
+    }
+
+    const email = user.getEmail().getValue();
+
+    const result = await this.emailProvider.send({
+      recipientId,
+      recipientEmail: email,
+      subject,
+      content: body,
+    });
+
+    if (!result.success) {
+      throw new NotificationSendFailedError(
+        "EMAIL",
+        result.error || "Failed to send email",
       );
-
-      if (!user) {
-        console.warn(`[EMAIL] User not found: ${recipientId}. Email not sent.`);
-        return;
-      }
-
-      const email = user.getEmail().getValue();
-
-      const result = await this.emailProvider.send({
-        recipientId,
-        recipientEmail: email,
-        subject,
-        content: body,
-      });
-
-      if (!result.success) {
-        throw new Error(result.error || "Failed to send email");
-      }
-    } catch (error) {
-      console.error(`[EMAIL] Failed to resolve user/send email:`, error);
-      // We don't throw here to avoid failing the entire notification process if email fails
-      // But we should probably mark the notification as partially failed or log it securely
     }
   }
 }

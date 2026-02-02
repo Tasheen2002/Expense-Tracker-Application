@@ -114,3 +114,9 @@ export class UnauthorizedAllocationAccessError extends CostAllocationDomainError
     );
   }
 }
+
+export class InvalidCodeError extends CostAllocationDomainError {
+  constructor(entity: string, reason: string) {
+    super(`Invalid ${entity} code: ${reason}`, "INVALID_CODE", 400);
+  }
+}

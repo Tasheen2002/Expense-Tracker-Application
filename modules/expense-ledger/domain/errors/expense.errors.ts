@@ -195,3 +195,185 @@ export class InvalidRecurrencePatternError extends ExpenseLedgerError {
     );
   }
 }
+
+// --- Tag Errors ---
+export class TagNameRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("Tag name is required", "TAG_NAME_REQUIRED", 400);
+  }
+}
+
+export class TagNameTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Tag name cannot exceed ${maxLength} characters`,
+      "TAG_NAME_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class InvalidHexColorError extends ExpenseLedgerError {
+  constructor(color: string) {
+    super(
+      `Color must be a valid hex color code (e.g., #FFFFFF), got: ${color}`,
+      "INVALID_HEX_COLOR",
+      400,
+    );
+  }
+}
+
+// --- Category Errors ---
+export class CategoryNameRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("Category name is required", "CATEGORY_NAME_REQUIRED", 400);
+  }
+}
+
+export class CategoryNameTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Category name cannot exceed ${maxLength} characters`,
+      "CATEGORY_NAME_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class CategoryDescriptionTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Category description cannot exceed ${maxLength} characters`,
+      "CATEGORY_DESCRIPTION_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class IconNameTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Icon name cannot exceed ${maxLength} characters`,
+      "ICON_NAME_TOO_LONG",
+      400,
+    );
+  }
+}
+
+// --- Expense Errors ---
+export class ExpenseTitleRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("Expense title is required", "EXPENSE_TITLE_REQUIRED", 400);
+  }
+}
+
+export class ExpenseTitleTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Expense title cannot exceed ${maxLength} characters`,
+      "EXPENSE_TITLE_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class ExpenseDescriptionTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Expense description cannot exceed ${maxLength} characters`,
+      "EXPENSE_DESCRIPTION_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class MerchantNameTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `Merchant name cannot exceed ${maxLength} characters`,
+      "MERCHANT_NAME_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class InvalidExpenseDateError extends ExpenseLedgerError {
+  constructor(reason: string) {
+    super(`Invalid expense date: ${reason}`, "INVALID_EXPENSE_DATE", 400);
+  }
+}
+
+export class NonReimbursableError extends ExpenseLedgerError {
+  constructor(expenseId: string) {
+    super(
+      `Cannot reimburse a non-reimbursable expense ${expenseId}`,
+      "NON_REIMBURSABLE_EXPENSE",
+      400,
+    );
+  }
+}
+
+// --- Attachment Errors ---
+export class FileNameRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("File name is required", "FILE_NAME_REQUIRED", 400);
+  }
+}
+
+export class FileNameTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `File name cannot exceed ${maxLength} characters`,
+      "FILE_NAME_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class FilePathRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("File path is required", "FILE_PATH_REQUIRED", 400);
+  }
+}
+
+export class FilePathTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `File path cannot exceed ${maxLength} characters`,
+      "FILE_PATH_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class FileSizeInvalidError extends ExpenseLedgerError {
+  constructor() {
+    super("File size must be greater than 0", "FILE_SIZE_INVALID", 400);
+  }
+}
+
+export class MimeTypeRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super("MIME type is required", "MIME_TYPE_REQUIRED", 400);
+  }
+}
+
+export class MimeTypeTooLongError extends ExpenseLedgerError {
+  constructor(maxLength: number) {
+    super(
+      `MIME type cannot exceed ${maxLength} characters`,
+      "MIME_TYPE_TOO_LONG",
+      400,
+    );
+  }
+}
+
+export class CurrencyRequiredError extends ExpenseLedgerError {
+  constructor() {
+    super(
+      "Currency is required for financial aggregations to prevent mixing currencies",
+      "CURRENCY_REQUIRED",
+      400,
+    );
+  }
+}

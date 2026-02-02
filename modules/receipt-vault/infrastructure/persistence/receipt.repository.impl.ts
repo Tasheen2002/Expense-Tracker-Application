@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Receipt as ReceiptModel } from "@prisma/client";
 import { Receipt } from "../../domain/entities/receipt.entity";
 import { ReceiptId } from "../../domain/value-objects/receipt-id";
 import { FileInfo } from "../../domain/value-objects/file-info";
@@ -257,39 +257,39 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
     });
   }
 
-  private toDomain(row: any): Receipt {
+  private toDomain(row: ReceiptModel): Receipt {
     const fileInfo = FileInfo.create({
       fileName: row.fileName,
       originalName: row.originalName,
       filePath: row.filePath,
       fileSize: row.fileSize,
       mimeType: row.mimeType,
-      fileHash: row.fileHash,
+      fileHash: row.fileHash ?? undefined,
     });
 
     const storageLocation = StorageLocation.create({
       provider: row.storageProvider as StorageProvider,
-      bucket: row.storageBucket,
-      key: row.storageKey,
+      bucket: row.storageBucket ?? undefined,
+      key: row.storageKey ?? undefined,
     });
 
     return Receipt.fromPersistence({
       id: ReceiptId.fromString(row.id),
       workspaceId: row.workspaceId,
-      expenseId: row.expenseId,
+      expenseId: row.expenseId ?? undefined,
       userId: row.userId,
       fileInfo,
       receiptType: row.receiptType as ReceiptType,
       status: row.status as ReceiptStatus,
       storageLocation,
-      thumbnailPath: row.thumbnailPath,
-      ocrText: row.ocrText,
-      ocrConfidence: row.ocrConfidence,
-      processedAt: row.processedAt,
-      failureReason: row.failureReason,
+      thumbnailPath: row.thumbnailPath ?? undefined,
+      ocrText: row.ocrText ?? undefined,
+      ocrConfidence: row.ocrConfidence ?? undefined,
+      processedAt: row.processedAt ?? undefined,
+      failureReason: row.failureReason ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      deletedAt: row.deletedAt,
+      deletedAt: row.deletedAt ?? undefined,
     });
   }
   async deleteWithDependencies(

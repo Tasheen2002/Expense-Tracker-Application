@@ -7,18 +7,17 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async getNotifications(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getNotifications(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { limit?: string; offset?: string };
+    }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
-      const userId = request.user.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
+      const userId = request.user.userId;
 
       const result = await this.notificationService.getNotifications(
         userId,
@@ -54,17 +53,13 @@ export class NotificationController {
     }
   }
 
-  async markAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
+  async markAsRead(
+    request: AuthenticatedRequest<{ Params: { notificationId: string } }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { notificationId } = request.params as { notificationId: string };
-      const userId = request.user.id;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
+      const { notificationId } = request.params;
+      const userId = request.user.userId;
 
       const notification = await this.notificationService.markAsRead(
         notificationId,
@@ -82,14 +77,13 @@ export class NotificationController {
     }
   }
 
-  async markAllAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
+  async markAllAsRead(
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const userId = request.user.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const { workspaceId } = request.params;
+      const userId = request.user.userId;
 
       await this.notificationService.markAllAsRead(userId, workspaceId);
 
@@ -103,14 +97,13 @@ export class NotificationController {
     }
   }
 
-  async getPreferences(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getPreferences(
+    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const userId = request.user.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const { workspaceId } = request.params;
+      const userId = request.user.userId;
 
       const preferences = await this.notificationService.getPreferences(
         userId,
@@ -138,19 +131,21 @@ export class NotificationController {
     }
   }
 
-  async updatePreferences(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { email, inApp, push } = request.body as {
+  async updatePreferences(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
         email?: boolean;
         inApp?: boolean;
         push?: boolean;
       };
-      const userId = request.user.id;
-
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { email, inApp, push } = request.body;
+      const userId = request.user.userId;
 
       const preferences = await this.notificationService.updatePreferences(
         userId,

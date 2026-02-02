@@ -4,6 +4,7 @@ import {
 } from "../../domain/repositories/receipt.repository";
 import { IReceiptMetadataRepository } from "../../domain/repositories/receipt-metadata.repository";
 import { IReceiptTagRepository } from "../../domain/repositories/receipt-tag.repository";
+import { IFileStorageService } from "../../domain/ports/file-storage.port";
 import { Receipt } from "../../domain/entities/receipt.entity";
 import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
 import { ReceiptId } from "../../domain/value-objects/receipt-id";
@@ -26,6 +27,7 @@ export class ReceiptService {
     private readonly receiptRepository: IReceiptRepository,
     private readonly metadataRepository: IReceiptMetadataRepository,
     private readonly tagRepository: IReceiptTagRepository,
+    private readonly fileStorage: IFileStorageService,
   ) {}
 
   async uploadReceipt(params: {
@@ -355,6 +357,23 @@ export class ReceiptService {
         receipt.getId(),
         workspaceId,
       );
+
+      // Clean up file storage
+      const storageLocation = receipt.getStorageLocation();
+      const bucket = storageLocation.getBucket() || "local";
+      const key = storageLocation.getKey();
+
+      if (key) {
+        try {
+          await this.fileStorage.delete(key, bucket);
+        } catch (error) {
+          // Log but don't fail as the DB delete succeeded
+          console.error(
+            `Failed to delete file for receipt ${receiptId}:`,
+            error,
+          );
+        }
+      }
     } else {
       // Soft delete
       receipt.softDelete();
@@ -626,5 +645,34 @@ export class ReceiptService {
       ]);
 
     return { total, pending, processing, processed, failed, verified };
+  }
+
+  async getDownloadUrl(
+    receiptId: string,
+    workspaceId: string,
+    userId: string,
+  ): Promise<string> {
+    const receipt = await this.receiptRepository.findById(
+      ReceiptId.fromString(receiptId),
+      workspaceId,
+    );
+
+    if (!receipt) {
+      throw new ReceiptNotFoundError(receiptId, workspaceId);
+    }
+
+    if (receipt.getUserId() !== userId) {
+      throw new UnauthorizedAccessError(userId, receiptId);
+    }
+
+    const storageLocation = receipt.getStorageLocation();
+    const bucket = storageLocation.getBucket() || "local";
+    const key = storageLocation.getKey();
+
+    if (!key) {
+      throw new Error(`Receipt ${receiptId} has no storage key`);
+    }
+
+    return await this.fileStorage.generateSignedUrl(key, bucket);
   }
 }

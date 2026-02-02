@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import { CreateSuggestionBody } from "../validation/category-suggestion.schema";
 
@@ -51,20 +52,14 @@ export class CategorySuggestionController {
   ) {}
 
   async createSuggestion(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Body: CreateSuggestionBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId } = request.params;
 
       const command: CreateSuggestionCommand = {
@@ -89,19 +84,13 @@ export class CategorySuggestionController {
   }
 
   async acceptSuggestion(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { suggestionId } = request.params;
 
       const command: AcceptSuggestionCommand = { suggestionId };
@@ -119,19 +108,13 @@ export class CategorySuggestionController {
   }
 
   async rejectSuggestion(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { suggestionId } = request.params;
 
       const command: RejectSuggestionCommand = { suggestionId };
@@ -149,19 +132,13 @@ export class CategorySuggestionController {
   }
 
   async deleteSuggestion(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { suggestionId } = request.params;
 
       const command: DeleteSuggestionCommand = { suggestionId };
@@ -178,19 +155,13 @@ export class CategorySuggestionController {
   }
 
   async getSuggestionById(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { suggestionId } = request.params;
 
       const query: GetSuggestionByIdQuery = { suggestionId };
@@ -208,19 +179,13 @@ export class CategorySuggestionController {
   }
 
   async getSuggestionsByExpense(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
       const query: GetSuggestionsByExpenseQuery = { workspaceId, expenseId };
@@ -239,20 +204,14 @@ export class CategorySuggestionController {
   }
 
   async listSuggestions(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { workspaceId: string };
       Querystring: { pendingOnly?: string; limit?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.error(reply, {
-          message: "User not authenticated",
-          statusCode: 401,
-        });
-      }
+      const userId = request.user.userId;
       const { workspaceId } = request.params;
       const { pendingOnly, limit: limitStr } = request.query;
       const limit = limitStr ? parseInt(limitStr) : undefined;

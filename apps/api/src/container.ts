@@ -106,6 +106,8 @@ import { ReceiptTagRepositoryImpl } from "../../../modules/receipt-vault/infrast
 // Receipt Vault Module - Services
 import { ReceiptService } from "../../../modules/receipt-vault/application/services/receipt.service";
 import { TagService as ReceiptTagService } from "../../../modules/receipt-vault/application/services/tag.service";
+import { LocalFileStorageAdapter } from "../../../modules/receipt-vault/infrastructure/adapters/local-file-storage.adapter";
+import * as path from "path";
 
 // Receipt Vault Module - Command Handlers
 import { UploadReceiptHandler } from "../../../modules/receipt-vault/application/commands/upload-receipt.command";
@@ -175,6 +177,7 @@ import { ExpenseAllocationService } from "../../../modules/cost-allocation/appli
 // Cost Allocation Module - Adapters
 import { PrismaExpenseLookupAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-expense-lookup.adapter";
 import { PrismaAllocationSummaryAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-allocation-summary.adapter";
+import { PrismaWorkspaceAccessAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-workspace-access.adapter";
 
 // Cost Allocation Module - Command Handlers
 import { CreateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/create-department.command";
@@ -594,16 +597,23 @@ export class Container {
     this.services.set("receiptTagRepository", receiptTagRepository);
 
     // Services
+    const fileStorageService = new LocalFileStorageAdapter(
+      path.join(process.cwd(), "uploads"), // Verify this path is correct for your setup
+      "http://localhost:3000/uploads",
+    );
+
     const receiptService = new ReceiptService(
       receiptRepository,
       receiptMetadataRepository,
       receiptTagRepository,
+      fileStorageService,
     );
     const receiptTagService = new ReceiptTagService(
       receiptTagDefinitionRepository,
       receiptTagRepository,
     );
 
+    this.services.set("fileStorageService", fileStorageService);
     this.services.set("receiptService", receiptService);
     this.services.set("receiptTagService", receiptTagService);
 
@@ -813,10 +823,12 @@ export class Container {
     );
 
     // Services
+    const workspaceAccessAdapter = new PrismaWorkspaceAccessAdapter(prisma);
     const allocationManagementService = new AllocationManagementService(
       departmentRepository,
       costCenterRepository,
       projectRepository,
+      workspaceAccessAdapter,
     );
     const expenseLookupAdapter = new PrismaExpenseLookupAdapter(prisma);
     const allocationSummaryAdapter = new PrismaAllocationSummaryAdapter(prisma);
@@ -949,18 +961,30 @@ export class Container {
     const scenarioRepository = new ScenarioRepositoryImpl(prisma);
     const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
 
+    // Adapters
+    const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
+
     this.services.set("budgetPlanRepository", budgetPlanRepository);
     this.services.set("forecastRepository", forecastRepository);
     this.services.set("scenarioRepository", scenarioRepository);
     this.services.set("forecastItemRepository", forecastItemRepository);
 
     // Services
-    const budgetPlanService = new BudgetPlanService(budgetPlanRepository);
+    const budgetPlanService = new BudgetPlanService(
+      budgetPlanRepository,
+      workspaceAccessPlanning,
+    );
     const forecastService = new ForecastService(
       forecastRepository,
       forecastItemRepository,
+      budgetPlanRepository,
+      workspaceAccessPlanning,
     );
-    const scenarioService = new ScenarioService(scenarioRepository);
+    const scenarioService = new ScenarioService(
+      scenarioRepository,
+      budgetPlanRepository,
+      workspaceAccessPlanning,
+    );
 
     this.services.set("budgetPlanService", budgetPlanService);
     this.services.set("forecastService", forecastService);
@@ -1038,7 +1062,10 @@ export class Container {
     );
 
     // Services
-    const categoryRuleService = new CategoryRuleService(categoryRuleRepository);
+    const categoryRuleService = new CategoryRuleService(
+      categoryRuleRepository,
+      workspaceAccessPlanning,
+    );
     const ruleExecutionService = new RuleExecutionService(
       categoryRuleRepository,
       ruleExecutionRepository,
