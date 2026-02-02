@@ -6,8 +6,64 @@ import {
   InvitationAlreadyAcceptedError,
   InvitationExpiredError,
 } from "../errors/identity.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
-export class WorkspaceInvitation {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class InvitationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly invitationId: string,
+    public readonly workspaceId: string,
+    public readonly email: string,
+    public readonly role: string,
+  ) {
+    super(invitationId, "WorkspaceInvitation");
+  }
+
+  get eventType(): string {
+    return "InvitationCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      invitationId: this.invitationId,
+      workspaceId: this.workspaceId,
+      email: this.email,
+      role: this.role,
+    };
+  }
+}
+
+export class InvitationAcceptedEvent extends DomainEvent {
+  constructor(
+    public readonly invitationId: string,
+    public readonly workspaceId: string,
+    public readonly email: string,
+  ) {
+    super(invitationId, "WorkspaceInvitation");
+  }
+
+  get eventType(): string {
+    return "InvitationAccepted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      invitationId: this.invitationId,
+      workspaceId: this.workspaceId,
+      email: this.email,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class WorkspaceInvitation extends AggregateRoot {
   private constructor(
     private readonly id: InvitationId,
     private readonly workspaceId: WorkspaceId,
@@ -17,7 +73,9 @@ export class WorkspaceInvitation {
     private readonly expiresAt: Date,
     private acceptedAt: Date | null,
     private readonly createdAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(data: CreateWorkspaceInvitationData): WorkspaceInvitation {
     const invitationId = InvitationId.create();
@@ -28,7 +86,7 @@ export class WorkspaceInvitation {
       now.getTime() + data.expiryHours * 60 * 60 * 1000,
     );
 
-    return new WorkspaceInvitation(
+    const invitation = new WorkspaceInvitation(
       invitationId,
       workspaceId,
       data.email.toLowerCase(),
@@ -38,6 +96,17 @@ export class WorkspaceInvitation {
       null,
       now,
     );
+
+    invitation.addDomainEvent(
+      new InvitationCreatedEvent(
+        invitationId.getValue(),
+        data.workspaceId,
+        data.email.toLowerCase(),
+        data.role,
+      ),
+    );
+
+    return invitation;
   }
 
   static reconstitute(data: WorkspaceInvitationData): WorkspaceInvitation {
@@ -120,6 +189,14 @@ export class WorkspaceInvitation {
       throw new InvitationExpiredError();
     }
     this.acceptedAt = new Date();
+
+    this.addDomainEvent(
+      new InvitationAcceptedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.email,
+      ),
+    );
   }
 
   // Helper methods
