@@ -3,8 +3,84 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { PlanPeriod } from "../value-objects/plan-period";
 import { PlanStatus } from "../enums/plan-status.enum";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
-export class BudgetPlan {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class BudgetPlanCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly workspaceId: string,
+    public readonly name: string,
+    public readonly createdBy: string,
+  ) {
+    super(planId, "BudgetPlan");
+  }
+
+  get eventType(): string {
+    return "BudgetPlanCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      workspaceId: this.workspaceId,
+      name: this.name,
+      createdBy: this.createdBy,
+    };
+  }
+}
+
+export class BudgetPlanStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly oldStatus: string,
+    public readonly newStatus: string,
+  ) {
+    super(planId, "BudgetPlan");
+  }
+
+  get eventType(): string {
+    return "BudgetPlanStatusChanged";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      oldStatus: this.oldStatus,
+      newStatus: this.newStatus,
+    };
+  }
+}
+
+export class BudgetPlanUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly name: string,
+  ) {
+    super(planId, "BudgetPlan");
+  }
+
+  get eventType(): string {
+    return "BudgetPlanUpdated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      name: this.name,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class BudgetPlan extends AggregateRoot {
   private constructor(
     private readonly id: PlanId,
     private readonly workspaceId: WorkspaceId,
@@ -15,7 +91,9 @@ export class BudgetPlan {
     private readonly createdBy: UserId,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(params: {
     workspaceId: WorkspaceId;
@@ -24,8 +102,10 @@ export class BudgetPlan {
     period: PlanPeriod;
     createdBy: UserId;
   }): BudgetPlan {
-    return new BudgetPlan(
-      PlanId.create(),
+    const planId = PlanId.create();
+
+    const plan = new BudgetPlan(
+      planId,
       params.workspaceId,
       params.name,
       params.description || null,
@@ -35,6 +115,17 @@ export class BudgetPlan {
       new Date(),
       new Date(),
     );
+
+    plan.addDomainEvent(
+      new BudgetPlanCreatedEvent(
+        planId.getValue(),
+        params.workspaceId.getValue(),
+        params.name,
+        params.createdBy.getValue(),
+      ),
+    );
+
+    return plan;
   }
 
   static reconstitute(params: {
@@ -102,10 +193,19 @@ export class BudgetPlan {
     if (name) this.name = name;
     if (description !== undefined) this.description = description;
     this.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetPlanUpdatedEvent(this.id.getValue(), this.name),
+    );
   }
 
   updateStatus(status: PlanStatus): void {
+    const oldStatus = this.status;
     this.status = status;
     this.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetPlanStatusChangedEvent(this.id.getValue(), oldStatus, status),
+    );
   }
 }
