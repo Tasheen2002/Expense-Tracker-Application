@@ -2,13 +2,16 @@ import { ForecastService } from "../services/forecast.service";
 import { Forecast } from "../../domain/entities/forecast.entity";
 
 export class GetForecastQuery {
-  constructor(public readonly id: string) {}
+  constructor(
+    public readonly id: string,
+    public readonly userId: string,
+  ) {}
 }
 
 export class GetForecastHandler {
   constructor(private readonly forecastService: ForecastService) {}
 
   async handle(query: GetForecastQuery): Promise<Forecast> {
-    return await this.forecastService.getForecast(query.id);
+    return await this.forecastService.getForecast(query.id, query.userId);
   }
 }

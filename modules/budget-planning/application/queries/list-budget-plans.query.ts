@@ -5,6 +5,7 @@ import { PlanStatus } from "../../domain/enums/plan-status.enum";
 
 export class ListBudgetPlansQuery {
   constructor(
+    public readonly userId: string,
     public readonly workspaceId: string,
     public readonly status?: PlanStatus,
     public readonly limit?: number,
@@ -19,6 +20,7 @@ export class ListBudgetPlansHandler {
     query: ListBudgetPlansQuery,
   ): Promise<PaginatedResult<BudgetPlan>> {
     return await this.budgetPlanService.listPlans(
+      query.userId,
       query.workspaceId,
       query.status,
       {
