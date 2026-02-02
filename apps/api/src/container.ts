@@ -961,18 +961,30 @@ export class Container {
     const scenarioRepository = new ScenarioRepositoryImpl(prisma);
     const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
 
+    // Adapters
+    const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
+
     this.services.set("budgetPlanRepository", budgetPlanRepository);
     this.services.set("forecastRepository", forecastRepository);
     this.services.set("scenarioRepository", scenarioRepository);
     this.services.set("forecastItemRepository", forecastItemRepository);
 
     // Services
-    const budgetPlanService = new BudgetPlanService(budgetPlanRepository);
+    const budgetPlanService = new BudgetPlanService(
+      budgetPlanRepository,
+      workspaceAccessPlanning,
+    );
     const forecastService = new ForecastService(
       forecastRepository,
       forecastItemRepository,
+      budgetPlanRepository,
+      workspaceAccessPlanning,
     );
-    const scenarioService = new ScenarioService(scenarioRepository);
+    const scenarioService = new ScenarioService(
+      scenarioRepository,
+      budgetPlanRepository,
+      workspaceAccessPlanning,
+    );
 
     this.services.set("budgetPlanService", budgetPlanService);
     this.services.set("forecastService", forecastService);
@@ -1050,7 +1062,10 @@ export class Container {
     );
 
     // Services
-    const categoryRuleService = new CategoryRuleService(categoryRuleRepository);
+    const categoryRuleService = new CategoryRuleService(
+      categoryRuleRepository,
+      workspaceAccessPlanning,
+    );
     const ruleExecutionService = new RuleExecutionService(
       categoryRuleRepository,
       ruleExecutionRepository,
