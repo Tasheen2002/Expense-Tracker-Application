@@ -89,3 +89,9 @@ export class InvalidForecastAmountError extends BudgetPlanningDomainError {
     super(message, "INVALID_FORECAST_AMOUNT", 400);
   }
 }
+
+export class ValidationError extends BudgetPlanningDomainError {
+  constructor(message: string) {
+    super(message, "VALIDATION_ERROR", 400);
+  }
+}
