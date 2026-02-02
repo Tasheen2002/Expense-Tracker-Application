@@ -79,13 +79,33 @@ export class ResponseHelper {
     const message =
       error instanceof Error ? error.message : "Internal server error";
 
-    const response: ErrorResponse = {
+    // Extract error code/name for response
+    const errorCode =
+      error && typeof error === "object" && "code" in error
+        ? (error as { code: string }).code
+        : undefined;
+
+    // Map status codes to error names
+    const errorName =
+      statusCode === 409
+        ? "Conflict"
+        : statusCode === 404
+          ? "Not Found"
+          : statusCode === 401
+            ? "Unauthorized"
+            : statusCode === 403
+              ? "Forbidden"
+              : statusCode === 400
+                ? "Bad Request"
+                : "Internal Server Error";
+
+    return reply.status(statusCode).send({
       success: false,
       statusCode,
+      error: errorName,
+      code: errorCode,
       message,
-    };
-
-    return reply.status(statusCode).send(response);
+    });
   }
 
   /**
