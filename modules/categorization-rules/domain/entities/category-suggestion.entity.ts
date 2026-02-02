@@ -4,8 +4,86 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { InvalidSuggestionError } from "../errors/categorization-rules.errors";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class CategorySuggestion {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class CategorySuggestionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly suggestionId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string,
+    public readonly suggestedCategoryId: string,
+    public readonly confidence: number,
+  ) {
+    super(suggestionId, "CategorySuggestion");
+  }
+
+  get eventType(): string {
+    return "CategorySuggestionCreated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      suggestionId: this.suggestionId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+      suggestedCategoryId: this.suggestedCategoryId,
+      confidence: this.confidence,
+    };
+  }
+}
+
+export class CategorySuggestionAcceptedEvent extends DomainEvent {
+  constructor(
+    public readonly suggestionId: string,
+    public readonly expenseId: string,
+    public readonly categoryId: string,
+  ) {
+    super(suggestionId, "CategorySuggestion");
+  }
+
+  get eventType(): string {
+    return "CategorySuggestionAccepted";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      suggestionId: this.suggestionId,
+      expenseId: this.expenseId,
+      categoryId: this.categoryId,
+    };
+  }
+}
+
+export class CategorySuggestionRejectedEvent extends DomainEvent {
+  constructor(
+    public readonly suggestionId: string,
+    public readonly expenseId: string,
+  ) {
+    super(suggestionId, "CategorySuggestion");
+  }
+
+  get eventType(): string {
+    return "CategorySuggestionRejected";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      suggestionId: this.suggestionId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class CategorySuggestion extends AggregateRoot {
   private id: SuggestionId;
   private workspaceId: WorkspaceId;
   private expenseId: ExpenseId;
@@ -27,6 +105,7 @@ export class CategorySuggestion {
     createdAt: Date;
     respondedAt: Date | null;
   }) {
+    super();
     this.id = props.id;
     this.workspaceId = props.workspaceId;
     this.expenseId = props.expenseId;
@@ -51,7 +130,7 @@ export class CategorySuggestion {
       );
     }
 
-    return new CategorySuggestion({
+    const suggestion = new CategorySuggestion({
       id: SuggestionId.create(),
       workspaceId: props.workspaceId,
       expenseId: props.expenseId,
@@ -62,6 +141,18 @@ export class CategorySuggestion {
       createdAt: new Date(),
       respondedAt: null,
     });
+
+    suggestion.addDomainEvent(
+      new CategorySuggestionCreatedEvent(
+        suggestion.id.getValue(),
+        props.workspaceId.getValue(),
+        props.expenseId.getValue(),
+        props.suggestedCategoryId.getValue(),
+        props.confidence.getValue(),
+      ),
+    );
+
+    return suggestion;
   }
 
   static reconstitute(props: {
@@ -87,6 +178,13 @@ export class CategorySuggestion {
     }
     this.isAccepted = true;
     this.respondedAt = new Date();
+    this.addDomainEvent(
+      new CategorySuggestionAcceptedEvent(
+        this.id.getValue(),
+        this.expenseId.getValue(),
+        this.suggestedCategoryId.getValue(),
+      ),
+    );
   }
 
   reject(): void {
@@ -97,6 +195,12 @@ export class CategorySuggestion {
     }
     this.isAccepted = false;
     this.respondedAt = new Date();
+    this.addDomainEvent(
+      new CategorySuggestionRejectedEvent(
+        this.id.getValue(),
+        this.expenseId.getValue(),
+      ),
+    );
   }
 
   // Query methods
