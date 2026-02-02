@@ -7,6 +7,7 @@ export class CreateForecastCommand {
     public readonly planId: string,
     public readonly name: string,
     public readonly type: ForecastType,
+    public readonly userId: string,
   ) {}
 }
 
@@ -18,6 +19,7 @@ export class CreateForecastHandler {
       planId: command.planId,
       name: command.name,
       type: command.type,
+      userId: command.userId,
     });
   }
 }

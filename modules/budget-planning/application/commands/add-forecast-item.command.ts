@@ -6,6 +6,7 @@ export class AddForecastItemCommand {
     public readonly forecastId: string,
     public readonly categoryId: string,
     public readonly amount: number,
+    public readonly userId: string,
     public readonly notes?: string,
   ) {}
 }
@@ -19,6 +20,7 @@ export class AddForecastItemHandler {
       categoryId: command.categoryId,
       amount: command.amount,
       notes: command.notes,
+      userId: command.userId,
     });
   }
 }
