@@ -16,14 +16,17 @@ import {
   DuplicateDepartmentCodeError,
   DuplicateCostCenterCodeError,
   DuplicateProjectCodeError,
+  UnauthorizedAllocationAccessError,
 } from "../../domain/errors/cost-allocation.errors";
 import { Decimal } from "@prisma/client/runtime/library";
+import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
 
 export class AllocationManagementService {
   constructor(
     private readonly departmentRepository: DepartmentRepository,
     private readonly costCenterRepository: CostCenterRepository,
     private readonly projectRepository: ProjectRepository,
+    private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   // ==========================================
@@ -32,6 +35,7 @@ export class AllocationManagementService {
 
   async createDepartment(params: {
     workspaceId: string;
+    actorId: string;
     name: string;
     code: string;
     description?: string;
@@ -39,6 +43,15 @@ export class AllocationManagementService {
     parentDepartmentId?: string;
   }): Promise<Department> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("create department");
+    }
 
     // Check for duplicate code
     const existing = await this.departmentRepository.findByCode(
@@ -87,6 +100,7 @@ export class AllocationManagementService {
   async updateDepartment(params: {
     id: string;
     workspaceId: string;
+    actorId: string;
     name?: string;
     code?: string;
     description?: string | null;
@@ -95,6 +109,15 @@ export class AllocationManagementService {
   }): Promise<Department> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
     const departmentId = DepartmentId.fromString(params.id);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("update department");
+    }
 
     // Get existing department
     const department = await this.departmentRepository.findById(departmentId);
@@ -134,7 +157,14 @@ export class AllocationManagementService {
     return department;
   }
 
-  async deleteDepartment(id: string, workspaceId: string): Promise<void> {
+  async deleteDepartment(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<void> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("delete department");
+    }
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
     );
@@ -147,7 +177,14 @@ export class AllocationManagementService {
     await this.departmentRepository.save(department);
   }
 
-  async activateDepartment(id: string): Promise<Department> {
+  async activateDepartment(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<Department> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("activate department");
+    }
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
     );
@@ -166,11 +203,21 @@ export class AllocationManagementService {
 
   async createCostCenter(params: {
     workspaceId: string;
+    actorId: string;
     name: string;
     code: string;
     description?: string;
   }): Promise<CostCenter> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("create cost center");
+    }
 
     const existing = await this.costCenterRepository.findByCode(
       params.code,
@@ -210,11 +257,21 @@ export class AllocationManagementService {
   async updateCostCenter(params: {
     id: string;
     workspaceId: string;
+    actorId: string;
     name?: string;
     code?: string;
     description?: string | null;
   }): Promise<CostCenter> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("update cost center");
+    }
     const costCenterId = CostCenterId.fromString(params.id);
 
     // Get existing cost center
@@ -245,7 +302,14 @@ export class AllocationManagementService {
     return costCenter;
   }
 
-  async deleteCostCenter(id: string, workspaceId: string): Promise<void> {
+  async deleteCostCenter(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<void> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("delete cost center");
+    }
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
     );
@@ -258,7 +322,14 @@ export class AllocationManagementService {
     await this.costCenterRepository.save(costCenter);
   }
 
-  async activateCostCenter(id: string): Promise<CostCenter> {
+  async activateCostCenter(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<CostCenter> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("activate cost center");
+    }
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
     );
@@ -277,6 +348,7 @@ export class AllocationManagementService {
 
   async createProject(params: {
     workspaceId: string;
+    actorId: string;
     name: string;
     code: string;
     startDate: string | Date;
@@ -286,6 +358,15 @@ export class AllocationManagementService {
     budget?: number;
   }): Promise<Project> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("create project");
+    }
 
     // Check code uniqueness
     const existing = await this.projectRepository.findByCode(
@@ -330,6 +411,7 @@ export class AllocationManagementService {
   async updateProject(params: {
     id: string;
     workspaceId: string;
+    actorId: string;
     name?: string;
     code?: string;
     description?: string | null;
@@ -339,6 +421,15 @@ export class AllocationManagementService {
     budget?: number | null;
   }): Promise<Project> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
+
+    if (
+      !(await this.workspaceAccess.isAdminOrOwner(
+        params.actorId,
+        params.workspaceId,
+      ))
+    ) {
+      throw new UnauthorizedAllocationAccessError("update project");
+    }
     const projectId = ProjectId.fromString(params.id);
 
     // Get existing project
@@ -388,7 +479,14 @@ export class AllocationManagementService {
     return project;
   }
 
-  async deleteProject(id: string, workspaceId: string): Promise<void> {
+  async deleteProject(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<void> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("delete project");
+    }
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
     );
@@ -401,7 +499,14 @@ export class AllocationManagementService {
     await this.projectRepository.save(project);
   }
 
-  async activateProject(id: string): Promise<Project> {
+  async activateProject(
+    id: string,
+    workspaceId: string,
+    actorId: string,
+  ): Promise<Project> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("activate project");
+    }
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
     );
