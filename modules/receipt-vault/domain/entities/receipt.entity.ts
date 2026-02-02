@@ -13,6 +13,92 @@ import {
   MIN_OCR_CONFIDENCE,
   MAX_OCR_CONFIDENCE,
 } from "../constants/receipt.constants";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class ReceiptUploadedEvent extends DomainEvent {
+  constructor(
+    public readonly receiptId: string,
+    public readonly workspaceId: string,
+    public readonly userId: string,
+    public readonly fileName: string,
+  ) {
+    super(receiptId, "Receipt");
+  }
+
+  get eventType(): string {
+    return "ReceiptUploaded";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      receiptId: this.receiptId,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      fileName: this.fileName,
+    };
+  }
+}
+
+export class ReceiptProcessedEvent extends DomainEvent {
+  constructor(
+    public readonly receiptId: string,
+    public readonly ocrText: string | undefined,
+    public readonly ocrConfidence: number | undefined,
+  ) {
+    super(receiptId, "Receipt");
+  }
+
+  get eventType(): string {
+    return "ReceiptProcessed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      receiptId: this.receiptId,
+      ocrText: this.ocrText,
+      ocrConfidence: this.ocrConfidence,
+    };
+  }
+}
+
+export class ReceiptLinkedToExpenseEvent extends DomainEvent {
+  constructor(
+    public readonly receiptId: string,
+    public readonly expenseId: string,
+  ) {
+    super(receiptId, "Receipt");
+  }
+
+  get eventType(): string {
+    return "ReceiptLinkedToExpense";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      receiptId: this.receiptId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+export class ReceiptDeletedEvent extends DomainEvent {
+  constructor(public readonly receiptId: string) {
+    super(receiptId, "Receipt");
+  }
+
+  get eventType(): string {
+    return "ReceiptDeleted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { receiptId: this.receiptId };
+  }
+}
 
 export interface ReceiptProps {
   id: ReceiptId;
@@ -46,8 +132,10 @@ export interface CreateReceiptData {
   storageLocation: StorageLocation;
 }
 
-export class Receipt {
-  private constructor(private props: ReceiptProps) {}
+export class Receipt extends AggregateRoot {
+  private constructor(private props: ReceiptProps) {
+    super();
+  }
 
   static create(data: CreateReceiptData): Receipt {
     const fileInfo = FileInfo.create({
@@ -59,8 +147,10 @@ export class Receipt {
       fileHash: data.fileHash,
     });
 
-    return new Receipt({
-      id: ReceiptId.create(),
+    const receiptId = ReceiptId.create();
+
+    const receipt = new Receipt({
+      id: receiptId,
       workspaceId: data.workspaceId,
       userId: data.userId,
       fileInfo,
@@ -70,6 +160,17 @@ export class Receipt {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    receipt.addDomainEvent(
+      new ReceiptUploadedEvent(
+        receiptId.getValue(),
+        data.workspaceId,
+        data.userId,
+        data.originalName,
+      ),
+    );
+
+    return receipt;
   }
 
   static fromPersistence(props: ReceiptProps): Receipt {
@@ -163,6 +264,10 @@ export class Receipt {
 
     this.props.expenseId = expenseId;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ReceiptLinkedToExpenseEvent(this.props.id.getValue(), expenseId),
+    );
   }
 
   unlinkFromExpense(): void {
@@ -205,6 +310,14 @@ export class Receipt {
     if (ocrConfidence !== undefined) {
       this.props.ocrConfidence = new Decimal(ocrConfidence);
     }
+
+    this.addDomainEvent(
+      new ReceiptProcessedEvent(
+        this.props.id.getValue(),
+        ocrText,
+        ocrConfidence,
+      ),
+    );
   }
 
   markAsFailed(reason: string): void {
@@ -260,6 +373,8 @@ export class Receipt {
 
     this.props.deletedAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(new ReceiptDeletedEvent(this.props.id.getValue()));
   }
 
   restore(): void {
