@@ -19,8 +19,13 @@ export async function registerBudgetPlanningRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add workspace authorization middleware
+      // Add authentication hook first
       instance.addHook("onRequest", async (request, reply) => {
+        await fastify.authenticate(request);
+      });
+
+      // Add workspace authorization middleware
+      instance.addHook("preHandler", async (request, reply) => {
         await workspaceAuthorizationMiddleware(request as any, reply, prisma);
       });
 
