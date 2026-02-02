@@ -1,8 +1,76 @@
 import { WorkspaceId } from "../value-objects/workspace-id.vo";
 import { UserId } from "../value-objects/user-id.vo";
 import { InvalidWorkspaceNameError } from "../errors/identity.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
-export class Workspace {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class WorkspaceCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly name: string,
+    public readonly ownerId: string,
+  ) {
+    super(workspaceId, "Workspace");
+  }
+
+  get eventType(): string {
+    return "WorkspaceCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      name: this.name,
+      ownerId: this.ownerId,
+    };
+  }
+}
+
+export class WorkspaceRenamedEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly oldName: string,
+    public readonly newName: string,
+  ) {
+    super(workspaceId, "Workspace");
+  }
+
+  get eventType(): string {
+    return "WorkspaceRenamed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      oldName: this.oldName,
+      newName: this.newName,
+    };
+  }
+}
+
+export class WorkspaceDeactivatedEvent extends DomainEvent {
+  constructor(public readonly workspaceId: string) {
+    super(workspaceId, "Workspace");
+  }
+
+  get eventType(): string {
+    return "WorkspaceDeactivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { workspaceId: this.workspaceId };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class Workspace extends AggregateRoot {
   private constructor(
     private readonly id: WorkspaceId,
     private name: string,
@@ -11,7 +79,9 @@ export class Workspace {
     private isActive: boolean,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(data: CreateWorkspaceData): Workspace {
     const workspaceId = WorkspaceId.create();
@@ -19,7 +89,7 @@ export class Workspace {
     const slug = Workspace.generateSlug(data.name);
     const now = new Date();
 
-    return new Workspace(
+    const workspace = new Workspace(
       workspaceId,
       data.name,
       slug,
@@ -28,6 +98,16 @@ export class Workspace {
       now,
       now,
     );
+
+    workspace.addDomainEvent(
+      new WorkspaceCreatedEvent(
+        workspaceId.getValue(),
+        data.name,
+        data.ownerId,
+      ),
+    );
+
+    return workspace;
   }
 
   static reconstitute(data: WorkspaceData): Workspace {
@@ -89,14 +169,20 @@ export class Workspace {
       throw new InvalidWorkspaceNameError();
     }
 
+    const oldName = this.name;
     this.name = newName.trim();
     this.slug = Workspace.generateSlug(newName);
     this.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new WorkspaceRenamedEvent(this.id.getValue(), oldName, this.name),
+    );
   }
 
   deactivate(): void {
     this.isActive = false;
     this.updatedAt = new Date();
+    this.addDomainEvent(new WorkspaceDeactivatedEvent(this.id.getValue()));
   }
 
   activate(): void {
