@@ -197,3 +197,9 @@ export class AlertAlreadyNotifiedError extends BudgetManagementError {
     );
   }
 }
+
+export class InvalidBudgetDataError extends BudgetManagementError {
+  constructor(message: string) {
+    super(message, "INVALID_BUDGET_DATA", 400);
+  }
+}
