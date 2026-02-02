@@ -2,6 +2,7 @@ import { DomainEventHandler } from "../../../../apps/api/src/shared/domain/event
 import { ExpenseStatusChangedEvent } from "../../../expense-ledger/domain/entities/expense.entity";
 import { BudgetThresholdExceededEvent } from "../../../budget-management/domain/entities/budget.entity";
 import { ApprovalWorkflowStartedEvent } from "../../../approval-workflow/domain/entities/expense-workflow.entity";
+import { UserCreatedEvent } from "../../../identity-workspace/domain/entities/user.entity";
 import { NotificationService } from "../services/notification.service";
 import { NotificationType } from "../../domain/enums/notification-type.enum";
 import { NotificationPriority } from "../../domain/enums/notification-priority.enum";
@@ -36,10 +37,6 @@ export class NotificationEventHandler {
     {
       eventType: "budget.threshold_exceeded",
       handle: async (event: BudgetThresholdExceededEvent): Promise<void> => {
-        // TODO: Determine WHO to notify (workspace owner? budget creator?)
-        // For now, assuming we notify the workspace owner or similar mechanism
-        // Since we don't have that info in event, we might need to fetch budget or workspace.
-        // Skipping specific recipient logic for MVP, logging warning.
         console.warn(
           `[Notification] Budget ${event.budgetId} exceeded threshold. Notification skipped (recipient unknown).`,
         );
@@ -62,6 +59,23 @@ export class NotificationEventHandler {
         });
       },
     };
+
+  public handleUserCreated: DomainEventHandler<UserCreatedEvent> = {
+    eventType: "UserCreated",
+    handle: async (event: UserCreatedEvent): Promise<void> => {
+      await this.notificationService.send({
+        workspaceId: "system", // System notifications might need a special workspace or null
+        recipientId: event.userId,
+        type: NotificationType.SYSTEM_ALERT,
+        priority: NotificationPriority.HIGH,
+        title: "Welcome to Expense Tracker",
+        content: `Welcome ${event.fullName || event.email}! Your account has been created successfully.`,
+        data: {
+          email: event.email,
+        },
+      });
+    },
+  };
 
   private mapStatusToNotificationType(status: string): NotificationType | null {
     switch (status) {
