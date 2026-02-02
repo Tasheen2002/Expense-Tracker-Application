@@ -6,8 +6,49 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { Decimal } from "@prisma/client/runtime/library";
 import { InvalidAllocationTargetError } from "../errors/cost-allocation.errors";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import * as crypto from "crypto";
 
-export class ExpenseAllocation {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class ExpenseAllocationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string,
+    public readonly amount: string,
+    public readonly targetType: "department" | "costCenter" | "project",
+    public readonly targetId: string,
+    public readonly createdBy: string,
+  ) {
+    super(allocationId, "ExpenseAllocation");
+  }
+
+  get eventType(): string {
+    return "ExpenseAllocationCreated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+      amount: this.amount,
+      targetType: this.targetType,
+      targetId: this.targetId,
+      createdBy: this.createdBy,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class ExpenseAllocation extends AggregateRoot {
   private constructor(
     private readonly id: string, // Using string UUID for simplicity in this entity
     private readonly workspaceId: WorkspaceId,
@@ -20,7 +61,9 @@ export class ExpenseAllocation {
     private readonly notes: string | null,
     private readonly createdBy: UserId,
     private readonly createdAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(params: {
     workspaceId: WorkspaceId;
@@ -45,7 +88,21 @@ export class ExpenseAllocation {
       );
     }
 
-    return new ExpenseAllocation(
+    // Determine target type and ID
+    let targetType: "department" | "costCenter" | "project";
+    let targetId: string;
+    if (params.departmentId) {
+      targetType = "department";
+      targetId = params.departmentId.getValue();
+    } else if (params.costCenterId) {
+      targetType = "costCenter";
+      targetId = params.costCenterId.getValue();
+    } else {
+      targetType = "project";
+      targetId = params.projectId!.getValue();
+    }
+
+    const allocation = new ExpenseAllocation(
       crypto.randomUUID(),
       params.workspaceId,
       params.expenseId,
@@ -58,6 +115,20 @@ export class ExpenseAllocation {
       params.createdBy,
       new Date(),
     );
+
+    allocation.addDomainEvent(
+      new ExpenseAllocationCreatedEvent(
+        allocation.id,
+        params.workspaceId.getValue(),
+        params.expenseId,
+        params.amount.getValue().toString(),
+        targetType,
+        targetId,
+        params.createdBy.getValue(),
+      ),
+    );
+
+    return allocation;
   }
 
   static reconstitute(params: {
