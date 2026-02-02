@@ -3,6 +3,10 @@ import { PrismaClient } from "@prisma/client";
 // Event Bus
 import { getEventBus } from "./shared/domain/events/event-bus";
 import { NotificationEventHandler } from "../../../modules/notification-dispatch/application/handlers/notification.handler";
+// Audit
+import { AuditLogRepositoryImpl } from "../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl";
+import { AuditService } from "../../../modules/audit-compliance/application/services/audit.service";
+import { AuditEventListener } from "../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener";
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl";
@@ -356,7 +360,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const expenseRepository = new ExpenseRepositoryImpl(prisma);
+    const expenseRepository = new ExpenseRepositoryImpl(prisma, eventBus);
     const categoryRepository = new CategoryRepositoryImpl(prisma);
     const tagRepository = new TagRepositoryImpl(prisma);
     const attachmentRepository = new AttachmentRepositoryImpl(prisma);
@@ -504,7 +508,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const budgetRepository = new BudgetRepositoryImpl(prisma);
+    const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
       prisma,
     );
@@ -588,7 +592,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const receiptRepository = new ReceiptRepositoryImpl(prisma);
+    const receiptRepository = new ReceiptRepositoryImpl(prisma, eventBus);
     const receiptMetadataRepository = new ReceiptMetadataRepositoryImpl(prisma);
     const receiptTagDefinitionRepository =
       new ReceiptTagDefinitionRepositoryImpl(prisma);
@@ -735,10 +739,14 @@ export class Container {
     // Notification Dispatch Module
     // ============================================
 
-    // Repositories
+    // Repositories - Notification
     const notificationRepository = new NotificationRepositoryImpl(prisma);
     const notificationTemplateRepository =
       new NotificationTemplateRepositoryImpl(prisma);
+
+    // Repositories - Audit
+    const auditRepository = new AuditLogRepositoryImpl(prisma, eventBus);
+    this.services.set("auditLogRepository", auditRepository);
     const notificationPreferenceRepository =
       new NotificationPreferenceRepositoryImpl(prisma);
 
@@ -752,19 +760,23 @@ export class Container {
       notificationPreferenceRepository,
     );
 
-    // Services
+    // Services - Notification
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
       userRepository,
     );
+    this.services.set("notificationService", notificationService);
+
+    // Services - Audit
+    const auditService = new AuditService(auditRepository);
+    this.services.set("auditService", auditService);
     const templateService = new TemplateService(notificationTemplateRepository);
     const preferenceService = new PreferenceService(
       notificationPreferenceRepository,
     );
 
-    this.services.set("notificationService", notificationService);
     this.services.set("templateService", templateService);
     this.services.set("preferenceService", preferenceService);
 
@@ -784,7 +796,26 @@ export class Container {
       notificationService,
     );
 
-    // Subscribe to events
+    // --- Event Subscriptions ---
+
+    // 1. Notification Subscriptions
+    const notificationHandler = new NotificationEventHandler(
+      notificationService,
+    );
+    eventBus.subscribe("UserCreated", notificationHandler.handleUserCreated);
+
+    // 2. Audit Subscriptions (Global listener)
+    const auditListener = new AuditEventListener(auditService);
+
+    // Subscribe to all known critical events
+    // Ideally we'd valid wildcard support, but manual for now
+    eventBus.subscribe("UserCreated", auditListener);
+    eventBus.subscribe("expense.created", auditListener);
+    eventBus.subscribe("expense.approved", auditListener);
+    eventBus.subscribe("expense.rejected", auditListener);
+    eventBus.subscribe("expense.submitted", auditListener);
+    eventBus.subscribe("budget.threshold_exceeded", auditListener);
+    eventBus.subscribe("receipt.uploaded", auditListener);
     eventBus.subscribe(
       "expense.status_changed",
       notificationEventHandler.handleExpenseStatusChanged,
@@ -1332,6 +1363,15 @@ export class Container {
       ),
       forecastController: this.get<ForecastController>("forecastController"),
       scenarioController: this.get<ScenarioController>("scenarioController"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+  /**
+   * Get all audit-compliance services for route registration
+   */
+  getAuditComplianceServices() {
+    return {
+      auditService: this.get<AuditService>("auditService"),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }
