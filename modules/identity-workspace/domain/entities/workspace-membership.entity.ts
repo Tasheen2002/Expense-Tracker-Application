@@ -2,6 +2,62 @@ import { MembershipId } from "../value-objects/membership-id.vo";
 import { UserId } from "../value-objects/user-id.vo";
 import { WorkspaceId } from "../value-objects/workspace-id.vo";
 import { CannotChangeOwnerRoleError } from "../errors/identity.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class MemberJoinedWorkspaceEvent extends DomainEvent {
+  constructor(
+    public readonly membershipId: string,
+    public readonly userId: string,
+    public readonly workspaceId: string,
+    public readonly role: string,
+  ) {
+    super(membershipId, "WorkspaceMembership");
+  }
+
+  get eventType(): string {
+    return "MemberJoinedWorkspace";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      membershipId: this.membershipId,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+      role: this.role,
+    };
+  }
+}
+
+export class MemberRoleChangedEvent extends DomainEvent {
+  constructor(
+    public readonly membershipId: string,
+    public readonly userId: string,
+    public readonly workspaceId: string,
+    public readonly oldRole: string,
+    public readonly newRole: string,
+  ) {
+    super(membershipId, "WorkspaceMembership");
+  }
+
+  get eventType(): string {
+    return "MemberRoleChanged";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      membershipId: this.membershipId,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+      oldRole: this.oldRole,
+      newRole: this.newRole,
+    };
+  }
+}
 
 export enum WorkspaceRole {
   OWNER = "owner",
@@ -9,7 +65,11 @@ export enum WorkspaceRole {
   MEMBER = "member",
 }
 
-export class WorkspaceMembership {
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class WorkspaceMembership extends AggregateRoot {
   private constructor(
     private readonly id: MembershipId,
     private readonly userId: UserId,
@@ -17,7 +77,9 @@ export class WorkspaceMembership {
     private role: WorkspaceRole,
     private readonly createdAt: Date,
     private updatedAt: Date,
-  ) {}
+  ) {
+    super();
+  }
 
   static create(data: CreateWorkspaceMembershipData): WorkspaceMembership {
     const membershipId = MembershipId.create();
@@ -25,7 +87,7 @@ export class WorkspaceMembership {
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
     const now = new Date();
 
-    return new WorkspaceMembership(
+    const membership = new WorkspaceMembership(
       membershipId,
       userId,
       workspaceId,
@@ -33,6 +95,17 @@ export class WorkspaceMembership {
       now,
       now,
     );
+
+    membership.addDomainEvent(
+      new MemberJoinedWorkspaceEvent(
+        membershipId.getValue(),
+        data.userId,
+        data.workspaceId,
+        data.role,
+      ),
+    );
+
+    return membership;
   }
 
   static reconstitute(data: WorkspaceMembershipData): WorkspaceMembership {
@@ -87,8 +160,19 @@ export class WorkspaceMembership {
     if (this.role === WorkspaceRole.OWNER && newRole !== WorkspaceRole.OWNER) {
       throw new CannotChangeOwnerRoleError();
     }
+    const oldRole = this.role;
     this.role = newRole;
     this.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new MemberRoleChangedEvent(
+        this.id.getValue(),
+        this.userId.getValue(),
+        this.workspaceId.getValue(),
+        oldRole,
+        newRole,
+      ),
+    );
   }
 
   isOwner(): boolean {
