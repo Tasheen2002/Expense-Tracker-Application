@@ -4,8 +4,92 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { InvalidRuleError } from "../errors/categorization-rules.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
-export class CategoryRule {
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class CategoryRuleCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly ruleId: string,
+    public readonly workspaceId: string,
+    public readonly name: string,
+    public readonly targetCategoryId: string,
+    public readonly createdBy: string,
+  ) {
+    super(ruleId, "CategoryRule");
+  }
+
+  get eventType(): string {
+    return "CategoryRuleCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      ruleId: this.ruleId,
+      workspaceId: this.workspaceId,
+      name: this.name,
+      targetCategoryId: this.targetCategoryId,
+      createdBy: this.createdBy,
+    };
+  }
+}
+
+export class CategoryRuleActivatedEvent extends DomainEvent {
+  constructor(public readonly ruleId: string) {
+    super(ruleId, "CategoryRule");
+  }
+
+  get eventType(): string {
+    return "CategoryRuleActivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { ruleId: this.ruleId };
+  }
+}
+
+export class CategoryRuleDeactivatedEvent extends DomainEvent {
+  constructor(public readonly ruleId: string) {
+    super(ruleId, "CategoryRule");
+  }
+
+  get eventType(): string {
+    return "CategoryRuleDeactivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return { ruleId: this.ruleId };
+  }
+}
+
+export class CategoryRuleUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly ruleId: string,
+    public readonly name: string,
+  ) {
+    super(ruleId, "CategoryRule");
+  }
+
+  get eventType(): string {
+    return "CategoryRuleUpdated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      ruleId: this.ruleId,
+      name: this.name,
+    };
+  }
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class CategoryRule extends AggregateRoot {
   private id: RuleId;
   private workspaceId: WorkspaceId;
   private name: string;
@@ -31,6 +115,7 @@ export class CategoryRule {
     createdAt: Date;
     updatedAt: Date;
   }) {
+    super();
     this.id = props.id;
     this.workspaceId = props.workspaceId;
     this.name = props.name;
@@ -73,9 +158,10 @@ export class CategoryRule {
     }
 
     const now = new Date();
+    const ruleId = RuleId.create();
 
-    return new CategoryRule({
-      id: RuleId.create(),
+    const rule = new CategoryRule({
+      id: ruleId,
       workspaceId: props.workspaceId,
       name: props.name.trim(),
       description: props.description?.trim() || null,
@@ -87,6 +173,18 @@ export class CategoryRule {
       createdAt: now,
       updatedAt: now,
     });
+
+    rule.addDomainEvent(
+      new CategoryRuleCreatedEvent(
+        ruleId.getValue(),
+        props.workspaceId.getValue(),
+        props.name.trim(),
+        props.targetCategoryId.getValue(),
+        props.createdBy.getValue(),
+      ),
+    );
+
+    return rule;
   }
 
   static reconstitute(props: {
@@ -138,6 +236,11 @@ export class CategoryRule {
     }
 
     this.updatedAt = new Date();
+    if (props.name) {
+      this.addDomainEvent(
+        new CategoryRuleUpdatedEvent(this.id.getValue(), this.name),
+      );
+    }
   }
 
   updateName(name: string): void {
@@ -149,6 +252,9 @@ export class CategoryRule {
     }
     this.name = name.trim();
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new CategoryRuleUpdatedEvent(this.id.getValue(), this.name),
+    );
   }
 
   updateDescription(description: string | null): void {
@@ -182,11 +288,13 @@ export class CategoryRule {
   activate(): void {
     this.isActive = true;
     this.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleActivatedEvent(this.id.getValue()));
   }
 
   deactivate(): void {
     this.isActive = false;
     this.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.id.getValue()));
   }
 
   // Check if rule matches expense data
