@@ -164,3 +164,36 @@ export class NegativeAmountError extends BudgetManagementError {
     super(`Amount cannot be negative: ${amount}`, "NEGATIVE_AMOUNT", 400);
   }
 }
+
+export class InvalidAlertThresholdError extends BudgetManagementError {
+  constructor(message: string) {
+    super(message, "INVALID_ALERT_THRESHOLD", 400);
+  }
+}
+
+export class InvalidAmountError extends BudgetManagementError {
+  constructor(message: string) {
+    super(message, "INVALID_AMOUNT", 400);
+  }
+}
+
+export class InvalidCurrencyError extends BudgetManagementError {
+  constructor(message: string) {
+    super(message, "INVALID_CURRENCY", 400);
+  }
+}
+
+export class BudgetAlreadyActiveError extends BudgetManagementError {
+  constructor(message: string) {
+    super(message, "BUDGET_ALREADY_ACTIVE", 400);
+  }
+}
+
+export class AlertAlreadyNotifiedError extends BudgetManagementError {
+  constructor(alertId: string) {
+    super(
+      `Alert ${alertId} has already been notified`,
+      "ALERT_ALREADY_NOTIFIED",
+    );
+  }
+}
