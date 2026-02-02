@@ -129,6 +129,7 @@ export class AllocationManagementController {
       const { workspaceId } = request.params;
       const command = new CreateDepartmentCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -231,6 +232,7 @@ export class AllocationManagementController {
       const command = new UpdateDepartmentCommand(
         departmentId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -269,7 +271,11 @@ export class AllocationManagementController {
       const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
-      const command = new DeleteDepartmentCommand(departmentId, workspaceId);
+      const command = new DeleteDepartmentCommand(
+        departmentId,
+        workspaceId,
+        userId,
+      );
       await this.deleteDepartmentHandler.handle(command);
 
       return ResponseHelper.success(
@@ -292,8 +298,12 @@ export class AllocationManagementController {
     try {
       const userId = request.user.userId;
 
-      const { departmentId } = request.params;
-      const command = new ActivateDepartmentCommand(departmentId);
+      const { workspaceId, departmentId } = request.params;
+      const command = new ActivateDepartmentCommand(
+        departmentId,
+        workspaceId,
+        userId,
+      );
       const department = await this.activateDepartmentHandler.handle(command);
 
       return ResponseHelper.success(
@@ -335,6 +345,7 @@ export class AllocationManagementController {
       const { workspaceId } = request.params;
       const command = new CreateCostCenterCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -431,6 +442,7 @@ export class AllocationManagementController {
       const command = new UpdateCostCenterCommand(
         costCenterId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -465,7 +477,11 @@ export class AllocationManagementController {
       const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
-      const command = new DeleteCostCenterCommand(costCenterId, workspaceId);
+      const command = new DeleteCostCenterCommand(
+        costCenterId,
+        workspaceId,
+        userId,
+      );
       await this.deleteCostCenterHandler.handle(command);
 
       return ResponseHelper.success(
@@ -488,8 +504,12 @@ export class AllocationManagementController {
     try {
       const userId = request.user.userId;
 
-      const { costCenterId } = request.params;
-      const command = new ActivateCostCenterCommand(costCenterId);
+      const { workspaceId, costCenterId } = request.params;
+      const command = new ActivateCostCenterCommand(
+        costCenterId,
+        workspaceId,
+        userId,
+      );
       const costCenter = await this.activateCostCenterHandler.handle(command);
 
       return ResponseHelper.success(
@@ -534,6 +554,7 @@ export class AllocationManagementController {
 
       const command = new CreateProjectCommand(
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         startDate,
@@ -642,6 +663,7 @@ export class AllocationManagementController {
       const command = new UpdateProjectCommand(
         projectId,
         workspaceId,
+        userId,
         request.body.name,
         request.body.code,
         request.body.description,
@@ -684,7 +706,7 @@ export class AllocationManagementController {
       const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
-      const command = new DeleteProjectCommand(projectId, workspaceId);
+      const command = new DeleteProjectCommand(projectId, workspaceId, userId);
       await this.deleteProjectHandler.handle(command);
 
       return ResponseHelper.success(
@@ -707,8 +729,12 @@ export class AllocationManagementController {
     try {
       const userId = request.user.userId;
 
-      const { projectId } = request.params;
-      const command = new ActivateProjectCommand(projectId);
+      const { workspaceId, projectId } = request.params;
+      const command = new ActivateProjectCommand(
+        projectId,
+        workspaceId,
+        userId,
+      );
       const project = await this.activateProjectHandler.handle(command);
 
       return ResponseHelper.success(
