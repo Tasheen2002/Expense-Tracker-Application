@@ -10,6 +10,9 @@ describe("Identity-Workspace Module - Member Controller", () => {
   let ownerId: string;
   let memberId: string;
   let workspaceId: string;
+  const uniqueId = Date.now();
+  const ownerEmail = `owner_${uniqueId}@test.com`;
+  const memberEmail = `member_${uniqueId}@test.com`;
 
   beforeAll(async () => {
     server = await createServer();
@@ -36,7 +39,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
       method: "POST",
       url: "/auth/register",
       payload: {
-        email: "owner@test.com",
+        email: ownerEmail,
         password: "password123",
         fullName: "Owner",
       },
@@ -47,7 +50,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
     const loginResponse = await server.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "owner@test.com", password: "password123" },
+      payload: { email: ownerEmail, password: "password123" },
     });
     ownerToken = JSON.parse(loginResponse.body).data.token;
 
@@ -56,10 +59,13 @@ describe("Identity-Workspace Module - Member Controller", () => {
       method: "POST",
       url: "/workspaces",
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { name: "Test Workspace", description: "Testing Members" },
+      payload: {
+        name: `Test Workspace ${uniqueId}`,
+        description: "Testing Members",
+      },
     });
-    workspaceId = JSON.parse(wsResponse.body).data.workspaceId;
     expect(wsResponse.statusCode).toBe(201);
+    workspaceId = JSON.parse(wsResponse.body).data.workspaceId;
   });
 
   it("should setup member to be added", async () => {
@@ -68,7 +74,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
       method: "POST",
       url: "/auth/register",
       payload: {
-        email: "member@test.com",
+        email: memberEmail,
         password: "password123",
         fullName: "Member",
       },
@@ -79,7 +85,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
     const loginResponse = await server.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "member@test.com", password: "password123" },
+      payload: { email: memberEmail, password: "password123" },
     });
     memberToken = JSON.parse(loginResponse.body).data.token;
 
@@ -96,8 +102,8 @@ describe("Identity-Workspace Module - Member Controller", () => {
     // Direct Insert Membership
     await (server as any).prisma.workspaceMembership.create({
       data: {
-        userId: memberId,
-        workspaceId: workspaceId,
+        user: { connect: { id: memberId } },
+        workspace: { connect: { id: workspaceId } },
         role: "MEMBER",
       },
     });
@@ -114,10 +120,10 @@ describe("Identity-Workspace Module - Member Controller", () => {
 
     // Change Role
     const response = await server.inject({
-      method: "PUT",
+      method: "PATCH",
       url: `/workspaces/${workspaceId}/members/${memberId}/role`,
       headers: { authorization: `Bearer ${ownerToken}` },
-      payload: { role: "ADMIN" },
+      payload: { role: "admin" },
     });
 
     expect(response.statusCode).toBe(200);

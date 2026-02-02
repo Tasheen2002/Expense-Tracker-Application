@@ -12,12 +12,15 @@ describe("Expense-Ledger Module - Expense Service", () => {
   beforeAll(async () => {
     server = await createServer();
 
+    const uniqueId = Date.now();
+    const email = `ledger_${uniqueId}@test.com`;
+
     // Register & Login User
     const regRes = await server.inject({
       method: "POST",
       url: "/auth/register",
       payload: {
-        email: "ledger@test.com",
+        email,
         password: "password123",
         fullName: "Ledger User",
       },
@@ -25,18 +28,18 @@ describe("Expense-Ledger Module - Expense Service", () => {
     const loginRes = await server.inject({
       method: "POST",
       url: "/auth/login",
-      payload: { email: "ledger@test.com", password: "password123" },
+      payload: { email, password: "password123" },
     });
-    token = JSON.parse(loginRes.body).data.token;
+    token = JSON.parse(loginRes.body).data?.token;
 
     // Create Workspace
     const wsRes = await server.inject({
       method: "POST",
       url: "/workspaces",
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Ledger WS", description: "Testing Ledger" },
+      payload: { name: `Ledger WS ${uniqueId}`, description: "Testing Ledger" },
     });
-    workspaceId = JSON.parse(wsRes.body).data.workspaceId;
+    workspaceId = JSON.parse(wsRes.body).data?.workspaceId;
 
     // Create Tag
     const tagRes = await server.inject({
@@ -45,7 +48,11 @@ describe("Expense-Ledger Module - Expense Service", () => {
       headers: { authorization: `Bearer ${token}` },
       payload: { name: "Test Tag", color: "#000000" },
     });
-    tagId = JSON.parse(tagRes.body).data.tagId;
+    tagId = JSON.parse(tagRes.body).data?.tagId;
+    if (!tagId) {
+      console.error("Failed to create tag:", tagRes.body);
+      throw new Error("Failed to create tag");
+    }
   });
 
   afterAll(async () => {
@@ -69,6 +76,9 @@ describe("Expense-Ledger Module - Expense Service", () => {
       },
     });
 
+    if (response.statusCode !== 201) {
+      // Debug: console.log("Duplicate Tag Test Failed:", response.body);
+    }
     expect(response.statusCode).toBe(201);
     const body = JSON.parse(response.body);
     expect(body.success).toBe(true);
