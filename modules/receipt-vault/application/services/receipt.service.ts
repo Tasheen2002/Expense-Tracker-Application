@@ -18,6 +18,7 @@ import {
   ReceiptMetadataNotFoundError,
   ReceiptMetadataAlreadyExistsError,
   DeletedReceiptError,
+  ReceiptMissingStorageKeyError,
 } from "../../domain/errors/receipt.errors";
 import { UnauthorizedAccessError } from "../../domain/errors/unauthorized-access.error";
 import { UpdateReceiptMetadataDto } from "../commands/update-receipt-metadata.command";
@@ -670,7 +671,7 @@ export class ReceiptService {
     const key = storageLocation.getKey();
 
     if (!key) {
-      throw new Error(`Receipt ${receiptId} has no storage key`);
+      throw new ReceiptMissingStorageKeyError(receiptId);
     }
 
     return await this.fileStorage.generateSignedUrl(key, bucket);
