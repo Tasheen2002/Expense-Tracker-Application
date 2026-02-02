@@ -1,7 +1,11 @@
-import { InvitationId } from '../value-objects/invitation-id.vo'
-import { WorkspaceId } from '../value-objects/workspace-id.vo'
-import { WorkspaceRole } from './workspace-membership.entity'
-import { randomBytes } from 'crypto'
+import { InvitationId } from "../value-objects/invitation-id.vo";
+import { WorkspaceId } from "../value-objects/workspace-id.vo";
+import { WorkspaceRole } from "./workspace-membership.entity";
+import { randomBytes } from "crypto";
+import {
+  InvitationAlreadyAcceptedError,
+  InvitationExpiredError,
+} from "../errors/identity.errors";
 
 export class WorkspaceInvitation {
   private constructor(
@@ -12,15 +16,17 @@ export class WorkspaceInvitation {
     private readonly token: string,
     private readonly expiresAt: Date,
     private acceptedAt: Date | null,
-    private readonly createdAt: Date
+    private readonly createdAt: Date,
   ) {}
 
   static create(data: CreateWorkspaceInvitationData): WorkspaceInvitation {
-    const invitationId = InvitationId.create()
-    const workspaceId = WorkspaceId.fromString(data.workspaceId)
-    const token = WorkspaceInvitation.generateToken()
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + data.expiryHours * 60 * 60 * 1000)
+    const invitationId = InvitationId.create();
+    const workspaceId = WorkspaceId.fromString(data.workspaceId);
+    const token = WorkspaceInvitation.generateToken();
+    const now = new Date();
+    const expiresAt = new Date(
+      now.getTime() + data.expiryHours * 60 * 60 * 1000,
+    );
 
     return new WorkspaceInvitation(
       invitationId,
@@ -30,8 +36,8 @@ export class WorkspaceInvitation {
       token,
       expiresAt,
       null,
-      now
-    )
+      now,
+    );
   }
 
   static reconstitute(data: WorkspaceInvitationData): WorkspaceInvitation {
@@ -43,8 +49,8 @@ export class WorkspaceInvitation {
       data.token,
       data.expiresAt,
       data.acceptedAt,
-      data.createdAt
-    )
+      data.createdAt,
+    );
   }
 
   static fromDatabaseRow(row: WorkspaceInvitationRow): WorkspaceInvitation {
@@ -56,70 +62,70 @@ export class WorkspaceInvitation {
       row.token,
       row.expires_at,
       row.accepted_at,
-      row.created_at
-    )
+      row.created_at,
+    );
   }
 
   // Getters
   getId(): InvitationId {
-    return this.id
+    return this.id;
   }
 
   getWorkspaceId(): WorkspaceId {
-    return this.workspaceId
+    return this.workspaceId;
   }
 
   getEmail(): string {
-    return this.email
+    return this.email;
   }
 
   getRole(): WorkspaceRole {
-    return this.role
+    return this.role;
   }
 
   getToken(): string {
-    return this.token
+    return this.token;
   }
 
   getExpiresAt(): Date {
-    return this.expiresAt
+    return this.expiresAt;
   }
 
   getAcceptedAt(): Date | null {
-    return this.acceptedAt
+    return this.acceptedAt;
   }
 
   getCreatedAt(): Date {
-    return this.createdAt
+    return this.createdAt;
   }
 
   // Business logic methods
   isExpired(): boolean {
-    return new Date() > this.expiresAt
+    return new Date() > this.expiresAt;
   }
 
   isAccepted(): boolean {
-    return this.acceptedAt !== null
+    return this.acceptedAt !== null;
   }
 
   isPending(): boolean {
-    return !this.isAccepted() && !this.isExpired()
+    return !this.isAccepted() && !this.isExpired();
   }
 
   accept(): void {
     if (this.isAccepted()) {
-      throw new Error('Invitation has already been accepted')
+      throw new InvitationAlreadyAcceptedError();
     }
     if (this.isExpired()) {
-      throw new Error('Invitation has expired')
+      throw new InvitationExpiredError();
     }
-    this.acceptedAt = new Date()
+    this.acceptedAt = new Date();
   }
 
   // Helper methods
   private static generateToken(): string {
     // Generate a secure random token (32 bytes = 64 hex characters)
-    return randomBytes(32).toString('hex')
+    return randomBytes(32).toString("hex");
   }
 
   // Convert to data for persistence
@@ -133,7 +139,7 @@ export class WorkspaceInvitation {
       expiresAt: this.expiresAt,
       acceptedAt: this.acceptedAt,
       createdAt: this.createdAt,
-    }
+    };
   }
 
   toDatabaseRow(): WorkspaceInvitationRow {
@@ -146,40 +152,40 @@ export class WorkspaceInvitation {
       expires_at: this.expiresAt,
       accepted_at: this.acceptedAt,
       created_at: this.createdAt,
-    }
+    };
   }
 
   equals(other: WorkspaceInvitation): boolean {
-    return this.id.equals(other.id)
+    return this.id.equals(other.id);
   }
 }
 
 // Supporting types and interfaces
 export interface CreateWorkspaceInvitationData {
-  workspaceId: string
-  email: string
-  role: WorkspaceRole
-  expiryHours: number // Default: 168 hours (7 days)
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+  expiryHours: number; // Default: 168 hours (7 days)
 }
 
 export interface WorkspaceInvitationData {
-  id: string
-  workspaceId: string
-  email: string
-  role: WorkspaceRole
-  token: string
-  expiresAt: Date
-  acceptedAt: Date | null
-  createdAt: Date
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+  token: string;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface WorkspaceInvitationRow {
-  id: string
-  workspace_id: string
-  email: string
-  role: string
-  token: string
-  expires_at: Date
-  accepted_at: Date | null
-  created_at: Date
+  id: string;
+  workspace_id: string;
+  email: string;
+  role: string;
+  token: string;
+  expires_at: Date;
+  accepted_at: Date | null;
+  created_at: Date;
 }
