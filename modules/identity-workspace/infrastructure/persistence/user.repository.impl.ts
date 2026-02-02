@@ -1,14 +1,27 @@
-import { PrismaClient } from '@prisma/client'
-import { IUserRepository, UserQueryOptions } from '../../domain/repositories/user.repository'
-import { User } from '../../domain/entities/user.entity'
-import { UserId } from '../../domain/value-objects/user-id.vo'
-import { Email } from '../../domain/value-objects/email.vo'
+import { PrismaClient } from "@prisma/client";
+import {
+  IUserRepository,
+  UserQueryOptions,
+} from "../../domain/repositories/user.repository";
+import { User } from "../../domain/entities/user.entity";
+import { UserId } from "../../domain/value-objects/user-id.vo";
+import { Email } from "../../domain/value-objects/email.vo";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class UserRepositoryImpl implements IUserRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class UserRepositoryImpl
+  extends PrismaRepository<User>
+  implements IUserRepository
+{
+  constructor(
+    protected readonly prisma: PrismaClient,
+    protected readonly eventBus: IEventBus,
+  ) {
+    super(prisma, eventBus);
+  }
 
   async save(user: User): Promise<void> {
-    const data = user.toDatabaseRow()
+    const data = user.toDatabaseRow();
     await this.prisma.userAccount.create({
       data: {
         id: data.id,
@@ -20,16 +33,17 @@ export class UserRepositoryImpl implements IUserRepository {
         createdAt: data.created_at,
         updatedAt: data.updated_at,
       },
-    })
+    });
+    await this.dispatchEvents(user);
   }
 
   async findById(id: UserId): Promise<User | null> {
     const row = await this.prisma.userAccount.findUnique({
       where: { id: id.getValue() },
-    })
+    });
 
     if (!row) {
-      return null
+      return null;
     }
 
     return User.fromDatabaseRow({
@@ -41,16 +55,16 @@ export class UserRepositoryImpl implements IUserRepository {
       email_verified: row.emailVerified,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
-    })
+    });
   }
 
   async findByEmail(email: Email): Promise<User | null> {
     const row = await this.prisma.userAccount.findUnique({
       where: { email: email.getValue() },
-    })
+    });
 
     if (!row) {
-      return null
+      return null;
     }
 
     return User.fromDatabaseRow({
@@ -62,7 +76,7 @@ export class UserRepositoryImpl implements IUserRepository {
       email_verified: row.emailVerified,
       created_at: row.createdAt,
       updated_at: row.updatedAt,
-    })
+    });
   }
 
   async findAll(options?: UserQueryOptions): Promise<User[]> {
@@ -71,25 +85,25 @@ export class UserRepositoryImpl implements IUserRepository {
       offset = 0,
       isActive,
       emailVerified,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
-    } = options || {}
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    const where: any = {}
+    const where: any = {};
     if (isActive !== undefined) {
-      where.isActive = isActive
+      where.isActive = isActive;
     }
     if (emailVerified !== undefined) {
-      where.emailVerified = emailVerified
+      where.emailVerified = emailVerified;
     }
 
-    const orderBy: any = {}
-    if (sortBy === 'email') {
-      orderBy.email = sortOrder
-    } else if (sortBy === 'fullName') {
-      orderBy.fullName = sortOrder
+    const orderBy: any = {};
+    if (sortBy === "email") {
+      orderBy.email = sortOrder;
+    } else if (sortBy === "fullName") {
+      orderBy.fullName = sortOrder;
     } else {
-      orderBy.createdAt = sortOrder
+      orderBy.createdAt = sortOrder;
     }
 
     const rows = await this.prisma.userAccount.findMany({
@@ -97,7 +111,7 @@ export class UserRepositoryImpl implements IUserRepository {
       orderBy,
       take: limit,
       skip: offset,
-    })
+    });
 
     return rows.map((row) =>
       User.fromDatabaseRow({
@@ -109,12 +123,12 @@ export class UserRepositoryImpl implements IUserRepository {
         email_verified: row.emailVerified,
         created_at: row.createdAt,
         updated_at: row.updatedAt,
-      })
-    )
+      }),
+    );
   }
 
   async update(user: User): Promise<void> {
-    const data = user.toDatabaseRow()
+    const data = user.toDatabaseRow();
     await this.prisma.userAccount.update({
       where: { id: data.id },
       data: {
@@ -125,30 +139,33 @@ export class UserRepositoryImpl implements IUserRepository {
         emailVerified: data.email_verified,
         updatedAt: data.updated_at,
       },
-    })
+    });
+    await this.dispatchEvents(user);
   }
 
   async delete(id: UserId): Promise<void> {
     await this.prisma.userAccount.delete({
       where: { id: id.getValue() },
-    })
+    });
+    // Note: Deletion events typically require loading the entity first if we want to emit a domain event from it.
+    // For now, we assume deletion is physical.
   }
 
   async exists(id: UserId): Promise<boolean> {
     const count = await this.prisma.userAccount.count({
       where: { id: id.getValue() },
-    })
-    return count > 0
+    });
+    return count > 0;
   }
 
   async existsByEmail(email: Email): Promise<boolean> {
     const count = await this.prisma.userAccount.count({
       where: { email: email.getValue() },
-    })
-    return count > 0
+    });
+    return count > 0;
   }
 
   async count(): Promise<number> {
-    return await this.prisma.userAccount.count()
+    return await this.prisma.userAccount.count();
   }
 }
