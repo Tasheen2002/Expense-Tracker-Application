@@ -106,6 +106,8 @@ import { ReceiptTagRepositoryImpl } from "../../../modules/receipt-vault/infrast
 // Receipt Vault Module - Services
 import { ReceiptService } from "../../../modules/receipt-vault/application/services/receipt.service";
 import { TagService as ReceiptTagService } from "../../../modules/receipt-vault/application/services/tag.service";
+import { LocalFileStorageAdapter } from "../../../modules/receipt-vault/infrastructure/adapters/local-file-storage.adapter";
+import * as path from "path";
 
 // Receipt Vault Module - Command Handlers
 import { UploadReceiptHandler } from "../../../modules/receipt-vault/application/commands/upload-receipt.command";
@@ -595,16 +597,23 @@ export class Container {
     this.services.set("receiptTagRepository", receiptTagRepository);
 
     // Services
+    const fileStorageService = new LocalFileStorageAdapter(
+      path.join(process.cwd(), "uploads"), // Verify this path is correct for your setup
+      "http://localhost:3000/uploads",
+    );
+
     const receiptService = new ReceiptService(
       receiptRepository,
       receiptMetadataRepository,
       receiptTagRepository,
+      fileStorageService,
     );
     const receiptTagService = new ReceiptTagService(
       receiptTagDefinitionRepository,
       receiptTagRepository,
     );
 
+    this.services.set("fileStorageService", fileStorageService);
     this.services.set("receiptService", receiptService);
     this.services.set("receiptTagService", receiptTagService);
 
