@@ -79,7 +79,7 @@ export class PrismaViolationRepository implements ViolationRepository {
 
     const rows = await (this.prisma as any).policyViolation.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { detectedAt: "desc" },
     });
 
     return rows.map((row: any) => this.toDomain(row));
