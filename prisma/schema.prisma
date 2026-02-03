@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["approval_workflow", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "receipt_vault", "audit_compliance"]
+  schemas  = ["approval_workflow", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
 }
 
 model UserAccount {
@@ -998,4 +998,135 @@ model AuditLog {
   @@index([createdAt])
   @@map("audit_logs")
   @@schema("audit_compliance")
+}
+
+// ============================================================================
+// Policy Controls Schema
+// ============================================================================
+
+model ExpensePolicy {
+  id            String                   @id @default(uuid()) @db.Uuid
+  workspaceId   String                   @map("workspace_id") @db.Uuid
+  name          String                   @db.VarChar(100)
+  description   String?
+  policyType    PolicyType               @map("policy_type")
+  severity      ViolationSeverity
+  configuration Json
+  priority      Int                      @default(0)
+  isActive      Boolean                  @default(true) @map("is_active")
+  createdBy     String                   @map("created_by") @db.Uuid
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  violations    PolicyViolation[]
+  exemptions    PolicyExemption[]
+
+  @@index([workspaceId])
+  @@index([isActive])
+  @@index([policyType])
+  @@map("expense_policies")
+  @@schema("policy_controls")
+}
+
+model PolicyViolation {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @map("workspace_id") @db.Uuid
+  policyId         String            @map("policy_id") @db.Uuid
+  expenseId        String            @map("expense_id") @db.Uuid
+  userId           String            @map("user_id") @db.Uuid
+  status           ViolationStatus   @default(PENDING)
+  severity         ViolationSeverity
+  violationDetails String            @map("violation_details")
+  expenseAmount    Decimal           @map("expense_amount") @db.Decimal(12, 2)
+  currency         String            @default("USD") @db.VarChar(3)
+  detectedAt       DateTime          @default(now()) @map("detected_at") @db.Timestamptz(6)
+  acknowledgedAt   DateTime?         @map("acknowledged_at") @db.Timestamptz(6)
+  acknowledgedBy   String?           @map("acknowledged_by") @db.Uuid
+  resolvedAt       DateTime?         @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy       String?           @map("resolved_by") @db.Uuid
+  resolutionNote   String?           @map("resolution_note")
+  exemptionId      String?           @map("exemption_id") @db.Uuid
+  overriddenBy     String?           @map("overridden_by") @db.Uuid
+  overrideReason   String?           @map("override_reason")
+  policy           ExpensePolicy     @relation(fields: [policyId], references: [id])
+
+  @@index([workspaceId])
+  @@index([policyId])
+  @@index([expenseId])
+  @@index([userId])
+  @@index([status])
+  @@index([detectedAt])
+  @@map("policy_violations")
+  @@schema("policy_controls")
+}
+
+model PolicyExemption {
+  id              String          @id @default(uuid()) @db.Uuid
+  workspaceId     String          @map("workspace_id") @db.Uuid
+  policyId        String          @map("policy_id") @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  status          ExemptionStatus @default(PENDING)
+  reason          String
+  requestedBy     String          @map("requested_by") @db.Uuid
+  requestedAt     DateTime        @default(now()) @map("requested_at") @db.Timestamptz(6)
+  approvedBy      String?         @map("approved_by") @db.Uuid
+  approvedAt      DateTime?       @map("approved_at") @db.Timestamptz(6)
+  approvalNote    String?         @map("approval_note")
+  rejectedBy      String?         @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime?       @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?         @map("rejection_reason")
+  validFrom       DateTime        @map("valid_from") @db.Timestamptz(6)
+  validUntil      DateTime        @map("valid_until") @db.Timestamptz(6)
+  scope           Json?
+  policy          ExpensePolicy   @relation(fields: [policyId], references: [id])
+
+  @@index([workspaceId])
+  @@index([policyId])
+  @@index([userId])
+  @@index([status])
+  @@index([validFrom, validUntil])
+  @@map("policy_exemptions")
+  @@schema("policy_controls")
+}
+
+enum PolicyType {
+  SPENDING_LIMIT
+  DAILY_LIMIT
+  WEEKLY_LIMIT
+  MONTHLY_LIMIT
+  CATEGORY_RESTRICTION
+  MERCHANT_BLACKLIST
+  TIME_RESTRICTION
+  RECEIPT_REQUIRED
+  DESCRIPTION_REQUIRED
+  APPROVAL_REQUIRED
+
+  @@schema("policy_controls")
+}
+
+enum ViolationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@schema("policy_controls")
+}
+
+enum ViolationStatus {
+  PENDING
+  ACKNOWLEDGED
+  RESOLVED
+  EXEMPTED
+  OVERRIDDEN
+
+  @@schema("policy_controls")
+}
+
+enum ExemptionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+
+  @@schema("policy_controls")
 }
