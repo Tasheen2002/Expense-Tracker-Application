@@ -21,8 +21,13 @@ export async function registerPolicyControlsRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add workspace authorization middleware to all routes
+      // First authenticate the request
       instance.addHook("onRequest", async (request, reply) => {
+        await fastify.authenticate(request);
+      });
+
+      // Then authorize workspace access
+      instance.addHook("preHandler", async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as any,
           reply,
