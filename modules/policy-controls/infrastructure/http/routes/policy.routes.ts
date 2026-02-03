@@ -114,7 +114,7 @@ export async function policyRoutes(
   );
 
   // Update policy
-  fastify.patch(
+  fastify.put(
     "/:workspaceId/policies/:policyId",
     {
       schema: {

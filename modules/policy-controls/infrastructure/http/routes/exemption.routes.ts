@@ -21,13 +21,13 @@ export async function exemptionRoutes(
         },
         body: {
           type: "object",
-          required: ["policyId", "userId", "reason", "validFrom", "validUntil"],
+          required: ["policyId", "userId", "reason", "startDate", "endDate"],
           properties: {
             policyId: { type: "string", format: "uuid" },
             userId: { type: "string", format: "uuid" },
             reason: { type: "string", minLength: 10, maxLength: 1000 },
-            validFrom: { type: "string", format: "date-time" },
-            validUntil: { type: "string", format: "date-time" },
+            startDate: { type: "string", format: "date-time" },
+            endDate: { type: "string", format: "date-time" },
             scope: {
               type: "object",
               properties: {
