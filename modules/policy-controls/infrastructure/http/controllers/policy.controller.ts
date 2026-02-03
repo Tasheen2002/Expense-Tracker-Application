@@ -25,7 +25,7 @@ export class PolicyController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const userId = request.user?.id;
+      const userId = request.user?.userId;
 
       if (!userId) {
         return reply.status(401).send({

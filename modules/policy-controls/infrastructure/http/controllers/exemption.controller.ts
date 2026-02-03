@@ -23,7 +23,7 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const requestedBy = request.user?.id;
+      const requestedBy = request.user?.userId;
 
       if (!requestedBy) {
         return reply.status(401).send({
@@ -123,7 +123,7 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
-      const approvedBy = request.user?.id;
+      const approvedBy = request.user?.userId;
 
       if (!approvedBy) {
         return reply.status(401).send({
@@ -160,9 +160,9 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
-      const rejectedBy = request.user?.id;
+      const userId = request.user?.userId;
 
-      if (!rejectedBy) {
+      if (!userId) {
         return reply.status(401).send({
           success: false,
           statusCode: 401,
@@ -174,7 +174,7 @@ export class ExemptionController {
       const exemption = await this.exemptionService.rejectExemption(
         exemptionId,
         workspaceId,
-        rejectedBy,
+        userId,
         request.body.rejectionReason,
       );
 

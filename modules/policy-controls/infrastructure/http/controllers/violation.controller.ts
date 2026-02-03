@@ -110,7 +110,7 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.id;
+      const userId = request.user?.userId;
 
       if (!userId) {
         return reply.status(401).send({
@@ -147,7 +147,7 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.id;
+      const userId = request.user?.userId;
 
       if (!userId) {
         return reply.status(401).send({
@@ -185,7 +185,7 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.id;
+      const userId = request.user?.userId;
 
       if (!userId) {
         return reply.status(401).send({
@@ -223,7 +223,7 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.id;
+      const userId = request.user?.userId;
 
       if (!userId) {
         return reply.status(401).send({
