@@ -287,6 +287,22 @@ import { BudgetPlanController } from "../../../modules/budget-planning/infrastru
 import { ForecastController } from "../../../modules/budget-planning/infrastructure/http/controllers/forecast.controller";
 import { ScenarioController } from "../../../modules/budget-planning/infrastructure/http/controllers/scenario.controller";
 
+// Policy Controls Module - Repositories
+import { PrismaPolicyRepository } from "../../../modules/policy-controls/infrastructure/persistence/policy.repository.impl";
+import { PrismaViolationRepository } from "../../../modules/policy-controls/infrastructure/persistence/violation.repository.impl";
+import { PrismaExemptionRepository } from "../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl";
+
+// Policy Controls Module - Services
+import { PolicyService } from "../../../modules/policy-controls/application/services/policy.service";
+import { ViolationService } from "../../../modules/policy-controls/application/services/violation.service";
+import { ExemptionService } from "../../../modules/policy-controls/application/services/exemption.service";
+import { PolicyEvaluationService } from "../../../modules/policy-controls/application/services/policy-evaluation.service";
+
+// Policy Controls Module - Controllers
+import { PolicyController } from "../../../modules/policy-controls/infrastructure/http/controllers/policy.controller";
+import { ViolationController } from "../../../modules/policy-controls/infrastructure/http/controllers/violation.controller";
+import { ExemptionController } from "../../../modules/policy-controls/infrastructure/http/controllers/exemption.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -1203,6 +1219,43 @@ export class Container {
       categorySuggestionController,
     );
 
+    // ============================================
+    // Policy Controls Module
+    // ============================================
+
+    // Repositories
+    const policyRepository = new PrismaPolicyRepository(prisma);
+    const violationRepository = new PrismaViolationRepository(prisma);
+    const exemptionRepository = new PrismaExemptionRepository(prisma);
+
+    this.services.set("policyRepository", policyRepository);
+    this.services.set("violationRepository", violationRepository);
+    this.services.set("exemptionRepository", exemptionRepository);
+
+    // Services
+    const policyService = new PolicyService(policyRepository);
+    const violationService = new ViolationService(violationRepository);
+    const exemptionService = new ExemptionService(exemptionRepository);
+    const policyEvaluationService = new PolicyEvaluationService(
+      policyRepository,
+      violationRepository,
+      exemptionRepository,
+    );
+
+    this.services.set("policyService", policyService);
+    this.services.set("violationService", violationService);
+    this.services.set("exemptionService", exemptionService);
+    this.services.set("policyEvaluationService", policyEvaluationService);
+
+    // Controllers
+    const policyController = new PolicyController(policyService);
+    const violationController = new ViolationController(violationService);
+    const exemptionController = new ExemptionController(exemptionService);
+
+    this.services.set("policyController", policyController);
+    this.services.set("violationController", violationController);
+    this.services.set("exemptionController", exemptionController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -1372,6 +1425,24 @@ export class Container {
   getAuditComplianceServices() {
     return {
       auditService: this.get<AuditService>("auditService"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all policy-controls services for route registration
+   */
+  getPolicyControlsServices() {
+    return {
+      policyController: this.get<PolicyController>("policyController"),
+      violationController: this.get<ViolationController>("violationController"),
+      exemptionController: this.get<ExemptionController>("exemptionController"),
+      policyService: this.get<PolicyService>("policyService"),
+      violationService: this.get<ViolationService>("violationService"),
+      exemptionService: this.get<ExemptionService>("exemptionService"),
+      policyEvaluationService: this.get<PolicyEvaluationService>(
+        "policyEvaluationService",
+      ),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }
