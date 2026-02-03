@@ -4,7 +4,6 @@ import {
 } from "../../domain/repositories/exemption.repository";
 import { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
 import { ExemptionId } from "../../domain/value-objects/exemption-id";
-import { ExemptionStatus } from "../../domain/enums/exemption-status.enum";
 import {
   ExemptionNotFoundError,
   UnauthorizedExemptionApprovalError,
