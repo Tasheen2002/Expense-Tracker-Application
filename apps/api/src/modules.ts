@@ -9,6 +9,8 @@ import { registerNotificationDispatchRoutes } from "../../../modules/notificatio
 import { registerCostAllocationRoutes } from "../../../modules/cost-allocation/infrastructure/http/routes/index";
 import { registerCategorizationRulesRoutes } from "../../../modules/categorization-rules/infrastructure/http/routes/main";
 import { registerBudgetPlanningRoutes } from "../../../modules/budget-planning/infrastructure/http/routes/index";
+import { registerAuditComplianceRoutes } from "../../../modules/audit-compliance/infrastructure/http/routes/index";
+import { registerPolicyControlsRoutes } from "../../../modules/policy-controls/infrastructure/http/routes/index";
 
 export default fp(
   async (fastify) => {
@@ -106,6 +108,24 @@ export default fp(
       budgetPlanningServices.prisma,
     );
     fastify.log.info("✓ Budget Planning module registered");
+
+    // ============================================
+    // Audit Compliance Module
+    // ============================================
+    const auditComplianceServices = container.getAuditComplianceServices();
+    await registerAuditComplianceRoutes(
+      fastify,
+      auditComplianceServices.auditService,
+      auditComplianceServices.prisma,
+    );
+    fastify.log.info("✓ Audit Compliance module registered");
+
+    // ============================================
+    // Policy Controls Module
+    // ============================================
+    const policyControlsServices = container.getPolicyControlsServices();
+    await registerPolicyControlsRoutes(fastify, policyControlsServices);
+    fastify.log.info("✓ Policy Controls module registered");
 
     fastify.log.info("All modules registered successfully");
   },

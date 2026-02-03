@@ -15,10 +15,17 @@ import { ExpenseStatus } from "../../domain/enums/expense-status";
 import { PaymentMethod } from "../../domain/enums/payment-method";
 import { CurrencyRequiredError } from "../../domain/errors/expense.errors";
 
-// ...
+// ... (imports)
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class ExpenseRepositoryImpl implements ExpenseRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ExpenseRepositoryImpl
+  extends PrismaRepository<Expense>
+  implements ExpenseRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(expense: Expense): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -53,6 +60,8 @@ export class ExpenseRepositoryImpl implements ExpenseRepository {
         });
       }
     });
+
+    await this.dispatchEvents(expense);
   }
 
   async update(expense: Expense): Promise<void> {
@@ -115,6 +124,9 @@ export class ExpenseRepositoryImpl implements ExpenseRepository {
         });
       }
     });
+
+    // Dispatch domain events after transaction commits
+    await this.dispatchEvents(expense);
   }
 
   async findById(id: ExpenseId, workspaceId: string): Promise<Expense | null> {

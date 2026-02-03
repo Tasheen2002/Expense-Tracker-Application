@@ -3,6 +3,10 @@ import { PrismaClient } from "@prisma/client";
 // Event Bus
 import { getEventBus } from "./shared/domain/events/event-bus";
 import { NotificationEventHandler } from "../../../modules/notification-dispatch/application/handlers/notification.handler";
+// Audit
+import { AuditLogRepositoryImpl } from "../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl";
+import { AuditService } from "../../../modules/audit-compliance/application/services/audit.service";
+import { AuditEventListener } from "../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener";
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl";
@@ -283,6 +287,22 @@ import { BudgetPlanController } from "../../../modules/budget-planning/infrastru
 import { ForecastController } from "../../../modules/budget-planning/infrastructure/http/controllers/forecast.controller";
 import { ScenarioController } from "../../../modules/budget-planning/infrastructure/http/controllers/scenario.controller";
 
+// Policy Controls Module - Repositories
+import { PrismaPolicyRepository } from "../../../modules/policy-controls/infrastructure/persistence/policy.repository.impl";
+import { PrismaViolationRepository } from "../../../modules/policy-controls/infrastructure/persistence/violation.repository.impl";
+import { PrismaExemptionRepository } from "../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl";
+
+// Policy Controls Module - Services
+import { PolicyService } from "../../../modules/policy-controls/application/services/policy.service";
+import { ViolationService } from "../../../modules/policy-controls/application/services/violation.service";
+import { ExemptionService } from "../../../modules/policy-controls/application/services/exemption.service";
+import { PolicyEvaluationService } from "../../../modules/policy-controls/application/services/policy-evaluation.service";
+
+// Policy Controls Module - Controllers
+import { PolicyController } from "../../../modules/policy-controls/infrastructure/http/controllers/policy.controller";
+import { ViolationController } from "../../../modules/policy-controls/infrastructure/http/controllers/violation.controller";
+import { ExemptionController } from "../../../modules/policy-controls/infrastructure/http/controllers/exemption.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -356,7 +376,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const expenseRepository = new ExpenseRepositoryImpl(prisma);
+    const expenseRepository = new ExpenseRepositoryImpl(prisma, eventBus);
     const categoryRepository = new CategoryRepositoryImpl(prisma);
     const tagRepository = new TagRepositoryImpl(prisma);
     const attachmentRepository = new AttachmentRepositoryImpl(prisma);
@@ -504,7 +524,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const budgetRepository = new BudgetRepositoryImpl(prisma);
+    const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
       prisma,
     );
@@ -588,7 +608,7 @@ export class Container {
     // ============================================
 
     // Repositories
-    const receiptRepository = new ReceiptRepositoryImpl(prisma);
+    const receiptRepository = new ReceiptRepositoryImpl(prisma, eventBus);
     const receiptMetadataRepository = new ReceiptMetadataRepositoryImpl(prisma);
     const receiptTagDefinitionRepository =
       new ReceiptTagDefinitionRepositoryImpl(prisma);
@@ -735,10 +755,14 @@ export class Container {
     // Notification Dispatch Module
     // ============================================
 
-    // Repositories
+    // Repositories - Notification
     const notificationRepository = new NotificationRepositoryImpl(prisma);
     const notificationTemplateRepository =
       new NotificationTemplateRepositoryImpl(prisma);
+
+    // Repositories - Audit
+    const auditRepository = new AuditLogRepositoryImpl(prisma, eventBus);
+    this.services.set("auditLogRepository", auditRepository);
     const notificationPreferenceRepository =
       new NotificationPreferenceRepositoryImpl(prisma);
 
@@ -752,19 +776,23 @@ export class Container {
       notificationPreferenceRepository,
     );
 
-    // Services
+    // Services - Notification
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
       userRepository,
     );
+    this.services.set("notificationService", notificationService);
+
+    // Services - Audit
+    const auditService = new AuditService(auditRepository);
+    this.services.set("auditService", auditService);
     const templateService = new TemplateService(notificationTemplateRepository);
     const preferenceService = new PreferenceService(
       notificationPreferenceRepository,
     );
 
-    this.services.set("notificationService", notificationService);
     this.services.set("templateService", templateService);
     this.services.set("preferenceService", preferenceService);
 
@@ -784,7 +812,26 @@ export class Container {
       notificationService,
     );
 
-    // Subscribe to events
+    // --- Event Subscriptions ---
+
+    // 1. Notification Subscriptions
+    const notificationHandler = new NotificationEventHandler(
+      notificationService,
+    );
+    eventBus.subscribe("UserCreated", notificationHandler.handleUserCreated);
+
+    // 2. Audit Subscriptions (Global listener)
+    const auditListener = new AuditEventListener(auditService);
+
+    // Subscribe to all known critical events
+    // Ideally we'd valid wildcard support, but manual for now
+    eventBus.subscribe("UserCreated", auditListener);
+    eventBus.subscribe("expense.created", auditListener);
+    eventBus.subscribe("expense.approved", auditListener);
+    eventBus.subscribe("expense.rejected", auditListener);
+    eventBus.subscribe("expense.submitted", auditListener);
+    eventBus.subscribe("budget.threshold_exceeded", auditListener);
+    eventBus.subscribe("receipt.uploaded", auditListener);
     eventBus.subscribe(
       "expense.status_changed",
       notificationEventHandler.handleExpenseStatusChanged,
@@ -1172,6 +1219,43 @@ export class Container {
       categorySuggestionController,
     );
 
+    // ============================================
+    // Policy Controls Module
+    // ============================================
+
+    // Repositories
+    const policyRepository = new PrismaPolicyRepository(prisma);
+    const violationRepository = new PrismaViolationRepository(prisma);
+    const exemptionRepository = new PrismaExemptionRepository(prisma);
+
+    this.services.set("policyRepository", policyRepository);
+    this.services.set("violationRepository", violationRepository);
+    this.services.set("exemptionRepository", exemptionRepository);
+
+    // Services
+    const policyService = new PolicyService(policyRepository);
+    const violationService = new ViolationService(violationRepository);
+    const exemptionService = new ExemptionService(exemptionRepository);
+    const policyEvaluationService = new PolicyEvaluationService(
+      policyRepository,
+      violationRepository,
+      exemptionRepository,
+    );
+
+    this.services.set("policyService", policyService);
+    this.services.set("violationService", violationService);
+    this.services.set("exemptionService", exemptionService);
+    this.services.set("policyEvaluationService", policyEvaluationService);
+
+    // Controllers
+    const policyController = new PolicyController(policyService);
+    const violationController = new ViolationController(violationService);
+    const exemptionController = new ExemptionController(exemptionService);
+
+    this.services.set("policyController", policyController);
+    this.services.set("violationController", violationController);
+    this.services.set("exemptionController", exemptionController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -1332,6 +1416,33 @@ export class Container {
       ),
       forecastController: this.get<ForecastController>("forecastController"),
       scenarioController: this.get<ScenarioController>("scenarioController"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+  /**
+   * Get all audit-compliance services for route registration
+   */
+  getAuditComplianceServices() {
+    return {
+      auditService: this.get<AuditService>("auditService"),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all policy-controls services for route registration
+   */
+  getPolicyControlsServices() {
+    return {
+      policyController: this.get<PolicyController>("policyController"),
+      violationController: this.get<ViolationController>("violationController"),
+      exemptionController: this.get<ExemptionController>("exemptionController"),
+      policyService: this.get<PolicyService>("policyService"),
+      violationService: this.get<ViolationService>("violationService"),
+      exemptionService: this.get<ExemptionService>("exemptionService"),
+      policyEvaluationService: this.get<PolicyEvaluationService>(
+        "policyEvaluationService",
+      ),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }

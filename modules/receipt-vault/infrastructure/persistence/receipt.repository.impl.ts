@@ -11,8 +11,17 @@ import { ReceiptStatus } from "../../domain/enums/receipt-status";
 import { ReceiptType } from "../../domain/enums/receipt-type";
 import { StorageProvider } from "../../domain/enums/storage-provider";
 
-export class ReceiptRepositoryImpl implements IReceiptRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ... (imports)
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+
+export class ReceiptRepositoryImpl
+  extends PrismaRepository<Receipt>
+  implements IReceiptRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(receipt: Receipt): Promise<void> {
     const fileInfo = receipt.getFileInfo();
@@ -60,6 +69,8 @@ export class ReceiptRepositoryImpl implements IReceiptRepository {
         deletedAt: receipt.getDeletedAt(),
       },
     });
+
+    await this.dispatchEvents(receipt);
   }
 
   async findById(id: ReceiptId, workspaceId: string): Promise<Receipt | null> {

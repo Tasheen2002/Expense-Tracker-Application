@@ -9,8 +9,17 @@ import {
   BudgetFilters,
 } from "../../domain/repositories/budget.repository";
 
-export class BudgetRepositoryImpl implements IBudgetRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ... (imports)
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+
+export class BudgetRepositoryImpl
+  extends PrismaRepository<Budget>
+  implements IBudgetRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(budget: Budget): Promise<void> {
     const period = budget.getPeriod();
@@ -48,6 +57,8 @@ export class BudgetRepositoryImpl implements IBudgetRepository {
         updatedAt: budget.getUpdatedAt(),
       },
     });
+
+    await this.dispatchEvents(budget);
   }
 
   async findById(id: BudgetId, workspaceId: string): Promise<Budget | null> {
