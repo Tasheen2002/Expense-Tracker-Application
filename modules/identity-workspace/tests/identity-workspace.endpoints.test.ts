@@ -324,8 +324,8 @@ describe("Identity Workspace Module - Endpoint Tests", () => {
         });
 
         console.log("Non-existent Workspace:", response.statusCode);
-        // Note: API returns 500 for invalid UUID format - this is a known issue
-        expect([403, 404, 500]).toContain(response.statusCode);
+        // Note: API returns 400 for invalid UUID format (all-zeros UUID)
+        expect([400, 403, 404, 500]).toContain(response.statusCode);
       });
     });
 

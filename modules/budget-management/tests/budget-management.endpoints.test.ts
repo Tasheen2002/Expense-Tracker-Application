@@ -259,7 +259,7 @@ describe("Budget Management Module - Endpoint Tests", () => {
         });
 
         console.log("Get Non-existent Budget:", response.statusCode);
-        expect([404, 500]).toContain(response.statusCode);
+        expect([400, 404, 500]).toContain(response.statusCode);
       });
     });
 

@@ -303,6 +303,37 @@ import { PolicyController } from "../../../modules/policy-controls/infrastructur
 import { ViolationController } from "../../../modules/policy-controls/infrastructure/http/controllers/violation.controller";
 import { ExemptionController } from "../../../modules/policy-controls/infrastructure/http/controllers/exemption.controller";
 
+// Bank Feed Sync Module - Repositories
+import { PrismaBankConnectionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/bank-connection.repository.impl";
+import { PrismaSyncSessionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/sync-session.repository.impl";
+import { PrismaBankTransactionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/bank-transaction.repository.impl";
+
+// Bank Feed Sync Module - Services
+import { BankConnectionService } from "../../../modules/bank-feed-sync/application/services/bank-connection.service";
+import { TransactionSyncService } from "../../../modules/bank-feed-sync/application/services/transaction-sync.service";
+import { BankTransactionService } from "../../../modules/bank-feed-sync/application/services/bank-transaction.service";
+
+// Bank Feed Sync Module - Command Handlers
+import {
+  ConnectBankHandler,
+  DisconnectBankHandler,
+  UpdateConnectionTokenHandler,
+  SyncTransactionsHandler,
+  ProcessTransactionHandler,
+} from "../../../modules/bank-feed-sync/application/commands";
+
+// Bank Feed Sync Module - Query Handlers
+import {
+  GetBankConnectionsHandler,
+  GetSyncHistoryHandler,
+  GetPendingTransactionsHandler,
+} from "../../../modules/bank-feed-sync/application/queries";
+
+// Bank Feed Sync Module - Controllers
+import { BankConnectionController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-connection.controller";
+import { TransactionSyncController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/transaction-sync.controller";
+import { BankTransactionController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-transaction.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -1256,6 +1287,100 @@ export class Container {
     this.services.set("violationController", violationController);
     this.services.set("exemptionController", exemptionController);
 
+    // ============================================
+    // Bank Feed Sync Module
+    // ============================================
+
+    // Repositories
+    const bankConnectionRepository = new PrismaBankConnectionRepository(prisma);
+    const syncSessionRepository = new PrismaSyncSessionRepository(prisma);
+    const bankTransactionRepository = new PrismaBankTransactionRepository(
+      prisma,
+    );
+
+    this.services.set("bankConnectionRepository", bankConnectionRepository);
+    this.services.set("syncSessionRepository", syncSessionRepository);
+    this.services.set("bankTransactionRepository", bankTransactionRepository);
+
+    // Stub Bank API Client (to be implemented with real bank API integration)
+    const stubBankAPIClient = {
+      async fetchTransactions(
+        accessToken: string,
+        fromDate: Date,
+        toDate: Date,
+      ) {
+        // Stub implementation - will be replaced with real bank API integration
+        return [];
+      },
+    };
+
+    // Services
+    const bankConnectionService = new BankConnectionService(
+      bankConnectionRepository,
+    );
+    const transactionSyncService = new TransactionSyncService(
+      bankConnectionRepository,
+      syncSessionRepository,
+      bankTransactionRepository,
+      stubBankAPIClient,
+    );
+    const bankTransactionService = new BankTransactionService(
+      bankTransactionRepository,
+    );
+
+    this.services.set("bankConnectionService", bankConnectionService);
+    this.services.set("transactionSyncService", transactionSyncService);
+    this.services.set("bankTransactionService", bankTransactionService);
+
+    // Command Handlers
+    const connectBankHandler = new ConnectBankHandler(bankConnectionService);
+    const disconnectBankHandler = new DisconnectBankHandler(
+      bankConnectionService,
+    );
+    const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(
+      bankConnectionService,
+    );
+    const syncTransactionsHandler = new SyncTransactionsHandler(
+      transactionSyncService,
+    );
+    const processTransactionHandler = new ProcessTransactionHandler(
+      bankTransactionService,
+    );
+
+    // Query Handlers
+    const getBankConnectionsHandler = new GetBankConnectionsHandler(
+      bankConnectionService,
+    );
+    const getSyncHistoryHandler = new GetSyncHistoryHandler(
+      transactionSyncService,
+    );
+    const getPendingTransactionsHandler = new GetPendingTransactionsHandler(
+      bankTransactionService,
+    );
+
+    // Controllers
+    const bankConnectionController = new BankConnectionController(
+      connectBankHandler,
+      disconnectBankHandler,
+      updateConnectionTokenHandler,
+      getBankConnectionsHandler,
+      bankConnectionService,
+    );
+    const transactionSyncController = new TransactionSyncController(
+      syncTransactionsHandler,
+      getSyncHistoryHandler,
+      transactionSyncService,
+    );
+    const bankTransactionController = new BankTransactionController(
+      processTransactionHandler,
+      getPendingTransactionsHandler,
+      bankTransactionService,
+    );
+
+    this.services.set("bankConnectionController", bankConnectionController);
+    this.services.set("transactionSyncController", transactionSyncController);
+    this.services.set("bankTransactionController", bankTransactionController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -1442,6 +1567,24 @@ export class Container {
       exemptionService: this.get<ExemptionService>("exemptionService"),
       policyEvaluationService: this.get<PolicyEvaluationService>(
         "policyEvaluationService",
+      ),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all bank-feed-sync services for route registration
+   */
+  getBankFeedSyncServices() {
+    return {
+      bankConnectionController: this.get<BankConnectionController>(
+        "bankConnectionController",
+      ),
+      transactionSyncController: this.get<TransactionSyncController>(
+        "transactionSyncController",
+      ),
+      bankTransactionController: this.get<BankTransactionController>(
+        "bankTransactionController",
       ),
       prisma: this.get<PrismaClient>("prisma"),
     };

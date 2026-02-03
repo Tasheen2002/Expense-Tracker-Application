@@ -11,6 +11,7 @@ import { registerCategorizationRulesRoutes } from "../../../modules/categorizati
 import { registerBudgetPlanningRoutes } from "../../../modules/budget-planning/infrastructure/http/routes/index";
 import { registerAuditComplianceRoutes } from "../../../modules/audit-compliance/infrastructure/http/routes/index";
 import { registerPolicyControlsRoutes } from "../../../modules/policy-controls/infrastructure/http/routes/index";
+import { registerBankFeedSyncRoutes } from "../../../modules/bank-feed-sync/infrastructure/http/routes/index";
 
 export default fp(
   async (fastify) => {
@@ -126,6 +127,16 @@ export default fp(
     const policyControlsServices = container.getPolicyControlsServices();
     await registerPolicyControlsRoutes(fastify, policyControlsServices);
     fastify.log.info("✓ Policy Controls module registered");
+
+    // Bank Feed Sync Module
+    // ============================================
+    const bankFeedSyncServices = container.getBankFeedSyncServices();
+    await registerBankFeedSyncRoutes(
+      fastify,
+      bankFeedSyncServices,
+      bankFeedSyncServices.prisma,
+    );
+    fastify.log.info("✓ Bank Feed Sync module registered");
 
     fastify.log.info("All modules registered successfully");
   },

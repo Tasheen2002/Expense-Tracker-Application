@@ -1,0 +1,253 @@
+import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { BankConnectionId } from "../value-objects/bank-connection-id";
+import { ConnectionStatus } from "../enums/connection-status.enum";
+
+export interface BankConnectionProps {
+  id: BankConnectionId;
+  workspaceId: WorkspaceId;
+  userId: UserId;
+  institutionId: string;
+  institutionName: string;
+  accountId: string;
+  accountName: string;
+  accountType: string;
+  accountMask?: string;
+  currency: string;
+  accessToken: string;
+  status: ConnectionStatus;
+  lastSyncAt?: Date;
+  tokenExpiresAt?: Date;
+  errorMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class BankConnection {
+  private constructor(private readonly props: BankConnectionProps) {}
+
+  static create(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    institutionId: string,
+    institutionName: string,
+    accountId: string,
+    accountName: string,
+    accountType: string,
+    currency: string,
+    accessToken: string,
+    accountMask?: string,
+    tokenExpiresAt?: Date,
+  ): BankConnection {
+    return new BankConnection({
+      id: BankConnectionId.create(),
+      workspaceId,
+      userId,
+      institutionId,
+      institutionName,
+      accountId,
+      accountName,
+      accountType,
+      accountMask,
+      currency,
+      accessToken,
+      status: ConnectionStatus.PENDING,
+      tokenExpiresAt,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  static fromPersistence(props: BankConnectionProps): BankConnection {
+    return new BankConnection(props);
+  }
+
+  // Getters
+  get id(): BankConnectionId {
+    return this.props.id;
+  }
+
+  get workspaceId(): WorkspaceId {
+    return this.props.workspaceId;
+  }
+
+  get userId(): UserId {
+    return this.props.userId;
+  }
+
+  get institutionId(): string {
+    return this.props.institutionId;
+  }
+
+  get institutionName(): string {
+    return this.props.institutionName;
+  }
+
+  get accountId(): string {
+    return this.props.accountId;
+  }
+
+  get accountName(): string {
+    return this.props.accountName;
+  }
+
+  get accountType(): string {
+    return this.props.accountType;
+  }
+
+  get accountMask(): string | undefined {
+    return this.props.accountMask;
+  }
+
+  get currency(): string {
+    return this.props.currency;
+  }
+
+  get accessToken(): string {
+    return this.props.accessToken;
+  }
+
+  get status(): ConnectionStatus {
+    return this.props.status;
+  }
+
+  get lastSyncAt(): Date | undefined {
+    return this.props.lastSyncAt;
+  }
+
+  get tokenExpiresAt(): Date | undefined {
+    return this.props.tokenExpiresAt;
+  }
+
+  get errorMessage(): string | undefined {
+    return this.props.errorMessage;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  // Method-style getters for repository compatibility
+  getId(): BankConnectionId {
+    return this.props.id;
+  }
+
+  getWorkspaceId(): WorkspaceId {
+    return this.props.workspaceId;
+  }
+
+  getUserId(): UserId {
+    return this.props.userId;
+  }
+
+  getInstitutionId(): string {
+    return this.props.institutionId;
+  }
+
+  getInstitutionName(): string {
+    return this.props.institutionName;
+  }
+
+  getAccountId(): string {
+    return this.props.accountId;
+  }
+
+  getAccountName(): string {
+    return this.props.accountName;
+  }
+
+  getAccountType(): string {
+    return this.props.accountType;
+  }
+
+  getAccountMask(): string | undefined {
+    return this.props.accountMask;
+  }
+
+  getCurrency(): string {
+    return this.props.currency;
+  }
+
+  getAccessToken(): string {
+    return this.props.accessToken;
+  }
+
+  getStatus(): ConnectionStatus {
+    return this.props.status;
+  }
+
+  getLastSyncAt(): Date | undefined {
+    return this.props.lastSyncAt;
+  }
+
+  getTokenExpiresAt(): Date | undefined {
+    return this.props.tokenExpiresAt;
+  }
+
+  getErrorMessage(): string | undefined {
+    return this.props.errorMessage;
+  }
+
+  getCreatedAt(): Date {
+    return this.props.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  // Business methods
+  activate(): void {
+    this.props.status = ConnectionStatus.CONNECTED;
+    this.props.errorMessage = undefined;
+    this.props.updatedAt = new Date();
+  }
+
+  markAsExpired(): void {
+    this.props.status = ConnectionStatus.EXPIRED;
+    this.props.updatedAt = new Date();
+  }
+
+  markAsError(errorMessage: string): void {
+    this.props.status = ConnectionStatus.ERROR;
+    this.props.errorMessage = errorMessage;
+    this.props.updatedAt = new Date();
+  }
+
+  disconnect(): void {
+    this.props.status = ConnectionStatus.DISCONNECTED;
+    this.props.updatedAt = new Date();
+  }
+
+  updateLastSync(): void {
+    this.props.lastSyncAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  updateAccessToken(token: string, expiresAt?: Date): void {
+    this.props.accessToken = token;
+    this.props.tokenExpiresAt = expiresAt;
+    this.props.status = ConnectionStatus.CONNECTED;
+    this.props.errorMessage = undefined;
+    this.props.updatedAt = new Date();
+  }
+
+  isExpired(): boolean {
+    if (!this.props.tokenExpiresAt) return false;
+    return new Date() >= this.props.tokenExpiresAt;
+  }
+
+  isActive(): boolean {
+    return (
+      this.props.status === ConnectionStatus.CONNECTED && !this.isExpired()
+    );
+  }
+
+  toPersistence(): BankConnectionProps {
+    return { ...this.props };
+  }
+}

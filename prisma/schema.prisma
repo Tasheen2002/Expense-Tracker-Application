@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["approval_workflow", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
+  schemas  = ["approval_workflow", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
 }
 
 model UserAccount {
@@ -1129,4 +1129,111 @@ enum ExemptionStatus {
   EXPIRED
 
   @@schema("policy_controls")
+}
+
+// ============================================================================
+// Bank Feed Sync Schema
+// ============================================================================
+
+model BankConnection {
+  id              String            @id @default(uuid())
+  workspaceId     String            @map("workspace_id")
+  userId          String            @map("user_id")
+  institutionId   String            @map("institution_id")
+  institutionName String            @map("institution_name")
+  accountId       String            @map("account_id")
+  accountName     String            @map("account_name")
+  accountType     String            @map("account_type")
+  accountMask     String?           @map("account_mask")
+  currency        String
+  accessToken     String            @map("access_token")
+  status          ConnectionStatus
+  lastSyncAt      DateTime?         @map("last_sync_at")
+  tokenExpiresAt  DateTime?         @map("token_expires_at")
+  errorMessage    String?           @map("error_message")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  syncSessions    SyncSession[]
+  transactions    BankTransaction[]
+
+  @@unique([workspaceId, institutionId, accountId])
+  @@map("bank_connection")
+  @@schema("bank_feed_sync")
+}
+
+model SyncSession {
+  id                    String            @id @default(uuid())
+  workspaceId           String            @map("workspace_id")
+  connectionId          String            @map("connection_id")
+  status                SyncStatus
+  startedAt             DateTime          @map("started_at")
+  completedAt           DateTime?         @map("completed_at")
+  transactionsFetched   Int               @default(0) @map("transactions_fetched")
+  transactionsImported  Int               @default(0) @map("transactions_imported")
+  transactionsDuplicate Int               @default(0) @map("transactions_duplicate")
+  errorMessage          String?           @map("error_message")
+  metadata              Json?
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  connection            BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  transactions          BankTransaction[]
+
+  @@map("sync_session")
+  @@schema("bank_feed_sync")
+}
+
+model BankTransaction {
+  id              String            @id @default(uuid())
+  workspaceId     String            @map("workspace_id")
+  connectionId    String            @map("connection_id")
+  sessionId       String            @map("session_id")
+  externalId      String            @map("external_id")
+  amount          Float
+  currency        String
+  description     String
+  merchantName    String?           @map("merchant_name")
+  categoryName    String?           @map("category_name")
+  transactionDate DateTime          @map("transaction_date")
+  postedDate      DateTime?         @map("posted_date")
+  status          TransactionStatus
+  expenseId       String?           @map("expense_id")
+  metadata        Json?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  connection      BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  session         SyncSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, externalId])
+  @@map("bank_transaction")
+  @@schema("bank_feed_sync")
+}
+
+enum ConnectionStatus {
+  PENDING
+  CONNECTED
+  EXPIRED
+  ERROR
+  DISCONNECTED
+
+  @@schema("bank_feed_sync")
+}
+
+enum SyncStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  PARTIAL
+
+  @@schema("bank_feed_sync")
+}
+
+enum TransactionStatus {
+  PENDING
+  MATCHED
+  IMPORTED
+  IGNORED
+  DUPLICATE
+
+  @@schema("bank_feed_sync")
 }

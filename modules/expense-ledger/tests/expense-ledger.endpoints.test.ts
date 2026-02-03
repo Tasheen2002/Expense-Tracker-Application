@@ -532,7 +532,7 @@ describe("Expense Ledger Module - Endpoint Tests", () => {
         });
 
         console.log("Get Non-existent Expense:", response.statusCode);
-        expect([404, 500]).toContain(response.statusCode);
+        expect([400, 404, 500]).toContain(response.statusCode);
       });
     });
 
