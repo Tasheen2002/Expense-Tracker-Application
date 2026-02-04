@@ -334,6 +334,23 @@ import { BankConnectionController } from "../../../modules/bank-feed-sync/infras
 import { TransactionSyncController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/transaction-sync.controller";
 import { BankTransactionController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-transaction.controller";
 
+// Event Outbox Module - Repositories
+import { OutboxEventRepositoryImpl } from "../../../modules/event-outbox/infrastructure/persistence/outbox-event.repository.impl";
+import { IOutboxEventRepository } from "../../../modules/event-outbox/domain/repositories/outbox-event.repository";
+
+// Event Outbox Module - Services
+import { OutboxEventService } from "../../../modules/event-outbox/application/services/outbox-event.service";
+
+// Event Outbox Module - Command Handlers
+import { StoreOutboxEventHandler } from "../../../modules/event-outbox/application/commands/store-outbox-event.command";
+
+// Event Outbox Module - Query Handlers
+import { ProcessPendingEventsHandler } from "../../../modules/event-outbox/application/queries/process-pending-events.query";
+import { GetFailedEventsHandler } from "../../../modules/event-outbox/application/queries/get-failed-events.query";
+
+// Event Outbox Module - Controllers
+import { OutboxEventController } from "../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller";
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -1381,6 +1398,43 @@ export class Container {
     this.services.set("transactionSyncController", transactionSyncController);
     this.services.set("bankTransactionController", bankTransactionController);
 
+    // ============================================
+    // Event Outbox Module
+    // ============================================
+
+    // Repositories
+    const outboxEventRepository: IOutboxEventRepository =
+      new OutboxEventRepositoryImpl(prisma);
+    this.services.set("outboxEventRepository", outboxEventRepository);
+
+    // Services
+    const outboxEventService = new OutboxEventService(
+      outboxEventRepository,
+      eventBus,
+    );
+    this.services.set("outboxEventService", outboxEventService);
+
+    // Command Handlers
+    const storeOutboxEventHandler = new StoreOutboxEventHandler(
+      outboxEventRepository,
+    );
+
+    // Query Handlers
+    const processPendingEventsHandler = new ProcessPendingEventsHandler(
+      outboxEventRepository,
+    );
+    const getFailedEventsHandler = new GetFailedEventsHandler(
+      outboxEventRepository,
+    );
+
+    // Controllers
+    const outboxEventController = new OutboxEventController(
+      storeOutboxEventHandler,
+      processPendingEventsHandler,
+      getFailedEventsHandler,
+    );
+    this.services.set("outboxEventController", outboxEventController);
+
     // Store Prisma for module route registration
     this.services.set("prisma", prisma);
   }
@@ -1585,6 +1639,18 @@ export class Container {
       ),
       bankTransactionController: this.get<BankTransactionController>(
         "bankTransactionController",
+      ),
+      prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  /**
+   * Get all event-outbox services for route registration
+   */
+  getEventOutboxServices() {
+    return {
+      outboxEventController: this.get<OutboxEventController>(
+        "outboxEventController",
       ),
       prisma: this.get<PrismaClient>("prisma"),
     };
