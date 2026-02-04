@@ -136,19 +136,25 @@ export class ReceiptController {
         isDeleted: query.isDeleted,
         fromDate: query.fromDate,
         toDate: query.toDate,
-        page: query.page,
-        pageSize: query.pageSize,
+        limit: query.limit,
+        offset: query.offset,
       });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Receipts retrieved successfully",
-        data: result.items.map((receipt) => this.serializeReceipt(receipt)),
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-        hasMore: result.hasMore,
+        data: {
+          receipts: result.items.map((receipt) =>
+            this.serializeReceipt(receipt),
+          ),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -173,11 +179,17 @@ export class ReceiptController {
         success: true,
         statusCode: 200,
         message: "Receipts retrieved successfully",
-        data: receipts.items.map((receipt) => this.serializeReceipt(receipt)),
-        total: receipts.total,
-        limit: receipts.limit,
-        offset: receipts.offset,
-        hasMore: receipts.hasMore,
+        data: {
+          receipts: receipts.items.map((receipt) =>
+            this.serializeReceipt(receipt),
+          ),
+          pagination: {
+            total: receipts.total,
+            limit: receipts.limit,
+            offset: receipts.offset,
+            hasMore: receipts.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
