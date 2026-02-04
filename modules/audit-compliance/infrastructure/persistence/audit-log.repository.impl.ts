@@ -65,6 +65,7 @@ export class AuditLogRepositoryImpl
       total,
       limit,
       offset,
+      hasMore: offset + items.length < total,
     };
   }
 
@@ -110,6 +111,7 @@ export class AuditLogRepositoryImpl
       total,
       limit: filter.limit || 50,
       offset: filter.offset || 0,
+      hasMore: (filter.offset || 0) + items.length < total,
     };
   }
 

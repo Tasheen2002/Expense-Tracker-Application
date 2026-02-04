@@ -74,10 +74,18 @@ export class AuditLogController {
     );
 
     return reply.status(200).send({
-      items: result.items.map(toResponse),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
+      success: true,
+      statusCode: 200,
+      message: "Audit logs retrieved successfully",
+      data: {
+        items: result.items.map(toResponse),
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      },
     });
   }
 

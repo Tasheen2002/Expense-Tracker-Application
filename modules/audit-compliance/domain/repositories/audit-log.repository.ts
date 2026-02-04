@@ -18,6 +18,7 @@ export interface PaginatedAuditLogs {
   total: number;
   limit: number;
   offset: number;
+  hasMore: boolean;
 }
 
 export interface AuditLogRepository {
