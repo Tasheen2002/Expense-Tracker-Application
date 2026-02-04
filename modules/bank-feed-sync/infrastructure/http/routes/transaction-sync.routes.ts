@@ -43,6 +43,13 @@ export async function transactionSyncRoutes(
           },
           required: ["workspaceId", "connectionId"],
         },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
+          },
+        },
       },
     },
     (request, reply) => controller.getSyncHistory(request as any, reply),
@@ -76,6 +83,13 @@ export async function transactionSyncRoutes(
           required: ["workspaceId"],
           properties: {
             workspaceId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },

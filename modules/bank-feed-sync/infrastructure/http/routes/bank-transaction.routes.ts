@@ -21,6 +21,8 @@ export async function bankTransactionRoutes(
           type: "object",
           properties: {
             connectionId: { type: "string", format: "uuid" },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },
@@ -85,6 +87,13 @@ export async function bankTransactionRoutes(
             connectionId: { type: "string", format: "uuid" },
           },
           required: ["workspaceId", "connectionId"],
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
+          },
         },
       },
     },
