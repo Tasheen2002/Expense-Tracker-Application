@@ -111,10 +111,11 @@ describe("Audit Compliance Endpoints", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.items).toHaveLength(2);
-      expect(body.total).toBe(2);
-      expect(body.limit).toBe(50);
-      expect(body.offset).toBe(0);
+      expect(Array.isArray(body.data.items)).toBe(true);
+      expect(body.data.items).toHaveLength(2);
+      expect(body.data.pagination.total).toBe(2);
+      expect(body.data.pagination.limit).toBe(50);
+      expect(body.data.pagination.offset).toBe(0);
     });
 
     it("should list audit logs with filters", async () => {
@@ -178,8 +179,8 @@ describe("Audit Compliance Endpoints", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.limit).toBe(20);
-      expect(body.offset).toBe(40);
+      expect(body.data.pagination.limit).toBe(20);
+      expect(body.data.pagination.offset).toBe(40);
     });
 
     it("should return empty list when no audit logs found", async () => {
@@ -197,8 +198,9 @@ describe("Audit Compliance Endpoints", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.items).toHaveLength(0);
-      expect(body.total).toBe(0);
+      expect(Array.isArray(body.data.items)).toBe(true);
+      expect(body.data.items).toHaveLength(0);
+      expect(body.data.pagination.total).toBe(0);
     });
   });
 
@@ -560,11 +562,12 @@ describe("Audit Compliance Endpoints", () => {
       const body = JSON.parse(response.body);
 
       // Verify pagination structure
-      expect(body).toHaveProperty("items");
-      expect(body).toHaveProperty("total");
-      expect(body).toHaveProperty("limit");
-      expect(body).toHaveProperty("offset");
-      expect(Array.isArray(body.items)).toBe(true);
+      expect(body.data).toHaveProperty("items");
+      expect(body.data).toHaveProperty("pagination");
+      expect(body.data.pagination).toHaveProperty("total");
+      expect(body.data.pagination).toHaveProperty("limit");
+      expect(body.data.pagination).toHaveProperty("offset");
+      expect(Array.isArray(body.data.items)).toBe(true);
     });
   });
 
