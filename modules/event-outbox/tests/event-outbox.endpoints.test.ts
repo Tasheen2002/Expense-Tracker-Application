@@ -111,7 +111,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("✅ should store an outbox event", async () => {
         const response = await app.inject({
           method: "POST",
-          url: `/${testWorkspaceId}/event-outbox/events`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -144,7 +144,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("❌ should fail without authentication", async () => {
         const response = await app.inject({
           method: "POST",
-          url: `/${testWorkspaceId}/event-outbox/events`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events`,
           payload: {
             aggregateType: "Expense",
             aggregateId: "123e4567-e89b-12d3-a456-426614174000",
@@ -159,7 +159,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("❌ should fail with invalid aggregate ID", async () => {
         const response = await app.inject({
           method: "POST",
-          url: `/${testWorkspaceId}/event-outbox/events`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -177,7 +177,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("❌ should fail with missing required fields", async () => {
         const response = await app.inject({
           method: "POST",
-          url: `/${testWorkspaceId}/event-outbox/events`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -195,7 +195,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("✅ should get pending events", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/pending`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/pending`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -221,7 +221,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("✅ should get pending events with limit", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/pending?limit=10`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/pending?limit=10`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -245,7 +245,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("❌ should fail without authentication", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/pending`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/pending`,
         });
 
         expect([401, 500]).toContain(response.statusCode);
@@ -256,7 +256,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("✅ should get failed events", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/failed`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/failed`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -282,7 +282,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("✅ should get failed events with custom max retries", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/failed?maxRetries=5&limit=20`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/failed?maxRetries=5&limit=20`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -306,7 +306,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
       it("❌ should fail without authentication", async () => {
         const response = await app.inject({
           method: "GET",
-          url: `/${testWorkspaceId}/event-outbox/events/failed`,
+          url: `/api/v1/${testWorkspaceId}/event-outbox/events/failed`,
         });
 
         expect([401, 500]).toContain(response.statusCode);
@@ -321,7 +321,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
     it("❌ should fail with invalid workspace ID", async () => {
       const response = await app.inject({
         method: "GET",
-        url: `/00000000-0000-0000-0000-000000000000/event-outbox/events/pending`,
+        url: "/api/v1/00000000-0000-0000-0000-000000000000/event-outbox/events/pending",
         headers: {
           authorization: `Bearer ${authToken}`,
         },
@@ -333,7 +333,7 @@ describe("Event Outbox Module - Endpoint Tests", () => {
     it("❌ should fail with non-UUID workspace ID", async () => {
       const response = await app.inject({
         method: "GET",
-        url: `/invalid-workspace-id/event-outbox/events/pending`,
+        url: "/api/v1/invalid-workspace-id/event-outbox/events/pending",
         headers: {
           authorization: `Bearer ${authToken}`,
         },
