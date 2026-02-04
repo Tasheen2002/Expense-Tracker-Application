@@ -145,9 +145,7 @@ export class ReceiptController {
         statusCode: 200,
         message: "Receipts retrieved successfully",
         data: {
-          receipts: result.items.map((receipt) =>
-            this.serializeReceipt(receipt),
-          ),
+          items: result.items.map((receipt) => this.serializeReceipt(receipt)),
           pagination: {
             total: result.total,
             limit: result.limit,
