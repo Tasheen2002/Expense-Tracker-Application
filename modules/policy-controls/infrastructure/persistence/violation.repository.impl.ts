@@ -32,19 +32,39 @@ export class PrismaViolationRepository implements ViolationRepository {
         violationDetails: violation.getViolationDetails(),
         expenseAmount: violation.getExpenseAmount() ?? 0,
         ...(violation.getCurrency() && { currency: violation.getCurrency() }),
-        ...(violation.getAcknowledgedAt() && { acknowledgedAt: violation.getAcknowledgedAt() }),
-        ...(violation.getAcknowledgedBy() && { acknowledgedBy: violation.getAcknowledgedBy() }),
-        ...(violation.getResolvedAt() && { resolvedAt: violation.getResolvedAt() }),
-        ...(violation.getResolvedBy() && { resolvedBy: violation.getResolvedBy() }),
-        ...(violation.getResolutionNotes() && { resolutionNote: violation.getResolutionNotes() }),
+        ...(violation.getAcknowledgedAt() && {
+          acknowledgedAt: violation.getAcknowledgedAt(),
+        }),
+        ...(violation.getAcknowledgedBy() && {
+          acknowledgedBy: violation.getAcknowledgedBy(),
+        }),
+        ...(violation.getResolvedAt() && {
+          resolvedAt: violation.getResolvedAt(),
+        }),
+        ...(violation.getResolvedBy() && {
+          resolvedBy: violation.getResolvedBy(),
+        }),
+        ...(violation.getResolutionNotes() && {
+          resolutionNote: violation.getResolutionNotes(),
+        }),
       },
       update: {
         status: violation.getStatus(),
-        ...(violation.getAcknowledgedAt() && { acknowledgedAt: violation.getAcknowledgedAt() }),
-        ...(violation.getAcknowledgedBy() && { acknowledgedBy: violation.getAcknowledgedBy() }),
-        ...(violation.getResolvedAt() && { resolvedAt: violation.getResolvedAt() }),
-        ...(violation.getResolvedBy() && { resolvedBy: violation.getResolvedBy() }),
-        ...(violation.getResolutionNotes() && { resolutionNote: violation.getResolutionNotes() }),
+        ...(violation.getAcknowledgedAt() && {
+          acknowledgedAt: violation.getAcknowledgedAt(),
+        }),
+        ...(violation.getAcknowledgedBy() && {
+          acknowledgedBy: violation.getAcknowledgedBy(),
+        }),
+        ...(violation.getResolvedAt() && {
+          resolvedAt: violation.getResolvedAt(),
+        }),
+        ...(violation.getResolvedBy() && {
+          resolvedBy: violation.getResolvedBy(),
+        }),
+        ...(violation.getResolutionNotes() && {
+          resolutionNote: violation.getResolutionNotes(),
+        }),
       },
     });
   }
