@@ -3,6 +3,10 @@ import { SyncSession } from "../entities/sync-session.entity";
 import { SyncSessionId } from "../value-objects/sync-session-id";
 import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { SyncStatus } from "../enums/sync-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface ISyncSessionRepository {
   save(session: SyncSession): Promise<void>;
@@ -13,7 +17,8 @@ export interface ISyncSessionRepository {
   findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-  ): Promise<SyncSession[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SyncSession>>;
   findActiveByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
@@ -25,5 +30,6 @@ export interface ISyncSessionRepository {
   findByStatus(
     workspaceId: WorkspaceId,
     status: SyncStatus,
-  ): Promise<SyncSession[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SyncSession>>;
 }

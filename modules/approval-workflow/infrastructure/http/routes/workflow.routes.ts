@@ -168,6 +168,13 @@ export async function workflowRoutes(
             workspaceId: { type: "string", format: "uuid" },
           },
         },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
+          },
+        },
       },
     },
     (request, reply) => controller.listPendingApprovals(request as any, reply),
@@ -185,6 +192,13 @@ export async function workflowRoutes(
           required: ["workspaceId"],
           properties: {
             workspaceId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },

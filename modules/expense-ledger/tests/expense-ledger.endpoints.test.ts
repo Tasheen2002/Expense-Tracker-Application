@@ -485,12 +485,14 @@ describe("Expense Ledger Module - Endpoint Tests", () => {
         const body = JSON.parse(response.body);
         console.log("List Expenses:", response.statusCode);
 
-        // Note: API may return 500 due to schema serialization issue
-        expect([200, 500]).toContain(response.statusCode);
-        if (response.statusCode === 200) {
-          expect(body.success).toBe(true);
-          expect(Array.isArray(body.data)).toBe(true);
-        }
+        expect(response.statusCode).toBe(200);
+        expect(body.success).toBe(true);
+        expect(Array.isArray(body.data.items)).toBe(true);
+        expect(body.data.pagination).toBeDefined();
+        expect(typeof body.data.pagination.total).toBe("number");
+        expect(typeof body.data.pagination.limit).toBe("number");
+        expect(typeof body.data.pagination.offset).toBe("number");
+        expect(typeof body.data.pagination.hasMore).toBe("boolean");
       });
 
       it("❌ should fail without auth token", async () => {

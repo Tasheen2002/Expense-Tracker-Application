@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["approval_workflow", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
+  schemas  = ["approval_workflow", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "event_outbox", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
 }
 
 model UserAccount {
@@ -1236,4 +1236,32 @@ enum TransactionStatus {
   DUPLICATE
 
   @@schema("bank_feed_sync")
+}
+
+// Event Outbox Schema
+model OutboxEvent {
+  id            String   @id @default(uuid())
+  aggregateType String   @map("aggregate_type")
+  aggregateId   String   @map("aggregate_id")
+  eventType     String   @map("event_type")
+  payload       Json
+  status        OutboxEventStatus
+  createdAt     DateTime @default(now()) @map("created_at")
+  processedAt   DateTime? @map("processed_at")
+  retryCount    Int      @default(0) @map("retry_count")
+  error         String?
+
+  @@index([status, createdAt])
+  @@index([aggregateId])
+  @@map("outbox_event")
+  @@schema("event_outbox")
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+
+  @@schema("event_outbox")
 }

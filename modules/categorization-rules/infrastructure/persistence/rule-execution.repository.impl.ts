@@ -10,6 +10,11 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -82,13 +87,19 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
     return this.toDomain(execution);
   }
 
-  async findByRuleId(ruleId: RuleId): Promise<RuleExecution[]> {
-    const executions = await this.prisma.ruleExecution.findMany({
-      where: { ruleId: ruleId.getValue() },
-      orderBy: { executedAt: "desc" },
-    });
-
-    return executions.map((execution) => this.toDomain(execution));
+  async findByRuleId(
+    ruleId: RuleId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<RuleExecution>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.ruleExecution,
+      {
+        where: { ruleId: ruleId.getValue() },
+        orderBy: { executedAt: "desc" },
+      },
+      (execution) => this.toDomain(execution),
+      options,
+    );
   }
 
   async findByExpenseId(
@@ -108,15 +119,17 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
 
   async findByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number,
-  ): Promise<RuleExecution[]> {
-    const executions = await this.prisma.ruleExecution.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-      orderBy: { executedAt: "desc" },
-      take: limit,
-    });
-
-    return executions.map((execution) => this.toDomain(execution));
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<RuleExecution>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.ruleExecution,
+      {
+        where: { workspaceId: workspaceId.getValue() },
+        orderBy: { executedAt: "desc" },
+      },
+      (execution) => this.toDomain(execution),
+      options,
+    );
   }
 
   async delete(id: RuleExecutionId): Promise<void> {

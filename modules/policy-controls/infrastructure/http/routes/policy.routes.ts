@@ -86,6 +86,14 @@ export async function policyRoutes(
                 "APPROVAL_REQUIRED",
               ],
             },
+            limit: {
+              type: "string",
+              description: "Number of policies to return",
+            },
+            offset: {
+              type: "string",
+              description: "Number of policies to skip",
+            },
           },
         },
       },

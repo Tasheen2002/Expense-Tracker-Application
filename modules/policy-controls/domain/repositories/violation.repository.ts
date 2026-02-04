@@ -2,6 +2,8 @@ import { PolicyViolation } from "../entities/policy-violation.entity";
 import { ViolationId } from "../value-objects/violation-id";
 import { ViolationStatus } from "../enums/violation-status.enum";
 import { ViolationSeverity } from "../enums/violation-severity.enum";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export interface ViolationFilters {
   status?: ViolationStatus;
@@ -19,10 +21,18 @@ export interface ViolationRepository {
   findByWorkspace(
     workspaceId: string,
     filters?: ViolationFilters,
-  ): Promise<PolicyViolation[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>>;
   findByExpense(expenseId: string): Promise<PolicyViolation[]>;
-  findByUser(workspaceId: string, userId: string): Promise<PolicyViolation[]>;
-  findPendingByWorkspace(workspaceId: string): Promise<PolicyViolation[]>;
+  findByUser(
+    workspaceId: string,
+    userId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>>;
+  findPendingByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>>;
   countByWorkspace(
     workspaceId: string,
     filters?: ViolationFilters,

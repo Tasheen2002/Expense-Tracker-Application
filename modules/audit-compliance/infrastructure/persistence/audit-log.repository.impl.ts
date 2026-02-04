@@ -4,10 +4,10 @@ import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-
 import {
   AuditLogRepository,
   AuditLogFilter,
-  PaginatedAuditLogs,
 } from "../../domain/repositories/audit-log.repository";
 import { AuditLog } from "../../domain/entities/audit-log.entity";
 import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { AuditAction } from "../../domain/value-objects/audit-action.vo";
 import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
 
@@ -49,7 +49,7 @@ export class AuditLogRepositoryImpl
     workspaceId: string,
     limit: number = 50,
     offset: number = 0,
-  ): Promise<PaginatedAuditLogs> {
+  ): Promise<PaginatedResult<AuditLog>> {
     const [items, total] = await Promise.all([
       this.prisma.auditLog.findMany({
         where: { workspaceId },
@@ -65,10 +65,13 @@ export class AuditLogRepositoryImpl
       total,
       limit,
       offset,
+      hasMore: offset + items.length < total,
     };
   }
 
-  async findByFilter(filter: AuditLogFilter): Promise<PaginatedAuditLogs> {
+  async findByFilter(
+    filter: AuditLogFilter,
+  ): Promise<PaginatedResult<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = {
       workspaceId: filter.workspaceId,
     };
@@ -110,6 +113,7 @@ export class AuditLogRepositoryImpl
       total,
       limit: filter.limit || 50,
       offset: filter.offset || 0,
+      hasMore: (filter.offset || 0) + items.length < total,
     };
   }
 

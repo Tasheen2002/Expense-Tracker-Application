@@ -267,13 +267,13 @@ export class CategoryRuleController {
   async listRules(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string };
+      Querystring: { activeOnly?: string; limit?: string; offset?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { activeOnly } = request.query;
+      const { activeOnly, limit, offset } = request.query;
 
       const userId = request.user.userId;
       if (!userId) {
@@ -284,23 +284,49 @@ export class CategoryRuleController {
       }
 
       if (activeOnly === "true") {
-        const query: GetActiveRulesByWorkspaceQuery = { workspaceId, userId };
-        const rules =
+        const query: GetActiveRulesByWorkspaceQuery = {
+          workspaceId,
+          userId,
+          limit: limit ? parseInt(limit) : undefined,
+          offset: offset ? parseInt(offset) : undefined,
+        };
+        const result =
           await this.getActiveRulesByWorkspaceHandler.execute(query);
         return ResponseHelper.success(
           reply,
           200,
           "Active category rules retrieved successfully",
-          rules,
+          {
+            items: result.items,
+            pagination: {
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
+            },
+          },
         );
       } else {
-        const query: GetRulesByWorkspaceQuery = { workspaceId, userId };
-        const rules = await this.getRulesByWorkspaceHandler.execute(query);
+        const query: GetRulesByWorkspaceQuery = {
+          workspaceId,
+          userId,
+          limit: limit ? parseInt(limit) : undefined,
+          offset: offset ? parseInt(offset) : undefined,
+        };
+        const result = await this.getRulesByWorkspaceHandler.execute(query);
         return ResponseHelper.success(
           reply,
           200,
           "Category rules retrieved successfully",
-          rules,
+          {
+            items: result.items,
+            pagination: {
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
+            },
+          },
         );
       }
     } catch (error) {

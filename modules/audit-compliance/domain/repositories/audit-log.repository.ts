@@ -1,5 +1,6 @@
 import { AuditLog } from "../entities/audit-log.entity";
 import { AuditLogId } from "../value-objects/audit-log-id.vo";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface AuditLogFilter {
   workspaceId: string;
@@ -13,13 +14,6 @@ export interface AuditLogFilter {
   offset?: number;
 }
 
-export interface PaginatedAuditLogs {
-  items: AuditLog[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 export interface AuditLogRepository {
   save(auditLog: AuditLog): Promise<void>;
   saveMany(auditLogs: AuditLog[]): Promise<void>;
@@ -28,8 +22,8 @@ export interface AuditLogRepository {
     workspaceId: string,
     limit?: number,
     offset?: number,
-  ): Promise<PaginatedAuditLogs>;
-  findByFilter(filter: AuditLogFilter): Promise<PaginatedAuditLogs>;
+  ): Promise<PaginatedResult<AuditLog>>;
+  findByFilter(filter: AuditLogFilter): Promise<PaginatedResult<AuditLog>>;
   findByEntityId(
     workspaceId: string,
     entityType: string,

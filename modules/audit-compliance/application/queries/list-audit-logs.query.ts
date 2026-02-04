@@ -1,5 +1,6 @@
 import { AuditService } from "../services/audit.service";
-import { PaginatedAuditLogs } from "../../domain/repositories/audit-log.repository";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { AuditLog } from "../../domain/entities/audit-log.entity";
 
 export interface ListAuditLogsFilters {
   userId?: string;
@@ -22,7 +23,7 @@ export class ListAuditLogsQuery {
 export class ListAuditLogsHandler {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(query: ListAuditLogsQuery): Promise<PaginatedAuditLogs> {
+  async handle(query: ListAuditLogsQuery): Promise<PaginatedResult<AuditLog>> {
     return await this.auditService.listAuditLogs(
       query.workspaceId,
       query.filters,

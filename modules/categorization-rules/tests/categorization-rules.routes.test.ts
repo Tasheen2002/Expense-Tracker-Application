@@ -373,9 +373,13 @@ describe("Category Rule Routes", () => {
         createMockRule(mockRuleId, "Rule 1"),
         createMockRule("123e4567-e89b-12d3-a456-426614174011", "Rule 2"),
       ];
-      ruleHandlers.getRulesByWorkspaceHandler.execute.mockResolvedValue(
-        mockRules,
-      );
+      ruleHandlers.getRulesByWorkspaceHandler.execute.mockResolvedValue({
+        items: mockRules,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -385,14 +389,19 @@ describe("Category Rule Routes", () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(body.data).toHaveLength(2);
+      expect(body.data.items).toHaveLength(2);
+      expect(body.data.pagination).toBeDefined();
     });
 
     it("should filter by active rules only", async () => {
       const mockRules = [createMockRule(mockRuleId, "Active Rule", true)];
-      ruleHandlers.getActiveRulesByWorkspaceHandler.execute.mockResolvedValue(
-        mockRules,
-      );
+      ruleHandlers.getActiveRulesByWorkspaceHandler.execute.mockResolvedValue({
+        items: mockRules,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -401,11 +410,18 @@ describe("Category Rule Routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(1);
+      expect(body.data.items).toHaveLength(1);
+      expect(body.data.pagination).toBeDefined();
     });
 
     it("should return empty array when no rules exist", async () => {
-      ruleHandlers.getRulesByWorkspaceHandler.execute.mockResolvedValue([]);
+      ruleHandlers.getRulesByWorkspaceHandler.execute.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -414,7 +430,8 @@ describe("Category Rule Routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(0);
+      expect(body.data.items).toHaveLength(0);
+      expect(body.data.pagination).toBeDefined();
     });
 
     it("should return 400 for invalid workspaceId", async () => {

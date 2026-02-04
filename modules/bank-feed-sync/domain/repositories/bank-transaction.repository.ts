@@ -4,6 +4,10 @@ import { BankTransactionId } from "../value-objects/bank-transaction-id";
 import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { SyncSessionId } from "../value-objects/sync-session-id";
 import { TransactionStatus } from "../enums/transaction-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface IBankTransactionRepository {
   save(transaction: BankTransaction): Promise<void>;
@@ -19,15 +23,24 @@ export interface IBankTransactionRepository {
   findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-  ): Promise<BankTransaction[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>>;
   findBySession(
     workspaceId: WorkspaceId,
     sessionId: SyncSessionId,
-  ): Promise<BankTransaction[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>>;
   findByStatus(
     workspaceId: WorkspaceId,
     status: TransactionStatus,
-  ): Promise<BankTransaction[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>>;
+  findByConnectionAndStatus(
+    workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
+    status: TransactionStatus,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>>;
   findPotentialDuplicates(
     workspaceId: WorkspaceId,
     amount: number,

@@ -59,6 +59,8 @@ export async function budgetPlanningRoutes(
               type: "string",
               enum: ["DRAFT", "ACTIVE", "COMPLETED", "ARCHIVED"],
             },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },

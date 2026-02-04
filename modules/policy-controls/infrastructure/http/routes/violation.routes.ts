@@ -35,6 +35,14 @@ export async function violationRoutes(
             userId: { type: "string", format: "uuid" },
             expenseId: { type: "string", format: "uuid" },
             policyId: { type: "string", format: "uuid" },
+            limit: {
+              type: "string",
+              description: "Number of violations to return",
+            },
+            offset: {
+              type: "string",
+              description: "Number of violations to skip",
+            },
           },
         },
       },

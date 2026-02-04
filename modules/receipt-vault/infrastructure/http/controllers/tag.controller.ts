@@ -99,19 +99,31 @@ export class TagController {
   async listTags(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply,
   ) {
     const { workspaceId } = request.params;
+    const { limit, offset } = request.query;
 
     try {
-      const tags = await this.listTagsHandler.handle({ workspaceId });
+      const result = await this.listTagsHandler.handle({
+        workspaceId,
+        options: {
+          limit: limit ? Number(limit) : undefined,
+          offset: offset ? Number(offset) : undefined,
+        },
+      });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Tags retrieved successfully",
-        data: tags.map((tag) => this.serializeTag(tag)),
+        data: result.items.map((tag) => this.serializeTag(tag)),
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

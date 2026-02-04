@@ -8,6 +8,10 @@ import {
   ExemptionNotFoundError,
   UnauthorizedExemptionApprovalError,
 } from "../../domain/errors/policy-controls.errors";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ExemptionService {
   constructor(private readonly exemptionRepository: ExemptionRepository) {}
@@ -53,19 +57,31 @@ export class ExemptionService {
   async listExemptions(
     workspaceId: string,
     filters?: ExemptionFilters,
-  ): Promise<PolicyExemption[]> {
-    return this.exemptionRepository.findByWorkspace(workspaceId, filters);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    return this.exemptionRepository.findByWorkspace(
+      workspaceId,
+      filters,
+      options,
+    );
   }
 
   async listExemptionsByUser(
     workspaceId: string,
     userId: string,
-  ): Promise<PolicyExemption[]> {
-    return this.exemptionRepository.findByUser(workspaceId, userId);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    return this.exemptionRepository.findByUser(workspaceId, userId, options);
   }
 
-  async listPendingExemptions(workspaceId: string): Promise<PolicyExemption[]> {
-    return this.exemptionRepository.findPendingByWorkspace(workspaceId);
+  async listPendingExemptions(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    return this.exemptionRepository.findPendingByWorkspace(
+      workspaceId,
+      options,
+    );
   }
 
   async countExemptions(

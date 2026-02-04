@@ -11,7 +11,6 @@ export { AuditResource } from "./domain/value-objects/audit-resource.vo";
 export {
   AuditLogRepository,
   AuditLogFilter,
-  PaginatedAuditLogs,
 } from "./domain/repositories/audit-log.repository";
 export { AuditActionType, AuditEntityType } from "./domain/enums";
 export {

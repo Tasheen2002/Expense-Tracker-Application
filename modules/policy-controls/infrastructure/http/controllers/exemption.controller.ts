@@ -87,20 +87,26 @@ export class ExemptionController {
         status?: ExemptionStatus;
         userId?: string;
         policyId?: string;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { status, userId, policyId } = request.query;
+      const { status, userId, policyId, limit, offset } = request.query;
 
-      const exemptions = await this.exemptionService.listExemptions(
+      const result = await this.exemptionService.listExemptions(
         workspaceId,
         {
           status,
           userId,
           policyId,
+        },
+        {
+          limit: limit ? parseInt(limit, 10) : 50,
+          offset: offset ? parseInt(offset, 10) : 0,
         },
       );
 
@@ -108,7 +114,15 @@ export class ExemptionController {
         success: true,
         statusCode: 200,
         message: "Exemptions retrieved successfully",
-        data: exemptions.map((e) => this.serializeExemption(e)),
+        data: {
+          items: result.items.map((e) => this.serializeExemption(e)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

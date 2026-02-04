@@ -5,9 +5,9 @@ import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
 import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
 import {
   AuditLogRepository,
-  PaginatedAuditLogs,
   AuditLogFilter,
 } from "../../domain/repositories/audit-log.repository";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -124,7 +124,7 @@ export class AuditService {
     filters?: ListAuditLogsFilters,
     limit: number = 50,
     offset: number = 0,
-  ): Promise<PaginatedAuditLogs> {
+  ): Promise<PaginatedResult<AuditLog>> {
     const filter: AuditLogFilter = {
       workspaceId,
       limit,

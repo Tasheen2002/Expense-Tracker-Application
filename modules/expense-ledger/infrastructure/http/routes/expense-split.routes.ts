@@ -105,8 +105,8 @@ export async function expenseSplitRoutes(
         querystring: {
           type: "object",
           properties: {
-            limit: { type: "number", minimum: 1, maximum: 100 },
-            offset: { type: "number", minimum: 0 },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },
@@ -179,8 +179,8 @@ export async function expenseSplitRoutes(
               type: "string",
               enum: ["PENDING", "PARTIAL", "SETTLED"],
             },
-            limit: { type: "number", minimum: 1, maximum: 100 },
-            offset: { type: "number", minimum: 0 },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },

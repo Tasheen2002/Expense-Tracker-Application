@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client'
-import { ReceiptId } from '../../domain/value-objects/receipt-id'
-import { TagId } from '../../domain/value-objects/tag-id'
-import { IReceiptTagRepository } from '../../domain/repositories/receipt-tag.repository'
+import { PrismaClient } from "@prisma/client";
+import { ReceiptId } from "../../domain/value-objects/receipt-id";
+import { TagId } from "../../domain/value-objects/tag-id";
+import { IReceiptTagRepository } from "../../domain/repositories/receipt-tag.repository";
 
 export class ReceiptTagRepositoryImpl implements IReceiptTagRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -12,7 +12,7 @@ export class ReceiptTagRepositoryImpl implements IReceiptTagRepository {
         receiptId: receiptId.getValue(),
         tagId: tagId.getValue(),
       },
-    })
+    });
   }
 
   async removeTag(receiptId: ReceiptId, tagId: TagId): Promise<void> {
@@ -23,36 +23,22 @@ export class ReceiptTagRepositoryImpl implements IReceiptTagRepository {
           tagId: tagId.getValue(),
         },
       },
-    })
+    });
   }
 
   async findTagsByReceipt(receiptId: ReceiptId): Promise<TagId[]> {
     const rows = await this.prisma.receiptTag.findMany({
       where: { receiptId: receiptId.getValue() },
       select: { tagId: true },
-    })
+    });
 
-    return rows.map((row) => TagId.fromString(row.tagId))
-  }
-
-  async findReceiptsByTag(tagId: TagId, workspaceId: string): Promise<ReceiptId[]> {
-    const rows = await this.prisma.receiptTag.findMany({
-      where: {
-        tagId: tagId.getValue(),
-        receipt: {
-          workspaceId,
-        },
-      },
-      select: { receiptId: true },
-    })
-
-    return rows.map((row) => ReceiptId.fromString(row.receiptId))
+    return rows.map((row) => TagId.fromString(row.tagId));
   }
 
   async removeAllTagsFromReceipt(receiptId: ReceiptId): Promise<void> {
     await this.prisma.receiptTag.deleteMany({
       where: { receiptId: receiptId.getValue() },
-    })
+    });
   }
 
   async hasTag(receiptId: ReceiptId, tagId: TagId): Promise<boolean> {
@@ -61,8 +47,8 @@ export class ReceiptTagRepositoryImpl implements IReceiptTagRepository {
         receiptId: receiptId.getValue(),
         tagId: tagId.getValue(),
       },
-    })
+    });
 
-    return count > 0
+    return count > 0;
   }
 }

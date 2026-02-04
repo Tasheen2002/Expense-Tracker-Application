@@ -3,6 +3,10 @@ import { CostCenter } from "../../domain/entities/cost-center.entity";
 import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class CostCenterRepositoryImpl implements CostCenterRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -76,12 +80,25 @@ export class CostCenterRepositoryImpl implements CostCenterRepository {
     });
   }
 
-  async findAll(workspaceId: WorkspaceId): Promise<CostCenter[]> {
-    const data = await this.prisma.costCenter.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-    });
+  async findAll(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CostCenter>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
 
-    return data.map((c) =>
+    const where = { workspaceId: workspaceId.getValue() };
+
+    const [data, total] = await Promise.all([
+      this.prisma.costCenter.findMany({
+        where,
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.costCenter.count({ where }),
+    ]);
+
+    const items = data.map((c) =>
       CostCenter.reconstitute({
         id: c.id,
         workspaceId: c.workspaceId,
@@ -93,6 +110,14 @@ export class CostCenterRepositoryImpl implements CostCenterRepository {
         updatedAt: c.updatedAt,
       }),
     );
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + data.length < total,
+    };
   }
 
   async delete(id: CostCenterId, workspaceId: WorkspaceId): Promise<void> {
