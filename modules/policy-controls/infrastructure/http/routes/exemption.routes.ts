@@ -68,6 +68,14 @@ export async function exemptionRoutes(
             },
             userId: { type: "string", format: "uuid" },
             policyId: { type: "string", format: "uuid" },
+            limit: {
+              type: "string",
+              description: "Number of exemptions to return",
+            },
+            offset: {
+              type: "string",
+              description: "Number of exemptions to skip",
+            },
           },
         },
       },

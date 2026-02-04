@@ -111,24 +111,42 @@ export class PolicyController {
   async listPolicies(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string; policyType?: PolicyType };
+      Querystring: {
+        activeOnly?: string;
+        policyType?: PolicyType;
+        limit?: string;
+        offset?: string;
+      };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const activeOnly = request.query.activeOnly === "true";
+      const { activeOnly, limit, offset } = request.query;
+      const activeOnlyBool = activeOnly === "true";
 
-      const policies = await this.policyService.listPolicies(
+      const result = await this.policyService.listPolicies(
         workspaceId,
-        activeOnly,
+        activeOnlyBool,
+        {
+          limit: limit ? parseInt(limit, 10) : 50,
+          offset: offset ? parseInt(offset, 10) : 0,
+        },
       );
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Policies retrieved successfully",
-        data: policies.map((policy) => this.serializePolicy(policy)),
+        data: {
+          policies: result.items.map((policy) => this.serializePolicy(policy)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

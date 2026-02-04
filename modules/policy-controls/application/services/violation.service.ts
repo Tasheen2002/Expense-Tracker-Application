@@ -6,6 +6,10 @@ import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
 import { ViolationId } from "../../domain/value-objects/violation-id";
 import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
 import { ViolationNotFoundError } from "../../domain/errors/policy-controls.errors";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ViolationService {
   constructor(private readonly violationRepository: ViolationRepository) {}
@@ -53,8 +57,13 @@ export class ViolationService {
   async listViolations(
     workspaceId: string,
     filters?: ViolationFilters,
-  ): Promise<PolicyViolation[]> {
-    return this.violationRepository.findByWorkspace(workspaceId, filters);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
+    return this.violationRepository.findByWorkspace(
+      workspaceId,
+      filters,
+      options,
+    );
   }
 
   async listViolationsByExpense(expenseId: string): Promise<PolicyViolation[]> {
@@ -64,12 +73,19 @@ export class ViolationService {
   async listViolationsByUser(
     workspaceId: string,
     userId: string,
-  ): Promise<PolicyViolation[]> {
-    return this.violationRepository.findByUser(workspaceId, userId);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
+    return this.violationRepository.findByUser(workspaceId, userId, options);
   }
 
-  async listPendingViolations(workspaceId: string): Promise<PolicyViolation[]> {
-    return this.violationRepository.findPendingByWorkspace(workspaceId);
+  async listPendingViolations(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
+    return this.violationRepository.findPendingByWorkspace(
+      workspaceId,
+      options,
+    );
   }
 
   async countViolations(

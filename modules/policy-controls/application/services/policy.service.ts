@@ -10,6 +10,10 @@ import {
   PolicyNotFoundError,
   PolicyNameAlreadyExistsError,
 } from "../../domain/errors/policy-controls.errors";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class PolicyService {
   constructor(private readonly policyRepository: PolicyRepository) {}
@@ -112,18 +116,20 @@ export class PolicyService {
   async listPolicies(
     workspaceId: string,
     activeOnly = false,
-  ): Promise<ExpensePolicy[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ExpensePolicy>> {
     if (activeOnly) {
-      return this.policyRepository.findActiveByWorkspace(workspaceId);
+      return this.policyRepository.findActiveByWorkspace(workspaceId, options);
     }
-    return this.policyRepository.findByWorkspace(workspaceId);
+    return this.policyRepository.findByWorkspace(workspaceId, options);
   }
 
   async listPoliciesByType(
     workspaceId: string,
     type: PolicyType,
-  ): Promise<ExpensePolicy[]> {
-    return this.policyRepository.findByType(workspaceId, type);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ExpensePolicy>> {
+    return this.policyRepository.findByType(workspaceId, type, options);
   }
 
   async activatePolicy(

@@ -41,15 +41,18 @@ export class ViolationController {
         userId?: string;
         expenseId?: string;
         policyId?: string;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { status, userId, expenseId, policyId } = request.query;
+      const { status, userId, expenseId, policyId, limit, offset } =
+        request.query;
 
-      const violations = await this.violationService.listViolations(
+      const result = await this.violationService.listViolations(
         workspaceId,
         {
           status,
@@ -57,13 +60,25 @@ export class ViolationController {
           expenseId,
           policyId,
         },
+        {
+          limit: limit ? parseInt(limit, 10) : 50,
+          offset: offset ? parseInt(offset, 10) : 0,
+        },
       );
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Violations retrieved successfully",
-        data: violations.map((v) => this.serializeViolation(v)),
+        data: {
+          violations: result.items.map((v) => this.serializeViolation(v)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
