@@ -68,7 +68,21 @@ export async function outboxEventRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object" },
+              data: {
+                type: "object",
+                properties: {
+                  items: { type: "array", items: { type: "object" } },
+                  pagination: {
+                    type: "object",
+                    properties: {
+                      total: { type: "number" },
+                      limit: { type: "number" },
+                      offset: { type: "number" },
+                      hasMore: { type: "boolean" },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -102,8 +116,24 @@ export async function outboxEventRoutes(
           200: {
             type: "object",
             properties: {
-              events: { type: "array" },
-              count: { type: "number" },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: {
+                type: "object",
+                properties: {
+                  items: { type: "array", items: { type: "object" } },
+                  pagination: {
+                    type: "object",
+                    properties: {
+                      total: { type: "number" },
+                      limit: { type: "number" },
+                      offset: { type: "number" },
+                      hasMore: { type: "boolean" },
+                    },
+                  },
+                },
+              },
             },
           },
         },
