@@ -144,8 +144,11 @@ export class ReceiptController {
         success: true,
         statusCode: 200,
         message: "Receipts retrieved successfully",
-        data: result.data.map((receipt) => this.serializeReceipt(receipt)),
-        pagination: result.pagination,
+        data: result.items.map((receipt) => this.serializeReceipt(receipt)),
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -170,7 +173,11 @@ export class ReceiptController {
         success: true,
         statusCode: 200,
         message: "Receipts retrieved successfully",
-        data: receipts.map((receipt) => this.serializeReceipt(receipt)),
+        data: receipts.items.map((receipt) => this.serializeReceipt(receipt)),
+        total: receipts.total,
+        limit: receipts.limit,
+        offset: receipts.offset,
+        hasMore: receipts.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -10,6 +10,11 @@ import {
 import { ReceiptStatus } from "../../domain/enums/receipt-status";
 import { ReceiptType } from "../../domain/enums/receipt-type";
 import { StorageProvider } from "../../domain/enums/storage-provider";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 // ... (imports)
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
@@ -87,55 +92,79 @@ export class ReceiptRepositoryImpl
   async findByExpenseId(
     expenseId: string,
     workspaceId: string,
-  ): Promise<Receipt[]> {
-    const rows = await this.prisma.receipt.findMany({
-      where: {
-        expenseId,
-        workspaceId,
-        deletedAt: null,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where: {
+          expenseId,
+          workspaceId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) => this.toDomain(row));
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
-  async findByWorkspace(workspaceId: string): Promise<Receipt[]> {
-    const rows = await this.prisma.receipt.findMany({
-      where: {
-        workspaceId,
-        deletedAt: null,
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where: {
+          workspaceId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) => this.toDomain(row));
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
-  async findByUserId(userId: string, workspaceId: string): Promise<Receipt[]> {
-    const rows = await this.prisma.receipt.findMany({
-      where: {
-        userId,
-        workspaceId,
-        deletedAt: null,
+  async findByUserId(
+    userId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where: {
+          userId,
+          workspaceId,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) => this.toDomain(row));
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
-  async findByFilters(filters: ReceiptFilters): Promise<Receipt[]> {
+  async findByFilters(
+    filters: ReceiptFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
     const where = this.buildWhereClause(filters);
 
-    const rows = await this.prisma.receipt.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: filters.skip,
-      take: filters.take,
-    });
-
-    return rows.map((row) => this.toDomain(row));
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where,
+        orderBy: { createdAt: "desc" },
+      },
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
   async countByFilters(filters: ReceiptFilters): Promise<number> {
@@ -201,30 +230,42 @@ export class ReceiptRepositoryImpl
     return row ? this.toDomain(row) : null;
   }
 
-  async findPendingReceipts(workspaceId: string): Promise<Receipt[]> {
-    const rows = await this.prisma.receipt.findMany({
-      where: {
-        workspaceId,
-        status: ReceiptStatus.PENDING,
-        deletedAt: null,
+  async findPendingReceipts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where: {
+          workspaceId,
+          status: ReceiptStatus.PENDING,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "asc" },
       },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return rows.map((row) => this.toDomain(row));
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
-  async findFailedReceipts(workspaceId: string): Promise<Receipt[]> {
-    const rows = await this.prisma.receipt.findMany({
-      where: {
-        workspaceId,
-        status: ReceiptStatus.FAILED,
-        deletedAt: null,
+  async findFailedReceipts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receipt,
+      {
+        where: {
+          workspaceId,
+          status: ReceiptStatus.FAILED,
+          deletedAt: null,
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) => this.toDomain(row));
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
   async exists(id: ReceiptId, workspaceId: string): Promise<boolean> {

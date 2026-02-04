@@ -9,6 +9,11 @@ import { PolicyId } from "../../domain/value-objects/policy-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { ViolationStatus } from "../../domain/enums/violation-status.enum";
 import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaViolationRepository implements ViolationRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -58,7 +63,8 @@ export class PrismaViolationRepository implements ViolationRepository {
   async findByWorkspace(
     workspaceId: string,
     filters?: ViolationFilters,
-  ): Promise<PolicyViolation[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
     const where: any = { workspaceId };
 
     if (filters?.status) {
@@ -77,12 +83,15 @@ export class PrismaViolationRepository implements ViolationRepository {
       where.policyId = filters.policyId;
     }
 
-    const rows = await (this.prisma as any).policyViolation.findMany({
-      where,
-      orderBy: { detectedAt: "desc" },
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).policyViolation,
+      {
+        where,
+        orderBy: { detectedAt: "desc" },
+      },
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
   async findByExpense(expenseId: string): Promise<PolicyViolation[]> {
@@ -97,27 +106,35 @@ export class PrismaViolationRepository implements ViolationRepository {
   async findByUser(
     workspaceId: string,
     userId: string,
-  ): Promise<PolicyViolation[]> {
-    const rows = await (this.prisma as any).policyViolation.findMany({
-      where: { workspaceId, userId },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).policyViolation,
+      {
+        where: { workspaceId, userId },
+        orderBy: { createdAt: "desc" },
+      },
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
   async findPendingByWorkspace(
     workspaceId: string,
-  ): Promise<PolicyViolation[]> {
-    const rows = await (this.prisma as any).policyViolation.findMany({
-      where: {
-        workspaceId,
-        status: ViolationStatus.PENDING,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<PolicyViolation>> {
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).policyViolation,
+      {
+        where: {
+          workspaceId,
+          status: ViolationStatus.PENDING,
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
   async countByWorkspace(

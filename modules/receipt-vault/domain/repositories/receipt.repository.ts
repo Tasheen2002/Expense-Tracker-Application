@@ -2,6 +2,10 @@ import { Receipt } from "../entities/receipt.entity";
 import { ReceiptId } from "../value-objects/receipt-id";
 import { ReceiptStatus } from "../enums/receipt-status";
 import { ReceiptType } from "../enums/receipt-type";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface ReceiptFilters {
   workspaceId: string;
@@ -13,23 +17,41 @@ export interface ReceiptFilters {
   isDeleted?: boolean;
   fromDate?: Date;
   toDate?: Date;
-  skip?: number;
-  take?: number;
 }
 
 export interface IReceiptRepository {
   save(receipt: Receipt): Promise<void>;
   findById(id: ReceiptId, workspaceId: string): Promise<Receipt | null>;
-  findByExpenseId(expenseId: string, workspaceId: string): Promise<Receipt[]>;
-  findByWorkspace(workspaceId: string): Promise<Receipt[]>;
-  findByUserId(userId: string, workspaceId: string): Promise<Receipt[]>;
-  findByFilters(filters: ReceiptFilters): Promise<Receipt[]>;
+  findByExpenseId(
+    expenseId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
+  findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
+  findByUserId(
+    userId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
+  findByFilters(
+    filters: ReceiptFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
   findByFileHash(
     fileHash: string,
     workspaceId: string,
   ): Promise<Receipt | null>;
-  findPendingReceipts(workspaceId: string): Promise<Receipt[]>;
-  findFailedReceipts(workspaceId: string): Promise<Receipt[]>;
+  findPendingReceipts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
+  findFailedReceipts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>>;
   exists(id: ReceiptId, workspaceId: string): Promise<boolean>;
   delete(id: ReceiptId, workspaceId: string): Promise<void>;
   countByWorkspace(workspaceId: string): Promise<number>;

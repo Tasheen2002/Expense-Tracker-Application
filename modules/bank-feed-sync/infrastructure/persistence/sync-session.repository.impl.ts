@@ -5,6 +5,11 @@ import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
 import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
 import { ISyncSessionRepository } from "../../domain/repositories/sync-session.repository";
 import { SyncStatus } from "../../domain/enums/sync-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaSyncSessionRepository implements ISyncSessionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -50,18 +55,22 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
   async findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-  ): Promise<SyncSession[]> {
-    const records = await this.prisma.syncSession.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        connectionId: connectionId.getValue(),
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SyncSession>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.syncSession,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          connectionId: connectionId.getValue(),
+        },
+        orderBy: {
+          startedAt: "desc",
+        },
       },
-      orderBy: {
-        startedAt: "desc",
-      },
-    });
-
-    return records.map((r) => this.toDomain(r));
+      (r) => this.toDomain(r),
+      options,
+    );
   }
 
   async findActiveByConnection(
@@ -104,18 +113,22 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
   async findByStatus(
     workspaceId: WorkspaceId,
     status: SyncStatus,
-  ): Promise<SyncSession[]> {
-    const records = await this.prisma.syncSession.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        status,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SyncSession>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.syncSession,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          status,
+        },
+        orderBy: {
+          startedAt: "desc",
+        },
       },
-      orderBy: {
-        startedAt: "desc",
-      },
-    });
-
-    return records.map((r) => this.toDomain(r));
+      (r) => this.toDomain(r),
+      options,
+    );
   }
 
   private toDomain(record: any): SyncSession {

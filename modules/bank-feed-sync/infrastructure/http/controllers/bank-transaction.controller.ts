@@ -33,14 +33,22 @@ export class BankTransactionController {
     }
 
     const { connectionId } = queryResult.data;
+    const { limit, offset } = request.query as {
+      limit?: string;
+      offset?: string;
+    };
 
-    const transactions = await this.getPendingTransactionsHandler.handle({
+    const result = await this.getPendingTransactionsHandler.handle({
       workspaceId,
       connectionId,
+      options: {
+        limit: limit ? parseInt(limit) : undefined,
+        offset: offset ? parseInt(offset) : undefined,
+      },
     });
 
     return reply.send({
-      transactions: transactions.map((t) => ({
+      transactions: result.items.map((t) => ({
         id: t.getId().getValue(),
         workspaceId: t.getWorkspaceId().getValue(),
         connectionId: t.getConnectionId().getValue(),
@@ -58,6 +66,10 @@ export class BankTransactionController {
         createdAt: t.getCreatedAt(),
         updatedAt: t.getUpdatedAt(),
       })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
     });
   }
 
@@ -134,14 +146,23 @@ export class BankTransactionController {
       connectionId: string;
     };
 
-    const transactions =
+    const { limit, offset } = request.query as {
+      limit?: string;
+      offset?: string;
+    };
+
+    const result =
       await this.bankTransactionService.getTransactionsByConnection(
         workspaceId,
         connectionId,
+        {
+          limit: limit ? parseInt(limit) : undefined,
+          offset: offset ? parseInt(offset) : undefined,
+        },
       );
 
     return reply.send({
-      transactions: transactions.map((t) => ({
+      transactions: result.items.map((t) => ({
         id: t.getId().getValue(),
         externalId: t.getExternalId(),
         amount: t.getAmount(),
@@ -153,6 +174,10 @@ export class BankTransactionController {
         expenseId: t.getExpenseId(),
         createdAt: t.getCreatedAt(),
       })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
     });
   }
 }

@@ -243,28 +243,41 @@ export class BudgetController {
         isActive?: string;
         createdBy?: string;
         currency?: string;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { status, isActive, createdBy, currency } = request.query;
+      const { status, isActive, createdBy, currency, limit, offset } =
+        request.query;
 
-      const budgets = await this.listBudgetsHandler.handle({
+      const result = await this.listBudgetsHandler.handle({
         workspaceId,
         status: status as BudgetStatus | undefined,
         isActive:
           isActive === "true" ? true : isActive === "false" ? false : undefined,
         createdBy,
         currency,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
       });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Budgets retrieved successfully",
-        data: budgets.map((budget) => this.serializeBudget(budget)),
+        data: {
+          items: result.items.map((budget) => this.serializeBudget(budget)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

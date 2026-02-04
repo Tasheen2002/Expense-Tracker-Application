@@ -1,7 +1,12 @@
-import { PrismaClient } from '@prisma/client'
-import { ReceiptTagDefinition } from '../../domain/entities/receipt-tag-definition.entity'
-import { TagId } from '../../domain/value-objects/tag-id'
-import { IReceiptTagDefinitionRepository } from '../../domain/repositories/receipt-tag-definition.repository'
+import { PrismaClient } from "@prisma/client";
+import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definition.entity";
+import { TagId } from "../../domain/value-objects/tag-id";
+import { IReceiptTagDefinitionRepository } from "../../domain/repositories/receipt-tag-definition.repository";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinitionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -22,21 +27,27 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
         color: tag.getColor(),
         description: tag.getDescription(),
       },
-    })
+    });
   }
 
-  async findById(id: TagId, workspaceId: string): Promise<ReceiptTagDefinition | null> {
+  async findById(
+    id: TagId,
+    workspaceId: string,
+  ): Promise<ReceiptTagDefinition | null> {
     const row = await this.prisma.receiptTagDefinition.findFirst({
       where: {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    return row ? this.toDomain(row) : null
+    return row ? this.toDomain(row) : null;
   }
 
-  async findByName(name: string, workspaceId: string): Promise<ReceiptTagDefinition | null> {
+  async findByName(
+    name: string,
+    workspaceId: string,
+  ): Promise<ReceiptTagDefinition | null> {
     const row = await this.prisma.receiptTagDefinition.findUnique({
       where: {
         workspaceId_name: {
@@ -44,18 +55,24 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
           name,
         },
       },
-    })
+    });
 
-    return row ? this.toDomain(row) : null
+    return row ? this.toDomain(row) : null;
   }
 
-  async findByWorkspace(workspaceId: string): Promise<ReceiptTagDefinition[]> {
-    const rows = await this.prisma.receiptTagDefinition.findMany({
-      where: { workspaceId },
-      orderBy: { name: 'asc' },
-    })
-
-    return rows.map((row) => this.toDomain(row))
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ReceiptTagDefinition>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.receiptTagDefinition,
+      {
+        where: { workspaceId },
+        orderBy: { name: "asc" },
+      },
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 
   async exists(id: TagId, workspaceId: string): Promise<boolean> {
@@ -64,9 +81,9 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    return count > 0
+    return count > 0;
   }
 
   async existsByName(name: string, workspaceId: string): Promise<boolean> {
@@ -75,9 +92,9 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
         name,
         workspaceId,
       },
-    })
+    });
 
-    return count > 0
+    return count > 0;
   }
 
   async delete(id: TagId, workspaceId: string): Promise<void> {
@@ -85,7 +102,7 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
       where: {
         id: id.getValue(),
       },
-    })
+    });
   }
 
   private toDomain(row: any): ReceiptTagDefinition {
@@ -96,6 +113,6 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
       color: row.color,
       description: row.description,
       createdAt: row.createdAt,
-    })
+    });
   }
 }

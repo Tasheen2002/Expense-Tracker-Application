@@ -3,6 +3,8 @@ import { Department } from "../../domain/entities/department.entity";
 import { DepartmentRepository } from "../../domain/repositories/department.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export class DepartmentRepositoryImpl implements DepartmentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -86,12 +88,25 @@ export class DepartmentRepositoryImpl implements DepartmentRepository {
     });
   }
 
-  async findAll(workspaceId: WorkspaceId): Promise<Department[]> {
-    const data = await this.prisma.department.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-    });
+  async findAll(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Department>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
 
-    return data.map((d) =>
+    const where = { workspaceId: workspaceId.getValue() };
+
+    const [data, total] = await Promise.all([
+      this.prisma.department.findMany({
+        where,
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.department.count({ where }),
+    ]);
+
+    const items = data.map((d) =>
       Department.reconstitute({
         id: d.id,
         workspaceId: d.workspaceId,
@@ -105,6 +120,14 @@ export class DepartmentRepositoryImpl implements DepartmentRepository {
         updatedAt: d.updatedAt,
       }),
     );
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + data.length < total,
+    };
   }
 
   async delete(id: DepartmentId, workspaceId: WorkspaceId): Promise<void> {

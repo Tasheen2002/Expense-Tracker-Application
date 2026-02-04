@@ -10,6 +10,11 @@ import { RuleCondition } from "../../domain/value-objects/rule-condition";
 import { RuleConditionType } from "../../domain/enums/rule-condition-type";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaCategoryRuleRepository implements CategoryRuleRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -49,27 +54,37 @@ export class PrismaCategoryRuleRepository implements CategoryRuleRepository {
     return this.toDomain(rule);
   }
 
-  async findByWorkspaceId(workspaceId: WorkspaceId): Promise<CategoryRule[]> {
-    const rules = await this.prisma.categoryRule.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-    });
-
-    return rules.map((rule) => this.toDomain(rule));
+  async findByWorkspaceId(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CategoryRule>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.categoryRule,
+      {
+        where: { workspaceId: workspaceId.getValue() },
+        orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+      },
+      (rule) => this.toDomain(rule),
+      options,
+    );
   }
 
   async findActiveByWorkspaceId(
     workspaceId: WorkspaceId,
-  ): Promise<CategoryRule[]> {
-    const rules = await this.prisma.categoryRule.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        isActive: true,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CategoryRule>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.categoryRule,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          isActive: true,
+        },
+        orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
       },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
-    });
-
-    return rules.map((rule) => this.toDomain(rule));
+      (rule) => this.toDomain(rule),
+      options,
+    );
   }
 
   async findByName(

@@ -8,6 +8,11 @@ import { PolicyId } from "../../domain/value-objects/policy-id";
 import { PolicyType } from "../../domain/enums/policy-type.enum";
 import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaPolicyRepository implements PolicyRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -49,40 +54,56 @@ export class PrismaPolicyRepository implements PolicyRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async findByWorkspace(workspaceId: string): Promise<ExpensePolicy[]> {
-    const rows = await (this.prisma as any).expensePolicy.findMany({
-      where: { workspaceId },
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ExpensePolicy>> {
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).expensePolicy,
+      {
+        where: { workspaceId },
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      },
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
-  async findActiveByWorkspace(workspaceId: string): Promise<ExpensePolicy[]> {
-    const rows = await (this.prisma as any).expensePolicy.findMany({
-      where: {
-        workspaceId,
-        isActive: true,
+  async findActiveByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ExpensePolicy>> {
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).expensePolicy,
+      {
+        where: {
+          workspaceId,
+          isActive: true,
+        },
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       },
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
   async findByType(
     workspaceId: string,
     policyType: PolicyType,
-  ): Promise<ExpensePolicy[]> {
-    const rows = await (this.prisma as any).expensePolicy.findMany({
-      where: {
-        workspaceId,
-        policyType,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ExpensePolicy>> {
+    return PrismaRepositoryHelper.paginate(
+      (this.prisma as any).expensePolicy,
+      {
+        where: {
+          workspaceId,
+          policyType,
+        },
+        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       },
-      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-    });
-
-    return rows.map((row: any) => this.toDomain(row));
+      (row: any) => this.toDomain(row),
+      options,
+    );
   }
 
   async findByNameInWorkspace(

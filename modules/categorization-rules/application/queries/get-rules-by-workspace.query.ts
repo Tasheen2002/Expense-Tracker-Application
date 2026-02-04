@@ -1,9 +1,12 @@
 import { CategoryRuleService } from "../services/category-rule.service";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface GetRulesByWorkspaceQuery {
   workspaceId: string;
   userId: string;
+  limit?: number;
+  offset?: number;
 }
 
 export class GetRulesByWorkspaceHandler {

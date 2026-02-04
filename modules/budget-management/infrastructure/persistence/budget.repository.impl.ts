@@ -8,6 +8,8 @@ import {
   IBudgetRepository,
   BudgetFilters,
 } from "../../domain/repositories/budget.repository";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 // ... (imports)
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
@@ -74,16 +76,41 @@ export class BudgetRepositoryImpl
     return this.toDomain(row);
   }
 
-  async findByWorkspace(workspaceId: string): Promise<Budget[]> {
-    const rows = await this.prisma.budget.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: "desc" },
-    });
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
 
-    return rows.map((row) => this.toDomain(row));
+    const [rows, total] = await Promise.all([
+      this.prisma.budget.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.budget.count({ where: { workspaceId } }),
+    ]);
+
+    const items = rows.map((row) => this.toDomain(row));
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+    };
   }
 
-  async findByFilters(filters: BudgetFilters): Promise<Budget[]> {
+  async findByFilters(
+    filters: BudgetFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
     const where: any = {
       workspaceId: filters.workspaceId,
     };
@@ -109,43 +136,96 @@ export class BudgetRepositoryImpl
       }
     }
 
-    const rows = await this.prisma.budget.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const [rows, total] = await Promise.all([
+      this.prisma.budget.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.budget.count({ where }),
+    ]);
 
-    return rows.map((row) => this.toDomain(row));
+    const items = rows.map((row) => this.toDomain(row));
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+    };
   }
 
-  async findActiveBudgets(workspaceId: string): Promise<Budget[]> {
+  async findActiveBudgets(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
     const now = new Date();
 
-    const rows = await this.prisma.budget.findMany({
-      where: {
-        workspaceId,
-        status: BudgetStatus.ACTIVE,
-        startDate: { lte: now },
-        endDate: { gte: now },
-      },
-      orderBy: { startDate: "desc" },
-    });
+    const where = {
+      workspaceId,
+      status: BudgetStatus.ACTIVE,
+      startDate: { lte: now },
+      endDate: { gte: now },
+    };
 
-    return rows.map((row) => this.toDomain(row));
+    const [rows, total] = await Promise.all([
+      this.prisma.budget.findMany({
+        where,
+        orderBy: { startDate: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.budget.count({ where }),
+    ]);
+
+    const items = rows.map((row) => this.toDomain(row));
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+    };
   }
 
-  async findExpiredBudgets(workspaceId: string): Promise<Budget[]> {
+  async findExpiredBudgets(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
     const now = new Date();
 
-    const rows = await this.prisma.budget.findMany({
-      where: {
-        workspaceId,
-        status: BudgetStatus.ACTIVE,
-        endDate: { lt: now },
-      },
-      orderBy: { endDate: "asc" },
-    });
+    const where = {
+      workspaceId,
+      status: BudgetStatus.ACTIVE,
+      endDate: { lt: now },
+    };
 
-    return rows.map((row) => this.toDomain(row));
+    const [rows, total] = await Promise.all([
+      this.prisma.budget.findMany({
+        where,
+        orderBy: { endDate: "asc" },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.budget.count({ where }),
+    ]);
+
+    const items = rows.map((row) => this.toDomain(row));
+
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + rows.length < total,
+    };
   }
 
   async delete(id: BudgetId, workspaceId: string): Promise<void> {

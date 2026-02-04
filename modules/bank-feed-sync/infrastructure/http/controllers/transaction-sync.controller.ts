@@ -57,14 +57,22 @@ export class TransactionSyncController {
       workspaceId: string;
       connectionId: string;
     };
+    const { limit, offset } = request.query as {
+      limit?: string;
+      offset?: string;
+    };
 
-    const sessions = await this.getSyncHistoryHandler.handle({
+    const result = await this.getSyncHistoryHandler.handle({
       workspaceId,
       connectionId,
+      options: {
+        limit: limit ? parseInt(limit) : undefined,
+        offset: offset ? parseInt(offset) : undefined,
+      },
     });
 
     return reply.send({
-      sessions: sessions.map((s) => ({
+      sessions: result.items.map((s) => ({
         id: s.getId().getValue(),
         workspaceId: s.getWorkspaceId().getValue(),
         connectionId: s.getConnectionId().getValue(),
@@ -78,6 +86,10 @@ export class TransactionSyncController {
         createdAt: s.getCreatedAt(),
         updatedAt: s.getUpdatedAt(),
       })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
     });
   }
 
@@ -111,17 +123,30 @@ export class TransactionSyncController {
 
   async getActiveSyncs(request: AuthenticatedRequest, reply: FastifyReply) {
     const { workspaceId } = request.params as { workspaceId: string };
+    const { limit, offset } = request.query as {
+      limit?: string;
+      offset?: string;
+    };
 
-    const sessions =
-      await this.transactionSyncService.getActiveSyncs(workspaceId);
+    const result = await this.transactionSyncService.getActiveSyncs(
+      workspaceId,
+      {
+        limit: limit ? parseInt(limit) : undefined,
+        offset: offset ? parseInt(offset) : undefined,
+      },
+    );
 
     return reply.send({
-      sessions: sessions.map((s) => ({
+      sessions: result.items.map((s) => ({
         id: s.getId().getValue(),
         connectionId: s.getConnectionId().getValue(),
         status: s.getStatus(),
         startedAt: s.getStartedAt(),
       })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
     });
   }
 }

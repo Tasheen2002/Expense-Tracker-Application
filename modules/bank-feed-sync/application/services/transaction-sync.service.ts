@@ -19,6 +19,10 @@ import {
   MIN_SYNC_INTERVAL_MINUTES,
   DEFAULT_LOOKBACK_DAYS,
 } from "../../domain/constants/bank-feed-sync.constants";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface BankAPITransaction {
   externalId: string;
@@ -182,11 +186,18 @@ export class TransactionSyncService {
     }
   }
 
-  async getSyncHistory(query: GetSyncHistoryQuery): Promise<SyncSession[]> {
+  // Updated to include PaginationOptions (not yet in Query interface, but will be)
+  async getSyncHistory(
+    query: GetSyncHistoryQuery & { options?: PaginationOptions },
+  ): Promise<PaginatedResult<SyncSession>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const connectionId = BankConnectionId.fromString(query.connectionId);
 
-    return this.sessionRepository.findByConnection(workspaceId, connectionId);
+    return this.sessionRepository.findByConnection(
+      workspaceId,
+      connectionId,
+      query.options,
+    );
   }
 
   async getSyncSession(
@@ -205,8 +216,15 @@ export class TransactionSyncService {
     return session;
   }
 
-  async getActiveSyncs(workspaceId: string): Promise<SyncSession[]> {
+  async getActiveSyncs(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SyncSession>> {
     const wsId = WorkspaceId.fromString(workspaceId);
-    return this.sessionRepository.findByStatus(wsId, SyncStatus.IN_PROGRESS);
+    return this.sessionRepository.findByStatus(
+      wsId,
+      SyncStatus.IN_PROGRESS,
+      options,
+    );
   }
 }

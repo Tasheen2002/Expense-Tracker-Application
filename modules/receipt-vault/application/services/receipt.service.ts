@@ -22,6 +22,10 @@ import {
 } from "../../domain/errors/receipt.errors";
 import { UnauthorizedAccessError } from "../../domain/errors/unauthorized-access.error";
 import { UpdateReceiptMetadataDto } from "../commands/update-receipt-metadata.command";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ReceiptService {
   constructor(
@@ -83,68 +87,53 @@ export class ReceiptService {
     );
   }
 
-  async getReceiptsByWorkspace(workspaceId: string): Promise<Receipt[]> {
-    return await this.receiptRepository.findByWorkspace(workspaceId);
+  async getReceiptsByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return await this.receiptRepository.findByWorkspace(workspaceId, options);
   }
 
   async getReceiptsByExpense(
     expenseId: string,
     workspaceId: string,
-  ): Promise<Receipt[]> {
-    return await this.receiptRepository.findByExpenseId(expenseId, workspaceId);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return await this.receiptRepository.findByExpenseId(
+      expenseId,
+      workspaceId,
+      options,
+    );
   }
 
   async getReceiptsByUser(
     userId: string,
     workspaceId: string,
-  ): Promise<Receipt[]> {
-    return await this.receiptRepository.findByUserId(userId, workspaceId);
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return await this.receiptRepository.findByUserId(
+      userId,
+      workspaceId,
+      options,
+    );
   }
 
-  async filterReceipts(filters: ReceiptFilters): Promise<Receipt[]> {
-    return await this.receiptRepository.findByFilters(filters);
+  async filterReceipts(
+    filters: ReceiptFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Receipt>> {
+    return await this.receiptRepository.findByFilters(filters, options);
   }
 
+  // Deprecated/Refactored to match standard
   async filterReceiptsPaginated(
     filters: ReceiptFilters & { page?: number; pageSize?: number },
-  ): Promise<{
-    data: Receipt[];
-    pagination: {
-      page: number;
-      pageSize: number;
-      total: number;
-      totalPages: number;
-      hasNext: boolean;
-      hasPrevious: boolean;
-    };
-  }> {
+  ): Promise<PaginatedResult<Receipt>> {
     const page = filters.page || 1;
     const pageSize = filters.pageSize || 20;
-    const skip = (page - 1) * pageSize;
+    const offset = (page - 1) * pageSize;
 
-    // Get total count
-    const total = await this.receiptRepository.countByFilters(filters);
-
-    // Get paginated results
-    const data = await this.receiptRepository.findByFilters({
-      ...filters,
-      skip,
-      take: pageSize,
-    });
-
-    const totalPages = Math.ceil(total / pageSize);
-
-    return {
-      data,
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrevious: page > 1,
-      },
-    };
+    return await this.filterReceipts(filters, { limit: pageSize, offset });
   }
 
   async linkToExpense(

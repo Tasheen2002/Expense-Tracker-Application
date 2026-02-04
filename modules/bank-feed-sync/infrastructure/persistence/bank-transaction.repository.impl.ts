@@ -7,6 +7,11 @@ import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
 import { IBankTransactionRepository } from "../../domain/repositories/bank-transaction.repository";
 import { TransactionStatus } from "../../domain/enums/transaction-status.enum";
 import { DUPLICATE_TIME_THRESHOLD_MINUTES } from "../../domain/constants/bank-feed-sync.constants";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaBankTransactionRepository implements IBankTransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -97,52 +102,87 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
   async findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-  ): Promise<BankTransaction[]> {
-    const records = await this.prisma.bankTransaction.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        connectionId: connectionId.getValue(),
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankTransaction,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          connectionId: connectionId.getValue(),
+        },
+        orderBy: {
+          transactionDate: "desc",
+        },
       },
-      orderBy: {
-        transactionDate: "desc",
-      },
-    });
-
-    return records.map((r) => this.toDomain(r));
+      (r) => this.toDomain(r),
+      options,
+    );
   }
 
   async findBySession(
     workspaceId: WorkspaceId,
     sessionId: SyncSessionId,
-  ): Promise<BankTransaction[]> {
-    const records = await this.prisma.bankTransaction.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        sessionId: sessionId.getValue(),
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankTransaction,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          sessionId: sessionId.getValue(),
+        },
+        orderBy: {
+          transactionDate: "desc",
+        },
       },
-      orderBy: {
-        transactionDate: "desc",
-      },
-    });
-
-    return records.map((r) => this.toDomain(r));
+      (r) => this.toDomain(r),
+      options,
+    );
   }
 
   async findByStatus(
     workspaceId: WorkspaceId,
     status: TransactionStatus,
-  ): Promise<BankTransaction[]> {
-    const records = await this.prisma.bankTransaction.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        status,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankTransaction,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          status,
+        },
+        orderBy: {
+          transactionDate: "desc",
+        },
       },
-      orderBy: {
-        transactionDate: "desc",
-      },
-    });
+      (r) => this.toDomain(r),
+      options,
+    );
+  }
 
-    return records.map((r) => this.toDomain(r));
+  async findByConnectionAndStatus(
+    workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
+    status: TransactionStatus,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankTransaction,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          connectionId: connectionId.getValue(),
+          status,
+        },
+        orderBy: {
+          transactionDate: "desc",
+        },
+      },
+      (r) => this.toDomain(r),
+      options,
+    );
   }
 
   async findPotentialDuplicates(

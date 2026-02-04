@@ -12,6 +12,8 @@ import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { AlertId } from "../../domain/value-objects/alert-id";
 import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
 import { Decimal } from "@prisma/client/runtime/library";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 import {
   BudgetNotFoundError,
@@ -206,16 +208,25 @@ export class BudgetService {
     );
   }
 
-  async getBudgetsByWorkspace(workspaceId: string): Promise<Budget[]> {
-    return await this.budgetRepository.findByWorkspace(workspaceId);
+  async getBudgetsByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    return await this.budgetRepository.findByWorkspace(workspaceId, options);
   }
 
-  async getActiveBudgets(workspaceId: string): Promise<Budget[]> {
-    return await this.budgetRepository.findActiveBudgets(workspaceId);
+  async getActiveBudgets(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    return await this.budgetRepository.findActiveBudgets(workspaceId, options);
   }
 
-  async filterBudgets(filters: BudgetFilters): Promise<Budget[]> {
-    return await this.budgetRepository.findByFilters(filters);
+  async filterBudgets(
+    filters: BudgetFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Budget>> {
+    return await this.budgetRepository.findByFilters(filters, options);
   }
 
   // Allocation methods

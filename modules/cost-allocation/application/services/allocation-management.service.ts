@@ -20,6 +20,8 @@ import {
 } from "../../domain/errors/cost-allocation.errors";
 import { Decimal } from "@prisma/client/runtime/library";
 import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export class AllocationManagementService {
   constructor(
@@ -91,9 +93,13 @@ export class AllocationManagementService {
     return department;
   }
 
-  async listDepartments(workspaceId: string): Promise<Department[]> {
+  async listDepartments(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Department>> {
     return this.departmentRepository.findAll(
       WorkspaceId.fromString(workspaceId),
+      options,
     );
   }
 
@@ -248,9 +254,13 @@ export class AllocationManagementService {
     return costCenter;
   }
 
-  async listCostCenters(workspaceId: string): Promise<CostCenter[]> {
+  async listCostCenters(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CostCenter>> {
     return this.costCenterRepository.findAll(
       WorkspaceId.fromString(workspaceId),
+      options,
     );
   }
 
@@ -404,8 +414,14 @@ export class AllocationManagementService {
     return project;
   }
 
-  async listProjects(workspaceId: string): Promise<Project[]> {
-    return this.projectRepository.findAll(WorkspaceId.fromString(workspaceId));
+  async listProjects(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Project>> {
+    return this.projectRepository.findAll(
+      WorkspaceId.fromString(workspaceId),
+      options,
+    );
   }
 
   async updateProject(params: {

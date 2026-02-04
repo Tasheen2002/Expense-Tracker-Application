@@ -7,6 +7,10 @@ import { TransactionStatus } from "../../domain/enums/transaction-status.enum";
 import { BankTransactionNotFoundError } from "../../domain/errors";
 import { ProcessTransactionCommand } from "../commands";
 import { GetPendingTransactionsQuery } from "../queries";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class BankTransactionService {
   constructor(
@@ -56,24 +60,24 @@ export class BankTransactionService {
   }
 
   async getPendingTransactions(
-    query: GetPendingTransactionsQuery,
-  ): Promise<BankTransaction[]> {
+    query: GetPendingTransactionsQuery & { options?: PaginationOptions },
+  ): Promise<PaginatedResult<BankTransaction>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
 
     if (query.connectionId) {
       const connectionId = BankConnectionId.fromString(query.connectionId);
-      const allTransactions = await this.transactionRepository.findByConnection(
+      return this.transactionRepository.findByConnectionAndStatus(
         workspaceId,
         connectionId,
-      );
-      return allTransactions.filter(
-        (t) => t.status === TransactionStatus.PENDING,
+        TransactionStatus.PENDING,
+        query.options,
       );
     }
 
     return this.transactionRepository.findByStatus(
       workspaceId,
       TransactionStatus.PENDING,
+      query.options,
     );
   }
 
@@ -96,10 +100,11 @@ export class BankTransactionService {
   async getTransactionsByConnection(
     workspaceId: string,
     connectionId: string,
-  ): Promise<BankTransaction[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankTransaction>> {
     const wsId = WorkspaceId.fromString(workspaceId);
     const connId = BankConnectionId.fromString(connectionId);
 
-    return this.transactionRepository.findByConnection(wsId, connId);
+    return this.transactionRepository.findByConnection(wsId, connId, options);
   }
 }
