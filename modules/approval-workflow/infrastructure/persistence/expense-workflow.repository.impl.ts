@@ -1,4 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import {
+  PrismaClient,
+  WorkflowStatus as PrismaWorkflowStatus,
+  ApprovalStatus as PrismaApprovalStatus,
+  Prisma,
+} from "@prisma/client";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -28,14 +33,14 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           workspaceId: workflow.getWorkspaceId().getValue(),
           userId: workflow.getUserId().getValue(),
           chainId: workflow.getChainId().getValue(),
-          status: workflow.getStatus() as any,
+          status: workflow.getStatus() as unknown as PrismaWorkflowStatus,
           currentStepNumber: workflow.getCurrentStepNumber(),
           createdAt: workflow.getCreatedAt(),
           updatedAt: workflow.getUpdatedAt(),
           completedAt: workflow.getCompletedAt(),
         },
         update: {
-          status: workflow.getStatus() as any,
+          status: workflow.getStatus() as unknown as PrismaWorkflowStatus,
           currentStepNumber: workflow.getCurrentStepNumber(),
           updatedAt: workflow.getUpdatedAt(),
           completedAt: workflow.getCompletedAt(),
@@ -52,7 +57,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
             stepNumber: step.getStepNumber(),
             approverId: step.getApproverId().getValue(),
             delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: step.getStatus() as any,
+            status: step.getStatus() as unknown as PrismaApprovalStatus,
             comments: step.getComments(),
             processedAt: step.getProcessedAt(),
             createdAt: step.getCreatedAt(),
@@ -60,7 +65,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           },
           update: {
             delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: step.getStatus() as any,
+            status: step.getStatus() as unknown as PrismaApprovalStatus,
             comments: step.getComments(),
             processedAt: step.getProcessedAt(),
             updatedAt: step.getUpdatedAt(),
@@ -111,7 +116,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
-    const where = {
+    const where: Prisma.ExpenseWorkflowWhereInput = {
       workspaceId,
       status: { in: ["PENDING", "IN_PROGRESS"] },
       steps: {
@@ -122,7 +127,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           ],
         },
       },
-    } as any;
+    };
 
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;

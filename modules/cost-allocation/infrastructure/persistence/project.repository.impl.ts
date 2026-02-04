@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { Project } from "../../domain/entities/project.entity";
 import { ProjectRepository } from "../../domain/repositories/project.repository";
 import { ProjectId } from "../../domain/value-objects/project-id";
@@ -7,6 +7,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class ProjectRepositoryImpl implements ProjectRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -100,44 +101,30 @@ export class ProjectRepositoryImpl implements ProjectRepository {
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Project>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const where = { workspaceId: workspaceId.getValue() };
-
-    const [data, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.project.count({ where }),
-    ]);
-
-    const items = data.map((p) =>
-      Project.reconstitute({
-        id: p.id,
-        workspaceId: p.workspaceId,
-        name: p.name,
-        code: p.code,
-        description: p.description,
-        startDate: p.startDate,
-        endDate: p.endDate,
-        managerId: p.managerId,
-        budget: p.budget,
-        isActive: p.isActive,
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
-      }),
-    );
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + data.length < total,
+    const where: Prisma.ProjectWhereInput = {
+      workspaceId: workspaceId.getValue(),
     };
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.project,
+      { where },
+      (p) =>
+        Project.reconstitute({
+          id: p.id,
+          workspaceId: p.workspaceId,
+          name: p.name,
+          code: p.code,
+          description: p.description,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          managerId: p.managerId,
+          budget: p.budget,
+          isActive: p.isActive,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        }),
+      options,
+    );
   }
 
   async delete(id: ProjectId, workspaceId: WorkspaceId): Promise<void> {

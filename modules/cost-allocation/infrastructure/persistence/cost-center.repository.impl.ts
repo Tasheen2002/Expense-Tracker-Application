@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { CostCenter } from "../../domain/entities/cost-center.entity";
 import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
@@ -7,6 +7,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class CostCenterRepositoryImpl implements CostCenterRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -84,40 +85,26 @@ export class CostCenterRepositoryImpl implements CostCenterRepository {
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<CostCenter>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const where = { workspaceId: workspaceId.getValue() };
-
-    const [data, total] = await Promise.all([
-      this.prisma.costCenter.findMany({
-        where,
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.costCenter.count({ where }),
-    ]);
-
-    const items = data.map((c) =>
-      CostCenter.reconstitute({
-        id: c.id,
-        workspaceId: c.workspaceId,
-        name: c.name,
-        code: c.code,
-        description: c.description,
-        isActive: c.isActive,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-      }),
-    );
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + data.length < total,
+    const where: Prisma.CostCenterWhereInput = {
+      workspaceId: workspaceId.getValue(),
     };
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.costCenter,
+      { where },
+      (c) =>
+        CostCenter.reconstitute({
+          id: c.id,
+          workspaceId: c.workspaceId,
+          name: c.name,
+          code: c.code,
+          description: c.description,
+          isActive: c.isActive,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        }),
+      options,
+    );
   }
 
   async delete(id: CostCenterId, workspaceId: WorkspaceId): Promise<void> {

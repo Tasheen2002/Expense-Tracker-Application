@@ -26,13 +26,13 @@ describe("OutboxEventId", () => {
 
     it("should throw error for empty string", () => {
       expect(() => OutboxEventId.fromString("")).toThrow(
-        "OutboxEventId cannot be empty",
+        "Invalid OutboxEventId format",
       );
     });
 
     it("should throw error for whitespace string", () => {
       expect(() => OutboxEventId.fromString("   ")).toThrow(
-        "OutboxEventId cannot be empty",
+        "Invalid OutboxEventId format",
       );
     });
   });

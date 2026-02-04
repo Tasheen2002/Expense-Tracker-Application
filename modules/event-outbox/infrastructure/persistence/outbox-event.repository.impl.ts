@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IOutboxEventRepository } from "../../domain/repositories/outbox-event.repository";
 import { OutboxEvent } from "../../domain/entities/outbox-event.entity";
 import { OutboxEventId } from "../../domain/value-objects/outbox-event-id";
@@ -8,6 +8,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -85,23 +86,14 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
   async findPendingEvents(
     options?: PaginationOptions,
   ): Promise<PaginatedResult<OutboxEvent>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const where: Prisma.OutboxEventWhereInput = {
+      status: "PENDING" as OutboxEventStatus,
+    };
 
-    const where = { status: "PENDING" as OutboxEventStatus };
-
-    const [rows, total] = await Promise.all([
-      this.prisma.outboxEvent.findMany({
-        where,
-        orderBy: { createdAt: "asc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.outboxEvent.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((record) =>
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "asc" } },
+      (record) =>
         OutboxEvent.reconstitute({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
@@ -114,38 +106,23 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
           retryCount: record.retryCount,
           error: record.error ?? undefined,
         }),
-      ),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+      options,
+    );
   }
 
   async findFailedEventsForRetry(
     maxRetries: number,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<OutboxEvent>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const where = {
+    const where: Prisma.OutboxEventWhereInput = {
       status: "FAILED" as OutboxEventStatus,
       retryCount: { lt: maxRetries },
     };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.outboxEvent.findMany({
-        where,
-        orderBy: { createdAt: "asc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.outboxEvent.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((record) =>
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "asc" } },
+      (record) =>
         OutboxEvent.reconstitute({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
@@ -158,12 +135,8 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
           retryCount: record.retryCount,
           error: record.error ?? undefined,
         }),
-      ),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+      options,
+    );
   }
 
   async findByStatus(

@@ -188,7 +188,7 @@ describe("BudgetService Integration", () => {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.body).data.length).toBeGreaterThan(0);
+    expect(JSON.parse(res.body).data.items.length).toBeGreaterThan(0);
   });
 
   it("should get budget by id", async () => {
