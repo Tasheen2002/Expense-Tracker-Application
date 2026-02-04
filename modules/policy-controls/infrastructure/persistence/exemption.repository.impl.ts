@@ -18,7 +18,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(exemption: PolicyExemption): Promise<void> {
-    await (this.prisma as any).policyExemption.upsert({
+    await this.prisma.policyExemption.upsert({
       where: { id: exemption.getId().getValue() },
       create: {
         id: exemption.getId().getValue(),
@@ -52,7 +52,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
   }
 
   async findById(id: ExemptionId): Promise<PolicyExemption | null> {
-    const row = await (this.prisma as any).policyExemption.findUnique({
+    const row = await this.prisma.policyExemption.findUnique({
       where: { id: id.getValue() },
     });
 
@@ -77,7 +77,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     }
 
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyExemption,
+      this.prisma.policyExemption,
       {
         where,
         orderBy: { requestedAt: "desc" },
@@ -93,7 +93,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemption>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyExemption,
+      this.prisma.policyExemption,
       {
         where: { workspaceId, userId },
         orderBy: { requestedAt: "desc" },
@@ -109,7 +109,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     policyId: string,
   ): Promise<PolicyExemption | null> {
     const now = new Date();
-    const row = await (this.prisma as any).policyExemption.findFirst({
+    const row = await this.prisma.policyExemption.findFirst({
       where: {
         workspaceId,
         userId,
@@ -129,7 +129,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemption>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyExemption,
+      this.prisma.policyExemption,
       {
         where: {
           workspaceId,
@@ -155,11 +155,11 @@ export class PrismaExemptionRepository implements ExemptionRepository {
       where.userId = filters.userId;
     }
 
-    return (this.prisma as any).policyExemption.count({ where });
+    return this.prisma.policyExemption.count({ where });
   }
 
   async delete(id: ExemptionId): Promise<void> {
-    await (this.prisma as any).policyExemption.delete({
+    await this.prisma.policyExemption.delete({
       where: { id: id.getValue() },
     });
   }

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   ExpenseRepository,
   ExpenseFilters,
@@ -210,7 +210,7 @@ export class ExpenseRepositoryImpl
   async findWithFilters(
     filters: ExpenseFilters,
   ): Promise<PaginatedResult<Expense>> {
-    const where: any = {
+    const where: Prisma.ExpenseWhereInput = {
       workspaceId: filters.workspaceId,
     };
 
@@ -252,7 +252,7 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" }, // TODO: Support dynamic sorting
+        orderBy: { expenseDate: "desc" },
         skip: offset,
         take: limit,
       }),

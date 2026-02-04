@@ -19,7 +19,7 @@ export class PrismaViolationRepository implements ViolationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(violation: PolicyViolation): Promise<void> {
-    await (this.prisma as any).policyViolation.upsert({
+    await this.prisma.policyViolation.upsert({
       where: { id: violation.getId().getValue() },
       create: {
         id: violation.getId().getValue(),
@@ -30,30 +30,27 @@ export class PrismaViolationRepository implements ViolationRepository {
         status: violation.getStatus(),
         severity: violation.getSeverity(),
         violationDetails: violation.getViolationDetails(),
-        expenseAmount: violation.getExpenseAmount(),
-        currency: violation.getCurrency(),
-        acknowledgedAt: violation.getAcknowledgedAt(),
-        acknowledgedBy: violation.getAcknowledgedBy(),
-        resolvedAt: violation.getResolvedAt(),
-        resolvedBy: violation.getResolvedBy(),
-        resolutionNotes: violation.getResolutionNotes(),
-        createdAt: violation.getCreatedAt(),
-        updatedAt: violation.getUpdatedAt(),
+        expenseAmount: violation.getExpenseAmount() ?? 0,
+        ...(violation.getCurrency() && { currency: violation.getCurrency() }),
+        ...(violation.getAcknowledgedAt() && { acknowledgedAt: violation.getAcknowledgedAt() }),
+        ...(violation.getAcknowledgedBy() && { acknowledgedBy: violation.getAcknowledgedBy() }),
+        ...(violation.getResolvedAt() && { resolvedAt: violation.getResolvedAt() }),
+        ...(violation.getResolvedBy() && { resolvedBy: violation.getResolvedBy() }),
+        ...(violation.getResolutionNotes() && { resolutionNote: violation.getResolutionNotes() }),
       },
       update: {
         status: violation.getStatus(),
-        acknowledgedAt: violation.getAcknowledgedAt(),
-        acknowledgedBy: violation.getAcknowledgedBy(),
-        resolvedAt: violation.getResolvedAt(),
-        resolvedBy: violation.getResolvedBy(),
-        resolutionNotes: violation.getResolutionNotes(),
-        updatedAt: violation.getUpdatedAt(),
+        ...(violation.getAcknowledgedAt() && { acknowledgedAt: violation.getAcknowledgedAt() }),
+        ...(violation.getAcknowledgedBy() && { acknowledgedBy: violation.getAcknowledgedBy() }),
+        ...(violation.getResolvedAt() && { resolvedAt: violation.getResolvedAt() }),
+        ...(violation.getResolvedBy() && { resolvedBy: violation.getResolvedBy() }),
+        ...(violation.getResolutionNotes() && { resolutionNote: violation.getResolutionNotes() }),
       },
     });
   }
 
   async findById(id: ViolationId): Promise<PolicyViolation | null> {
-    const row = await (this.prisma as any).policyViolation.findUnique({
+    const row = await this.prisma.policyViolation.findUnique({
       where: { id: id.getValue() },
     });
 
@@ -84,7 +81,7 @@ export class PrismaViolationRepository implements ViolationRepository {
     }
 
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyViolation,
+      this.prisma.policyViolation,
       {
         where,
         orderBy: { detectedAt: "desc" },
@@ -95,9 +92,9 @@ export class PrismaViolationRepository implements ViolationRepository {
   }
 
   async findByExpense(expenseId: string): Promise<PolicyViolation[]> {
-    const rows = await (this.prisma as any).policyViolation.findMany({
+    const rows = await this.prisma.policyViolation.findMany({
       where: { expenseId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { detectedAt: "desc" },
     });
 
     return rows.map((row: any) => this.toDomain(row));
@@ -109,10 +106,10 @@ export class PrismaViolationRepository implements ViolationRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyViolation,
+      this.prisma.policyViolation,
       {
         where: { workspaceId, userId },
-        orderBy: { createdAt: "desc" },
+        orderBy: { detectedAt: "desc" },
       },
       (row: any) => this.toDomain(row),
       options,
@@ -124,13 +121,13 @@ export class PrismaViolationRepository implements ViolationRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).policyViolation,
+      this.prisma.policyViolation,
       {
         where: {
           workspaceId,
           status: ViolationStatus.PENDING,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { detectedAt: "desc" },
       },
       (row: any) => this.toDomain(row),
       options,
@@ -150,17 +147,17 @@ export class PrismaViolationRepository implements ViolationRepository {
       where.severity = filters.severity;
     }
 
-    return (this.prisma as any).policyViolation.count({ where });
+    return this.prisma.policyViolation.count({ where });
   }
 
   async deleteByExpense(expenseId: string): Promise<void> {
-    await (this.prisma as any).policyViolation.deleteMany({
+    await this.prisma.policyViolation.deleteMany({
       where: { expenseId },
     });
   }
 
   async delete(id: ViolationId): Promise<void> {
-    await (this.prisma as any).policyViolation.delete({
+    await this.prisma.policyViolation.delete({
       where: { id: id.getValue() },
     });
   }
@@ -181,9 +178,9 @@ export class PrismaViolationRepository implements ViolationRepository {
       acknowledgedAt: row.acknowledgedAt,
       resolvedBy: row.resolvedBy,
       resolvedAt: row.resolvedAt,
-      resolutionNotes: row.resolutionNotes,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      resolutionNotes: row.resolutionNote,
+      createdAt: row.detectedAt,
+      updatedAt: row.detectedAt,
     });
   }
 }

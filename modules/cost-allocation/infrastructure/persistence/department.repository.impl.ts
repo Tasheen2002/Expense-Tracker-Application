@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { Department } from "../../domain/entities/department.entity";
 import { DepartmentRepository } from "../../domain/repositories/department.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
@@ -7,6 +7,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class DepartmentRepositoryImpl implements DepartmentRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -94,42 +95,28 @@ export class DepartmentRepositoryImpl implements DepartmentRepository {
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Department>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const where = { workspaceId: workspaceId.getValue() };
-
-    const [data, total] = await Promise.all([
-      this.prisma.department.findMany({
-        where,
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.department.count({ where }),
-    ]);
-
-    const items = data.map((d) =>
-      Department.reconstitute({
-        id: d.id,
-        workspaceId: d.workspaceId,
-        name: d.name,
-        code: d.code,
-        description: d.description,
-        managerId: d.managerId,
-        parentDepartmentId: d.parentDepartmentId,
-        isActive: d.isActive,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-      }),
-    );
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + data.length < total,
+    const where: Prisma.DepartmentWhereInput = {
+      workspaceId: workspaceId.getValue(),
     };
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.department,
+      { where },
+      (d) =>
+        Department.reconstitute({
+          id: d.id,
+          workspaceId: d.workspaceId,
+          name: d.name,
+          code: d.code,
+          description: d.description,
+          managerId: d.managerId,
+          parentDepartmentId: d.parentDepartmentId,
+          isActive: d.isActive,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+        }),
+      options,
+    );
   }
 
   async delete(id: DepartmentId, workspaceId: WorkspaceId): Promise<void> {

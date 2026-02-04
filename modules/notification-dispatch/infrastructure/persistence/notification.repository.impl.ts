@@ -33,17 +33,15 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     const data = {
       workspaceId: notification.getWorkspaceId().getValue(),
       recipientId: notification.getRecipientId().getValue(),
-      type: notification.getType() as unknown as PrismaNotificationType,
-      channel:
-        notification.getChannel() as unknown as PrismaNotificationChannel,
-      priority:
-        notification.getPriority() as unknown as PrismaNotificationPriority,
+      type: PrismaNotificationType[notification.getType()],
+      channel: PrismaNotificationChannel[notification.getChannel()],
+      priority: PrismaNotificationPriority[notification.getPriority()],
       title: notification.getTitle(),
       content: notification.getContent(),
       data: notificationData
         ? (notificationData as Prisma.InputJsonValue)
         : Prisma.JsonNull,
-      status: notification.getStatus() as unknown as PrismaNotificationStatus,
+      status: PrismaNotificationStatus[notification.getStatus()],
       error: notification.getError() || null,
       readAt: notification.getReadAt() || null,
       sentAt: notification.getSentAt() || null,
@@ -147,13 +145,18 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       id: NotificationId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       recipientId: UserId.fromString(record.recipientId),
-      type: record.type as unknown as NotificationType,
-      channel: record.channel as unknown as NotificationChannel,
-      priority: record.priority as unknown as NotificationPriority,
+      type: NotificationType[record.type as keyof typeof NotificationType],
+      channel:
+        NotificationChannel[record.channel as keyof typeof NotificationChannel],
+      priority:
+        NotificationPriority[
+          record.priority as keyof typeof NotificationPriority
+        ],
       title: record.title,
       content: record.content,
       data: record.data as Record<string, unknown> | undefined,
-      status: record.status as unknown as NotificationStatus,
+      status:
+        NotificationStatus[record.status as keyof typeof NotificationStatus],
       error: record.error || undefined,
       readAt: record.readAt || undefined,
       sentAt: record.sentAt || undefined,

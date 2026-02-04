@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { Budget } from "../../domain/entities/budget.entity";
 import { BudgetId } from "../../domain/value-objects/budget-id";
 import { BudgetPeriod } from "../../domain/value-objects/budget-period";
@@ -85,14 +85,16 @@ export class BudgetRepositoryImpl
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
 
+    const where: Prisma.BudgetWhereInput = { workspaceId };
+
     const [rows, total] = await Promise.all([
       this.prisma.budget.findMany({
-        where: { workspaceId },
+        where,
         orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
       }),
-      this.prisma.budget.count({ where: { workspaceId } }),
+      this.prisma.budget.count({ where }),
     ]);
 
     const items = rows.map((row) => this.toDomain(row));
@@ -113,7 +115,7 @@ export class BudgetRepositoryImpl
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
 
-    const where: any = {
+    const where: Prisma.BudgetWhereInput = {
       workspaceId: filters.workspaceId,
     };
 

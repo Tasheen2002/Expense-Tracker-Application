@@ -18,7 +18,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(policy: ExpensePolicy): Promise<void> {
-    await (this.prisma as any).expensePolicy.upsert({
+    await this.prisma.expensePolicy.upsert({
       where: { id: policy.getId().getValue() },
       create: {
         id: policy.getId().getValue(),
@@ -47,7 +47,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
   }
 
   async findById(id: PolicyId): Promise<ExpensePolicy | null> {
-    const row = await (this.prisma as any).expensePolicy.findUnique({
+    const row = await this.prisma.expensePolicy.findUnique({
       where: { id: id.getValue() },
     });
 
@@ -59,7 +59,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).expensePolicy,
+      this.prisma.expensePolicy,
       {
         where: { workspaceId },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
@@ -74,7 +74,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).expensePolicy,
+      this.prisma.expensePolicy,
       {
         where: {
           workspaceId,
@@ -93,7 +93,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
-      (this.prisma as any).expensePolicy,
+      this.prisma.expensePolicy,
       {
         where: {
           workspaceId,
@@ -110,7 +110,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
     workspaceId: string,
     name: string,
   ): Promise<ExpensePolicy | null> {
-    const row = await (this.prisma as any).expensePolicy.findFirst({
+    const row = await this.prisma.expensePolicy.findFirst({
       where: {
         workspaceId,
         name,
@@ -121,7 +121,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
   }
 
   async delete(id: PolicyId): Promise<void> {
-    await (this.prisma as any).expensePolicy.delete({
+    await this.prisma.expensePolicy.delete({
       where: { id: id.getValue() },
     });
   }
