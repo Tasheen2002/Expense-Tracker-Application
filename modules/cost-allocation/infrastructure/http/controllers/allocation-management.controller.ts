@@ -155,29 +155,45 @@ export class AllocationManagementController {
   }
 
   async listDepartments(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { limit?: string; offset?: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
-      const query = new ListDepartmentsQuery(workspaceId);
-      const departments = await this.listDepartmentsHandler.handle(query);
+      const { limit, offset } = request.query;
+      const query = new ListDepartmentsQuery(
+        workspaceId,
+        limit ? parseInt(limit, 10) : undefined,
+        offset ? parseInt(offset, 10) : undefined,
+      );
+      const result = await this.listDepartmentsHandler.handle(query);
 
       return ResponseHelper.success(
         reply,
         200,
         "Departments retrieved successfully",
-        departments.map((d) => ({
-          id: d.getId().getValue(),
-          name: d.getName(),
-          code: d.getCode(),
-          description: d.getDescription(),
-          managerId: d.getManagerId()?.getValue(),
-          parentDepartmentId: d.getParentDepartmentId()?.getValue(),
-          isActive: d.getIsActive(),
-        })),
+        {
+          items: result.items.map((d) => ({
+            id: d.getId().getValue(),
+            name: d.getName(),
+            code: d.getCode(),
+            description: d.getDescription(),
+            managerId: d.getManagerId()?.getValue(),
+            parentDepartmentId: d.getParentDepartmentId()?.getValue(),
+            isActive: d.getIsActive(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -369,27 +385,43 @@ export class AllocationManagementController {
   }
 
   async listCostCenters(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { limit?: string; offset?: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
-      const query = new ListCostCentersQuery(workspaceId);
-      const costCenters = await this.listCostCentersHandler.handle(query);
+      const { limit, offset } = request.query;
+      const query = new ListCostCentersQuery(
+        workspaceId,
+        limit ? parseInt(limit, 10) : undefined,
+        offset ? parseInt(offset, 10) : undefined,
+      );
+      const result = await this.listCostCentersHandler.handle(query);
 
       return ResponseHelper.success(
         reply,
         200,
         "Cost Centers retrieved successfully",
-        costCenters.map((c) => ({
-          id: c.getId().getValue(),
-          name: c.getName(),
-          code: c.getCode(),
-          description: c.getDescription(),
-          isActive: c.getIsActive(),
-        })),
+        {
+          items: result.items.map((c) => ({
+            id: c.getId().getValue(),
+            name: c.getName(),
+            code: c.getCode(),
+            description: c.getDescription(),
+            isActive: c.getIsActive(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -582,31 +614,47 @@ export class AllocationManagementController {
   }
 
   async listProjects(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { limit?: string; offset?: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
-      const query = new ListProjectsQuery(workspaceId);
-      const projects = await this.listProjectsHandler.handle(query);
+      const { limit, offset } = request.query;
+      const query = new ListProjectsQuery(
+        workspaceId,
+        limit ? parseInt(limit, 10) : undefined,
+        offset ? parseInt(offset, 10) : undefined,
+      );
+      const result = await this.listProjectsHandler.handle(query);
 
       return ResponseHelper.success(
         reply,
         200,
         "Projects retrieved successfully",
-        projects.map((p) => ({
-          id: p.getId().getValue(),
-          name: p.getName(),
-          code: p.getCode(),
-          description: p.getDescription(),
-          startDate: p.getStartDate(),
-          endDate: p.getEndDate(),
-          managerId: p.getManagerId()?.getValue(),
-          budget: p.getBudget(),
-          isActive: p.getIsActive(),
-        })),
+        {
+          items: result.items.map((p) => ({
+            id: p.getId().getValue(),
+            name: p.getName(),
+            code: p.getCode(),
+            description: p.getDescription(),
+            startDate: p.getStartDate(),
+            endDate: p.getEndDate(),
+            managerId: p.getManagerId()?.getValue(),
+            budget: p.getBudget(),
+            isActive: p.getIsActive(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

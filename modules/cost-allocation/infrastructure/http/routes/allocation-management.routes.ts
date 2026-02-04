@@ -53,6 +53,13 @@ export async function allocationManagementRoutes(
             workspaceId: { type: "string", format: "uuid" },
           },
         },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
+          },
+        },
       },
     },
     (request, reply) => controller.listDepartments(request as any, reply),
@@ -100,7 +107,11 @@ export async function allocationManagementRoutes(
             code: { type: "string", minLength: 2, maxLength: 20 },
             description: { type: "string", nullable: true },
             managerId: { type: "string", format: "uuid", nullable: true },
-            parentDepartmentId: { type: "string", format: "uuid", nullable: true },
+            parentDepartmentId: {
+              type: "string",
+              format: "uuid",
+              nullable: true,
+            },
           },
         },
       },
@@ -192,6 +203,13 @@ export async function allocationManagementRoutes(
           required: ["workspaceId"],
           properties: {
             workspaceId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },
@@ -335,6 +353,13 @@ export async function allocationManagementRoutes(
           required: ["workspaceId"],
           properties: {
             workspaceId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },
