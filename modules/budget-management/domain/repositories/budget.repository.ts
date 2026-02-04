@@ -1,8 +1,10 @@
 import { Budget } from "../entities/budget.entity";
 import { BudgetId } from "../value-objects/budget-id";
 import { BudgetStatus } from "../enums/budget-status";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface BudgetFilters {
   workspaceId: string;

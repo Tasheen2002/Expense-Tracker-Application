@@ -8,8 +8,10 @@ import {
   IBudgetRepository,
   BudgetFilters,
 } from "../../domain/repositories/budget.repository";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 // ... (imports)
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";

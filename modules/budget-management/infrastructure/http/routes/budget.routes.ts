@@ -72,6 +72,8 @@ export async function budgetRoutes(
             isActive: { type: "string", enum: ["true", "false"] },
             createdBy: { type: "string", format: "uuid" },
             currency: { type: "string" },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },
