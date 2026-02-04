@@ -71,7 +71,7 @@ export class ViolationController {
         statusCode: 200,
         message: "Violations retrieved successfully",
         data: {
-          violations: result.items.map((v) => this.serializeViolation(v)),
+          items: result.items.map((v) => this.serializeViolation(v)),
           pagination: {
             total: result.total,
             limit: result.limit,

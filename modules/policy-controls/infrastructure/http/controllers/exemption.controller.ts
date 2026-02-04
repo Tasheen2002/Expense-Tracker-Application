@@ -115,7 +115,7 @@ export class ExemptionController {
         statusCode: 200,
         message: "Exemptions retrieved successfully",
         data: {
-          exemptions: result.items.map((e) => this.serializeExemption(e)),
+          items: result.items.map((e) => this.serializeExemption(e)),
           pagination: {
             total: result.total,
             limit: result.limit,

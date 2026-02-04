@@ -139,7 +139,7 @@ export class PolicyController {
         statusCode: 200,
         message: "Policies retrieved successfully",
         data: {
-          policies: result.items.map((policy) => this.serializePolicy(policy)),
+          items: result.items.map((policy) => this.serializePolicy(policy)),
           pagination: {
             total: result.total,
             limit: result.limit,
