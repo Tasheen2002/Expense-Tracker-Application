@@ -213,22 +213,28 @@ export class CategoryRuleService {
   async getRulesByWorkspaceId(
     workspaceId: WorkspaceId,
     userId: string,
-  ): Promise<CategoryRule[]> {
+    options?: { limit?: number; offset?: number },
+  ): Promise<
+    import("../../../apps/api/src/shared/domain/interfaces/paginated-result.interface").PaginatedResult<CategoryRule>
+  > {
     const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
-    return this.ruleRepository.findByWorkspaceId(workspaceId);
+    return this.ruleRepository.findByWorkspaceId(workspaceId, options);
   }
 
   async getActiveRulesByWorkspaceId(
     workspaceId: WorkspaceId,
     userId: string,
-  ): Promise<CategoryRule[]> {
+    options?: { limit?: number; offset?: number },
+  ): Promise<
+    import("../../../apps/api/src/shared/domain/interfaces/paginated-result.interface").PaginatedResult<CategoryRule>
+  > {
     const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
-    return this.ruleRepository.findActiveByWorkspaceId(workspaceId);
+    return this.ruleRepository.findActiveByWorkspaceId(workspaceId, options);
   }
 }

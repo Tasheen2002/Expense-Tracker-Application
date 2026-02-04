@@ -4,8 +4,10 @@ import { RuleId } from "../value-objects/rule-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
 import { CategorySuggestion } from "../entities/category-suggestion.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface RuleExecutionRepository {
   save(execution: RuleExecution): Promise<void>;

@@ -1,8 +1,10 @@
 import { CategoryRule } from "../entities/category-rule.entity";
 import { RuleId } from "../value-objects/rule-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface CategoryRuleRepository {
   save(rule: CategoryRule): Promise<void>;
