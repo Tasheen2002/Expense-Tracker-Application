@@ -3,8 +3,10 @@ import { Department } from "../../domain/entities/department.entity";
 import { DepartmentRepository } from "../../domain/repositories/department.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class DepartmentRepositoryImpl implements DepartmentRepository {
   constructor(private readonly prisma: PrismaClient) {}

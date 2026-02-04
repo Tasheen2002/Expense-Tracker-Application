@@ -265,6 +265,8 @@ export async function expenseRoutes(
           type: "object",
           properties: {
             userId: { type: "string", format: "uuid" },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
         response: {
@@ -353,6 +355,8 @@ export async function expenseRoutes(
             maxAmount: { type: "string" },
             currency: { type: "string" },
             searchText: { type: "string" },
+            limit: { type: "string" },
+            offset: { type: "string" },
           },
         },
       },

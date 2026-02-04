@@ -3,8 +3,10 @@ import { CostCenter } from "../../domain/entities/cost-center.entity";
 import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class CostCenterRepositoryImpl implements CostCenterRepository {
   constructor(private readonly prisma: PrismaClient) {}

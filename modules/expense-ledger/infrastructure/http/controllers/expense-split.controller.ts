@@ -162,7 +162,7 @@ export class ExpenseSplitController {
   async listUserSplits(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: number; offset?: number };
+      Querystring: { limit?: string; offset?: string };
     }>,
     reply: FastifyReply,
   ) {
@@ -173,8 +173,8 @@ export class ExpenseSplitController {
     const result = await this.listUserSplitsHandler.handle({
       userId,
       workspaceId,
-      limit,
-      offset,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
     });
 
     return reply.send({
@@ -252,8 +252,8 @@ export class ExpenseSplitController {
       Params: { workspaceId: string };
       Querystring: {
         status?: SettlementStatus;
-        limit?: number;
-        offset?: number;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
@@ -266,8 +266,8 @@ export class ExpenseSplitController {
       userId,
       workspaceId,
       status,
-      limit,
-      offset,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
     });
 
     return reply.send({

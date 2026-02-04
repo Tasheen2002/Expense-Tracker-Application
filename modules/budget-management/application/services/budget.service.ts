@@ -12,8 +12,10 @@ import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { AlertId } from "../../domain/value-objects/alert-id";
 import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
 import { Decimal } from "@prisma/client/runtime/library";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 import {
   BudgetNotFoundError,
@@ -445,14 +447,13 @@ export class BudgetService {
 
   // Budget period management
   async processExpiredBudgets(workspaceId: string): Promise<number> {
-    const expiredBudgets =
-      await this.budgetRepository.findExpiredBudgets(workspaceId);
+    const result = await this.budgetRepository.findExpiredBudgets(workspaceId);
 
-    for (const budget of expiredBudgets) {
+    for (const budget of result.items) {
       budget.archive();
       await this.budgetRepository.save(budget);
     }
 
-    return expiredBudgets.length;
+    return result.items.length;
   }
 }

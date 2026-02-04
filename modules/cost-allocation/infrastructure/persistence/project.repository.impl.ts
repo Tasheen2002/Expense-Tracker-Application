@@ -3,8 +3,10 @@ import { Project } from "../../domain/entities/project.entity";
 import { ProjectRepository } from "../../domain/repositories/project.repository";
 import { ProjectId } from "../../domain/value-objects/project-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ProjectRepositoryImpl implements ProjectRepository {
   constructor(private readonly prisma: PrismaClient) {}

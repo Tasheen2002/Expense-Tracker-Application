@@ -20,8 +20,10 @@ import {
 } from "../../domain/errors/cost-allocation.errors";
 import { Decimal } from "@prisma/client/runtime/library";
 import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class AllocationManagementService {
   constructor(

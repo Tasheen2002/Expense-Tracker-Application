@@ -10,7 +10,7 @@ import {
   DuplicateRuleNameError,
   UnauthorizedRuleAccessError,
 } from "../../domain/errors/categorization-rules.errors";
-
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class CategoryRuleService {
@@ -214,9 +214,7 @@ export class CategoryRuleService {
     workspaceId: WorkspaceId,
     userId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<
-    import("../../../apps/api/src/shared/domain/interfaces/paginated-result.interface").PaginatedResult<CategoryRule>
-  > {
+  ): Promise<PaginatedResult<CategoryRule>> {
     const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
@@ -228,9 +226,7 @@ export class CategoryRuleService {
     workspaceId: WorkspaceId,
     userId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<
-    import("../../../apps/api/src/shared/domain/interfaces/paginated-result.interface").PaginatedResult<CategoryRule>
-  > {
+  ): Promise<PaginatedResult<CategoryRule>> {
     const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
