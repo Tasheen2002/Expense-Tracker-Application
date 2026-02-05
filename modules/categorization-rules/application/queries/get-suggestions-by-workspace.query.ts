@@ -1,30 +1,40 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service'
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
 
 export interface GetSuggestionsByWorkspaceQuery {
   workspaceId: string
   limit?: number
+  offset?: number
 }
 
 export class GetSuggestionsByWorkspaceHandler {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async execute(query: GetSuggestionsByWorkspaceQuery) {
-    const suggestions = await this.suggestionService.getSuggestionsByWorkspaceId(
+  async execute(
+    query: GetSuggestionsByWorkspaceQuery,
+  ): Promise<PaginatedResult<any>> {
+    const result = await this.suggestionService.getSuggestionsByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
-      query.limit
+      { limit: query.limit, offset: query.offset },
     )
 
-    return suggestions.map((suggestion) => ({
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
-    }))
+    return {
+      items: result.items.map((suggestion) => ({
+        id: suggestion.getId().getValue(),
+        workspaceId: suggestion.getWorkspaceId().getValue(),
+        expenseId: suggestion.getExpenseId().getValue(),
+        suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
+        confidence: suggestion.getConfidence().getValue(),
+        reason: suggestion.getReason(),
+        isAccepted: suggestion.getIsAccepted(),
+        createdAt: suggestion.getCreatedAt(),
+        respondedAt: suggestion.getRespondedAt(),
+      })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    }
   }
 }

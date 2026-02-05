@@ -6,6 +6,11 @@ import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/wo
 import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id'
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score'
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper'
 
 export class PrismaCategorySuggestionRepository implements CategorySuggestionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -59,31 +64,35 @@ export class PrismaCategorySuggestionRepository implements CategorySuggestionRep
 
   async findPendingByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number
-  ): Promise<CategorySuggestion[]> {
-    const suggestions = await this.prisma.categorySuggestion.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        isAccepted: null,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CategorySuggestion>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.categorySuggestion,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          isAccepted: null,
+        },
+        orderBy: { createdAt: 'desc' },
       },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    })
-
-    return suggestions.map((suggestion) => this.toDomain(suggestion))
+      (suggestion) => this.toDomain(suggestion),
+      options,
+    )
   }
 
   async findByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number
-  ): Promise<CategorySuggestion[]> {
-    const suggestions = await this.prisma.categorySuggestion.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    })
-
-    return suggestions.map((suggestion) => this.toDomain(suggestion))
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<CategorySuggestion>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.categorySuggestion,
+      {
+        where: { workspaceId: workspaceId.getValue() },
+        orderBy: { createdAt: 'desc' },
+      },
+      (suggestion) => this.toDomain(suggestion),
+      options,
+    )
   }
 
   async delete(id: SuggestionId): Promise<void> {

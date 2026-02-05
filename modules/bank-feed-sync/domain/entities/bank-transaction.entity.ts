@@ -3,6 +3,103 @@ import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { BankTransactionId } from "../value-objects/bank-transaction-id";
 import { SyncSessionId } from "../value-objects/sync-session-id";
 import { TransactionStatus } from "../enums/transaction-status.enum";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class BankTransactionSyncedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+    public readonly externalId: string,
+    public readonly amount: number,
+    public readonly currency: string,
+  ) {
+    super(transactionId, "BankTransaction");
+  }
+
+  get eventType(): string {
+    return "BankTransactionSynced";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+      externalId: this.externalId,
+      amount: this.amount,
+      currency: this.currency,
+    };
+  }
+}
+
+export class BankTransactionMatchedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string,
+  ) {
+    super(transactionId, "BankTransaction");
+  }
+
+  get eventType(): string {
+    return "BankTransactionMatched";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+export class BankTransactionImportedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string,
+  ) {
+    super(transactionId, "BankTransaction");
+  }
+
+  get eventType(): string {
+    return "BankTransactionImported";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+export class BankTransactionIgnoredEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(transactionId, "BankTransaction");
+  }
+
+  get eventType(): string {
+    return "BankTransactionIgnored";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
 
 export interface BankTransactionProps {
   id: BankTransactionId;

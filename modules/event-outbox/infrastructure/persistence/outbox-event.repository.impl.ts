@@ -143,23 +143,14 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
     status: OutboxEventStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<OutboxEvent>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const where: Prisma.OutboxEventWhereInput = {
+      status: status as OutboxEventStatus,
+    };
 
-    const where = { status };
-
-    const [rows, total] = await Promise.all([
-      this.prisma.outboxEvent.findMany({
-        where,
-        orderBy: { createdAt: "asc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.outboxEvent.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((record) =>
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "asc" } },
+      (record) =>
         OutboxEvent.reconstitute({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
@@ -172,12 +163,8 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
           retryCount: record.retryCount,
           error: record.error ?? undefined,
         }),
-      ),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+      options,
+    );
   }
 
   async findByAggregateId(aggregateId: string): Promise<OutboxEvent[]> {

@@ -44,9 +44,9 @@ export class AuditService {
    */
   async log(event: DomainEvent): Promise<void> {
     try {
-      const payload = (event as any).getPayload
-        ? (event as any).getPayload()
-        : {};
+      // Check if event has getPayload method (most domain events do)
+      const hasGetPayload = typeof (event as any).getPayload === 'function';
+      const payload = hasGetPayload ? (event as any).getPayload() : {};
       const workspaceId = payload.workspaceId || "system";
       const userId = payload.triggeredBy || payload.userId || null;
 

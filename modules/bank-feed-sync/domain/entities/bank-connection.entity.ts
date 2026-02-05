@@ -2,6 +2,123 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { ConnectionStatus } from "../enums/connection-status.enum";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class BankConnectionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly userId: string,
+    public readonly institutionId: string,
+    public readonly institutionName: string,
+    public readonly accountName: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      institutionId: this.institutionId,
+      institutionName: this.institutionName,
+      accountName: this.accountName,
+    };
+  }
+}
+
+export class BankConnectionActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionActivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BankConnectionDisconnectedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly reason?: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionDisconnected";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      reason: this.reason,
+    };
+  }
+}
+
+export class BankConnectionExpiredEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionExpired";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BankConnectionSyncedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly syncedAt: Date,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionSynced";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      syncedAt: this.syncedAt.toISOString(),
+    };
+  }
+}
 
 export interface BankConnectionProps {
   id: BankConnectionId;

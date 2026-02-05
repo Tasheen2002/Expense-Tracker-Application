@@ -6,6 +6,7 @@ import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score'
 import { SuggestionNotFoundError } from '../../domain/errors/categorization-rules.errors'
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
 
 export class CategorySuggestionService {
   constructor(
@@ -74,16 +75,16 @@ export class CategorySuggestionService {
 
   async getPendingSuggestionsByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number
-  ): Promise<CategorySuggestion[]> {
-    return this.suggestionRepository.findPendingByWorkspaceId(workspaceId, limit)
+    options?: { limit?: number; offset?: number },
+  ): Promise<PaginatedResult<CategorySuggestion>> {
+    return this.suggestionRepository.findPendingByWorkspaceId(workspaceId, options)
   }
 
   async getSuggestionsByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number
-  ): Promise<CategorySuggestion[]> {
-    return this.suggestionRepository.findByWorkspaceId(workspaceId, limit)
+    options?: { limit?: number; offset?: number },
+  ): Promise<PaginatedResult<CategorySuggestion>> {
+    return this.suggestionRepository.findByWorkspaceId(workspaceId, options)
   }
 
   async deleteSuggestion(suggestionId: SuggestionId): Promise<void> {

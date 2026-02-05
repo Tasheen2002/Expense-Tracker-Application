@@ -10,6 +10,7 @@ import { RuleExecutionId } from "../../domain/value-objects/rule-execution-id";
 import { CategoryRuleNotFoundError } from "../../domain/errors/categorization-rules.errors";
 import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
 import { ConfidenceScore } from "../../domain/value-objects/confidence-score";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class RuleExecutionService {
   constructor(
@@ -33,12 +34,12 @@ export class RuleExecutionService {
     suggestion: CategorySuggestion | null;
   }> {
     // Get all active rules for the workspace, ordered by priority
-    const activeRules = await this.ruleRepository.findActiveByWorkspaceId(
+    const activeRulesResult = await this.ruleRepository.findActiveByWorkspaceId(
       params.workspaceId,
     );
 
     // Find the first matching rule
-    for (const rule of activeRules) {
+    for (const rule of activeRulesResult.items) {
       if (rule.matches(params.expenseData)) {
         // Create execution record
         const execution = RuleExecution.create({
@@ -80,14 +81,17 @@ export class RuleExecutionService {
     };
   }
 
-  async getExecutionsByRuleId(ruleId: RuleId): Promise<RuleExecution[]> {
+  async getExecutionsByRuleId(
+    ruleId: RuleId,
+    options?: { limit?: number; offset?: number },
+  ): Promise<PaginatedResult<RuleExecution>> {
     const rule = await this.ruleRepository.findById(ruleId);
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    return this.executionRepository.findByRuleId(ruleId);
+    return this.executionRepository.findByRuleId(ruleId, options);
   }
 
   async getExecutionsByExpenseId(
@@ -99,9 +103,9 @@ export class RuleExecutionService {
 
   async getExecutionsByWorkspaceId(
     workspaceId: WorkspaceId,
-    limit?: number,
-  ): Promise<RuleExecution[]> {
-    return this.executionRepository.findByWorkspaceId(workspaceId, limit);
+    options?: { limit?: number; offset?: number },
+  ): Promise<PaginatedResult<RuleExecution>> {
+    return this.executionRepository.findByWorkspaceId(workspaceId, options);
   }
 
   async getExecutionById(

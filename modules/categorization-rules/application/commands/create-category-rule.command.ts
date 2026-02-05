@@ -3,6 +3,8 @@ import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/wo
 import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo'
 import { RuleCondition } from '../../domain/value-objects/rule-condition'
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
+import { RuleConditionType, isValidRuleConditionType } from '../../domain/enums/rule-condition-type'
+import { InvalidRuleConditionError } from '../../domain/errors/categorization-rules.errors'
 
 export interface CreateCategoryRuleCommand {
   workspaceId: string
@@ -19,13 +21,17 @@ export class CreateCategoryRuleHandler {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async execute(command: CreateCategoryRuleCommand) {
+    if (!isValidRuleConditionType(command.conditionType)) {
+      throw new InvalidRuleConditionError(`Invalid condition type: ${command.conditionType}`)
+    }
+
     const rule = await this.ruleService.createRule({
       workspaceId: WorkspaceId.fromString(command.workspaceId),
       name: command.name,
       description: command.description,
       priority: command.priority,
       condition: RuleCondition.create(
-        command.conditionType as any,
+        command.conditionType as RuleConditionType,
         command.conditionValue
       ),
       targetCategoryId: CategoryId.fromString(command.targetCategoryId),
