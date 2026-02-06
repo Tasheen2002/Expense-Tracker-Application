@@ -547,7 +547,7 @@ describe("Budget Management Module - Endpoint Tests", () => {
 
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
-        expect(Array.isArray(body.data)).toBe(true);
+        expect(Array.isArray(body.data.items)).toBe(true);
       });
 
       it("✅ should filter by period type", async () => {
