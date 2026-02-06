@@ -42,7 +42,7 @@ export async function exemptionRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.requestExemption(
         request as Parameters<typeof controller.requestExemption>[0],
         reply,
@@ -84,7 +84,7 @@ export async function exemptionRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.listExemptions(
         request as Parameters<typeof controller.listExemptions>[0],
         reply,
@@ -115,7 +115,7 @@ export async function exemptionRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.checkActiveExemption(
         request as Parameters<typeof controller.checkActiveExemption>[0],
         reply,
@@ -139,7 +139,7 @@ export async function exemptionRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.getExemption(
         request as Parameters<typeof controller.getExemption>[0],
         reply,
@@ -169,7 +169,7 @@ export async function exemptionRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.approveExemption(
         request as Parameters<typeof controller.approveExemption>[0],
         reply,

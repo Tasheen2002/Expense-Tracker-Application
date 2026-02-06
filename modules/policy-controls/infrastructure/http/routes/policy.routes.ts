@@ -50,7 +50,7 @@ export async function policyRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.createPolicy(
         request as Parameters<typeof controller.createPolicy>[0],
         reply,
@@ -102,7 +102,7 @@ export async function policyRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.listPolicies(
         request as Parameters<typeof controller.listPolicies>[0],
         reply,
@@ -126,7 +126,7 @@ export async function policyRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.getPolicy(
         request as Parameters<typeof controller.getPolicy>[0],
         reply,
@@ -163,7 +163,7 @@ export async function policyRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.updatePolicy(
         request as Parameters<typeof controller.updatePolicy>[0],
         reply,
@@ -187,7 +187,7 @@ export async function policyRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.deletePolicy(
         request as Parameters<typeof controller.deletePolicy>[0],
         reply,

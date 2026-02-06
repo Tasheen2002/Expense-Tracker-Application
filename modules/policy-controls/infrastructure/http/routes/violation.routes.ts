@@ -47,7 +47,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.listViolations(
         request as Parameters<typeof controller.listViolations>[0],
         reply,
@@ -77,7 +77,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.getViolationStats(
         request as Parameters<typeof controller.getViolationStats>[0],
         reply,
@@ -101,7 +101,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.getViolation(
         request as Parameters<typeof controller.getViolation>[0],
         reply,
@@ -131,7 +131,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.acknowledgeViolation(
         request as Parameters<typeof controller.acknowledgeViolation>[0],
         reply,
@@ -161,7 +161,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.resolveViolation(
         request as Parameters<typeof controller.resolveViolation>[0],
         reply,
@@ -192,7 +192,7 @@ export async function violationRoutes(
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.exemptViolation(
         request as Parameters<typeof controller.exemptViolation>[0],
         reply,
