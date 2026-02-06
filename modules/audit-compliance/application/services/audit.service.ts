@@ -7,7 +7,10 @@ import {
   AuditLogRepository,
   AuditLogFilter,
 } from "../../domain/repositories/audit-log.repository";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -142,11 +145,13 @@ export class AuditService {
     workspaceId: string,
     entityType: string,
     entityId: string,
-  ): Promise<AuditLog[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<AuditLog>> {
     return await this.auditRepository.findByEntityId(
       workspaceId,
       entityType,
       entityId,
+      options,
     );
   }
 

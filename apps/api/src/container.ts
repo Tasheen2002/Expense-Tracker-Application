@@ -380,12 +380,14 @@ export class Container {
 
     // Repositories
     const userRepository = new UserRepositoryImpl(prisma, eventBus);
-    const workspaceRepository = new WorkspaceRepositoryImpl(prisma);
+    const workspaceRepository = new WorkspaceRepositoryImpl(prisma, eventBus);
     const workspaceMembershipRepository = new WorkspaceMembershipRepositoryImpl(
       prisma,
+      eventBus,
     );
     const workspaceInvitationRepository = new WorkspaceInvitationRepositoryImpl(
       prisma,
+      eventBus,
     );
 
     this.services.set("userRepository", userRepository);
@@ -425,14 +427,21 @@ export class Container {
 
     // Repositories
     const expenseRepository = new ExpenseRepositoryImpl(prisma, eventBus);
-    const categoryRepository = new CategoryRepositoryImpl(prisma);
-    const tagRepository = new TagRepositoryImpl(prisma);
-    const attachmentRepository = new AttachmentRepositoryImpl(prisma);
+    const categoryRepository = new CategoryRepositoryImpl(prisma, eventBus);
+    const tagRepository = new TagRepositoryImpl(prisma, eventBus);
+    const attachmentRepository = new AttachmentRepositoryImpl(prisma, eventBus);
     const recurringExpenseRepository = new PrismaRecurringExpenseRepository(
       prisma,
+      eventBus,
     );
-    const expenseSplitRepository = new ExpenseSplitRepositoryImpl(prisma);
-    const splitSettlementRepository = new SplitSettlementRepositoryImpl(prisma);
+    const expenseSplitRepository = new ExpenseSplitRepositoryImpl(
+      prisma,
+      eventBus,
+    );
+    const splitSettlementRepository = new SplitSettlementRepositoryImpl(
+      prisma,
+      eventBus,
+    );
 
     this.services.set("expenseRepository", expenseRepository);
     this.services.set("categoryRepository", categoryRepository);
@@ -575,6 +584,7 @@ export class Container {
     const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
       prisma,
+      eventBus,
     );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
@@ -804,7 +814,10 @@ export class Container {
     // ============================================
 
     // Repositories - Notification
-    const notificationRepository = new NotificationRepositoryImpl(prisma);
+    const notificationRepository = new NotificationRepositoryImpl(
+      prisma,
+      eventBus,
+    );
     const notificationTemplateRepository =
       new NotificationTemplateRepositoryImpl(prisma);
 
@@ -904,11 +917,12 @@ export class Container {
     // ============================================
 
     // Repositories
-    const departmentRepository = new DepartmentRepositoryImpl(prisma);
-    const costCenterRepository = new CostCenterRepositoryImpl(prisma);
-    const projectRepository = new ProjectRepositoryImpl(prisma);
+    const departmentRepository = new DepartmentRepositoryImpl(prisma, eventBus);
+    const costCenterRepository = new CostCenterRepositoryImpl(prisma, eventBus);
+    const projectRepository = new ProjectRepositoryImpl(prisma, eventBus);
     const expenseAllocationRepository = new ExpenseAllocationRepositoryImpl(
       prisma,
+      eventBus,
     );
 
     this.services.set("departmentRepository", departmentRepository);
@@ -1053,10 +1067,13 @@ export class Container {
     // ============================================
 
     // Repositories
-    const budgetPlanRepository = new BudgetPlanRepositoryImpl(prisma);
-    const forecastRepository = new ForecastRepositoryImpl(prisma);
-    const scenarioRepository = new ScenarioRepositoryImpl(prisma);
-    const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
+    const budgetPlanRepository = new BudgetPlanRepositoryImpl(prisma, eventBus);
+    const forecastRepository = new ForecastRepositoryImpl(prisma, eventBus);
+    const scenarioRepository = new ScenarioRepositoryImpl(prisma, eventBus);
+    const forecastItemRepository = new ForecastItemRepositoryImpl(
+      prisma,
+      eventBus,
+    );
 
     // Adapters
     const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
@@ -1145,10 +1162,14 @@ export class Container {
     // ============================================
 
     // Repositories
-    const categoryRuleRepository = new PrismaCategoryRuleRepository(prisma);
+    const categoryRuleRepository = new PrismaCategoryRuleRepository(
+      prisma,
+      eventBus,
+    );
     const ruleExecutionRepository = new PrismaRuleExecutionRepository(prisma);
     const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
       prisma,
+      eventBus,
     );
 
     this.services.set("categoryRuleRepository", categoryRuleRepository);

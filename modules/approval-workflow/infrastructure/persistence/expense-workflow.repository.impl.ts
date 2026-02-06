@@ -183,8 +183,10 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
     };
   }
 
-  private toDomain(row: any): ExpenseWorkflow {
-    const steps = row.steps.map((stepRow: any) =>
+  private toDomain(
+    row: Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>,
+  ): ExpenseWorkflow {
+    const steps = row.steps.map((stepRow) =>
       ApprovalStep.reconstitute({
         stepId: ApprovalStepId.fromString(stepRow.id),
         workflowId: WorkflowId.fromString(stepRow.workflowId),
@@ -194,8 +196,8 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           ? UserId.fromString(stepRow.delegatedTo)
           : undefined,
         status: stepRow.status as ApprovalStatus,
-        comments: stepRow.comments,
-        processedAt: stepRow.processedAt,
+        comments: stepRow.comments ?? undefined,
+        processedAt: stepRow.processedAt ?? undefined,
         createdAt: stepRow.createdAt,
         updatedAt: stepRow.updatedAt,
       }),
@@ -212,7 +214,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
       steps,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      completedAt: row.completedAt,
+      completedAt: row.completedAt ?? undefined,
     });
   }
 }

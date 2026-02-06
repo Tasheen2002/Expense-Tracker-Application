@@ -10,6 +10,10 @@ import { ForecastItem } from "../../domain/entities/forecast-item.entity";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
 import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
   ForecastNotFoundError,
   DuplicateForecastNameError,
   DuplicateForecastItemError,
@@ -199,17 +203,22 @@ export class ForecastService {
     return forecast;
   }
 
-  async listForecasts(planId: string, userId: string): Promise<Forecast[]> {
+  async listForecasts(
+    planId: string,
+    userId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Forecast>> {
     const pId = PlanId.fromString(planId);
     await this.checkPlanAccess(userId, pId, "list forecasts");
 
-    return this.forecastRepository.findByPlanId(pId);
+    return this.forecastRepository.findByPlanId(pId, options);
   }
 
   async getForecastItems(
     forecastId: string,
     userId: string,
-  ): Promise<ForecastItem[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ForecastItem>> {
     const fId = ForecastId.fromString(forecastId);
     const forecast = await this.forecastRepository.findById(fId);
     if (!forecast) {
@@ -222,7 +231,7 @@ export class ForecastService {
       "view forecast items",
     );
 
-    return this.forecastItemRepository.findByForecastId(fId);
+    return this.forecastItemRepository.findByForecastId(fId, options);
   }
 
   async deleteForecast(id: string, userId: string): Promise<void> {

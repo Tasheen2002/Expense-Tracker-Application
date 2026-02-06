@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { BankTransaction } from "../../domain/entities/bank-transaction.entity";
 import { BankTransactionId } from "../../domain/value-objects/bank-transaction-id";
@@ -213,7 +213,9 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
     return records.map((r) => this.toDomain(r));
   }
 
-  private toDomain(record: any): BankTransaction {
+  private toDomain(
+    record: Prisma.BankTransactionGetPayload<object>,
+  ): BankTransaction {
     return BankTransaction.fromPersistence({
       id: BankTransactionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
@@ -223,13 +225,13 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
       amount: record.amount,
       currency: record.currency,
       description: record.description,
-      merchantName: record.merchantName,
-      categoryName: record.categoryName,
+      merchantName: record.merchantName ?? undefined,
+      categoryName: record.categoryName ?? undefined,
       transactionDate: record.transactionDate,
-      postedDate: record.postedDate,
+      postedDate: record.postedDate ?? undefined,
       status: record.status as TransactionStatus,
-      expenseId: record.expenseId,
-      metadata: record.metadata,
+      expenseId: record.expenseId ?? undefined,
+      metadata: record.metadata ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

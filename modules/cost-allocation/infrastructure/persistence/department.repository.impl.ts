@@ -8,9 +8,16 @@ import {
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class DepartmentRepositoryImpl implements DepartmentRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class DepartmentRepositoryImpl
+  extends PrismaRepository<Department>
+  implements DepartmentRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(department: Department): Promise<void> {
     await this.prisma.department.upsert({
@@ -41,6 +48,8 @@ export class DepartmentRepositoryImpl implements DepartmentRepository {
         updatedAt: department.getUpdatedAt(),
       },
     });
+
+    await this.dispatchEvents(department);
   }
 
   async findById(id: DepartmentId): Promise<Department | null> {

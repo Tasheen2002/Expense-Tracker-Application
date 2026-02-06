@@ -11,6 +11,10 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ScenarioService {
   constructor(
@@ -138,10 +142,14 @@ export class ScenarioService {
     return scenario;
   }
 
-  async listScenarios(planId: string, userId: string): Promise<Scenario[]> {
+  async listScenarios(
+    planId: string,
+    userId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Scenario>> {
     const pId = PlanId.fromString(planId);
     await this.checkPlanAccess(userId, pId, "list scenarios");
 
-    return this.scenarioRepository.findByPlanId(pId);
+    return this.scenarioRepository.findByPlanId(pId, options);
   }
 }

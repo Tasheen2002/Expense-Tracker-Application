@@ -8,9 +8,16 @@ import {
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class ProjectRepositoryImpl implements ProjectRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ProjectRepositoryImpl
+  extends PrismaRepository<Project>
+  implements ProjectRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(project: Project): Promise<void> {
     await this.prisma.project.upsert({
@@ -43,6 +50,8 @@ export class ProjectRepositoryImpl implements ProjectRepository {
         updatedAt: project.getUpdatedAt(),
       },
     });
+
+    await this.dispatchEvents(project);
   }
 
   async findById(id: ProjectId): Promise<Project | null> {

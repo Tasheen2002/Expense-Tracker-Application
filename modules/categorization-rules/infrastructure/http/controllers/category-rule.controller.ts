@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 import {
@@ -337,6 +337,7 @@ export class CategoryRuleController {
   async getRuleExecutions(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
+      Querystring: { limit?: string; offset?: string };
     }>,
     reply: FastifyReply,
   ) {
@@ -351,14 +352,28 @@ export class CategoryRuleController {
         });
       }
 
-      const query: GetExecutionsByRuleQuery = { ruleId };
-      const executions = await this.getExecutionsByRuleHandler.execute(query);
+      const query: GetExecutionsByRuleQuery = {
+        ruleId,
+        limit: request.query.limit ? parseInt(request.query.limit) : undefined,
+        offset: request.query.offset
+          ? parseInt(request.query.offset)
+          : undefined,
+      };
+      const result = await this.getExecutionsByRuleHandler.execute(query);
 
       return ResponseHelper.success(
         reply,
         200,
         "Rule executions retrieved successfully",
-        executions,
+        {
+          items: result.items,
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

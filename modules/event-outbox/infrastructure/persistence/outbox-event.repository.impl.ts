@@ -19,7 +19,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       aggregateType: event.aggregateType,
       aggregateId: event.aggregateId.getValue(),
       eventType: event.eventType,
-      payload: event.payload as any,
+      payload: event.payload as Prisma.InputJsonValue,
       status: event.status,
       createdAt: event.createdAt,
       processedAt: event.processedAt,
@@ -44,7 +44,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
             aggregateType: event.aggregateType,
             aggregateId: event.aggregateId.getValue(),
             eventType: event.eventType,
-            payload: event.payload as any,
+            payload: event.payload as Prisma.InputJsonValue,
             status: event.status,
             createdAt: event.createdAt,
             processedAt: event.processedAt,
@@ -167,25 +167,29 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
     );
   }
 
-  async findByAggregateId(aggregateId: string): Promise<OutboxEvent[]> {
-    const records = await this.prisma.outboxEvent.findMany({
-      where: { aggregateId },
-      orderBy: { createdAt: "desc" },
-    });
+  async findByAggregateId(
+    aggregateId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<OutboxEvent>> {
+    const where: Prisma.OutboxEventWhereInput = { aggregateId };
 
-    return records.map((record) =>
-      OutboxEvent.reconstitute({
-        id: OutboxEventId.fromString(record.id),
-        aggregateType: record.aggregateType,
-        aggregateId: AggregateId.fromString(record.aggregateId),
-        eventType: record.eventType,
-        payload: record.payload as Record<string, any>,
-        status: record.status as OutboxEventStatus,
-        createdAt: record.createdAt,
-        processedAt: record.processedAt ?? undefined,
-        retryCount: record.retryCount,
-        error: record.error ?? undefined,
-      }),
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) =>
+        OutboxEvent.reconstitute({
+          id: OutboxEventId.fromString(record.id),
+          aggregateType: record.aggregateType,
+          aggregateId: AggregateId.fromString(record.aggregateId),
+          eventType: record.eventType,
+          payload: record.payload as Record<string, any>,
+          status: record.status as OutboxEventStatus,
+          createdAt: record.createdAt,
+          processedAt: record.processedAt ?? undefined,
+          retryCount: record.retryCount,
+          error: record.error ?? undefined,
+        }),
+      options,
     );
   }
 

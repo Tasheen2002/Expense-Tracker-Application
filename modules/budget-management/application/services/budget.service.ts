@@ -383,9 +383,13 @@ export class BudgetService {
     );
   }
 
-  async getAllocationsByBudget(budgetId: string): Promise<BudgetAllocation[]> {
+  async getAllocationsByBudget(
+    budgetId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAllocation>> {
     return await this.allocationRepository.findByBudget(
       BudgetId.fromString(budgetId),
+      options,
     );
   }
 
@@ -425,8 +429,11 @@ export class BudgetService {
     return alerts;
   }
 
-  async getUnreadAlerts(workspaceId: string): Promise<BudgetAlert[]> {
-    return await this.alertRepository.findUnreadAlerts(workspaceId);
+  async getUnreadAlerts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAlert>> {
+    return await this.alertRepository.findUnreadAlerts(workspaceId, options);
   }
 
   async markAlertAsRead(alertId: string): Promise<BudgetAlert> {

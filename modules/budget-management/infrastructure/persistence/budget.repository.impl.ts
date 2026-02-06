@@ -12,6 +12,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 // ... (imports)
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
@@ -82,39 +83,20 @@ export class BudgetRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Budget>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
     const where: Prisma.BudgetWhereInput = { workspaceId };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.budget.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.budget.count({ where }),
-    ]);
-
-    const items = rows.map((row) => this.toDomain(row));
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budget,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findByFilters(
     filters: BudgetFilters,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Budget>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
     const where: Prisma.BudgetWhereInput = {
       workspaceId: filters.workspaceId,
     };
@@ -140,96 +122,53 @@ export class BudgetRepositoryImpl
       }
     }
 
-    const [rows, total] = await Promise.all([
-      this.prisma.budget.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.budget.count({ where }),
-    ]);
-
-    const items = rows.map((row) => this.toDomain(row));
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budget,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findActiveBudgets(
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Budget>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
     const now = new Date();
 
-    const where = {
+    const where: Prisma.BudgetWhereInput = {
       workspaceId,
       status: BudgetStatus.ACTIVE,
       startDate: { lte: now },
       endDate: { gte: now },
     };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.budget.findMany({
-        where,
-        orderBy: { startDate: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.budget.count({ where }),
-    ]);
-
-    const items = rows.map((row) => this.toDomain(row));
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budget,
+      { where, orderBy: { startDate: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findExpiredBudgets(
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Budget>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
     const now = new Date();
 
-    const where = {
+    const where: Prisma.BudgetWhereInput = {
       workspaceId,
       status: BudgetStatus.ACTIVE,
       endDate: { lt: now },
     };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.budget.findMany({
-        where,
-        orderBy: { endDate: "asc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.budget.count({ where }),
-    ]);
-
-    const items = rows.map((row) => this.toDomain(row));
-
-    return {
-      items,
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budget,
+      { where, orderBy: { endDate: "asc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async delete(id: BudgetId, workspaceId: string): Promise<void> {
@@ -263,7 +202,7 @@ export class BudgetRepositoryImpl
     return count > 0;
   }
 
-  private toDomain(row: any): Budget {
+  private toDomain(row: Prisma.BudgetGetPayload<object>): Budget {
     const period = BudgetPeriod.fromDates(
       row.startDate,
       row.endDate,

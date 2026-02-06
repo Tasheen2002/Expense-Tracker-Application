@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IWorkspaceInvitationRepository } from "../../domain/repositories/workspace-invitation.repository";
 import {
   WorkspaceInvitation,
@@ -7,12 +7,26 @@ import {
 import { WorkspaceMembership } from "../../domain/entities/workspace-membership.entity";
 import { InvitationId } from "../../domain/value-objects/invitation-id.vo";
 import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
-export class WorkspaceInvitationRepositoryImpl implements IWorkspaceInvitationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class WorkspaceInvitationRepositoryImpl
+  extends PrismaRepository<WorkspaceInvitation>
+  implements IWorkspaceInvitationRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   // Helper to convert Prisma result (camelCase) to WorkspaceInvitationRow (snake_case)
-  private toDatabaseRow(prismaRow: any): WorkspaceInvitationRow {
+  private toDatabaseRow(
+    prismaRow: Prisma.WorkspaceInvitationGetPayload<{}>,
+  ): WorkspaceInvitationRow {
     return {
       id: prismaRow.id,
       workspace_id: prismaRow.workspaceId,
@@ -44,6 +58,7 @@ export class WorkspaceInvitationRepositoryImpl implements IWorkspaceInvitationRe
         acceptedAt: data.accepted_at,
       },
     });
+    await this.dispatchEvents(invitation);
   }
 
   async findById(id: InvitationId): Promise<WorkspaceInvitation | null> {
@@ -68,25 +83,31 @@ export class WorkspaceInvitationRepositoryImpl implements IWorkspaceInvitationRe
 
   async findByWorkspaceId(
     workspaceId: WorkspaceId,
-  ): Promise<WorkspaceInvitation[]> {
-    const rows = await this.prisma.workspaceInvitation.findMany({
-      where: { workspaceId: workspaceId.getValue() },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) =>
-      WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<WorkspaceInvitation>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.workspaceInvitation,
+      {
+        where: { workspaceId: workspaceId.getValue() },
+        orderBy: { createdAt: "desc" },
+      },
+      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      options,
     );
   }
 
-  async findByEmail(email: string): Promise<WorkspaceInvitation[]> {
-    const rows = await this.prisma.workspaceInvitation.findMany({
-      where: { email: email.toLowerCase() },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) =>
-      WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+  async findByEmail(
+    email: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<WorkspaceInvitation>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.workspaceInvitation,
+      {
+        where: { email: email.toLowerCase() },
+        orderBy: { createdAt: "desc" },
+      },
+      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      options,
     );
   }
 

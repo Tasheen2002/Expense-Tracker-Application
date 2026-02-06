@@ -1,6 +1,9 @@
 import { AuditLog } from "../entities/audit-log.entity";
 import { AuditLogId } from "../value-objects/audit-log-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface AuditLogFilter {
   workspaceId: string;
@@ -28,7 +31,8 @@ export interface AuditLogRepository {
     workspaceId: string,
     entityType: string,
     entityId: string,
-  ): Promise<AuditLog[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<AuditLog>>;
   countByWorkspace(workspaceId: string): Promise<number>;
   countByAction(workspaceId: string, action: string): Promise<number>;
   getActionSummary(

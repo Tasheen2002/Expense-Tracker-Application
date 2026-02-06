@@ -3,6 +3,10 @@ import { SpendingLimit } from '../../domain/entities/spending-limit.entity'
 import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id'
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
 import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors'
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
 
 export class SpendingLimitService {
   constructor(private readonly limitRepository: ISpendingLimitRepository) {}
@@ -109,12 +113,18 @@ export class SpendingLimitService {
     )
   }
 
-  async getSpendingLimitsByWorkspace(workspaceId: string): Promise<SpendingLimit[]> {
-    return await this.limitRepository.findByWorkspace(workspaceId)
+  async getSpendingLimitsByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    return await this.limitRepository.findByWorkspace(workspaceId, options)
   }
 
-  async filterSpendingLimits(filters: SpendingLimitFilters): Promise<SpendingLimit[]> {
-    return await this.limitRepository.findByFilters(filters)
+  async filterSpendingLimits(
+    filters: SpendingLimitFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    return await this.limitRepository.findByFilters(filters, options)
   }
 
   async getApplicableLimits(

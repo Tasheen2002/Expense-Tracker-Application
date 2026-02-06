@@ -113,28 +113,41 @@ export class SpendingLimitController {
         categoryId?: string;
         isActive?: string;
         periodType?: string;
+        limit?: string;
+        offset?: string;
       };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
-      const { userId, categoryId, isActive, periodType } = request.query;
+      const { userId, categoryId, isActive, periodType, limit, offset } =
+        request.query;
 
-      const limits = await this.listLimitsHandler.handle({
+      const result = await this.listLimitsHandler.handle({
         workspaceId,
         userId,
         categoryId,
         isActive:
           isActive === "true" ? true : isActive === "false" ? false : undefined,
         periodType: periodType as BudgetPeriodType | undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
       });
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Spending limits retrieved successfully",
-        data: limits.map((limit) => this.serializeLimit(limit)),
+        data: {
+          items: result.items.map((limit) => this.serializeLimit(limit)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

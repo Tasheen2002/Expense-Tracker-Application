@@ -22,9 +22,17 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
-export class NotificationRepositoryImpl implements INotificationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class NotificationRepositoryImpl
+  extends PrismaRepository<Notification>
+  implements INotificationRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(notification: Notification): Promise<void> {
     const id = notification.getId().getValue();
@@ -33,15 +41,17 @@ export class NotificationRepositoryImpl implements INotificationRepository {
     const data = {
       workspaceId: notification.getWorkspaceId().getValue(),
       recipientId: notification.getRecipientId().getValue(),
-      type: PrismaNotificationType[notification.getType()],
-      channel: PrismaNotificationChannel[notification.getChannel()],
-      priority: PrismaNotificationPriority[notification.getPriority()],
+      type: notification.getType() as unknown as PrismaNotificationType,
+      channel:
+        notification.getChannel() as unknown as PrismaNotificationChannel,
+      priority:
+        notification.getPriority() as unknown as PrismaNotificationPriority,
       title: notification.getTitle(),
       content: notification.getContent(),
       data: notificationData
         ? (notificationData as Prisma.InputJsonValue)
         : Prisma.JsonNull,
-      status: PrismaNotificationStatus[notification.getStatus()],
+      status: notification.getStatus() as unknown as PrismaNotificationStatus,
       error: notification.getError() || null,
       readAt: notification.getReadAt() || null,
       sentAt: notification.getSentAt() || null,
@@ -52,6 +62,8 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       update: data,
       create: { id, ...data },
     });
+
+    await this.dispatchEvents(notification);
   }
 
   async findById(id: NotificationId): Promise<Notification | null> {
@@ -66,17 +78,20 @@ export class NotificationRepositoryImpl implements INotificationRepository {
   async findUnreadByRecipient(
     recipientId: UserId,
     workspaceId: WorkspaceId,
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: {
-        recipientId: recipientId.getValue(),
-        workspaceId: workspaceId.getValue(),
-        readAt: null,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const where = {
+      recipientId: recipientId.getValue(),
+      workspaceId: workspaceId.getValue(),
+      readAt: null,
+    };
 
-    return records.map((record) => this.toDomain(record));
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.notification,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findByRecipient(
@@ -88,26 +103,13 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       recipientId: recipientId.getValue(),
       workspaceId: workspaceId.getValue(),
     };
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
 
-    const [records, total] = await Promise.all([
-      this.prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.notification.count({ where }),
-    ]);
-
-    return {
-      items: records.map((record) => this.toDomain(record)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + records.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.notification,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async countUnread(

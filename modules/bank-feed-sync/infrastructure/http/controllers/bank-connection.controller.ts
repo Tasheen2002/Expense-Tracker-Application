@@ -71,13 +71,19 @@ export class BankConnectionController {
 
   async getConnections(request: AuthenticatedRequest, reply: FastifyReply) {
     const { workspaceId } = request.params as { workspaceId: string };
+    const { limit, offset } = request.query as {
+      limit?: string;
+      offset?: string;
+    };
 
-    const connections = await this.getBankConnectionsHandler.handle({
+    const result = await this.getBankConnectionsHandler.handle({
       workspaceId,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
     });
 
     return reply.send({
-      connections: connections.map((c) => ({
+      connections: result.items.map((c) => ({
         id: c.getId().getValue(),
         workspaceId: c.getWorkspaceId().getValue(),
         userId: c.getUserId().getValue(),
@@ -95,6 +101,10 @@ export class BankConnectionController {
         createdAt: c.getCreatedAt(),
         updatedAt: c.getUpdatedAt(),
       })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
     });
   }
 

@@ -186,10 +186,15 @@ export class NotificationService {
   async getUnreadNotifications(
     recipientId: string,
     workspaceId: string,
-  ): Promise<Notification[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Notification>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
-    return this.notificationRepository.findUnreadByRecipient(userId, wsId);
+    return this.notificationRepository.findUnreadByRecipient(
+      userId,
+      wsId,
+      options,
+    );
   }
 
   async getNotifications(

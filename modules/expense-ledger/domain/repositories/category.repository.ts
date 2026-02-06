@@ -1,5 +1,9 @@
 import { Category } from "../entities/category.entity";
 import { CategoryId } from "../value-objects/category-id";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface CategoryRepository {
   save(category: Category): Promise<void>;
@@ -10,9 +14,15 @@ export interface CategoryRepository {
 
   findByName(name: string, workspaceId: string): Promise<Category | null>;
 
-  findByWorkspace(workspaceId: string): Promise<Category[]>;
+  findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Category>>;
 
-  findActiveByWorkspace(workspaceId: string): Promise<Category[]>;
+  findActiveByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Category>>;
 
   delete(id: CategoryId, workspaceId: string): Promise<void>;
 

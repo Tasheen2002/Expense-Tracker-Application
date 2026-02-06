@@ -10,7 +10,10 @@ export interface IWorkspaceRepository {
   save(workspace: Workspace): Promise<void>;
   findById(id: WorkspaceId): Promise<Workspace | null>;
   findBySlug(slug: string): Promise<Workspace | null>;
-  findByOwnerId(ownerId: UserId): Promise<Workspace[]>;
+  findByOwnerId(
+    ownerId: UserId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Workspace>>;
   findAll(options?: WorkspaceQueryOptions): Promise<PaginatedResult<Workspace>>;
   update(workspace: Workspace): Promise<void>;
   delete(id: WorkspaceId): Promise<void>;

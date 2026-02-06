@@ -1,10 +1,15 @@
-import { PrismaClient } from '@prisma/client'
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
-import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo'
+import { PrismaClient, Prisma } from "@prisma/client";
+import { ApprovalChainRepository } from "../../domain/repositories/approval-chain.repository";
+import { ApprovalChain } from "../../domain/entities/approval-chain.entity";
+import { ApprovalChainId } from "../../domain/value-objects/approval-chain-id";
+import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaApprovalChainRepository implements ApprovalChainRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -19,9 +24,11 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
         description: chain.getDescription(),
         minAmount: chain.getMinAmount(),
         maxAmount: chain.getMaxAmount(),
-        categoryIds: chain.getCategoryIds()?.map(id => id.getValue()) || [],
+        categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()) || [],
         requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain.getApproverSequence().map(id => id.getValue()),
+        approverSequence: chain
+          .getApproverSequence()
+          .map((id) => id.getValue()),
         isActive: chain.isActive(),
         createdAt: chain.getCreatedAt(),
         updatedAt: chain.getUpdatedAt(),
@@ -31,85 +38,107 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
         description: chain.getDescription(),
         minAmount: chain.getMinAmount(),
         maxAmount: chain.getMaxAmount(),
-        categoryIds: chain.getCategoryIds()?.map(id => id.getValue()) || [],
+        categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()) || [],
         requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain.getApproverSequence().map(id => id.getValue()),
+        approverSequence: chain
+          .getApproverSequence()
+          .map((id) => id.getValue()),
         isActive: chain.isActive(),
         updatedAt: chain.getUpdatedAt(),
       },
-    })
+    });
   }
 
   async findById(chainId: ApprovalChainId): Promise<ApprovalChain | null> {
     const row = await this.prisma.approvalChain.findUnique({
       where: { id: chainId.getValue() },
-    })
+    });
 
-    return row ? this.toDomain(row) : null
+    return row ? this.toDomain(row) : null;
   }
 
-  async findByWorkspace(workspaceId: string): Promise<ApprovalChain[]> {
-    const rows = await this.prisma.approvalChain.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ApprovalChain>> {
+    const where: Prisma.ApprovalChainWhereInput = { workspaceId };
 
-    return rows.map(row => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.approvalChain,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findActiveByWorkspace(workspaceId: string): Promise<ApprovalChain[]> {
-    const rows = await this.prisma.approvalChain.findMany({
-      where: {
-        workspaceId,
-        isActive: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findActiveByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ApprovalChain>> {
+    const where: Prisma.ApprovalChainWhereInput = {
+      workspaceId,
+      isActive: true,
+    };
 
-    return rows.map(row => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.approvalChain,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findApplicableChain(params: {
-    workspaceId: string
-    amount: number
-    categoryId?: string
-    hasReceipt: boolean
+    workspaceId: string;
+    amount: number;
+    categoryId?: string;
+    hasReceipt: boolean;
   }): Promise<ApprovalChain | null> {
-    const chains = await this.findActiveByWorkspace(params.workspaceId)
+    const result = await this.findActiveByWorkspace(params.workspaceId, {
+      limit: 100,
+      offset: 0,
+    });
 
-    for (const chain of chains) {
-      if (chain.appliesTo({
-        amount: params.amount,
-        categoryId: params.categoryId,
-        hasReceipt: params.hasReceipt,
-      })) {
-        return chain
+    for (const chain of result.items) {
+      if (
+        chain.appliesTo({
+          amount: params.amount,
+          categoryId: params.categoryId,
+          hasReceipt: params.hasReceipt,
+        })
+      ) {
+        return chain;
       }
     }
 
-    return null
+    return null;
   }
 
   async delete(chainId: ApprovalChainId): Promise<void> {
     await this.prisma.approvalChain.delete({
       where: { id: chainId.getValue() },
-    })
+    });
   }
 
-  private toDomain(row: any): ApprovalChain {
+  private toDomain(row: Prisma.ApprovalChainGetPayload<object>): ApprovalChain {
     return ApprovalChain.reconstitute({
       chainId: ApprovalChainId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       name: row.name,
-      description: row.description,
+      description: row.description ?? undefined,
       minAmount: row.minAmount ? Number(row.minAmount) : undefined,
       maxAmount: row.maxAmount ? Number(row.maxAmount) : undefined,
-      categoryIds: row.categoryIds?.length > 0 ? row.categoryIds.map((id: string) => CategoryId.fromString(id)) : undefined,
+      categoryIds:
+        row.categoryIds?.length > 0
+          ? row.categoryIds.map((id: string) => CategoryId.fromString(id))
+          : undefined,
       requiresReceipt: row.requiresReceipt,
-      approverSequence: row.approverSequence.map((id: string) => UserId.fromString(id)),
+      approverSequence: row.approverSequence.map((id: string) =>
+        UserId.fromString(id),
+      ),
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    })
+    });
   }
 }

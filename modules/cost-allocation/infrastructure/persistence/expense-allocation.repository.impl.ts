@@ -2,9 +2,16 @@ import { PrismaClient } from "@prisma/client";
 import { ExpenseAllocation } from "../../domain/entities/expense-allocation.entity";
 import { ExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class ExpenseAllocationRepositoryImpl implements ExpenseAllocationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ExpenseAllocationRepositoryImpl
+  extends PrismaRepository<ExpenseAllocation>
+  implements ExpenseAllocationRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(allocation: ExpenseAllocation): Promise<void> {
     await this.prisma.expenseAllocation.create({
@@ -22,6 +29,8 @@ export class ExpenseAllocationRepositoryImpl implements ExpenseAllocationReposit
         createdAt: allocation.getCreatedAt(),
       },
     });
+
+    await this.dispatchEvents(allocation);
   }
 
   async saveBatch(allocations: ExpenseAllocation[]): Promise<void> {
@@ -40,6 +49,11 @@ export class ExpenseAllocationRepositoryImpl implements ExpenseAllocationReposit
         createdAt: a.getCreatedAt(),
       })),
     });
+
+    // Dispatch events for all allocations
+    for (const allocation of allocations) {
+      await this.dispatchEvents(allocation);
+    }
   }
 
   async replaceAllocs(

@@ -12,7 +12,8 @@ export interface INotificationRepository {
   findUnreadByRecipient(
     recipientId: UserId,
     workspaceId: WorkspaceId,
-  ): Promise<Notification[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Notification>>;
   findByRecipient(
     recipientId: UserId,
     workspaceId: WorkspaceId,

@@ -1,10 +1,19 @@
-import { PrismaClient } from '@prisma/client'
-import { AttachmentRepository } from '../../domain/repositories/attachment.repository'
-import { Attachment } from '../../domain/entities/attachment.entity'
-import { AttachmentId } from '../../domain/value-objects/attachment-id'
+import { PrismaClient, Prisma } from "@prisma/client";
+import { AttachmentRepository } from "../../domain/repositories/attachment.repository";
+import { Attachment } from "../../domain/entities/attachment.entity";
+import { AttachmentId } from "../../domain/value-objects/attachment-id";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class AttachmentRepositoryImpl implements AttachmentRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async save(attachment: Attachment): Promise<void> {
     await this.prisma.attachment.create({
@@ -18,26 +27,34 @@ export class AttachmentRepositoryImpl implements AttachmentRepository {
         uploadedBy: attachment.uploadedBy,
         createdAt: attachment.createdAt,
       },
-    })
+    });
+
+    // NOTE: Attachment does not extend AggregateRoot - no domain events to dispatch
   }
 
   async findById(id: AttachmentId): Promise<Attachment | null> {
     const attachment = await this.prisma.attachment.findUnique({
       where: { id: id.getValue() },
-    })
+    });
 
-    if (!attachment) return null
+    if (!attachment) return null;
 
-    return this.toDomain(attachment)
+    return this.toDomain(attachment);
   }
 
-  async findByExpense(expenseId: string): Promise<Attachment[]> {
-    const attachments = await this.prisma.attachment.findMany({
-      where: { expenseId },
-      orderBy: { createdAt: 'desc' },
-    })
-
-    return attachments.map((attachment) => this.toDomain(attachment))
+  async findByExpense(
+    expenseId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Attachment>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.attachment,
+      {
+        where: { expenseId },
+        orderBy: { createdAt: "desc" },
+      },
+      (attachment) => this.toDomain(attachment),
+      options,
+    );
   }
 
   async findByIds(ids: AttachmentId[]): Promise<Attachment[]> {
@@ -45,28 +62,28 @@ export class AttachmentRepositoryImpl implements AttachmentRepository {
       where: {
         id: { in: ids.map((id) => id.getValue()) },
       },
-    })
+    });
 
-    return attachments.map((attachment) => this.toDomain(attachment))
+    return attachments.map((attachment) => this.toDomain(attachment));
   }
 
   async delete(id: AttachmentId): Promise<void> {
     await this.prisma.attachment.delete({
       where: { id: id.getValue() },
-    })
+    });
   }
 
   async deleteByExpense(expenseId: string): Promise<void> {
     await this.prisma.attachment.deleteMany({
       where: { expenseId },
-    })
+    });
   }
 
   async exists(id: AttachmentId): Promise<boolean> {
     const count = await this.prisma.attachment.count({
       where: { id: id.getValue() },
-    })
-    return count > 0
+    });
+    return count > 0;
   }
 
   async getTotalSizeByExpense(expenseId: string): Promise<number> {
@@ -75,12 +92,12 @@ export class AttachmentRepositoryImpl implements AttachmentRepository {
       _sum: {
         fileSize: true,
       },
-    })
+    });
 
-    return result._sum.fileSize || 0
+    return result._sum.fileSize || 0;
   }
 
-  private toDomain(data: any): Attachment {
+  private toDomain(data: Prisma.AttachmentGetPayload<{}>): Attachment {
     return Attachment.fromPersistence({
       id: AttachmentId.fromString(data.id),
       expenseId: data.expenseId,
@@ -90,6 +107,6 @@ export class AttachmentRepositoryImpl implements AttachmentRepository {
       mimeType: data.mimeType,
       uploadedBy: data.uploadedBy,
       createdAt: data.createdAt,
-    })
+    });
   }
 }

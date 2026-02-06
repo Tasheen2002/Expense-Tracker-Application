@@ -6,6 +6,141 @@ import {
   EmptyApproverSequenceError,
   InvalidAmountRangeError,
 } from "../errors/approval-workflow.errors";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+export class ApprovalChainCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+    public readonly name: string,
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.created";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+      name: this.name,
+    };
+  }
+}
+
+export class ApprovalChainUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+    public readonly changes: {
+      name?: string;
+      description?: string;
+      minAmount?: number;
+      maxAmount?: number;
+    },
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.updated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+      changes: this.changes,
+    };
+  }
+}
+
+export class ApproverSequenceChangedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+    public readonly oldSequence: string[],
+    public readonly newSequence: string[],
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.approver-sequence-changed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+      oldSequence: this.oldSequence,
+      newSequence: this.newSequence,
+    };
+  }
+}
+
+export class ApprovalChainActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.activated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ApprovalChainDeactivatedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.deactivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ApprovalChainDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly chainId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(chainId, "ApprovalChain");
+  }
+
+  get eventType(): string {
+    return "approval-chain.deleted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      chainId: this.chainId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
 
 export interface ApprovalChainProps {
   chainId: ApprovalChainId;
@@ -22,10 +157,11 @@ export interface ApprovalChainProps {
   updatedAt: Date;
 }
 
-export class ApprovalChain {
+export class ApprovalChain extends AggregateRoot {
   private props: ApprovalChainProps;
 
   private constructor(props: ApprovalChainProps) {
+    super();
     this.props = props;
   }
 
@@ -51,7 +187,7 @@ export class ApprovalChain {
       throw new InvalidAmountRangeError();
     }
 
-    return new ApprovalChain({
+    const chain = new ApprovalChain({
       chainId: ApprovalChainId.create(),
       workspaceId: WorkspaceId.fromString(params.workspaceId),
       name: params.name,
@@ -67,6 +203,16 @@ export class ApprovalChain {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    chain.addDomainEvent(
+      new ApprovalChainCreatedEvent(
+        chain.getId().getValue(),
+        chain.getWorkspaceId().getValue(),
+        chain.getName(),
+      ),
+    );
+
+    return chain;
   }
 
   static reconstitute(props: ApprovalChainProps): ApprovalChain {
@@ -122,13 +268,35 @@ export class ApprovalChain {
   }
 
   updateName(name: string): void {
+    const oldName = this.props.name;
     this.props.name = name;
     this.props.updatedAt = new Date();
+
+    if (oldName !== name) {
+      this.addDomainEvent(
+        new ApprovalChainUpdatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+          { name },
+        ),
+      );
+    }
   }
 
   updateDescription(description?: string): void {
+    const oldDescription = this.props.description;
     this.props.description = description;
     this.props.updatedAt = new Date();
+
+    if (oldDescription !== description) {
+      this.addDomainEvent(
+        new ApprovalChainUpdatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+          { description },
+        ),
+      );
+    }
   }
 
   updateAmountRange(minAmount?: number, maxAmount?: number): void {
@@ -138,26 +306,72 @@ export class ApprovalChain {
     this.props.minAmount = minAmount;
     this.props.maxAmount = maxAmount;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ApprovalChainUpdatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        { minAmount, maxAmount },
+      ),
+    );
   }
 
   updateApproverSequence(approverSequence: string[]): void {
     if (approverSequence.length === 0) {
       throw new EmptyApproverSequenceError();
     }
+
+    const oldSequence = this.props.approverSequence.map((id) => id.getValue());
     this.props.approverSequence = approverSequence.map((id) =>
       UserId.fromString(id),
     );
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ApproverSequenceChangedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        oldSequence,
+        approverSequence,
+      ),
+    );
   }
 
   activate(): void {
-    this.props.isActive = true;
-    this.props.updatedAt = new Date();
+    if (!this.props.isActive) {
+      this.props.isActive = true;
+      this.props.updatedAt = new Date();
+
+      this.addDomainEvent(
+        new ApprovalChainActivatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+        ),
+      );
+    }
   }
 
   deactivate(): void {
-    this.props.isActive = false;
-    this.props.updatedAt = new Date();
+    if (this.props.isActive) {
+      this.props.isActive = false;
+      this.props.updatedAt = new Date();
+
+      this.addDomainEvent(
+        new ApprovalChainDeactivatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+        ),
+      );
+    }
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ApprovalChainDeletedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+      ),
+    );
   }
 
   appliesTo(params: {

@@ -1,4 +1,4 @@
-import { PrismaClient, BudgetPeriodType } from "@prisma/client";
+import { PrismaClient, BudgetPeriodType, Prisma } from "@prisma/client";
 import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
 import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
@@ -8,9 +8,17 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class BudgetPlanRepositoryImpl
+  extends PrismaRepository<BudgetPlan>
+  implements BudgetPlanRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(plan: BudgetPlan): Promise<void> {
     const data = {
@@ -32,6 +40,8 @@ export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
       update: data,
       create: data,
     });
+
+    await this.dispatchEvents(plan);
   }
 
   async findById(id: PlanId): Promise<BudgetPlan | null> {
@@ -60,26 +70,17 @@ export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
     status?: PlanStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<BudgetPlan>> {
-    const where: any = { workspaceId: workspaceId.getValue() };
+    const where: Prisma.BudgetPlanWhereInput = {
+      workspaceId: workspaceId.getValue(),
+    };
     if (status) {
       where.status = status;
     }
 
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.budgetPlan.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.budgetPlan.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((raw: any) =>
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budgetPlan,
+      { where, orderBy: { createdAt: "desc" } },
+      (raw) =>
         BudgetPlan.reconstitute({
           id: raw.id,
           workspaceId: raw.workspaceId,
@@ -92,12 +93,8 @@ export class BudgetPlanRepositoryImpl implements BudgetPlanRepository {
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
         }),
-      ),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+      options,
+    );
   }
 
   async delete(id: PlanId): Promise<void> {

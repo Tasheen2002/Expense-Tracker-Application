@@ -84,7 +84,7 @@ export class RuleExecutionController {
   async getExecutionsByWorkspace(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string };
+      Querystring: { limit?: string; offset?: string };
     }>,
     reply: FastifyReply,
   ) {
@@ -94,16 +94,30 @@ export class RuleExecutionController {
       const limit = request.query.limit
         ? parseInt(request.query.limit)
         : undefined;
+      const offset = request.query.offset
+        ? parseInt(request.query.offset)
+        : undefined;
 
-      const query: GetExecutionsByWorkspaceQuery = { workspaceId, limit };
-      const executions =
-        await this.getExecutionsByWorkspaceHandler.execute(query);
+      const query: GetExecutionsByWorkspaceQuery = {
+        workspaceId,
+        limit,
+        offset,
+      };
+      const result = await this.getExecutionsByWorkspaceHandler.execute(query);
 
       return ResponseHelper.success(
         reply,
         200,
         "Executions retrieved successfully",
-        executions,
+        {
+          items: result.items,
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

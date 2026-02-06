@@ -5,6 +5,129 @@ import {
   InvalidAmountError,
   NegativeAmountError,
 } from "../errors/budget.errors";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class BudgetAllocationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly budgetId: string,
+    public readonly categoryId: string | null,
+    public readonly allocatedAmount: string,
+  ) {
+    super(allocationId, "BudgetAllocation");
+  }
+
+  get eventType(): string {
+    return "budget-allocation.created";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      budgetId: this.budgetId,
+      categoryId: this.categoryId,
+      allocatedAmount: this.allocatedAmount,
+    };
+  }
+}
+
+export class BudgetAllocationUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly budgetId: string,
+    public readonly changes: {
+      allocatedAmount?: string;
+      description?: string | null;
+    },
+  ) {
+    super(allocationId, "BudgetAllocation");
+  }
+
+  get eventType(): string {
+    return "budget-allocation.updated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      budgetId: this.budgetId,
+      changes: this.changes,
+    };
+  }
+}
+
+export class BudgetSpentIncrementedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly budgetId: string,
+    public readonly incrementAmount: string,
+    public readonly newSpentAmount: string,
+  ) {
+    super(allocationId, "BudgetAllocation");
+  }
+
+  get eventType(): string {
+    return "budget-allocation.spent-incremented";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      budgetId: this.budgetId,
+      incrementAmount: this.incrementAmount,
+      newSpentAmount: this.newSpentAmount,
+    };
+  }
+}
+
+export class BudgetSpentDecrementedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly budgetId: string,
+    public readonly decrementAmount: string,
+    public readonly newSpentAmount: string,
+  ) {
+    super(allocationId, "BudgetAllocation");
+  }
+
+  get eventType(): string {
+    return "budget-allocation.spent-decremented";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      budgetId: this.budgetId,
+      decrementAmount: this.decrementAmount,
+      newSpentAmount: this.newSpentAmount,
+    };
+  }
+}
+
+export class BudgetAllocationDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly budgetId: string,
+  ) {
+    super(allocationId, "BudgetAllocation");
+  }
+
+  get eventType(): string {
+    return "budget-allocation.deleted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      budgetId: this.budgetId,
+    };
+  }
+}
 
 export interface BudgetAllocationProps {
   id: AllocationId;
@@ -24,8 +147,10 @@ export interface CreateBudgetAllocationData {
   description?: string;
 }
 
-export class BudgetAllocation {
-  private constructor(private props: BudgetAllocationProps) {}
+export class BudgetAllocation extends AggregateRoot {
+  private constructor(private props: BudgetAllocationProps) {
+    super();
+  }
 
   static create(data: CreateBudgetAllocationData): BudgetAllocation {
     // Validate allocated amount
@@ -49,7 +174,7 @@ export class BudgetAllocation {
 
     const now = new Date();
 
-    return new BudgetAllocation({
+    const allocation = new BudgetAllocation({
       id: AllocationId.create(),
       budgetId: BudgetId.fromString(data.budgetId),
       categoryId: data.categoryId || null,
@@ -59,6 +184,17 @@ export class BudgetAllocation {
       createdAt: now,
       updatedAt: now,
     });
+
+    allocation.addDomainEvent(
+      new BudgetAllocationCreatedEvent(
+        allocation.getId().getValue(),
+        allocation.getBudgetId().getValue(),
+        allocation.getCategoryId(),
+        allocatedAmount.toString(),
+      ),
+    );
+
+    return allocation;
   }
 
   static fromPersistence(props: BudgetAllocationProps): BudgetAllocation {
@@ -117,8 +253,19 @@ export class BudgetAllocation {
       );
     }
 
+    const oldAmount = this.props.allocatedAmount;
     this.props.allocatedAmount = newAmount;
     this.props.updatedAt = new Date();
+
+    if (!oldAmount.equals(newAmount)) {
+      this.addDomainEvent(
+        new BudgetAllocationUpdatedEvent(
+          this.getId().getValue(),
+          this.getBudgetId().getValue(),
+          { allocatedAmount: newAmount.toString() },
+        ),
+      );
+    }
   }
 
   updateSpentAmount(amount: number | string | Decimal): void {
@@ -153,8 +300,18 @@ export class BudgetAllocation {
       );
     }
 
-    this.props.spentAmount = this.props.spentAmount.add(incrementAmount);
+    const newSpentAmount = this.props.spentAmount.add(incrementAmount);
+    this.props.spentAmount = newSpentAmount;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetSpentIncrementedEvent(
+        this.getId().getValue(),
+        this.getBudgetId().getValue(),
+        incrementAmount.toString(),
+        newSpentAmount.toString(),
+      ),
+    );
   }
 
   decrementSpent(amount: number | string | Decimal): void {
@@ -176,11 +333,41 @@ export class BudgetAllocation {
 
     this.props.spentAmount = newSpent;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetSpentDecrementedEvent(
+        this.getId().getValue(),
+        this.getBudgetId().getValue(),
+        decrementAmount.toString(),
+        newSpent.toString(),
+      ),
+    );
   }
 
   updateDescription(description: string | null): void {
-    this.props.description = description?.trim() || null;
+    const oldDescription = this.props.description;
+    const newDescription = description?.trim() || null;
+    this.props.description = newDescription;
     this.props.updatedAt = new Date();
+
+    if (oldDescription !== newDescription) {
+      this.addDomainEvent(
+        new BudgetAllocationUpdatedEvent(
+          this.getId().getValue(),
+          this.getBudgetId().getValue(),
+          { description: newDescription },
+        ),
+      );
+    }
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new BudgetAllocationDeletedEvent(
+        this.getId().getValue(),
+        this.getBudgetId().getValue(),
+      ),
+    );
   }
 
   getRemainingAmount(): Decimal {

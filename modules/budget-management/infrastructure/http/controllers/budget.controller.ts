@@ -14,6 +14,7 @@ import { GetAllocationsHandler } from "../../../application/queries/get-allocati
 import { GetUnreadAlertsHandler } from "../../../application/queries/get-unread-alerts.query";
 import { Budget } from "../../../domain/entities/budget.entity";
 import { BudgetAllocation } from "../../../domain/entities/budget-allocation.entity";
+import { BudgetAlert } from "../../../domain/entities/budget-alert.entity";
 import { BudgetPeriodType } from "../../../domain/enums/budget-period-type";
 import { BudgetStatus } from "../../../domain/enums/budget-status";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
@@ -398,9 +399,15 @@ export class BudgetController {
         success: true,
         statusCode: 200,
         message: "Allocations retrieved successfully",
-        data: allocations.map((allocation) =>
+        data: allocations.items.map((allocation: BudgetAllocation) =>
           this.serializeAllocation(allocation),
         ),
+        pagination: {
+          total: allocations.total,
+          limit: allocations.limit,
+          offset: allocations.offset,
+          hasMore: allocations.hasMore,
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -424,7 +431,7 @@ export class BudgetController {
         success: true,
         statusCode: 200,
         message: "Alerts retrieved successfully",
-        data: alerts.map((alert) => ({
+        data: alerts.items.map((alert: BudgetAlert) => ({
           alertId: alert.getId().getValue(),
           budgetId: alert.getBudgetId().getValue(),
           allocationId: alert.getAllocationId()?.getValue() || null,
@@ -436,6 +443,12 @@ export class BudgetController {
           isRead: alert.isRead(),
           createdAt: alert.getCreatedAt().toISOString(),
         })),
+        pagination: {
+          total: alerts.total,
+          limit: alerts.limit,
+          offset: alerts.offset,
+          hasMore: alerts.hasMore,
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

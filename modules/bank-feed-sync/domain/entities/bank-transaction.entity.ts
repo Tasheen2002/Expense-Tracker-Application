@@ -4,6 +4,7 @@ import { BankTransactionId } from "../value-objects/bank-transaction-id";
 import { SyncSessionId } from "../value-objects/sync-session-id";
 import { TransactionStatus } from "../enums/transaction-status.enum";
 import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
 // ============================================================================
 // Domain Events
@@ -121,8 +122,10 @@ export interface BankTransactionProps {
   updatedAt: Date;
 }
 
-export class BankTransaction {
-  private constructor(private readonly props: BankTransactionProps) {}
+export class BankTransaction extends AggregateRoot {
+  private constructor(private readonly props: BankTransactionProps) {
+    super();
+  }
 
   static create(
     workspaceId: WorkspaceId,
@@ -138,7 +141,7 @@ export class BankTransaction {
     postedDate?: Date,
     metadata?: Record<string, unknown>,
   ): BankTransaction {
-    return new BankTransaction({
+    const transaction = new BankTransaction({
       id: BankTransactionId.create(),
       workspaceId,
       connectionId,
@@ -156,6 +159,19 @@ export class BankTransaction {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    transaction.addDomainEvent(
+      new BankTransactionSyncedEvent(
+        transaction.getId().getValue(),
+        transaction.getWorkspaceId().getValue(),
+        transaction.getConnectionId().getValue(),
+        externalId,
+        amount,
+        currency,
+      ),
+    );
+
+    return transaction;
   }
 
   static fromPersistence(props: BankTransactionProps): BankTransaction {
@@ -305,17 +321,40 @@ export class BankTransaction {
     this.props.status = TransactionStatus.MATCHED;
     this.props.expenseId = expenseId;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankTransactionMatchedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        expenseId,
+      ),
+    );
   }
 
   markAsImported(expenseId: string): void {
     this.props.status = TransactionStatus.IMPORTED;
     this.props.expenseId = expenseId;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankTransactionImportedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        expenseId,
+      ),
+    );
   }
 
   markAsIgnored(): void {
     this.props.status = TransactionStatus.IGNORED;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankTransactionIgnoredEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+      ),
+    );
   }
 
   markAsDuplicate(): void {

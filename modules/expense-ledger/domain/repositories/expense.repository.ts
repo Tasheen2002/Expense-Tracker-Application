@@ -46,12 +46,19 @@ export interface ExpenseRepository {
   /**
    * Find all expenses by workspace
    */
-  findByWorkspace(workspaceId: string): Promise<Expense[]>;
+  findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>>;
 
   /**
    * Find expenses by user
    */
-  findByUser(userId: string, workspaceId: string): Promise<Expense[]>;
+  findByUser(
+    userId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>>;
 
   /**
    * Find expenses by category
@@ -59,12 +66,17 @@ export interface ExpenseRepository {
   findByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-  ): Promise<Expense[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>>;
 
   /**
    * Find expenses by status
    */
-  findByStatus(status: ExpenseStatus, workspaceId: string): Promise<Expense[]>;
+  findByStatus(
+    status: ExpenseStatus,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>>;
 
   /**
    * Find expenses with filters

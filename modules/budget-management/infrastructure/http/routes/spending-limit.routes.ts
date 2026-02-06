@@ -75,6 +75,8 @@ export async function spendingLimitRoutes(
               type: "string",
               enum: ["MONTHLY", "QUARTERLY", "YEARLY", "CUSTOM"],
             },
+            limit: { type: "string", pattern: "^[0-9]+$" },
+            offset: { type: "string", pattern: "^[0-9]+$" },
           },
         },
       },

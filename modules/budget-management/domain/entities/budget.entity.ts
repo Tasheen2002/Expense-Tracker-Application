@@ -138,6 +138,72 @@ export class BudgetCreatedEvent extends DomainEvent {
   }
 }
 
+export class BudgetActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(budgetId, "Budget");
+  }
+
+  get eventType(): string {
+    return "budget.activated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BudgetArchivedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(budgetId, "Budget");
+  }
+
+  get eventType(): string {
+    return "budget.archived";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BudgetUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string,
+    public readonly changes: {
+      name?: string;
+      totalAmount?: string;
+      description?: string | null;
+    },
+  ) {
+    super(budgetId, "Budget");
+  }
+
+  get eventType(): string {
+    return "budget.updated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+      changes: this.changes,
+    };
+  }
+}
+
 // ============================================================================
 // ENTITY
 // ============================================================================
@@ -245,8 +311,17 @@ export class Budget extends AggregateRoot {
     if (!newName || newName.trim().length === 0) {
       throw new InvalidBudgetDataError("Budget name is required");
     }
+    const oldName = this.props.name;
     this.props.name = newName;
     this.props.updatedAt = new Date();
+
+    if (oldName !== newName) {
+      this.addDomainEvent(
+        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+          name: newName,
+        }),
+      );
+    }
   }
 
   updateTotalAmount(amount: number | string | Decimal): void {
@@ -264,13 +339,32 @@ export class Budget extends AggregateRoot {
         "Total amount cannot have more than 2 decimal places",
       );
     }
+    const oldAmount = this.props.totalAmount;
     this.props.totalAmount = newAmount;
     this.props.updatedAt = new Date();
+
+    if (!oldAmount.equals(newAmount)) {
+      this.addDomainEvent(
+        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+          totalAmount: newAmount.toString(),
+        }),
+      );
+    }
   }
 
   updateDescription(description: string | null): void {
-    this.props.description = description ? description.trim() : null;
+    const oldDescription = this.props.description;
+    const newDescription = description ? description.trim() : null;
+    this.props.description = newDescription;
     this.props.updatedAt = new Date();
+
+    if (oldDescription !== newDescription) {
+      this.addDomainEvent(
+        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+          description: newDescription,
+        }),
+      );
+    }
   }
 
   activate(): void {
@@ -282,6 +376,10 @@ export class Budget extends AggregateRoot {
     }
     this.props.status = BudgetStatus.ACTIVE;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetActivatedEvent(this.getId().getValue(), this.getWorkspaceId()),
+    );
   }
 
   markAsExceeded(currentSpending: number): void {
@@ -315,6 +413,10 @@ export class Budget extends AggregateRoot {
     }
     this.props.status = BudgetStatus.ARCHIVED;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BudgetArchivedEvent(this.getId().getValue(), this.getWorkspaceId()),
+    );
   }
 
   // Getters

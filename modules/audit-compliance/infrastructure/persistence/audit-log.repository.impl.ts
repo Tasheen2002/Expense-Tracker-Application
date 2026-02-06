@@ -7,9 +7,13 @@ import {
 } from "../../domain/repositories/audit-log.repository";
 import { AuditLog } from "../../domain/entities/audit-log.entity";
 import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { AuditAction } from "../../domain/value-objects/audit-action.vo";
 import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class AuditLogRepositoryImpl
   extends PrismaRepository<AuditLog>
@@ -50,23 +54,14 @@ export class AuditLogRepositoryImpl
     limit: number = 50,
     offset: number = 0,
   ): Promise<PaginatedResult<AuditLog>> {
-    const [items, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where: { workspaceId },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.auditLog.count({ where: { workspaceId } }),
-    ]);
+    const where: Prisma.AuditLogWhereInput = { workspaceId };
 
-    return {
-      items: items.map((item) => this.toDomain(item)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + items.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.auditLog,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      { limit, offset },
+    );
   }
 
   async findByFilter(
@@ -98,40 +93,32 @@ export class AuditLogRepositoryImpl
       }
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: filter.limit || 50,
-        skip: filter.offset || 0,
-      }),
-      this.prisma.auditLog.count({ where }),
-    ]);
-
-    return {
-      items: items.map((item) => this.toDomain(item)),
-      total,
-      limit: filter.limit || 50,
-      offset: filter.offset || 0,
-      hasMore: (filter.offset || 0) + items.length < total,
-    };
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.auditLog,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      { limit: filter.limit, offset: filter.offset },
+    );
   }
 
   async findByEntityId(
     workspaceId: string,
     entityType: string,
     entityId: string,
-  ): Promise<AuditLog[]> {
-    const data = await this.prisma.auditLog.findMany({
-      where: {
-        workspaceId,
-        entityType,
-        entityId,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<AuditLog>> {
+    const where: Prisma.AuditLogWhereInput = {
+      workspaceId,
+      entityType,
+      entityId,
+    };
 
-    return data.map((item) => this.toDomain(item));
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.auditLog,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async countByWorkspace(workspaceId: string): Promise<number> {
@@ -213,7 +200,7 @@ export class AuditLogRepositoryImpl
     return result;
   }
 
-  private toDomain(data: any): AuditLog {
+  private toDomain(data: Prisma.AuditLogGetPayload<object>): AuditLog {
     return AuditLog.fromPersistence({
       id: AuditLogId.fromString(data.id),
       workspaceId: data.workspaceId,

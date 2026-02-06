@@ -1,10 +1,19 @@
-import { PrismaClient } from '@prisma/client'
-import { CategoryRepository } from '../../domain/repositories/category.repository'
-import { Category } from '../../domain/entities/category.entity'
-import { CategoryId } from '../../domain/value-objects/category-id'
+import { PrismaClient, Prisma } from "@prisma/client";
+import { CategoryRepository } from "../../domain/repositories/category.repository";
+import { Category } from "../../domain/entities/category.entity";
+import { CategoryId } from "../../domain/value-objects/category-id";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class CategoryRepositoryImpl implements CategoryRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async save(category: Category): Promise<void> {
     await this.prisma.category.create({
@@ -19,7 +28,9 @@ export class CategoryRepositoryImpl implements CategoryRepository {
         createdAt: category.createdAt,
         updatedAt: category.updatedAt,
       },
-    })
+    });
+
+    // NOTE: Category does not extend AggregateRoot - no domain events to dispatch
   }
 
   async update(category: Category): Promise<void> {
@@ -36,23 +47,31 @@ export class CategoryRepositoryImpl implements CategoryRepository {
         isActive: category.isActive,
         updatedAt: category.updatedAt,
       },
-    })
+    });
+
+    // NOTE: Category does not extend AggregateRoot - no domain events to dispatch
   }
 
-  async findById(id: CategoryId, workspaceId: string): Promise<Category | null> {
+  async findById(
+    id: CategoryId,
+    workspaceId: string,
+  ): Promise<Category | null> {
     const category = await this.prisma.category.findUnique({
       where: {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    if (!category) return null
+    if (!category) return null;
 
-    return this.toDomain(category)
+    return this.toDomain(category);
   }
 
-  async findByName(name: string, workspaceId: string): Promise<Category | null> {
+  async findByName(
+    name: string,
+    workspaceId: string,
+  ): Promise<Category | null> {
     const category = await this.prisma.category.findUnique({
       where: {
         workspaceId_name: {
@@ -60,32 +79,44 @@ export class CategoryRepositoryImpl implements CategoryRepository {
           name,
         },
       },
-    })
+    });
 
-    if (!category) return null
+    if (!category) return null;
 
-    return this.toDomain(category)
+    return this.toDomain(category);
   }
 
-  async findByWorkspace(workspaceId: string): Promise<Category[]> {
-    const categories = await this.prisma.category.findMany({
-      where: { workspaceId },
-      orderBy: { name: 'asc' },
-    })
-
-    return categories.map((category) => this.toDomain(category))
-  }
-
-  async findActiveByWorkspace(workspaceId: string): Promise<Category[]> {
-    const categories = await this.prisma.category.findMany({
-      where: {
-        workspaceId,
-        isActive: true,
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Category>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.category,
+      {
+        where: { workspaceId },
+        orderBy: { name: "asc" },
       },
-      orderBy: { name: 'asc' },
-    })
+      (category) => this.toDomain(category),
+      options,
+    );
+  }
 
-    return categories.map((category) => this.toDomain(category))
+  async findActiveByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Category>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.category,
+      {
+        where: {
+          workspaceId,
+          isActive: true,
+        },
+        orderBy: { name: "asc" },
+      },
+      (category) => this.toDomain(category),
+      options,
+    );
   }
 
   async delete(id: CategoryId, workspaceId: string): Promise<void> {
@@ -94,7 +125,7 @@ export class CategoryRepositoryImpl implements CategoryRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
   }
 
   async exists(id: CategoryId, workspaceId: string): Promise<boolean> {
@@ -103,8 +134,8 @@ export class CategoryRepositoryImpl implements CategoryRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
-    return count > 0
+    });
+    return count > 0;
   }
 
   async existsByName(name: string, workspaceId: string): Promise<boolean> {
@@ -113,21 +144,21 @@ export class CategoryRepositoryImpl implements CategoryRepository {
         name,
         workspaceId,
       },
-    })
-    return count > 0
+    });
+    return count > 0;
   }
 
-  private toDomain(data: any): Category {
+  private toDomain(data: Prisma.CategoryGetPayload<{}>): Category {
     return Category.fromPersistence({
       id: CategoryId.fromString(data.id),
       workspaceId: data.workspaceId,
       name: data.name,
-      description: data.description,
-      color: data.color,
-      icon: data.icon,
+      description: data.description ?? undefined,
+      color: data.color ?? undefined,
+      icon: data.icon ?? undefined,
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
-    })
+    });
   }
 }

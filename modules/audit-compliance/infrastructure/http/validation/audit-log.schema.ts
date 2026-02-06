@@ -39,6 +39,14 @@ export type GetAuditLogParams = z.infer<typeof getAuditLogParamsSchema>;
 export const entityAuditHistoryQuerySchema = z.object({
   entityType: z.string().min(1, "Entity type is required"),
   entityId: z.string().min(1, "Entity ID is required"),
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 50)),
+  offset: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 0)),
 });
 
 export type EntityAuditHistoryQuery = z.infer<

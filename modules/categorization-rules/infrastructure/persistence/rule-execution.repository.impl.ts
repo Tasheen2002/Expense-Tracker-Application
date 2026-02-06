@@ -105,16 +105,20 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
   async findByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId,
-  ): Promise<RuleExecution[]> {
-    const executions = await this.prisma.ruleExecution.findMany({
-      where: {
-        expenseId: expenseId.getValue(),
-        workspaceId: workspaceId.getValue(),
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<RuleExecution>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.ruleExecution,
+      {
+        where: {
+          expenseId: expenseId.getValue(),
+          workspaceId: workspaceId.getValue(),
+        },
+        orderBy: { executedAt: "desc" },
       },
-      orderBy: { executedAt: "desc" },
-    });
-
-    return executions.map((execution) => this.toDomain(execution));
+      (raw) => this.toDomain(raw),
+      options,
+    );
   }
 
   async findByWorkspaceId(
