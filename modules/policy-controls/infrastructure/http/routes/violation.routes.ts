@@ -47,7 +47,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.listViolations(request as any, reply),
+    async (request, reply) =>
+      controller.listViolations(
+        request as Parameters<typeof controller.listViolations>[0],
+        reply,
+      ),
   );
 
   // Get violation stats
@@ -73,7 +77,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.getViolationStats(request as any, reply),
+    async (request, reply) =>
+      controller.getViolationStats(
+        request as Parameters<typeof controller.getViolationStats>[0],
+        reply,
+      ),
   );
 
   // Get violation
@@ -93,7 +101,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.getViolation(request as any, reply),
+    async (request, reply) =>
+      controller.getViolation(
+        request as Parameters<typeof controller.getViolation>[0],
+        reply,
+      ),
   );
 
   // Acknowledge violation
@@ -119,7 +131,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.acknowledgeViolation(request as any, reply),
+    async (request, reply) =>
+      controller.acknowledgeViolation(
+        request as Parameters<typeof controller.acknowledgeViolation>[0],
+        reply,
+      ),
   );
 
   // Resolve violation
@@ -145,7 +161,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.resolveViolation(request as any, reply),
+    async (request, reply) =>
+      controller.resolveViolation(
+        request as Parameters<typeof controller.resolveViolation>[0],
+        reply,
+      ),
   );
 
   // Exempt violation
@@ -172,7 +192,11 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.exemptViolation(request as any, reply),
+    async (request, reply) =>
+      controller.exemptViolation(
+        request as Parameters<typeof controller.exemptViolation>[0],
+        reply,
+      ),
   );
 
   // Override violation
@@ -199,6 +223,10 @@ export async function violationRoutes(
         },
       },
     },
-    (request, reply) => controller.overrideViolation(request as any, reply),
+    async (request, reply) =>
+      controller.overrideViolation(
+        request as Parameters<typeof controller.overrideViolation>[0],
+        reply,
+      ),
   );
 }
