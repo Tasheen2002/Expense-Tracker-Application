@@ -109,6 +109,35 @@ export async function expenseSplitRoutes(
             offset: { type: "string" },
           },
         },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    expenseId: { type: "string" },
+                    paidBy: { type: "string" },
+                    totalAmount: { type: "string" },
+                    currency: { type: "string" },
+                    splitType: { type: "string" },
+                    participantCount: { type: "number" },
+                    isFullySettled: { type: "boolean" },
+                    outstandingAmount: { type: "string" },
+                    createdAt: { type: "string" },
+                  },
+                },
+              },
+              total: { type: "number" },
+              limit: { type: "number" },
+              offset: { type: "number" },
+              hasMore: { type: "boolean" },
+            },
+          },
+        },
       },
     },
     (request, reply) => controller.listUserSplits(request as any, reply),
@@ -181,6 +210,35 @@ export async function expenseSplitRoutes(
             },
             limit: { type: "string" },
             offset: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    splitId: { type: "string" },
+                    fromUserId: { type: "string" },
+                    toUserId: { type: "string" },
+                    totalOwedAmount: { type: "string" },
+                    paidAmount: { type: "string" },
+                    remainingAmount: { type: "string" },
+                    status: { type: "string" },
+                    settledAt: { type: "string", nullable: true }, // nullable based on logic
+                    createdAt: { type: "string" },
+                  },
+                },
+              },
+              total: { type: "number" },
+              limit: { type: "number" },
+              offset: { type: "number" },
+              hasMore: { type: "boolean" },
+            },
           },
         },
       },
