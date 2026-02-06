@@ -219,21 +219,23 @@ export class ExpenseService {
     );
   }
 
-  async getExpensesByWorkspace(workspaceId: string): Promise<Expense[]> {
+  async getExpensesByWorkspace(
+    workspaceId: string,
+  ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByWorkspace(workspaceId);
   }
 
   async getExpensesByUser(
     userId: string,
     workspaceId: string,
-  ): Promise<Expense[]> {
+  ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByUser(userId, workspaceId);
   }
 
   async getExpensesByCategory(
     categoryId: string,
     workspaceId: string,
-  ): Promise<Expense[]> {
+  ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByCategory(
       CategoryId.fromString(categoryId),
       workspaceId,
@@ -243,7 +245,7 @@ export class ExpenseService {
   async getExpensesByStatus(
     status: ExpenseStatus,
     workspaceId: string,
-  ): Promise<Expense[]> {
+  ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByStatus(status, workspaceId);
   }
 
