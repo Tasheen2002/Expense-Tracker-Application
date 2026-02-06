@@ -184,17 +184,25 @@ export class CategoryController {
         success: true,
         statusCode: 200,
         message: "Categories retrieved successfully",
-        data: categories.map((category: Category) => ({
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        })),
+        data: {
+          items: categories.items.map((category: Category) => ({
+            categoryId: category.id.getValue(),
+            workspaceId: category.workspaceId,
+            name: category.name,
+            description: category.description,
+            color: category.color,
+            icon: category.icon,
+            isActive: category.isActive,
+            createdAt: category.createdAt.toISOString(),
+            updatedAt: category.updatedAt.toISOString(),
+          })),
+          pagination: {
+            total: categories.total,
+            limit: categories.limit,
+            offset: categories.offset,
+            hasMore: categories.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
