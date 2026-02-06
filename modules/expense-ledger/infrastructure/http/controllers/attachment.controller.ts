@@ -137,7 +137,7 @@ export class AttachmentController {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const attachments = await this.listAttachmentsHandler.handle({
+      const result = await this.listAttachmentsHandler.handle({
         expenseId,
         workspaceId,
       });
@@ -146,16 +146,24 @@ export class AttachmentController {
         success: true,
         statusCode: 200,
         message: "Attachments retrieved successfully",
-        data: attachments.map((attachment) => ({
-          attachmentId: attachment.id.getValue(),
-          expenseId: attachment.expenseId,
-          fileName: attachment.fileName,
-          filePath: attachment.filePath,
-          fileSize: attachment.fileSize,
-          mimeType: attachment.mimeType,
-          uploadedBy: attachment.uploadedBy,
-          createdAt: attachment.createdAt.toISOString(),
-        })),
+        data: {
+          items: result.items.map((attachment) => ({
+            attachmentId: attachment.id.getValue(),
+            expenseId: attachment.expenseId,
+            fileName: attachment.fileName,
+            filePath: attachment.filePath,
+            fileSize: attachment.fileSize,
+            mimeType: attachment.mimeType,
+            uploadedBy: attachment.uploadedBy,
+            createdAt: attachment.createdAt.toISOString(),
+          })),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
