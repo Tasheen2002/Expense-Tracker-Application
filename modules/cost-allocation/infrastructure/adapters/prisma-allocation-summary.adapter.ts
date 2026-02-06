@@ -78,6 +78,7 @@ export class PrismaAllocationSummaryAdapter implements IAllocationSummaryPort {
     const departments = await this.prisma.department.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true },
+      take: 100,
     });
     return departments;
   }
@@ -86,6 +87,7 @@ export class PrismaAllocationSummaryAdapter implements IAllocationSummaryPort {
     const costCenters = await this.prisma.costCenter.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true },
+      take: 100,
     });
     return costCenters;
   }
@@ -94,6 +96,7 @@ export class PrismaAllocationSummaryAdapter implements IAllocationSummaryPort {
     const projects = await this.prisma.project.findMany({
       where: { id: { in: ids } },
       select: { id: true, name: true },
+      take: 100,
     });
     return projects;
   }

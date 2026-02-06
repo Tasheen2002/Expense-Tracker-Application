@@ -40,3 +40,21 @@ export const connectionIdParamSchema = z.object({
 });
 
 export type ConnectionIdParam = z.infer<typeof connectionIdParamSchema>;
+
+/**
+ * Get Bank Connections Query Schema
+ */
+export const getBankConnectionsQuerySchema = z.object({
+  limit: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 50)),
+  offset: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 0)),
+});
+
+export type GetBankConnectionsQuery = z.infer<
+  typeof getBankConnectionsQuerySchema
+>;

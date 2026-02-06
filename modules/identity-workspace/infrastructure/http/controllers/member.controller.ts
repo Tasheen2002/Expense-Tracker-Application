@@ -34,14 +34,22 @@ export class MemberController {
     return reply.status(200).send({
       success: true,
       statusCode: 200,
-      data: members.map((member) => ({
-        membershipId: member.getId().getValue(),
-        userId: member.getUserId().getValue(),
-        workspaceId: member.getWorkspaceId().getValue(),
-        role: member.getRole(),
-        createdAt: member.getCreatedAt(),
-        updatedAt: member.getUpdatedAt(),
-      })),
+      data: {
+        items: members.items.map((member) => ({
+          membershipId: member.getId().getValue(),
+          userId: member.getUserId().getValue(),
+          workspaceId: member.getWorkspaceId().getValue(),
+          role: member.getRole(),
+          createdAt: member.getCreatedAt(),
+          updatedAt: member.getUpdatedAt(),
+        })),
+        pagination: {
+          total: members.total,
+          limit: members.limit,
+          offset: members.offset,
+          hasMore: members.hasMore,
+        },
+      },
     });
   }
 

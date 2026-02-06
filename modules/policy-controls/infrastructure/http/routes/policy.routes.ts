@@ -50,7 +50,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.createPolicy(request as any, reply),
+    (request, reply) =>
+      controller.createPolicy(
+        request as Parameters<typeof controller.createPolicy>[0],
+        reply,
+      ),
   );
 
   // List policies
@@ -98,7 +102,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.listPolicies(request as any, reply),
+    (request, reply) =>
+      controller.listPolicies(
+        request as Parameters<typeof controller.listPolicies>[0],
+        reply,
+      ),
   );
 
   // Get policy
@@ -118,7 +126,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.getPolicy(request as any, reply),
+    (request, reply) =>
+      controller.getPolicy(
+        request as Parameters<typeof controller.getPolicy>[0],
+        reply,
+      ),
   );
 
   // Update policy
@@ -151,7 +163,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.updatePolicy(request as any, reply),
+    (request, reply) =>
+      controller.updatePolicy(
+        request as Parameters<typeof controller.updatePolicy>[0],
+        reply,
+      ),
   );
 
   // Delete policy
@@ -171,7 +187,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.deletePolicy(request as any, reply),
+    (request, reply) =>
+      controller.deletePolicy(
+        request as Parameters<typeof controller.deletePolicy>[0],
+        reply,
+      ),
   );
 
   // Activate policy
@@ -191,7 +211,11 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.activatePolicy(request as any, reply),
+    async (request, reply) =>
+      controller.activatePolicy(
+        request as Parameters<typeof controller.activatePolicy>[0],
+        reply,
+      ),
   );
 
   // Deactivate policy
@@ -211,6 +235,10 @@ export async function policyRoutes(
         },
       },
     },
-    (request, reply) => controller.deactivatePolicy(request as any, reply),
+    async (request, reply) =>
+      controller.deactivatePolicy(
+        request as Parameters<typeof controller.deactivatePolicy>[0],
+        reply,
+      ),
   );
 }

@@ -6,11 +6,21 @@ import {
 import { Workspace } from "../../domain/entities/workspace.entity";
 import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class WorkspaceRepositoryImpl implements IWorkspaceRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class WorkspaceRepositoryImpl
+  extends PrismaRepository<Workspace>
+  implements IWorkspaceRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(workspace: Workspace): Promise<void> {
     const data = workspace.toDatabaseRow();
@@ -25,6 +35,7 @@ export class WorkspaceRepositoryImpl implements IWorkspaceRepository {
         updatedAt: data.updated_at,
       },
     });
+    await this.dispatchEvents(workspace);
   }
 
   async findById(id: WorkspaceId): Promise<Workspace | null> {
@@ -67,22 +78,27 @@ export class WorkspaceRepositoryImpl implements IWorkspaceRepository {
     });
   }
 
-  async findByOwnerId(ownerId: UserId): Promise<Workspace[]> {
-    const rows = await this.prisma.workspace.findMany({
-      where: { ownerId: ownerId.getValue() },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return rows.map((row) =>
-      Workspace.fromDatabaseRow({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        owner_id: row.ownerId,
-        is_active: row.isActive,
-        created_at: row.createdAt,
-        updated_at: row.updatedAt,
-      }),
+  async findByOwnerId(
+    ownerId: UserId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Workspace>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.workspace,
+      {
+        where: { ownerId: ownerId.getValue() },
+        orderBy: { createdAt: "desc" },
+      },
+      (row) =>
+        Workspace.fromDatabaseRow({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          owner_id: row.ownerId,
+          is_active: row.isActive,
+          created_at: row.createdAt,
+          updated_at: row.updatedAt,
+        }),
+      options,
     );
   }
 
@@ -135,6 +151,7 @@ export class WorkspaceRepositoryImpl implements IWorkspaceRepository {
         updatedAt: data.updated_at,
       },
     });
+    await this.dispatchEvents(workspace);
   }
 
   async delete(id: WorkspaceId): Promise<void> {

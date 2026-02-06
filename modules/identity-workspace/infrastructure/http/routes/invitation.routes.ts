@@ -128,15 +128,29 @@ const listInvitationsSchema = {
           success: { type: "boolean" },
           statusCode: { type: "number" },
           data: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                invitationId: { type: "string" },
-                email: { type: "string" },
-                role: { type: "string" },
-                expiresAt: { type: "string" },
-                createdAt: { type: "string" },
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    invitationId: { type: "string" },
+                    email: { type: "string" },
+                    role: { type: "string" },
+                    expiresAt: { type: "string" },
+                    createdAt: { type: "string" },
+                  },
+                },
+              },
+              pagination: {
+                type: "object",
+                properties: {
+                  total: { type: "number" },
+                  limit: { type: "number" },
+                  offset: { type: "number" },
+                  hasMore: { type: "boolean" },
+                },
               },
             },
           },

@@ -2,6 +2,85 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { SyncSessionId } from "../value-objects/sync-session-id";
 import { SyncStatus } from "../enums/sync-status.enum";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class SyncSessionStartedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+  ) {
+    super(sessionId, "SyncSession");
+  }
+
+  get eventType(): string {
+    return "SyncSessionStarted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+    };
+  }
+}
+
+export class SyncSessionCompletedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+    public readonly transactionsFetched: number,
+    public readonly transactionsImported: number,
+    public readonly transactionsDuplicate: number,
+  ) {
+    super(sessionId, "SyncSession");
+  }
+
+  get eventType(): string {
+    return "SyncSessionCompleted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+      transactionsFetched: this.transactionsFetched,
+      transactionsImported: this.transactionsImported,
+      transactionsDuplicate: this.transactionsDuplicate,
+    };
+  }
+}
+
+export class SyncSessionFailedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+    public readonly errorMessage: string,
+  ) {
+    super(sessionId, "SyncSession");
+  }
+
+  get eventType(): string {
+    return "SyncSessionFailed";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+      errorMessage: this.errorMessage,
+    };
+  }
+}
 
 export interface SyncSessionProps {
   id: SyncSessionId;

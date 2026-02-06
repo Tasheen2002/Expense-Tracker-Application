@@ -3,6 +3,7 @@ import {
   ExpenseRepository,
   ExpenseFilters,
   PaginatedResult,
+  PaginationOptions,
 } from "../../domain/repositories/expense.repository";
 import { Expense } from "../../domain/entities/expense.entity";
 import { ExpenseId } from "../../domain/value-objects/expense-id";
@@ -14,6 +15,7 @@ import { ExpenseDate } from "../../domain/value-objects/expense-date";
 import { ExpenseStatus } from "../../domain/enums/expense-status";
 import { PaymentMethod } from "../../domain/enums/payment-method";
 import { CurrencyRequiredError } from "../../domain/errors/expense.errors";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 // ... (imports)
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
@@ -136,6 +138,7 @@ export class ExpenseRepositoryImpl
         workspaceId,
       },
       include: {
+        category: true,
         tags: true,
         attachments: true,
       },
@@ -146,65 +149,90 @@ export class ExpenseRepositoryImpl
     return this.toDomain(expense);
   }
 
-  async findByWorkspace(workspaceId: string): Promise<Expense[]> {
-    const expenses = await this.prisma.expense.findMany({
-      where: { workspaceId },
-      include: {
-        tags: true,
-        attachments: true,
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expense,
+      {
+        where: { workspaceId },
+        include: {
+          category: true,
+          tags: true,
+          attachments: true,
+        },
+        orderBy: { expenseDate: "desc" },
       },
-      orderBy: { expenseDate: "desc" },
-    });
-
-    return expenses.map((expense) => this.toDomain(expense));
+      (expense: any) => this.toDomain(expense),
+      options,
+    );
   }
 
-  async findByUser(userId: string, workspaceId: string): Promise<Expense[]> {
-    const expenses = await this.prisma.expense.findMany({
-      where: { userId, workspaceId },
-      include: {
-        tags: true,
-        attachments: true,
+  async findByUser(
+    userId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expense,
+      {
+        where: { userId, workspaceId },
+        include: {
+          category: true,
+          tags: true,
+          attachments: true,
+        },
+        orderBy: { expenseDate: "desc" },
       },
-      orderBy: { expenseDate: "desc" },
-    });
-
-    return expenses.map((expense) => this.toDomain(expense));
+      (expense: any) => this.toDomain(expense),
+      options,
+    );
   }
 
   async findByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-  ): Promise<Expense[]> {
-    const expenses = await this.prisma.expense.findMany({
-      where: {
-        categoryId: categoryId.getValue(),
-        workspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expense,
+      {
+        where: {
+          categoryId: categoryId.getValue(),
+          workspaceId,
+        },
+        include: {
+          category: true,
+          tags: true,
+          attachments: true,
+        },
+        orderBy: { expenseDate: "desc" },
       },
-      include: {
-        tags: true,
-        attachments: true,
-      },
-      orderBy: { expenseDate: "desc" },
-    });
-
-    return expenses.map((expense) => this.toDomain(expense));
+      (expense: any) => this.toDomain(expense),
+      options,
+    );
   }
 
   async findByStatus(
     status: ExpenseStatus,
     workspaceId: string,
-  ): Promise<Expense[]> {
-    const expenses = await this.prisma.expense.findMany({
-      where: { status, workspaceId },
-      include: {
-        tags: true,
-        attachments: true,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Expense>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expense,
+      {
+        where: { status, workspaceId },
+        include: {
+          category: true,
+          tags: true,
+          attachments: true,
+        },
+        orderBy: { expenseDate: "desc" },
       },
-      orderBy: { expenseDate: "desc" },
-    });
-
-    return expenses.map((expense) => this.toDomain(expense));
+      (expense: any) => this.toDomain(expense),
+      options,
+    );
   }
 
   async findWithFilters(
@@ -249,6 +277,7 @@ export class ExpenseRepositoryImpl
       this.prisma.expense.findMany({
         where,
         include: {
+          category: true,
           tags: true,
           attachments: true,
         },
@@ -260,7 +289,7 @@ export class ExpenseRepositoryImpl
     ]);
 
     return {
-      items: rows.map((expense) => this.toDomain(expense)),
+      items: rows.map((expense: any) => this.toDomain(expense)),
       total,
       limit,
       offset,
@@ -366,19 +395,23 @@ export class ExpenseRepositoryImpl
     });
   }
 
-  private toDomain(data: any): Expense {
+  private toDomain(
+    data: Prisma.ExpenseGetPayload<{
+      include: { category: true; tags: true; attachments: true };
+    }>,
+  ): Expense {
     return Expense.fromPersistence({
       id: ExpenseId.fromString(data.id),
       workspaceId: data.workspaceId,
       userId: data.userId,
       title: data.title,
-      description: data.description,
+      description: data.description ?? undefined,
       amount: Money.create(data.amount, data.currency),
       expenseDate: ExpenseDate.create(data.expenseDate),
       categoryId: data.categoryId
         ? CategoryId.fromString(data.categoryId)
         : undefined,
-      merchant: data.merchant,
+      merchant: data.merchant ?? undefined,
       paymentMethod: data.paymentMethod as PaymentMethod,
       isReimbursable: data.isReimbursable,
       status: data.status as ExpenseStatus,

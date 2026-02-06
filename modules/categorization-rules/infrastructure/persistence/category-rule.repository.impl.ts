@@ -15,9 +15,16 @@ import {
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class PrismaCategoryRuleRepository implements CategoryRuleRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaCategoryRuleRepository
+  extends PrismaRepository<CategoryRule>
+  implements CategoryRuleRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(rule: CategoryRule): Promise<void> {
     const data = {
@@ -40,6 +47,8 @@ export class PrismaCategoryRuleRepository implements CategoryRuleRepository {
       create: data,
       update: data,
     });
+
+    await this.dispatchEvents(rule);
   }
 
   async findById(id: RuleId): Promise<CategoryRule | null> {

@@ -7,7 +7,10 @@ import {
   AuditLogRepository,
   AuditLogFilter,
 } from "../../domain/repositories/audit-log.repository";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -44,9 +47,9 @@ export class AuditService {
    */
   async log(event: DomainEvent): Promise<void> {
     try {
-      const payload = (event as any).getPayload
-        ? (event as any).getPayload()
-        : {};
+      // Check if event has getPayload method (most domain events do)
+      const hasGetPayload = typeof (event as any).getPayload === 'function';
+      const payload = hasGetPayload ? (event as any).getPayload() : {};
       const workspaceId = payload.workspaceId || "system";
       const userId = payload.triggeredBy || payload.userId || null;
 
@@ -142,11 +145,13 @@ export class AuditService {
     workspaceId: string,
     entityType: string,
     entityId: string,
-  ): Promise<AuditLog[]> {
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<AuditLog>> {
     return await this.auditRepository.findByEntityId(
       workspaceId,
       entityType,
       entityId,
+      options,
     );
   }
 

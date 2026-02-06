@@ -1,8 +1,16 @@
-import { PrismaClient } from '@prisma/client'
-import { SpendingLimit } from '../../domain/entities/spending-limit.entity'
-import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id'
-import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
-import { ISpendingLimitRepository, SpendingLimitFilters } from '../../domain/repositories/spending-limit.repository'
+import { PrismaClient, Prisma } from "@prisma/client";
+import { SpendingLimit } from "../../domain/entities/spending-limit.entity";
+import { SpendingLimitId } from "../../domain/value-objects/spending-limit-id";
+import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
+import {
+  ISpendingLimitRepository,
+  SpendingLimitFilters,
+} from "../../domain/repositories/spending-limit.repository";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -28,124 +36,150 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
         isActive: limit.isActive(),
         updatedAt: limit.getUpdatedAt(),
       },
-    })
+    });
   }
 
-  async findById(id: SpendingLimitId, workspaceId: string): Promise<SpendingLimit | null> {
+  async findById(
+    id: SpendingLimitId,
+    workspaceId: string,
+  ): Promise<SpendingLimit | null> {
     const row = await this.prisma.spendingLimit.findFirst({
       where: {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
 
-    if (!row) return null
+    if (!row) return null;
 
-    return this.toDomain(row)
+    return this.toDomain(row);
   }
 
-  async findByWorkspace(workspaceId: string): Promise<SpendingLimit[]> {
-    const rows = await this.prisma.spendingLimit.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    const where: Prisma.SpendingLimitWhereInput = { workspaceId };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.spendingLimit,
+      { where, orderBy: { createdAt: "desc" } },
+      (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findByFilters(filters: SpendingLimitFilters): Promise<SpendingLimit[]> {
-    const where: any = {
+  async findByFilters(
+    filters: SpendingLimitFilters,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    const where: Prisma.SpendingLimitWhereInput = {
       workspaceId: filters.workspaceId,
-    }
+    };
 
     if (filters.userId !== undefined) {
-      where.userId = filters.userId
+      where.userId = filters.userId;
     }
 
     if (filters.categoryId !== undefined) {
-      where.categoryId = filters.categoryId
+      where.categoryId = filters.categoryId;
     }
 
     if (filters.isActive !== undefined) {
-      where.isActive = filters.isActive
+      where.isActive = filters.isActive;
     }
 
     if (filters.periodType) {
-      where.periodType = filters.periodType
+      where.periodType = filters.periodType;
     }
 
-    const rows = await this.prisma.spendingLimit.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    })
-
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.spendingLimit,
+      { where, orderBy: { createdAt: "desc" } },
+      (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findActiveByUser(workspaceId: string, userId: string): Promise<SpendingLimit[]> {
-    const rows = await this.prisma.spendingLimit.findMany({
-      where: {
-        workspaceId,
-        userId,
-        isActive: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findActiveByUser(
+    workspaceId: string,
+    userId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    const where: Prisma.SpendingLimitWhereInput = {
+      workspaceId,
+      userId,
+      isActive: true,
+    };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.spendingLimit,
+      { where, orderBy: { createdAt: "desc" } },
+      (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findActiveByCategory(workspaceId: string, categoryId: string): Promise<SpendingLimit[]> {
-    const rows = await this.prisma.spendingLimit.findMany({
-      where: {
-        workspaceId,
-        categoryId,
-        isActive: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findActiveByCategory(
+    workspaceId: string,
+    categoryId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SpendingLimit>> {
+    const where: Prisma.SpendingLimitWhereInput = {
+      workspaceId,
+      categoryId,
+      isActive: true,
+    };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.spendingLimit,
+      { where, orderBy: { createdAt: "desc" } },
+      (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
+      options,
+    );
   }
 
   async findApplicableLimits(
     workspaceId: string,
     userId?: string,
-    categoryId?: string
+    categoryId?: string,
   ): Promise<SpendingLimit[]> {
-    const where: any = {
-      workspaceId,
-      isActive: true,
-      OR: [
-        // Workspace-wide limits (applies to everyone)
-        { userId: null, categoryId: null },
-      ],
-    }
+    const orConditions: Prisma.SpendingLimitWhereInput[] = [
+      // Workspace-wide limits (applies to everyone)
+      { userId: null, categoryId: null },
+    ];
 
     // Add user-specific limits
     if (userId) {
-      where.OR.push(
+      orConditions.push(
         // User-specific, any category
         { userId, categoryId: null },
-      )
+      );
 
       if (categoryId) {
         // User + category specific
-        where.OR.push({ userId, categoryId })
+        orConditions.push({ userId, categoryId });
       }
     }
 
     // Add category-specific limits (any user)
     if (categoryId) {
-      where.OR.push({ userId: null, categoryId })
+      orConditions.push({ userId: null, categoryId });
     }
+
+    const where: Prisma.SpendingLimitWhereInput = {
+      workspaceId,
+      isActive: true,
+      OR: orConditions,
+    };
 
     const rows = await this.prisma.spendingLimit.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
-    })
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
 
-    return rows.map((row) => this.toDomain(row))
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: SpendingLimitId, workspaceId: string): Promise<void> {
@@ -154,21 +188,21 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
         id: id.getValue(),
         workspaceId,
       },
-    })
+    });
   }
 
-  private toDomain(row: any): SpendingLimit {
+  private toDomain(row: Prisma.SpendingLimitGetPayload<object>): SpendingLimit {
     return SpendingLimit.fromPersistence({
       id: SpendingLimitId.fromString(row.id),
       workspaceId: row.workspaceId,
-      userId: row.userId,
-      categoryId: row.categoryId,
+      userId: row.userId || null,
+      categoryId: row.categoryId || null,
       limitAmount: row.limitAmount,
       currency: row.currency,
       periodType: row.periodType as BudgetPeriodType,
       isActive: row.isActive,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    })
+    });
   }
 }

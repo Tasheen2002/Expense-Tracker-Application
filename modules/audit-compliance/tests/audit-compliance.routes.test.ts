@@ -309,7 +309,13 @@ describe("Audit Compliance Endpoints", () => {
           "expense-123",
         ),
       ];
-      (mockService.getEntityAuditHistory as any).mockResolvedValue(mockLogs);
+      (mockService.getEntityAuditHistory as any).mockResolvedValue({
+        items: mockLogs,
+        total: 2,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -318,8 +324,8 @@ describe("Audit Compliance Endpoints", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.items).toHaveLength(2);
-      expect(body.total).toBe(2);
+      expect(body.data.items).toHaveLength(2);
+      expect(body.data.pagination.total).toBe(2);
     });
 
     it("should return 400 when entityType missing", async () => {
@@ -343,7 +349,13 @@ describe("Audit Compliance Endpoints", () => {
     });
 
     it("should return empty list when no history found", async () => {
-      (mockService.getEntityAuditHistory as any).mockResolvedValue([]);
+      (mockService.getEntityAuditHistory as any).mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -352,7 +364,7 @@ describe("Audit Compliance Endpoints", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.items).toHaveLength(0);
+      expect(body.data.items).toHaveLength(0);
     });
   });
 

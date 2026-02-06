@@ -180,13 +180,21 @@ export class InvitationController {
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        data: invitations.map((inv) => ({
-          invitationId: inv.getId().getValue(),
-          email: inv.getEmail(),
-          role: inv.getRole(),
-          expiresAt: inv.getExpiresAt(),
-          createdAt: inv.getCreatedAt(),
-        })),
+        data: {
+          items: invitations.map((inv: any) => ({
+            invitationId: inv.getId().getValue(),
+            email: inv.getEmail(),
+            role: inv.getRole(),
+            expiresAt: inv.getExpiresAt(),
+            createdAt: inv.getCreatedAt(),
+          })),
+          pagination: {
+            total: invitations.length,
+            limit: 1000,
+            offset: 0,
+            hasMore: false,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

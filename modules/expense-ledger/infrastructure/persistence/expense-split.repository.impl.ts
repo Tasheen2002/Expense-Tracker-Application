@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ExpenseSplitRepository } from "../../domain/repositories/expense-split.repository";
 import { ExpenseSplit } from "../../domain/entities/expense-split.entity";
@@ -12,9 +12,13 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
 export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async save(split: ExpenseSplit): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -59,9 +63,14 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
         });
       }
     });
+
+    // NOTE: ExpenseSplit does not extend AggregateRoot - no domain events to dispatch
   }
 
-  async findById(id: SplitId, workspaceId: string): Promise<ExpenseSplit | null> {
+  async findById(
+    id: SplitId,
+    workspaceId: string,
+  ): Promise<ExpenseSplit | null> {
     const split = await this.prisma.expenseSplit.findUnique({
       where: {
         id: id.getValue(),
@@ -210,14 +219,18 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
     return count > 0;
   }
 
-  private toDomain(data: any): ExpenseSplit {
+  private toDomain(
+    data: Prisma.ExpenseSplitGetPayload<{ include: { participants: true } }>,
+  ): ExpenseSplit {
     const participants = data.participants.map((p: any) =>
       SplitParticipant.reconstitute({
         id: SplitParticipantId.fromString(p.id),
         splitId: SplitId.fromString(p.splitId),
         userId: p.userId,
         shareAmount: Money.create(Number(p.shareAmount), data.currency),
-        sharePercentage: p.sharePercentage ? new Decimal(p.sharePercentage) : undefined,
+        sharePercentage: p.sharePercentage
+          ? new Decimal(p.sharePercentage)
+          : undefined,
         isPaid: p.isPaid,
         paidAt: p.paidAt,
         createdAt: p.createdAt,

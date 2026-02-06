@@ -143,17 +143,28 @@ export class AuditLogController {
       });
     }
 
-    const { entityType, entityId } = queryResult.data;
+    const { entityType, entityId, limit, offset } = queryResult.data;
 
-    const auditLogs = await this.auditService.getEntityAuditHistory(
+    const result = await this.auditService.getEntityAuditHistory(
       workspaceId,
       entityType,
       entityId,
+      { limit, offset },
     );
 
     return reply.status(200).send({
-      items: auditLogs.map(toResponse),
-      total: auditLogs.length,
+      success: true,
+      statusCode: 200,
+      message: "Entity audit history retrieved successfully",
+      data: {
+        items: result.items.map(toResponse),
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      },
     });
   }
 

@@ -196,8 +196,8 @@ export class BudgetPlanController {
 
   async list(
     req: AuthenticatedRequest<{
+      Params: { workspaceId: string };
       Querystring: {
-        workspaceId: string;
         status?: string;
         limit?: string;
         offset?: string;
@@ -210,13 +210,10 @@ export class BudgetPlanController {
       if (!userId) {
         return reply.status(401).send({ message: "User not authenticated" });
       }
-      // Basic validation for query params (can be improved with schema)
-      if (!req.query.workspaceId) {
-        return reply.status(400).send({ message: "workspaceId is required" });
-      }
+      const { workspaceId } = req.params;
       const query = new ListBudgetPlansQuery(
         userId,
-        req.query.workspaceId,
+        workspaceId,
         req.query.status as PlanStatus,
         req.query.limit ? parseInt(req.query.limit) : 50,
         req.query.offset ? parseInt(req.query.offset) : 0,

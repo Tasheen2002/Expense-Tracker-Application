@@ -1,10 +1,15 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { BankConnection } from "../../domain/entities/bank-connection.entity";
 import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
 import { IBankConnectionRepository } from "../../domain/repositories/bank-connection.repository";
 import { ConnectionStatus } from "../../domain/enums/connection-status.enum";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaBankConnectionRepository implements IBankConnectionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -70,34 +75,38 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
     return record ? this.toDomain(record) : null;
   }
 
-  async findByWorkspace(workspaceId: WorkspaceId): Promise<BankConnection[]> {
-    const records = await this.prisma.bankConnection.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+  async findByWorkspace(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankConnection>> {
+    const where: Prisma.BankConnectionWhereInput = {
+      workspaceId: workspaceId.getValue(),
+    };
 
-    return records.map((r) => this.toDomain(r));
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankConnection,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async findByUser(
     workspaceId: WorkspaceId,
     userId: UserId,
-  ): Promise<BankConnection[]> {
-    const records = await this.prisma.bankConnection.findMany({
-      where: {
-        workspaceId: workspaceId.getValue(),
-        userId: userId.getValue(),
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BankConnection>> {
+    const where: Prisma.BankConnectionWhereInput = {
+      workspaceId: workspaceId.getValue(),
+      userId: userId.getValue(),
+    };
 
-    return records.map((r) => this.toDomain(r));
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankConnection,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async delete(id: BankConnectionId, workspaceId: WorkspaceId): Promise<void> {
@@ -109,7 +118,9 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
     });
   }
 
-  private toDomain(record: any): BankConnection {
+  private toDomain(
+    record: Prisma.BankConnectionGetPayload<object>,
+  ): BankConnection {
     return BankConnection.fromPersistence({
       id: BankConnectionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
@@ -119,13 +130,13 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
       accountId: record.accountId,
       accountName: record.accountName,
       accountType: record.accountType,
-      accountMask: record.accountMask,
+      accountMask: record.accountMask ?? undefined,
       currency: record.currency,
       accessToken: record.accessToken,
       status: record.status as ConnectionStatus,
-      lastSyncAt: record.lastSyncAt,
-      tokenExpiresAt: record.tokenExpiresAt,
-      errorMessage: record.errorMessage,
+      lastSyncAt: record.lastSyncAt ?? undefined,
+      tokenExpiresAt: record.tokenExpiresAt ?? undefined,
+      errorMessage: record.errorMessage ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

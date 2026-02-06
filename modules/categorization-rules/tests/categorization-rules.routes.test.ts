@@ -692,9 +692,13 @@ describe("Category Rule Routes", () => {
   describe("GET /:workspaceId/rules/:ruleId/executions", () => {
     it("should get rule executions", async () => {
       const mockExecutions = [createMockExecution()];
-      ruleHandlers.getExecutionsByRuleHandler.execute.mockResolvedValue(
-        mockExecutions,
-      );
+      ruleHandlers.getExecutionsByRuleHandler.execute.mockResolvedValue({
+        items: mockExecutions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -704,11 +708,17 @@ describe("Category Rule Routes", () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(body.data).toBeDefined();
+      expect(body.data.items).toBeDefined();
     });
 
     it("should return empty array when no executions", async () => {
-      ruleHandlers.getExecutionsByRuleHandler.execute.mockResolvedValue([]);
+      ruleHandlers.getExecutionsByRuleHandler.execute.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -717,7 +727,7 @@ describe("Category Rule Routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(0);
+      expect(body.data.items).toHaveLength(0);
     });
   });
 });

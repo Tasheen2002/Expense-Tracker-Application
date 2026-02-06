@@ -168,7 +168,7 @@ describe("Expense Ledger Module - Endpoint Tests", () => {
 
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
-        expect(Array.isArray(body.data)).toBe(true);
+        expect(Array.isArray(body.data.items)).toBe(true);
       });
 
       it("❌ should fail without auth token", async () => {
@@ -310,7 +310,7 @@ describe("Expense Ledger Module - Endpoint Tests", () => {
 
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
-        expect(Array.isArray(body.data)).toBe(true);
+        expect(Array.isArray(body.data.items)).toBe(true);
       });
 
       it("❌ should fail without auth token", async () => {

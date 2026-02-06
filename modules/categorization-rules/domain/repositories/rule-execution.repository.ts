@@ -23,7 +23,8 @@ export interface RuleExecutionRepository {
   findByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId,
-  ): Promise<RuleExecution[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<RuleExecution>>;
   findByWorkspaceId(
     workspaceId: WorkspaceId,
     options?: PaginationOptions,

@@ -42,7 +42,11 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.requestExemption(request as any, reply),
+    (request, reply) =>
+      controller.requestExemption(
+        request as Parameters<typeof controller.requestExemption>[0],
+        reply,
+      ),
   );
 
   // List exemptions
@@ -80,7 +84,11 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.listExemptions(request as any, reply),
+    (request, reply) =>
+      controller.listExemptions(
+        request as Parameters<typeof controller.listExemptions>[0],
+        reply,
+      ),
   );
 
   // Check active exemption
@@ -107,7 +115,11 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.checkActiveExemption(request as any, reply),
+    (request, reply) =>
+      controller.checkActiveExemption(
+        request as Parameters<typeof controller.checkActiveExemption>[0],
+        reply,
+      ),
   );
 
   // Get exemption
@@ -127,7 +139,11 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.getExemption(request as any, reply),
+    (request, reply) =>
+      controller.getExemption(
+        request as Parameters<typeof controller.getExemption>[0],
+        reply,
+      ),
   );
 
   // Approve exemption
@@ -153,7 +169,11 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.approveExemption(request as any, reply),
+    (request, reply) =>
+      controller.approveExemption(
+        request as Parameters<typeof controller.approveExemption>[0],
+        reply,
+      ),
   );
 
   // Reject exemption
@@ -180,6 +200,10 @@ export async function exemptionRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectExemption(request as any, reply),
+    async (request, reply) =>
+      controller.rejectExemption(
+        request as Parameters<typeof controller.rejectExemption>[0],
+        reply,
+      ),
   );
 }

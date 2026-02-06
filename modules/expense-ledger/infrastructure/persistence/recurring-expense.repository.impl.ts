@@ -6,9 +6,18 @@ import {
 } from "../../domain/entities/recurring-expense.entity";
 import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
 import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaRecurringExpenseRepository implements RecurringExpenseRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async save(expense: RecurringExpense): Promise<void> {
     await this.prisma.recurringExpense.upsert({
@@ -38,6 +47,8 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
         updatedAt: expense.updatedAt,
       },
     });
+
+    // NOTE: RecurringExpense does not extend AggregateRoot - no domain events to dispatch
   }
 
   async findById(id: string): Promise<RecurringExpense | null> {
@@ -50,17 +61,24 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
     return this.toDomain(data);
   }
 
-  async findDueExpenses(beforeDate: Date): Promise<RecurringExpense[]> {
-    const data = await this.prisma.recurringExpense.findMany({
-      where: {
-        status: RecurrenceStatus.ACTIVE,
-        nextRunDate: {
-          lte: beforeDate,
+  async findDueExpenses(
+    beforeDate: Date,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<RecurringExpense>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.recurringExpense,
+      {
+        where: {
+          status: RecurrenceStatus.ACTIVE,
+          nextRunDate: {
+            lte: beforeDate,
+          },
         },
+        orderBy: { nextRunDate: "asc" },
       },
-    });
-
-    return data.map((item: any) => this.toDomain(item));
+      (expense) => this.toDomain(expense),
+      options,
+    );
   }
 
   async delete(id: string): Promise<void> {
@@ -69,7 +87,9 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
     });
   }
 
-  private toDomain(data: any): RecurringExpense {
+  private toDomain(
+    data: Prisma.RecurringExpenseGetPayload<{}>,
+  ): RecurringExpense {
     const template: ExpenseTemplate =
       data.template as unknown as ExpenseTemplate;
 
@@ -80,7 +100,7 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
       frequency: data.frequency as RecurrenceFrequency,
       interval: data.interval,
       startDate: data.startDate,
-      endDate: data.endDate,
+      endDate: data.endDate ?? undefined,
       nextRunDate: data.nextRunDate,
       status: data.status as RecurrenceStatus,
       template: template,

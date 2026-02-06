@@ -142,3 +142,27 @@ export class BankAuthorizationRequiredError extends BankFeedSyncDomainError {
     );
   }
 }
+
+// ============================================================================
+// Transaction Processing Errors
+// ============================================================================
+
+export class MissingExpenseIdError extends BankFeedSyncDomainError {
+  constructor(action: string) {
+    super(
+      `expenseId is required for ${action} action`,
+      400,
+      "MISSING_EXPENSE_ID",
+    );
+  }
+}
+
+export class InvalidTransactionActionError extends BankFeedSyncDomainError {
+  constructor(action: string) {
+    super(
+      `Invalid transaction action: ${action}`,
+      400,
+      "INVALID_TRANSACTION_ACTION",
+    );
+  }
+}

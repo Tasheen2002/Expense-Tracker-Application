@@ -1,5 +1,6 @@
 import {
   PrismaClient,
+  Prisma,
   SettlementStatus as PrismaSettlementStatus,
 } from "@prisma/client";
 import { SplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
@@ -12,9 +13,14 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class SplitSettlementRepositoryImpl implements SplitSettlementRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly eventBus: IEventBus,
+  ) {}
 
   async save(settlement: SplitSettlement): Promise<void> {
     await this.prisma.splitSettlement.upsert({
@@ -39,6 +45,8 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
         updatedAt: settlement.getUpdatedAt(),
       },
     });
+
+    // NOTE: SplitSettlement does not extend AggregateRoot - no domain events to dispatch
   }
 
   async findById(
@@ -60,16 +68,20 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
   async findBySplitId(
     splitId: SplitId,
     workspaceId: string,
-  ): Promise<SplitSettlement[]> {
-    const settlements = await this.prisma.splitSettlement.findMany({
-      where: {
-        splitId: splitId.getValue(),
-        split: { workspaceId },
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SplitSettlement>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.splitSettlement,
+      {
+        where: {
+          splitId: splitId.getValue(),
+          split: { workspaceId },
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return settlements.map((s) => this.toDomain(s));
+      (settlement) => this.toDomain(settlement),
+      options,
+    );
   }
 
   async findByUser(
@@ -112,17 +124,21 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
   async findPendingForUser(
     userId: string,
     workspaceId: string,
-  ): Promise<SplitSettlement[]> {
-    const settlements = await this.prisma.splitSettlement.findMany({
-      where: {
-        fromUserId: userId,
-        split: { workspaceId },
-        status: { in: ["PENDING", "PARTIAL"] },
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SplitSettlement>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.splitSettlement,
+      {
+        where: {
+          fromUserId: userId,
+          split: { workspaceId },
+          status: { in: ["PENDING", "PARTIAL"] },
+        },
+        orderBy: { createdAt: "desc" },
       },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return settlements.map((s) => this.toDomain(s));
+      (settlement) => this.toDomain(settlement),
+      options,
+    );
   }
 
   async delete(id: SettlementId, workspaceId: string): Promise<void> {
@@ -134,7 +150,9 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
     });
   }
 
-  private toDomain(data: any): SplitSettlement {
+  private toDomain(
+    data: Prisma.SplitSettlementGetPayload<{}>,
+  ): SplitSettlement {
     return SplitSettlement.reconstitute({
       id: SettlementId.fromString(data.id),
       splitId: SplitId.fromString(data.splitId),
@@ -146,7 +164,7 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
       ),
       paidAmount: Money.create(Number(data.paidAmount), data.currency),
       status: data.status as SettlementStatus,
-      settledAt: data.settledAt,
+      settledAt: data.settledAt ?? undefined,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });

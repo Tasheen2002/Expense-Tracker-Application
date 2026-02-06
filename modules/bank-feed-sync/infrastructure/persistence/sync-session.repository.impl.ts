@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { SyncSession } from "../../domain/entities/sync-session.entity";
 import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
@@ -131,19 +131,19 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
     );
   }
 
-  private toDomain(record: any): SyncSession {
+  private toDomain(record: Prisma.SyncSessionGetPayload<object>): SyncSession {
     return SyncSession.fromPersistence({
       id: SyncSessionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),
       status: record.status as SyncStatus,
       startedAt: record.startedAt,
-      completedAt: record.completedAt,
+      completedAt: record.completedAt ?? undefined,
       transactionsFetched: record.transactionsFetched,
       transactionsImported: record.transactionsImported,
       transactionsDuplicate: record.transactionsDuplicate,
-      errorMessage: record.errorMessage,
-      metadata: record.metadata,
+      errorMessage: record.errorMessage ?? undefined,
+      metadata: (record.metadata as Record<string, unknown>) ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

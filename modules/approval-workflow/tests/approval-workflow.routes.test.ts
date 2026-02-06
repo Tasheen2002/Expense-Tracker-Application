@@ -276,7 +276,13 @@ describe("Approval Chain Routes", () => {
           false,
         ),
       ];
-      mockChainService.listChains.mockResolvedValue(mockChains);
+      mockChainService.listChains.mockResolvedValue({
+        items: mockChains,
+        total: 2,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -286,10 +292,11 @@ describe("Approval Chain Routes", () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(body.data).toHaveLength(2);
+      expect(body.data.items).toHaveLength(2);
       expect(mockChainService.listChains).toHaveBeenCalledWith(
         mockWorkspaceId,
         false,
+        expect.objectContaining({ limit: 50, offset: 0 }),
       );
     });
 
@@ -297,7 +304,13 @@ describe("Approval Chain Routes", () => {
       const mockChains = [
         createMockApprovalChain(mockChainId, "Chain 1", true),
       ];
-      mockChainService.listChains.mockResolvedValue(mockChains);
+      mockChainService.listChains.mockResolvedValue({
+        items: mockChains,
+        total: 1,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -306,15 +319,22 @@ describe("Approval Chain Routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(1);
+      expect(body.data.items).toHaveLength(1);
       expect(mockChainService.listChains).toHaveBeenCalledWith(
         mockWorkspaceId,
         true,
+        expect.objectContaining({ limit: 50, offset: 0 }),
       );
     });
 
     it("should return empty array when no chains exist", async () => {
-      mockChainService.listChains.mockResolvedValue([]);
+      mockChainService.listChains.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: "GET",
@@ -323,7 +343,7 @@ describe("Approval Chain Routes", () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(0);
+      expect(body.data.items).toHaveLength(0);
     });
 
     it("should return 400 for invalid workspaceId", async () => {
@@ -1253,7 +1273,13 @@ describe("Approval Workflow Edge Cases", () => {
 
   it("should handle concurrent requests gracefully", async () => {
     const mockChains = [createMockApprovalChain()];
-    mockChainService.listChains.mockResolvedValue(mockChains);
+    mockChainService.listChains.mockResolvedValue({
+      items: mockChains,
+      total: 1,
+      limit: 50,
+      offset: 0,
+      hasMore: false,
+    });
 
     const requests = Array(5)
       .fill(null)

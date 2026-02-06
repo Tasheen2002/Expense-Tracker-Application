@@ -16,7 +16,8 @@ export interface SplitSettlementRepository {
   findBySplitId(
     splitId: SplitId,
     workspaceId: string,
-  ): Promise<SplitSettlement[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SplitSettlement>>;
   findByUser(
     userId: string,
     workspaceId: string,
@@ -26,6 +27,7 @@ export interface SplitSettlementRepository {
   findPendingForUser(
     userId: string,
     workspaceId: string,
-  ): Promise<SplitSettlement[]>;
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<SplitSettlement>>;
   delete(id: SettlementId, workspaceId: string): Promise<void>;
 }

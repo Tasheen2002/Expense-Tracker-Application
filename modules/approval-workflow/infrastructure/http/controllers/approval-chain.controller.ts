@@ -102,24 +102,37 @@ export class ApprovalChainController {
   async listChains(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string };
+      Querystring: { activeOnly?: string; limit?: string; offset?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { workspaceId } = request.params;
       const activeOnly = request.query.activeOnly === "true";
+      const { limit, offset } = request.query;
 
-      const chains = await this.approvalChainService.listChains(
+      const result = await this.approvalChainService.listChains(
         workspaceId,
         activeOnly,
+        {
+          limit: limit ? parseInt(limit, 10) : 50,
+          offset: offset ? parseInt(offset, 10) : 0,
+        },
       );
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
         message: "Approval chains retrieved successfully",
-        data: chains.map((chain) => this.serializeChain(chain)),
+        data: {
+          items: result.items.map((chain) => this.serializeChain(chain)),
+          pagination: {
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

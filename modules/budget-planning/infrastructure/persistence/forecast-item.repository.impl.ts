@@ -1,12 +1,24 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ForecastItem } from "../../domain/entities/forecast-item.entity";
 import { ForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class ForecastItemRepositoryImpl implements ForecastItemRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ForecastItemRepositoryImpl
+  extends PrismaRepository<ForecastItem>
+  implements ForecastItemRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(item: ForecastItem): Promise<void> {
     const data = {
@@ -24,6 +36,8 @@ export class ForecastItemRepositoryImpl implements ForecastItemRepository {
       update: data,
       create: data,
     });
+
+    await this.dispatchEvents(item);
   }
 
   async findById(id: ForecastItemId): Promise<ForecastItem | null> {
@@ -44,22 +58,28 @@ export class ForecastItemRepositoryImpl implements ForecastItemRepository {
     });
   }
 
-  async findByForecastId(forecastId: ForecastId): Promise<ForecastItem[]> {
-    const raws = await this.prisma.forecastItem.findMany({
-      where: { forecastId: forecastId.getValue() },
-      orderBy: { createdAt: "desc" },
-    });
+  async findByForecastId(
+    forecastId: ForecastId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ForecastItem>> {
+    const where: Prisma.ForecastItemWhereInput = {
+      forecastId: forecastId.getValue(),
+    };
 
-    return raws.map((raw) =>
-      ForecastItem.reconstitute({
-        id: raw.id,
-        forecastId: raw.forecastId,
-        categoryId: raw.categoryId,
-        amount: raw.amount.toNumber(),
-        notes: raw.notes,
-        createdAt: raw.createdAt,
-        updatedAt: raw.updatedAt,
-      }),
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.forecastItem,
+      { where, orderBy: { createdAt: "desc" } },
+      (raw) =>
+        ForecastItem.reconstitute({
+          id: raw.id,
+          forecastId: raw.forecastId,
+          categoryId: raw.categoryId,
+          amount: raw.amount.toNumber(),
+          notes: raw.notes,
+          createdAt: raw.createdAt,
+          updatedAt: raw.updatedAt,
+        }),
+      options,
     );
   }
 

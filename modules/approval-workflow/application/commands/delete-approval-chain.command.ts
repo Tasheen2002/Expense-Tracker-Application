@@ -24,6 +24,7 @@ export class DeleteApprovalChainHandler {
       throw new ApprovalChainNotFoundError(input.chainId)
     }
 
+    chain.markAsDeleted()
     await this.approvalChainRepository.delete(chainId)
   }
 }

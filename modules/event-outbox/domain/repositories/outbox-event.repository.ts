@@ -21,7 +21,10 @@ export interface IOutboxEventRepository {
     status: OutboxEventStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<OutboxEvent>>;
-  findByAggregateId(aggregateId: string): Promise<OutboxEvent[]>;
+  findByAggregateId(
+    aggregateId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<OutboxEvent>>;
   deleteProcessedEvents(olderThan: Date): Promise<number>;
   countByStatus(status: OutboxEventStatus): Promise<number>;
 }

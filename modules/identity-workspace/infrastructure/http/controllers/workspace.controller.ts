@@ -122,15 +122,23 @@ export class WorkspaceController {
     return reply.status(200).send({
       success: true,
       statusCode: 200,
-      data: workspaces.map((workspace) => ({
-        workspaceId: workspace.getId().getValue(),
-        name: workspace.getName(),
-        slug: workspace.getSlug(),
-        ownerId: workspace.getOwnerId().getValue(),
-        isActive: workspace.getIsActive(),
-        createdAt: workspace.getCreatedAt(),
-        updatedAt: workspace.getUpdatedAt(),
-      })),
+      data: {
+        items: workspaces.map((workspace: any) => ({
+          workspaceId: workspace.getId().getValue(),
+          name: workspace.getName(),
+          slug: workspace.getSlug(),
+          ownerId: workspace.getOwnerId().getValue(),
+          isActive: workspace.getIsActive(),
+          createdAt: workspace.getCreatedAt(),
+          updatedAt: workspace.getUpdatedAt(),
+        })),
+        pagination: {
+          total: workspaces.length,
+          limit: 1000,
+          offset: 0,
+          hasMore: false,
+        },
+      },
     });
   }
 

@@ -2,6 +2,168 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
 import { BankConnectionId } from "../value-objects/bank-connection-id";
 import { ConnectionStatus } from "../enums/connection-status.enum";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class BankConnectionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly userId: string,
+    public readonly institutionId: string,
+    public readonly institutionName: string,
+    public readonly accountName: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionCreated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      institutionId: this.institutionId,
+      institutionName: this.institutionName,
+      accountName: this.accountName,
+    };
+  }
+}
+
+export class BankConnectionActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionActivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BankConnectionDisconnectedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly reason?: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionDisconnected";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      reason: this.reason,
+    };
+  }
+}
+
+export class BankConnectionExpiredEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionExpired";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class BankConnectionSyncedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly syncedAt: Date,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionSynced";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      syncedAt: this.syncedAt.toISOString(),
+    };
+  }
+}
+
+export class BankConnectionErrorEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly errorMessage: string,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionError";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      errorMessage: this.errorMessage,
+    };
+  }
+}
+
+export class BankConnectionTokenUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string,
+    public readonly expiresAt?: Date,
+  ) {
+    super(connectionId, "BankConnection");
+  }
+
+  get eventType(): string {
+    return "BankConnectionTokenUpdated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+      expiresAt: this.expiresAt?.toISOString(),
+    };
+  }
+}
 
 export interface BankConnectionProps {
   id: BankConnectionId;
@@ -23,8 +185,10 @@ export interface BankConnectionProps {
   updatedAt: Date;
 }
 
-export class BankConnection {
-  private constructor(private readonly props: BankConnectionProps) {}
+export class BankConnection extends AggregateRoot {
+  private constructor(private readonly props: BankConnectionProps) {
+    super();
+  }
 
   static create(
     workspaceId: WorkspaceId,
@@ -39,7 +203,7 @@ export class BankConnection {
     accountMask?: string,
     tokenExpiresAt?: Date,
   ): BankConnection {
-    return new BankConnection({
+    const connection = new BankConnection({
       id: BankConnectionId.create(),
       workspaceId,
       userId,
@@ -56,6 +220,19 @@ export class BankConnection {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    connection.addDomainEvent(
+      new BankConnectionCreatedEvent(
+        connection.getId().getValue(),
+        connection.getWorkspaceId().getValue(),
+        connection.getUserId().getValue(),
+        institutionId,
+        institutionName,
+        accountName,
+      ),
+    );
+
+    return connection;
   }
 
   static fromPersistence(props: BankConnectionProps): BankConnection {
@@ -205,27 +382,65 @@ export class BankConnection {
     this.props.status = ConnectionStatus.CONNECTED;
     this.props.errorMessage = undefined;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankConnectionActivatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+      ),
+    );
   }
 
   markAsExpired(): void {
     this.props.status = ConnectionStatus.EXPIRED;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankConnectionExpiredEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+      ),
+    );
   }
 
   markAsError(errorMessage: string): void {
     this.props.status = ConnectionStatus.ERROR;
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankConnectionErrorEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        errorMessage,
+      ),
+    );
   }
 
   disconnect(): void {
     this.props.status = ConnectionStatus.DISCONNECTED;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankConnectionDisconnectedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+      ),
+    );
   }
 
   updateLastSync(): void {
-    this.props.lastSyncAt = new Date();
-    this.props.updatedAt = new Date();
+    const syncedAt = new Date();
+    this.props.lastSyncAt = syncedAt;
+    this.props.updatedAt = syncedAt;
+
+    this.addDomainEvent(
+      new BankConnectionSyncedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        syncedAt,
+      ),
+    );
   }
 
   updateAccessToken(token: string, expiresAt?: Date): void {
@@ -234,6 +449,14 @@ export class BankConnection {
     this.props.status = ConnectionStatus.CONNECTED;
     this.props.errorMessage = undefined;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankConnectionTokenUpdatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        expiresAt,
+      ),
+    );
   }
 
   isExpired(): boolean {

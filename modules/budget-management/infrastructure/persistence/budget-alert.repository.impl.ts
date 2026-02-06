@@ -1,10 +1,18 @@
-import { PrismaClient } from '@prisma/client'
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity'
-import { AlertId } from '../../domain/value-objects/alert-id'
-import { BudgetId } from '../../domain/value-objects/budget-id'
-import { AllocationId } from '../../domain/value-objects/allocation-id'
-import { AlertLevel } from '../../domain/enums/alert-level'
-import { IBudgetAlertRepository, BudgetAlertFilters } from '../../domain/repositories/budget-alert.repository'
+import { PrismaClient, Prisma } from "@prisma/client";
+import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
+import { AlertId } from "../../domain/value-objects/alert-id";
+import { BudgetId } from "../../domain/value-objects/budget-id";
+import { AllocationId } from "../../domain/value-objects/allocation-id";
+import { AlertLevel } from "../../domain/enums/alert-level";
+import {
+  IBudgetAlertRepository,
+  BudgetAlertFilters,
+} from "../../domain/repositories/budget-alert.repository";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -29,108 +37,133 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
         isRead: alert.isRead(),
         notifiedAt: alert.getNotifiedAt(),
       },
-    })
+    });
   }
 
   async findById(id: AlertId): Promise<BudgetAlert | null> {
     const row = await this.prisma.budgetAlert.findUnique({
       where: { id: id.getValue() },
-    })
+    });
 
-    if (!row) return null
+    if (!row) return null;
 
-    return this.toDomain(row)
+    return this.toDomain(row);
   }
 
-  async findByBudget(budgetId: BudgetId): Promise<BudgetAlert[]> {
-    const rows = await this.prisma.budgetAlert.findMany({
-      where: { budgetId: budgetId.getValue() },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findByBudget(
+    budgetId: BudgetId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAlert>> {
+    const where: Prisma.BudgetAlertWhereInput = {
+      budgetId: budgetId.getValue(),
+    };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budgetAlert,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findByAllocation(allocationId: AllocationId): Promise<BudgetAlert[]> {
-    const rows = await this.prisma.budgetAlert.findMany({
-      where: { allocationId: allocationId.getValue() },
-      orderBy: { createdAt: 'desc' },
-    })
+  async findByAllocation(
+    allocationId: AllocationId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAlert>> {
+    const where: Prisma.BudgetAlertWhereInput = {
+      allocationId: allocationId.getValue(),
+    };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budgetAlert,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findByFilters(filters: BudgetAlertFilters, workspaceId: string): Promise<BudgetAlert[]> {
-    const where: any = {}
+  async findByFilters(
+    filters: BudgetAlertFilters,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAlert>> {
+    const where: Prisma.BudgetAlertWhereInput = {};
 
     if (filters.budgetId) {
-      where.budgetId = filters.budgetId
+      where.budgetId = filters.budgetId;
     } else {
       // Filter by workspace if no specific budget
       where.budget = {
         workspaceId,
-      }
+      };
     }
 
     if (filters.allocationId) {
-      where.allocationId = filters.allocationId
+      where.allocationId = filters.allocationId;
     }
 
     if (filters.level) {
-      where.level = filters.level
+      where.level = filters.level;
     }
 
     if (filters.isRead !== undefined) {
-      where.isRead = filters.isRead
+      where.isRead = filters.isRead;
     }
 
-    const rows = await this.prisma.budgetAlert.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    })
-
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budgetAlert,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
-  async findUnreadAlerts(workspaceId: string): Promise<BudgetAlert[]> {
-    const rows = await this.prisma.budgetAlert.findMany({
-      where: {
-        isRead: false,
-        budget: {
-          workspaceId,
-        },
+  async findUnreadAlerts(
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetAlert>> {
+    const where: Prisma.BudgetAlertWhereInput = {
+      isRead: false,
+      budget: {
+        workspaceId,
       },
-      orderBy: [{ level: 'desc' }, { createdAt: 'desc' }],
-    })
+    };
 
-    return rows.map((row) => this.toDomain(row))
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.budgetAlert,
+      { where, orderBy: [{ level: "desc" }, { createdAt: "desc" }] },
+      (record) => this.toDomain(record),
+      options,
+    );
   }
 
   async delete(id: AlertId): Promise<void> {
     await this.prisma.budgetAlert.delete({
       where: { id: id.getValue() },
-    })
+    });
   }
 
   async deleteByBudget(budgetId: BudgetId): Promise<void> {
     await this.prisma.budgetAlert.deleteMany({
       where: { budgetId: budgetId.getValue() },
-    })
+    });
   }
 
-  private toDomain(row: any): BudgetAlert {
+  private toDomain(row: Prisma.BudgetAlertGetPayload<object>): BudgetAlert {
     return BudgetAlert.fromPersistence({
       id: AlertId.fromString(row.id),
       budgetId: BudgetId.fromString(row.budgetId),
-      allocationId: row.allocationId ? AllocationId.fromString(row.allocationId) : null,
+      allocationId: row.allocationId
+        ? AllocationId.fromString(row.allocationId)
+        : null,
       level: row.level as AlertLevel,
       threshold: row.threshold,
       currentSpent: row.currentSpent,
       allocatedAmount: row.allocatedAmount,
       message: row.message,
       isRead: row.isRead,
-      notifiedAt: row.notifiedAt,
+      notifiedAt: row.notifiedAt || null,
       createdAt: row.createdAt,
-    })
+    });
   }
 }

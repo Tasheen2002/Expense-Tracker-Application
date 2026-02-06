@@ -19,7 +19,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       aggregateType: event.aggregateType,
       aggregateId: event.aggregateId.getValue(),
       eventType: event.eventType,
-      payload: event.payload as any,
+      payload: event.payload as Prisma.InputJsonValue,
       status: event.status,
       createdAt: event.createdAt,
       processedAt: event.processedAt,
@@ -44,7 +44,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
             aggregateType: event.aggregateType,
             aggregateId: event.aggregateId.getValue(),
             eventType: event.eventType,
-            payload: event.payload as any,
+            payload: event.payload as Prisma.InputJsonValue,
             status: event.status,
             createdAt: event.createdAt,
             processedAt: event.processedAt,
@@ -143,23 +143,14 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
     status: OutboxEventStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<OutboxEvent>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const where: Prisma.OutboxEventWhereInput = {
+      status: status as OutboxEventStatus,
+    };
 
-    const where = { status };
-
-    const [rows, total] = await Promise.all([
-      this.prisma.outboxEvent.findMany({
-        where,
-        orderBy: { createdAt: "asc" },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.outboxEvent.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((record) =>
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "asc" } },
+      (record) =>
         OutboxEvent.reconstitute({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
@@ -172,33 +163,33 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
           retryCount: record.retryCount,
           error: record.error ?? undefined,
         }),
-      ),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+      options,
+    );
   }
 
-  async findByAggregateId(aggregateId: string): Promise<OutboxEvent[]> {
-    const records = await this.prisma.outboxEvent.findMany({
-      where: { aggregateId },
-      orderBy: { createdAt: "desc" },
-    });
+  async findByAggregateId(
+    aggregateId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<OutboxEvent>> {
+    const where: Prisma.OutboxEventWhereInput = { aggregateId };
 
-    return records.map((record) =>
-      OutboxEvent.reconstitute({
-        id: OutboxEventId.fromString(record.id),
-        aggregateType: record.aggregateType,
-        aggregateId: AggregateId.fromString(record.aggregateId),
-        eventType: record.eventType,
-        payload: record.payload as Record<string, any>,
-        status: record.status as OutboxEventStatus,
-        createdAt: record.createdAt,
-        processedAt: record.processedAt ?? undefined,
-        retryCount: record.retryCount,
-        error: record.error ?? undefined,
-      }),
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.outboxEvent,
+      { where, orderBy: { createdAt: "desc" } },
+      (record) =>
+        OutboxEvent.reconstitute({
+          id: OutboxEventId.fromString(record.id),
+          aggregateType: record.aggregateType,
+          aggregateId: AggregateId.fromString(record.aggregateId),
+          eventType: record.eventType,
+          payload: record.payload as Record<string, any>,
+          status: record.status as OutboxEventStatus,
+          createdAt: record.createdAt,
+          processedAt: record.processedAt ?? undefined,
+          retryCount: record.retryCount,
+          error: record.error ?? undefined,
+        }),
+      options,
     );
   }
 

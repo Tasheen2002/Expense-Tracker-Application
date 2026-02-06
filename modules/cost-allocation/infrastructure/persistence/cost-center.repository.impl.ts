@@ -8,9 +8,16 @@ import {
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
-export class CostCenterRepositoryImpl implements CostCenterRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class CostCenterRepositoryImpl
+  extends PrismaRepository<CostCenter>
+  implements CostCenterRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(costCenter: CostCenter): Promise<void> {
     await this.prisma.costCenter.upsert({
@@ -35,6 +42,8 @@ export class CostCenterRepositoryImpl implements CostCenterRepository {
         updatedAt: costCenter.getUpdatedAt(),
       },
     });
+
+    await this.dispatchEvents(costCenter);
   }
 
   async findById(id: CostCenterId): Promise<CostCenter | null> {

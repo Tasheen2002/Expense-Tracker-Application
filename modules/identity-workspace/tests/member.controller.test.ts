@@ -116,7 +116,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
       url: `/workspaces/${workspaceId}/members`,
       headers: { authorization: `Bearer ${ownerToken}` },
     });
-    expect(JSON.parse(membersResponse.body).data).toHaveLength(2); // Owner + Member
+    expect(JSON.parse(membersResponse.body).data.items).toHaveLength(2); // Owner + Member
 
     // Change Role
     const response = await server.inject({
@@ -150,7 +150,7 @@ describe("Identity-Workspace Module - Member Controller", () => {
       url: `/workspaces/${workspaceId}/members`,
       headers: { authorization: `Bearer ${ownerToken}` },
     });
-    const members = JSON.parse(membersResponse.body).data;
+    const members = JSON.parse(membersResponse.body).data.items;
     expect(members).toHaveLength(1); // Only Owner
     expect(members[0].userId).toBe(ownerId);
   });

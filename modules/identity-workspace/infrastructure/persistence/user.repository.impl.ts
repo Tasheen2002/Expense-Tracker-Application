@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   IUserRepository,
   UserQueryOptions,
@@ -8,6 +8,8 @@ import { UserId } from "../../domain/value-objects/user-id.vo";
 import { Email } from "../../domain/value-objects/email.vo";
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class UserRepositoryImpl
   extends PrismaRepository<User>
@@ -79,17 +81,15 @@ export class UserRepositoryImpl
     });
   }
 
-  async findAll(options?: UserQueryOptions): Promise<User[]> {
+  async findAll(options?: UserQueryOptions): Promise<PaginatedResult<User>> {
     const {
-      limit = 50,
-      offset = 0,
       isActive,
       emailVerified,
       sortBy = "createdAt",
       sortOrder = "desc",
     } = options || {};
 
-    const where: any = {};
+    const where: Prisma.UserAccountWhereInput = {};
     if (isActive !== undefined) {
       where.isActive = isActive;
     }
@@ -97,7 +97,7 @@ export class UserRepositoryImpl
       where.emailVerified = emailVerified;
     }
 
-    const orderBy: any = {};
+    const orderBy: Prisma.UserAccountOrderByWithRelationInput = {};
     if (sortBy === "email") {
       orderBy.email = sortOrder;
     } else if (sortBy === "fullName") {
@@ -106,24 +106,21 @@ export class UserRepositoryImpl
       orderBy.createdAt = sortOrder;
     }
 
-    const rows = await this.prisma.userAccount.findMany({
-      where,
-      orderBy,
-      take: limit,
-      skip: offset,
-    });
-
-    return rows.map((row) =>
-      User.fromDatabaseRow({
-        id: row.id,
-        email: row.email,
-        password_hash: row.passwordHash,
-        full_name: row.fullName,
-        is_active: row.isActive,
-        email_verified: row.emailVerified,
-        created_at: row.createdAt,
-        updated_at: row.updatedAt,
-      }),
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.userAccount,
+      { where, orderBy },
+      (row) =>
+        User.fromDatabaseRow({
+          id: row.id,
+          email: row.email,
+          password_hash: row.passwordHash,
+          full_name: row.fullName,
+          is_active: row.isActive,
+          email_verified: row.emailVerified,
+          created_at: row.createdAt,
+          updated_at: row.updatedAt,
+        }),
+      options,
     );
   }
 

@@ -4,7 +4,11 @@ import { BankTransactionId } from "../../domain/value-objects/bank-transaction-i
 import { BankTransaction } from "../../domain/entities/bank-transaction.entity";
 import { IBankTransactionRepository } from "../../domain/repositories/bank-transaction.repository";
 import { TransactionStatus } from "../../domain/enums/transaction-status.enum";
-import { BankTransactionNotFoundError } from "../../domain/errors";
+import {
+  BankTransactionNotFoundError,
+  MissingExpenseIdError,
+  InvalidTransactionActionError,
+} from "../../domain/errors";
 import { ProcessTransactionCommand } from "../commands";
 import { GetPendingTransactionsQuery } from "../queries";
 import {
@@ -35,14 +39,14 @@ export class BankTransactionService {
     switch (command.action) {
       case "import":
         if (!command.expenseId) {
-          throw new Error("expenseId is required for import action");
+          throw new MissingExpenseIdError("import");
         }
         transaction.markAsImported(command.expenseId);
         break;
 
       case "match":
         if (!command.expenseId) {
-          throw new Error("expenseId is required for match action");
+          throw new MissingExpenseIdError("match");
         }
         transaction.markAsMatched(command.expenseId);
         break;
@@ -52,7 +56,7 @@ export class BankTransactionService {
         break;
 
       default:
-        throw new Error(`Invalid action: ${command.action}`);
+        throw new InvalidTransactionActionError(command.action);
     }
 
     await this.transactionRepository.save(transaction);

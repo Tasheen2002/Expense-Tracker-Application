@@ -7,6 +7,120 @@ import {
   BudgetAlreadyActiveError,
   InvalidBudgetStatusError,
 } from "../errors/budget.errors";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class SpendingLimitCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly limitId: string,
+    public readonly workspaceId: string,
+    public readonly limitAmount: string,
+    public readonly periodType: string,
+  ) {
+    super(limitId, "SpendingLimit");
+  }
+
+  get eventType(): string {
+    return "spending-limit.created";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      limitId: this.limitId,
+      workspaceId: this.workspaceId,
+      limitAmount: this.limitAmount,
+      periodType: this.periodType,
+    };
+  }
+}
+
+export class SpendingLimitUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly limitId: string,
+    public readonly workspaceId: string,
+    public readonly oldAmount: string,
+    public readonly newAmount: string,
+  ) {
+    super(limitId, "SpendingLimit");
+  }
+
+  get eventType(): string {
+    return "spending-limit.updated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      limitId: this.limitId,
+      workspaceId: this.workspaceId,
+      oldAmount: this.oldAmount,
+      newAmount: this.newAmount,
+    };
+  }
+}
+
+export class SpendingLimitActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly limitId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(limitId, "SpendingLimit");
+  }
+
+  get eventType(): string {
+    return "spending-limit.activated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      limitId: this.limitId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class SpendingLimitDeactivatedEvent extends DomainEvent {
+  constructor(
+    public readonly limitId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(limitId, "SpendingLimit");
+  }
+
+  get eventType(): string {
+    return "spending-limit.deactivated";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      limitId: this.limitId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class SpendingLimitDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly limitId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(limitId, "SpendingLimit");
+  }
+
+  get eventType(): string {
+    return "spending-limit.deleted";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      limitId: this.limitId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
 
 export interface SpendingLimitProps {
   id: SpendingLimitId;
@@ -30,8 +144,10 @@ export interface CreateSpendingLimitData {
   periodType: BudgetPeriodType;
 }
 
-export class SpendingLimit {
-  private constructor(private props: SpendingLimitProps) {}
+export class SpendingLimit extends AggregateRoot {
+  private constructor(private props: SpendingLimitProps) {
+    super();
+  }
 
   static create(data: CreateSpendingLimitData): SpendingLimit {
     // Validate limit amount
@@ -73,6 +189,15 @@ export class SpendingLimit {
       createdAt: now,
       updatedAt: now,
     });
+
+    spendingLimit.addDomainEvent(
+      new SpendingLimitCreatedEvent(
+        spendingLimit.getId().getValue(),
+        data.workspaceId,
+        limitAmount.toString(),
+        data.periodType,
+      ),
+    );
 
     return spendingLimit;
   }
@@ -139,8 +264,20 @@ export class SpendingLimit {
       );
     }
 
+    const oldAmount = this.props.limitAmount;
     this.props.limitAmount = newAmount;
     this.props.updatedAt = new Date();
+
+    if (!oldAmount.equals(newAmount)) {
+      this.addDomainEvent(
+        new SpendingLimitUpdatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId(),
+          oldAmount.toString(),
+          newAmount.toString(),
+        ),
+      );
+    }
   }
 
   // ...
@@ -151,6 +288,13 @@ export class SpendingLimit {
     }
     this.props.isActive = true;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SpendingLimitActivatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId(),
+      ),
+    );
   }
 
   deactivate(): void {
@@ -159,6 +303,22 @@ export class SpendingLimit {
     }
     this.props.isActive = false;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SpendingLimitDeactivatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId(),
+      ),
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new SpendingLimitDeletedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId(),
+      ),
+    );
   }
 
   isWorkspaceWide(): boolean {

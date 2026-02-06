@@ -11,19 +11,27 @@ export interface GetExecutionsByWorkspaceQuery {
 export class GetExecutionsByWorkspaceHandler {
   constructor(private readonly executionService: RuleExecutionService) {}
 
-  async execute(query: GetExecutionsByWorkspaceQuery) {
-    const executions = await this.executionService.getExecutionsByWorkspaceId(
+  async execute(
+    query: GetExecutionsByWorkspaceQuery,
+  ): Promise<PaginatedResult<any>> {
+    const result = await this.executionService.getExecutionsByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
-      query.limit,
+      { limit: query.limit, offset: query.offset },
     );
 
-    return executions.map((execution) => ({
-      id: execution.getId().getValue(),
-      ruleId: execution.getRuleId().getValue(),
-      expenseId: execution.getExpenseId().getValue(),
-      workspaceId: execution.getWorkspaceId().getValue(),
-      appliedCategoryId: execution.getAppliedCategoryId().getValue(),
-      executedAt: execution.getExecutedAt(),
-    }));
+    return {
+      items: result.items.map((execution) => ({
+        id: execution.getId().getValue(),
+        ruleId: execution.getRuleId().getValue(),
+        expenseId: execution.getExpenseId().getValue(),
+        workspaceId: execution.getWorkspaceId().getValue(),
+        appliedCategoryId: execution.getAppliedCategoryId().getValue(),
+        executedAt: execution.getExecutedAt(),
+      })),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

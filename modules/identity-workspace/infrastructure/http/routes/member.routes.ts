@@ -19,16 +19,30 @@ const listMembersSchema = {
           success: { type: "boolean" },
           statusCode: { type: "number" },
           data: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                membershipId: { type: "string" },
-                userId: { type: "string" },
-                workspaceId: { type: "string" },
-                role: { type: "string" },
-                createdAt: { type: "string" },
-                updatedAt: { type: "string" },
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    membershipId: { type: "string" },
+                    userId: { type: "string" },
+                    workspaceId: { type: "string" },
+                    role: { type: "string" },
+                    createdAt: { type: "string" },
+                    updatedAt: { type: "string" },
+                  },
+                },
+              },
+              pagination: {
+                type: "object",
+                properties: {
+                  total: { type: "number" },
+                  limit: { type: "number" },
+                  offset: { type: "number" },
+                  hasMore: { type: "boolean" },
+                },
               },
             },
           },

@@ -70,8 +70,8 @@ export async function categoryRuleRoutes(
           type: "object",
           properties: {
             activeOnly: { type: "string", enum: ["true", "false"] },
-            limit: { type: "string" },
-            offset: { type: "string" },
+            limit: { type: "string", pattern: "^[0-9]+$" },
+            offset: { type: "string", pattern: "^[0-9]+$" },
           },
         },
       },
@@ -214,6 +214,13 @@ export async function categoryRuleRoutes(
           properties: {
             workspaceId: { type: "string", format: "uuid" },
             ruleId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "string", pattern: "^[0-9]+$" },
+            offset: { type: "string", pattern: "^[0-9]+$" },
           },
         },
       },
