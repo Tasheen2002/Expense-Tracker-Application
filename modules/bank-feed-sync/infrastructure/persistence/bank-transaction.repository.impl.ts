@@ -231,7 +231,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
       postedDate: record.postedDate ?? undefined,
       status: record.status as TransactionStatus,
       expenseId: record.expenseId ?? undefined,
-      metadata: record.metadata ?? undefined,
+      metadata: (record.metadata as Record<string, unknown>) ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
