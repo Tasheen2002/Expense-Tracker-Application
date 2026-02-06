@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PolicyRepository } from "../../domain/repositories/policy.repository";
 import {
   ExpensePolicy,
@@ -27,7 +27,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         description: policy.getDescription(),
         policyType: policy.getPolicyType(),
         severity: policy.getSeverity(),
-        configuration: policy.getConfiguration() as any,
+        configuration: policy.getConfiguration() as Prisma.InputJsonValue,
         priority: policy.getPriority(),
         isActive: policy.isActive(),
         createdBy: policy.getCreatedBy(),
@@ -38,7 +38,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         name: policy.getName(),
         description: policy.getDescription(),
         severity: policy.getSeverity(),
-        configuration: policy.getConfiguration() as any,
+        configuration: policy.getConfiguration() as Prisma.InputJsonValue,
         priority: policy.getPriority(),
         isActive: policy.isActive(),
         updatedAt: policy.getUpdatedAt(),
@@ -64,7 +64,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         where: { workspaceId },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
       options,
     );
   }
@@ -82,7 +82,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
       options,
     );
   }
@@ -101,7 +101,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
       options,
     );
   }
@@ -126,12 +126,12 @@ export class PrismaPolicyRepository implements PolicyRepository {
     });
   }
 
-  private toDomain(row: any): ExpensePolicy {
+  private toDomain(row: Prisma.ExpensePolicyGetPayload<object>): ExpensePolicy {
     return ExpensePolicy.reconstitute({
       policyId: PolicyId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       name: row.name,
-      description: row.description,
+      description: row.description ?? undefined,
       policyType: row.policyType as PolicyType,
       severity: row.severity as ViolationSeverity,
       configuration: row.configuration as PolicyConfiguration,
