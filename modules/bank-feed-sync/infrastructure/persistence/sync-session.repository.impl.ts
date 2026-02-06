@@ -143,7 +143,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
       transactionsImported: record.transactionsImported,
       transactionsDuplicate: record.transactionsDuplicate,
       errorMessage: record.errorMessage ?? undefined,
-      metadata: record.metadata ?? undefined,
+      metadata: (record.metadata as Record<string, unknown>) ?? undefined,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
