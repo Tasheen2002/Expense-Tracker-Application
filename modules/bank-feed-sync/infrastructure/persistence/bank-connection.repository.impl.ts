@@ -9,7 +9,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository-helper";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class PrismaBankConnectionRepository implements IBankConnectionRepository {
   constructor(private readonly prisma: PrismaClient) {}
