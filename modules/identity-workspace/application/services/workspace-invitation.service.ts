@@ -84,7 +84,9 @@ export class WorkspaceInvitationService {
     workspaceId: string,
   ): Promise<WorkspaceInvitation[]> {
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
-    return await this.invitationRepository.findByWorkspaceId(workspaceIdVO);
+    const result =
+      await this.invitationRepository.findByWorkspaceId(workspaceIdVO);
+    return result.items;
   }
 
   async getPendingInvitations(
@@ -95,7 +97,8 @@ export class WorkspaceInvitationService {
   }
 
   async getUserInvitations(email: string): Promise<WorkspaceInvitation[]> {
-    return await this.invitationRepository.findByEmail(email);
+    const result = await this.invitationRepository.findByEmail(email);
+    return result.items;
   }
 
   async acceptInvitation(
