@@ -162,13 +162,21 @@ export class TagController {
         success: true,
         statusCode: 200,
         message: "Tags retrieved successfully",
-        data: tags.map((tag: Tag) => ({
-          tagId: tag.id.getValue(),
-          workspaceId: tag.workspaceId,
-          name: tag.name,
-          color: tag.color,
-          createdAt: tag.createdAt.toISOString(),
-        })),
+        data: {
+          items: tags.items.map((tag: Tag) => ({
+            tagId: tag.id.getValue(),
+            workspaceId: tag.workspaceId,
+            name: tag.name,
+            color: tag.color,
+            createdAt: tag.createdAt.toISOString(),
+          })),
+          pagination: {
+            total: tags.total,
+            limit: tags.limit,
+            offset: tags.offset,
+            hasMore: tags.hasMore,
+          },
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
