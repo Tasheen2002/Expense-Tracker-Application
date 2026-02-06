@@ -83,17 +83,31 @@ const getUserWorkspacesSchema = {
           success: { type: "boolean" },
           statusCode: { type: "number" },
           data: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                workspaceId: { type: "string" },
-                name: { type: "string" },
-                slug: { type: "string" },
-                ownerId: { type: "string" },
-                isActive: { type: "boolean" },
-                createdAt: { type: "string" },
-                updatedAt: { type: "string" },
+            type: "object",
+            properties: {
+              items: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    workspaceId: { type: "string" },
+                    name: { type: "string" },
+                    slug: { type: "string" },
+                    ownerId: { type: "string" },
+                    isActive: { type: "boolean" },
+                    createdAt: { type: "string" },
+                    updatedAt: { type: "string" },
+                  },
+                },
+              },
+              pagination: {
+                type: "object",
+                properties: {
+                  total: { type: "number" },
+                  limit: { type: "number" },
+                  offset: { type: "number" },
+                  hasMore: { type: "boolean" },
+                },
               },
             },
           },
