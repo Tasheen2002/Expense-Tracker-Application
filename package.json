@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch apps/api/src/index.ts",
+    "dev:web": "pnpm --filter @expense-tracker/web dev",
     "dev:worker": "tsx watch apps/worker/src/outbox.run.ts",
-    "build": "tsc",
+    "build": "pnpm -r build",
+    "build:web": "pnpm --filter @expense-tracker/web build",
     "start": "node dist/apps/api/src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -14,7 +16,9 @@
     "db:seed": "tsx db/seeds/index.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "clean": "rimraf dist coverage"
+    "clean": "rimraf dist coverage",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
