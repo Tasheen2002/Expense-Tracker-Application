@@ -34,7 +34,7 @@ export class ExemptionRequestedEvent extends DomainEvent {
     return "exemption.requested";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       exemptionId: this.exemptionId,
       workspaceId: this.workspaceId,
@@ -66,7 +66,7 @@ export class ExemptionApprovedEvent extends DomainEvent {
     return "exemption.approved";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       exemptionId: this.exemptionId,
       workspaceId: this.workspaceId,
@@ -96,7 +96,7 @@ export class ExemptionRejectedEvent extends DomainEvent {
     return "exemption.rejected";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       exemptionId: this.exemptionId,
       workspaceId: this.workspaceId,
@@ -125,7 +125,7 @@ export class ExemptionExpiredEvent extends DomainEvent {
     return "exemption.expired";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       exemptionId: this.exemptionId,
       workspaceId: this.workspaceId,

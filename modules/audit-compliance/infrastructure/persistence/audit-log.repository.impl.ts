@@ -32,8 +32,8 @@ export class AuditLogRepositoryImpl
         action: auditLog.action.getValue(),
         entityType: auditLog.resource.entityType,
         entityId: auditLog.resource.entityId,
-        details: auditLog.details as any,
-        metadata: auditLog.metadata as any,
+        details: auditLog.details as Prisma.InputJsonValue,
+        metadata: auditLog.metadata as Prisma.InputJsonValue,
         ipAddress: auditLog.ipAddress,
         userAgent: auditLog.userAgent,
         createdAt: auditLog.createdAt,
@@ -164,24 +164,20 @@ export class AuditLogRepositoryImpl
   }
 
   async saveMany(auditLogs: AuditLog[]): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      for (const auditLog of auditLogs) {
-        await tx.auditLog.create({
-          data: {
-            id: auditLog.id.getValue(),
-            workspaceId: auditLog.workspaceId,
-            userId: auditLog.userId,
-            action: auditLog.action.getValue(),
-            entityType: auditLog.resource.entityType,
-            entityId: auditLog.resource.entityId,
-            details: auditLog.details as any,
-            metadata: auditLog.metadata as any,
-            ipAddress: auditLog.ipAddress,
-            userAgent: auditLog.userAgent,
-            createdAt: auditLog.createdAt,
-          },
-        });
-      }
+    await this.prisma.auditLog.createMany({
+      data: auditLogs.map((auditLog) => ({
+        id: auditLog.id.getValue(),
+        workspaceId: auditLog.workspaceId,
+        userId: auditLog.userId,
+        action: auditLog.action.getValue(),
+        entityType: auditLog.resource.entityType,
+        entityId: auditLog.resource.entityId,
+        details: auditLog.details as Prisma.InputJsonValue,
+        metadata: auditLog.metadata as Prisma.InputJsonValue,
+        ipAddress: auditLog.ipAddress,
+        userAgent: auditLog.userAgent,
+        createdAt: auditLog.createdAt,
+      })),
     });
   }
 

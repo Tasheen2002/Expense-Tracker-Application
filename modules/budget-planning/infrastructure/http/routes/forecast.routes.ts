@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ForecastController } from "../controllers/forecast.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function forecastRoutes(
   fastify: FastifyInstance,
@@ -37,7 +38,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.create(request as any, reply),
+    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
   );
 
   // List forecasts for a plan
@@ -57,7 +58,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.list(request as any, reply),
+    (request, reply) => controller.list(request as AuthenticatedRequest, reply),
   );
 
   // Get single forecast
@@ -77,7 +78,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.get(request as any, reply),
+    (request, reply) => controller.get(request as AuthenticatedRequest, reply),
   );
 
   // Delete forecast
@@ -97,7 +98,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.delete(request as any, reply),
+    (request, reply) => controller.delete(request as AuthenticatedRequest, reply),
   );
 
   // ==========================================
@@ -130,7 +131,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.addItem(request as any, reply),
+    (request, reply) => controller.addItem(request as AuthenticatedRequest, reply),
   );
 
   // List forecast items
@@ -150,7 +151,7 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.listItems(request as any, reply),
+    (request, reply) => controller.listItems(request as AuthenticatedRequest, reply),
   );
 
   // Delete forecast item
@@ -170,6 +171,6 @@ export async function forecastRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteItem(request as any, reply),
+    (request, reply) => controller.deleteItem(request as AuthenticatedRequest, reply),
   );
 }

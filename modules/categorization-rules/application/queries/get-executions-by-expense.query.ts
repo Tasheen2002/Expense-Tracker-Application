@@ -16,7 +16,7 @@ export class GetExecutionsByExpenseHandler {
       WorkspaceId.fromString(query.workspaceId)
     )
 
-    return executions.map((execution) => ({
+    return executions.items.map((execution) => ({
       id: execution.getId().getValue(),
       ruleId: execution.getRuleId().getValue(),
       expenseId: execution.getExpenseId().getValue(),

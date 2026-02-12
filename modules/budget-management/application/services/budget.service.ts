@@ -254,14 +254,6 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError("add allocation to");
     }
 
-    // Validate budget limits
-    const currentAllocated =
-      await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
-    const newAmount = new Decimal(params.allocatedAmount);
-
-    // Delegate validation to the aggregate root
-    budget.validateAllocationAmount(newAmount, currentAllocated);
-
     const allocation = BudgetAllocation.create({
       budgetId: params.budgetId,
       categoryId: params.categoryId,
@@ -269,7 +261,11 @@ export class BudgetService {
       description: params.description,
     });
 
-    await this.allocationRepository.save(allocation);
+    // Use transactional validation to prevent TOCTOU race conditions
+    await this.allocationRepository.saveWithBudgetValidation(
+      allocation,
+      budget.getTotalAmount(),
+    );
 
     return allocation;
   }
@@ -309,18 +305,6 @@ export class BudgetService {
     }
 
     if (updates.allocatedAmount) {
-      const newAmount = new Decimal(updates.allocatedAmount);
-      const currentAllocated =
-        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
-      const oldAmount = allocation.getAllocatedAmount(); // This is a Decimal
-
-      // Calculate projected total BEFORE this specific allocation was made
-      // effectively backing out the old amount to validate the new amount against the remaining pool
-      const currentAllocatedWithoutThis = currentAllocated.minus(oldAmount);
-
-      // Delegate validation to the aggregate root
-      budget.validateAllocationAmount(newAmount, currentAllocatedWithoutThis);
-
       allocation.updateAllocatedAmount(updates.allocatedAmount);
     }
 
@@ -328,7 +312,17 @@ export class BudgetService {
       allocation.updateDescription(updates.description);
     }
 
-    await this.allocationRepository.save(allocation);
+    if (updates.allocatedAmount) {
+      // Use transactional validation to prevent TOCTOU race conditions
+      // Exclude this allocation's old amount from the total check
+      await this.allocationRepository.saveWithBudgetValidation(
+        allocation,
+        budget.getTotalAmount(),
+        allocationId,
+      );
+    } else {
+      await this.allocationRepository.save(allocation);
+    }
 
     return allocation;
   }

@@ -57,5 +57,6 @@ export interface IReceiptRepository {
   countByWorkspace(workspaceId: string): Promise<number>;
   countByStatus(workspaceId: string, status: ReceiptStatus): Promise<number>;
   countByFilters(filters: ReceiptFilters): Promise<number>;
+  getStatusCounts(workspaceId: string): Promise<Record<string, number>>;
   deleteWithDependencies(id: ReceiptId, workspaceId: string): Promise<void>;
 }

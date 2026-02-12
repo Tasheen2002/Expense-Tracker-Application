@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AllocationManagementController } from "../controllers/allocation-management.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function allocationManagementRoutes(
   fastify: FastifyInstance,
@@ -36,7 +37,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.createDepartment(request as any, reply),
+    (request, reply) => controller.createDepartment(request as AuthenticatedRequest, reply),
   );
 
   // List departments
@@ -62,7 +63,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.listDepartments(request as any, reply),
+    (request, reply) => controller.listDepartments(request as AuthenticatedRequest, reply),
   );
 
   // Get single department
@@ -82,7 +83,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.getDepartment(request as any, reply),
+    (request, reply) => controller.getDepartment(request as AuthenticatedRequest, reply),
   );
 
   // Update department
@@ -116,7 +117,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.updateDepartment(request as any, reply),
+    (request, reply) => controller.updateDepartment(request as AuthenticatedRequest, reply),
   );
 
   // Delete department (soft delete)
@@ -136,7 +137,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteDepartment(request as any, reply),
+    (request, reply) => controller.deleteDepartment(request as AuthenticatedRequest, reply),
   );
 
   // Activate department
@@ -156,7 +157,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.activateDepartment(request as any, reply),
+    (request, reply) => controller.activateDepartment(request as AuthenticatedRequest, reply),
   );
 
   // ==========================================
@@ -188,7 +189,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.createCostCenter(request as any, reply),
+    (request, reply) => controller.createCostCenter(request as AuthenticatedRequest, reply),
   );
 
   // List cost centers
@@ -214,7 +215,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.listCostCenters(request as any, reply),
+    (request, reply) => controller.listCostCenters(request as AuthenticatedRequest, reply),
   );
 
   // Get single cost center
@@ -234,7 +235,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.getCostCenter(request as any, reply),
+    (request, reply) => controller.getCostCenter(request as AuthenticatedRequest, reply),
   );
 
   // Update cost center
@@ -262,7 +263,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.updateCostCenter(request as any, reply),
+    (request, reply) => controller.updateCostCenter(request as AuthenticatedRequest, reply),
   );
 
   // Delete cost center (soft delete)
@@ -282,7 +283,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteCostCenter(request as any, reply),
+    (request, reply) => controller.deleteCostCenter(request as AuthenticatedRequest, reply),
   );
 
   // Activate cost center
@@ -302,7 +303,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.activateCostCenter(request as any, reply),
+    (request, reply) => controller.activateCostCenter(request as AuthenticatedRequest, reply),
   );
 
   // ==========================================
@@ -338,7 +339,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.createProject(request as any, reply),
+    (request, reply) => controller.createProject(request as AuthenticatedRequest, reply),
   );
 
   // List projects
@@ -364,7 +365,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.listProjects(request as any, reply),
+    (request, reply) => controller.listProjects(request as AuthenticatedRequest, reply),
   );
 
   // Get single project
@@ -384,7 +385,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.getProject(request as any, reply),
+    (request, reply) => controller.getProject(request as AuthenticatedRequest, reply),
   );
 
   // Update project
@@ -416,7 +417,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.updateProject(request as any, reply),
+    (request, reply) => controller.updateProject(request as AuthenticatedRequest, reply),
   );
 
   // Delete project (soft delete)
@@ -436,7 +437,7 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteProject(request as any, reply),
+    (request, reply) => controller.deleteProject(request as AuthenticatedRequest, reply),
   );
 
   // Activate project
@@ -456,6 +457,6 @@ export async function allocationManagementRoutes(
         },
       },
     },
-    (request, reply) => controller.activateProject(request as any, reply),
+    (request, reply) => controller.activateProject(request as AuthenticatedRequest, reply),
   );
 }

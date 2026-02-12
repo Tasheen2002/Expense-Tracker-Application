@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { SpendingLimitController } from "../controllers/spending-limit.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
 
@@ -12,7 +13,7 @@ export async function spendingLimitRoutes(
     const params = request.params as { workspaceId?: string };
     if (params && params.workspaceId) {
       await workspaceAuthorizationMiddleware(
-        request as any,
+        request as AuthenticatedRequest,
         reply,
         (fastify as any).prisma,
       );
@@ -48,7 +49,7 @@ export async function spendingLimitRoutes(
         },
       },
     },
-    (request, reply) => controller.createLimit(request as any, reply),
+    (request, reply) => controller.createLimit(request as AuthenticatedRequest, reply),
   );
 
   // List spending limits
@@ -81,7 +82,7 @@ export async function spendingLimitRoutes(
         },
       },
     },
-    (request, reply) => controller.listLimits(request as any, reply),
+    (request, reply) => controller.listLimits(request as AuthenticatedRequest, reply),
   );
 
   // Update spending limit
@@ -107,7 +108,7 @@ export async function spendingLimitRoutes(
         },
       },
     },
-    (request, reply) => controller.updateLimit(request as any, reply),
+    (request, reply) => controller.updateLimit(request as AuthenticatedRequest, reply),
   );
 
   // Delete spending limit
@@ -127,6 +128,6 @@ export async function spendingLimitRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteLimit(request as any, reply),
+    (request, reply) => controller.deleteLimit(request as AuthenticatedRequest, reply),
   );
 }

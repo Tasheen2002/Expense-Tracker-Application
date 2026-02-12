@@ -1,9 +1,13 @@
 import {
   PrismaClient,
-  WorkflowStatus as PrismaWorkflowStatus,
-  ApprovalStatus as PrismaApprovalStatus,
   Prisma,
 } from "@prisma/client";
+import {
+  toDbWorkflowStatus,
+  fromDbWorkflowStatus,
+  toDbApprovalStatus,
+  fromDbApprovalStatus,
+} from "./enum-mappers";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -14,8 +18,6 @@ import { ApprovalStep } from "../../domain/entities/approval-step.entity";
 import { ApprovalStepId } from "../../domain/value-objects/approval-step-id";
 import { WorkflowId } from "../../domain/value-objects/workflow-id";
 import { ApprovalChainId } from "../../domain/value-objects/approval-chain-id";
-import { WorkflowStatus } from "../../domain/enums/workflow-status";
-import { ApprovalStatus } from "../../domain/enums/approval-status";
 import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
 import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
 import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
@@ -33,14 +35,14 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           workspaceId: workflow.getWorkspaceId().getValue(),
           userId: workflow.getUserId().getValue(),
           chainId: workflow.getChainId().getValue(),
-          status: workflow.getStatus() as unknown as PrismaWorkflowStatus,
+          status: toDbWorkflowStatus(workflow.getStatus()),
           currentStepNumber: workflow.getCurrentStepNumber(),
           createdAt: workflow.getCreatedAt(),
           updatedAt: workflow.getUpdatedAt(),
           completedAt: workflow.getCompletedAt(),
         },
         update: {
-          status: workflow.getStatus() as unknown as PrismaWorkflowStatus,
+          status: toDbWorkflowStatus(workflow.getStatus()),
           currentStepNumber: workflow.getCurrentStepNumber(),
           updatedAt: workflow.getUpdatedAt(),
           completedAt: workflow.getCompletedAt(),
@@ -57,7 +59,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
             stepNumber: step.getStepNumber(),
             approverId: step.getApproverId().getValue(),
             delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: step.getStatus() as unknown as PrismaApprovalStatus,
+            status: toDbApprovalStatus(step.getStatus()),
             comments: step.getComments(),
             processedAt: step.getProcessedAt(),
             createdAt: step.getCreatedAt(),
@@ -65,7 +67,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           },
           update: {
             delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: step.getStatus() as unknown as PrismaApprovalStatus,
+            status: toDbApprovalStatus(step.getStatus()),
             comments: step.getComments(),
             processedAt: step.getProcessedAt(),
             updatedAt: step.getUpdatedAt(),
@@ -195,7 +197,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
         delegatedTo: stepRow.delegatedTo
           ? UserId.fromString(stepRow.delegatedTo)
           : undefined,
-        status: stepRow.status as ApprovalStatus,
+        status: fromDbApprovalStatus(stepRow.status),
         comments: stepRow.comments ?? undefined,
         processedAt: stepRow.processedAt ?? undefined,
         createdAt: stepRow.createdAt,
@@ -209,7 +211,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       userId: UserId.fromString(row.userId),
       chainId: ApprovalChainId.fromString(row.chainId),
-      status: row.status as WorkflowStatus,
+      status: fromDbWorkflowStatus(row.status),
       currentStepNumber: row.currentStepNumber,
       steps,
       createdAt: row.createdAt,

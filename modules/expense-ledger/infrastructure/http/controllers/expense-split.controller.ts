@@ -306,7 +306,7 @@ export class ExpenseSplitController {
     );
 
     return reply.send({
-      items: settlements.map((s) => ({
+      items: settlements.items.map((s) => ({
         id: s.getId().getValue(),
         fromUserId: s.getFromUserId(),
         toUserId: s.getToUserId(),

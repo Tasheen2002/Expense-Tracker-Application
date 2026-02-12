@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { ExpenseAllocationController } from "../controllers/expense-allocation.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
@@ -47,13 +48,13 @@ export async function expenseAllocationRoutes(
       },
       preHandler: async (request, reply) => {
         await workspaceAuthorizationMiddleware(
-          request as any,
+          request as AuthenticatedRequest,
           reply,
           (fastify as any).prisma,
         );
       },
     },
-    (request, reply) => controller.allocateExpense(request as any, reply),
+    (request, reply) => controller.allocateExpense(request as AuthenticatedRequest, reply),
   );
 
   // Get expense allocations
@@ -74,13 +75,13 @@ export async function expenseAllocationRoutes(
       },
       preHandler: async (request, reply) => {
         await workspaceAuthorizationMiddleware(
-          request as any,
+          request as AuthenticatedRequest,
           reply,
           (fastify as any).prisma,
         );
       },
     },
-    (request, reply) => controller.getAllocations(request as any, reply),
+    (request, reply) => controller.getAllocations(request as AuthenticatedRequest, reply),
   );
 
   // Delete expense allocations
@@ -101,13 +102,13 @@ export async function expenseAllocationRoutes(
       },
       preHandler: async (request, reply) => {
         await workspaceAuthorizationMiddleware(
-          request as any,
+          request as AuthenticatedRequest,
           reply,
           (fastify as any).prisma,
         );
       },
     },
-    (request, reply) => controller.deleteAllocations(request as any, reply),
+    (request, reply) => controller.deleteAllocations(request as AuthenticatedRequest, reply),
   );
 
   // Get allocation summary for workspace
@@ -127,12 +128,12 @@ export async function expenseAllocationRoutes(
       },
       preHandler: async (request, reply) => {
         await workspaceAuthorizationMiddleware(
-          request as any,
+          request as AuthenticatedRequest,
           reply,
           (fastify as any).prisma,
         );
       },
     },
-    (request, reply) => controller.getAllocationSummary(request as any, reply),
+    (request, reply) => controller.getAllocationSummary(request as AuthenticatedRequest, reply),
   );
 }

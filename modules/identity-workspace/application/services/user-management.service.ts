@@ -7,6 +7,7 @@ import {
   UserNotFoundError,
   UserAlreadyExistsError,
 } from '../../domain/errors/identity.errors'
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
 
 export interface UserManagementServiceOptions {
   page?: number
@@ -44,7 +45,7 @@ export class UserManagementService {
     return await this.userRepository.findByEmail(emailVo)
   }
 
-  async getUsers(options: UserManagementServiceOptions = {}): Promise<User[]> {
+  async getUsers(options: UserManagementServiceOptions = {}): Promise<PaginatedResult<User>> {
     const { page = 1, limit = 50, isActive, emailVerified, sortBy = 'createdAt', sortOrder = 'desc' } = options
 
     const repositoryOptions = {

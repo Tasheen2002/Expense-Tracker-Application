@@ -109,6 +109,10 @@ model Expense {
   @@index([expenseDate])
   @@index([status])
   @@index([createdAt])
+  @@index([workspaceId, status, expenseDate])
+  @@index([workspaceId, userId, status])
+  @@index([workspaceId, categoryId, expenseDate])
+  @@index([userId, status, createdAt])
   @@map("expenses")
   @@schema("expense_ledger")
 }
@@ -238,6 +242,8 @@ model BudgetAllocation {
   @@unique([budgetId, categoryId], map: "budget_category_allocation")
   @@index([budgetId])
   @@index([categoryId])
+  @@index([budgetId, spentAmount])
+  @@index([categoryId, spentAmount])
   @@map("budget_allocations")
   @@schema("budget_management")
 }
@@ -446,6 +452,9 @@ model ApprovalStep {
   @@index([approverId])
   @@index([delegatedTo])
   @@index([status])
+  @@index([approverId, status])
+  @@index([delegatedTo, status])
+  @@index([workflowId, stepNumber, status])
   @@map("approval_steps")
   @@schema("approval_workflow")
 }

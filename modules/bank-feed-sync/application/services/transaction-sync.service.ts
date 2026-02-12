@@ -116,7 +116,7 @@ export class TransactionSyncService {
 
       // Fetch transactions from bank API
       const apiTransactions = await this.bankAPIClient.fetchTransactions(
-        connection.accessToken,
+        connection.getAccessTokenForSync(),
         fromDate,
         toDate,
       );
@@ -124,16 +124,18 @@ export class TransactionSyncService {
       let imported = 0;
       let duplicates = 0;
 
+      // Batch check for existing transactions to avoid N+1 queries
+      const existingExternalIds =
+        await this.transactionRepository.findByExternalIds(
+          workspaceId,
+          apiTransactions.map((t) => t.externalId),
+        );
+
       // Process each transaction
       const transactions: BankTransaction[] = [];
       for (const apiTxn of apiTransactions) {
-        // Check for duplicates
-        const existing = await this.transactionRepository.findByExternalId(
-          workspaceId,
-          apiTxn.externalId,
-        );
-
-        if (existing) {
+        // Check for duplicates using pre-fetched set
+        if (existingExternalIds.has(apiTxn.externalId)) {
           duplicates++;
           continue;
         }

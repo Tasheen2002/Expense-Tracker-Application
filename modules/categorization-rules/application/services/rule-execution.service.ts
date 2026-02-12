@@ -97,7 +97,7 @@ export class RuleExecutionService {
   async getExecutionsByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId,
-  ): Promise<RuleExecution[]> {
+  ): Promise<PaginatedResult<RuleExecution>> {
     return this.executionRepository.findByExpenseId(expenseId, workspaceId);
   }
 

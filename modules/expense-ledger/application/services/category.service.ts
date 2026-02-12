@@ -6,9 +6,13 @@ import {
   CategoryAlreadyExistsError,
 } from "../../domain/errors/expense.errors";
 import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { ICacheService } from "../../../../apps/api/src/shared/infrastructure/cache/cache.service";
 
 export class CategoryService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly cacheService: ICacheService,
+  ) {}
 
   async createCategory(params: {
     workspaceId: string;
@@ -37,6 +41,9 @@ export class CategoryService {
     });
 
     await this.categoryRepository.save(category);
+
+    // Invalidate workspace categories cache
+    await this.cacheService.deletePattern(`workspace:${params.workspaceId}:categories*`);
 
     return category;
   }
@@ -86,6 +93,10 @@ export class CategoryService {
 
     await this.categoryRepository.update(category);
 
+    // Invalidate cache
+    await this.cacheService.delete(`category:${categoryId}`);
+    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
+
     return category;
   }
 
@@ -103,15 +114,27 @@ export class CategoryService {
       CategoryId.fromString(categoryId),
       workspaceId,
     );
+
+    // Invalidate cache
+    await this.cacheService.delete(`category:${categoryId}`);
+    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
   }
 
   async getCategoryById(
     categoryId: string,
     workspaceId: string,
   ): Promise<Category | null> {
-    return await this.categoryRepository.findById(
-      CategoryId.fromString(categoryId),
-      workspaceId,
+    const cacheKey = `category:${categoryId}`;
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return await this.categoryRepository.findById(
+          CategoryId.fromString(categoryId),
+          workspaceId,
+        );
+      },
+      300, // 5 minutes TTL
     );
   }
 
@@ -144,6 +167,10 @@ export class CategoryService {
 
     await this.categoryRepository.update(category);
 
+    // Invalidate cache
+    await this.cacheService.delete(`category:${categoryId}`);
+    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
+
     return category;
   }
 
@@ -163,6 +190,10 @@ export class CategoryService {
     category.deactivate();
 
     await this.categoryRepository.update(category);
+
+    // Invalidate cache
+    await this.cacheService.delete(`category:${categoryId}`);
+    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
 
     return category;
   }

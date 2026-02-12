@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AttachmentController } from "../controllers/attachment.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function attachmentRoutes(
   fastify: FastifyInstance,
@@ -55,7 +56,7 @@ export async function attachmentRoutes(
         },
       },
     },
-    (request, reply) => controller.createAttachment(request as any, reply),
+    (request, reply) => controller.createAttachment(request as AuthenticatedRequest, reply),
   );
 
   // Delete attachment
@@ -86,7 +87,7 @@ export async function attachmentRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteAttachment(request as any, reply),
+    (request, reply) => controller.deleteAttachment(request as AuthenticatedRequest, reply),
   );
 
   // Get attachment by ID
@@ -130,7 +131,7 @@ export async function attachmentRoutes(
         },
       },
     },
-    (request, reply) => controller.getAttachment(request as any, reply),
+    (request, reply) => controller.getAttachment(request as AuthenticatedRequest, reply),
   );
 
   // List attachments for an expense
@@ -190,6 +191,6 @@ export async function attachmentRoutes(
         },
       },
     },
-    (request, reply) => controller.listAttachments(request as any, reply),
+    (request, reply) => controller.listAttachments(request as AuthenticatedRequest, reply),
   );
 }

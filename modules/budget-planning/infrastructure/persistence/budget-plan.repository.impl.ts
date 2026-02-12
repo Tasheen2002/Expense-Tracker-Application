@@ -26,7 +26,7 @@ export class BudgetPlanRepositoryImpl
       workspaceId: plan.getWorkspaceId().getValue(),
       name: plan.getName(),
       description: plan.getDescription(),
-      periodType: BudgetPeriodType.CUSTOM, // Defaulting to CUSTOM as specified in schema for now, logic to be refined with Value Object mapping
+      periodType: this.derivePeriodType(plan.getPeriod().getStartDate(), plan.getPeriod().getEndDate()),
       startDate: plan.getPeriod().getStartDate(),
       endDate: plan.getPeriod().getEndDate(),
       status: plan.getStatus(),
@@ -101,5 +101,16 @@ export class BudgetPlanRepositoryImpl
     await this.prisma.budgetPlan.delete({
       where: { id: id.getValue() },
     });
+  }
+
+  private derivePeriodType(startDate: Date, endDate: Date): BudgetPeriodType {
+    const diffDays = Math.round(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    if (diffDays >= 28 && diffDays <= 31) return BudgetPeriodType.MONTHLY;
+    if (diffDays >= 89 && diffDays <= 92) return BudgetPeriodType.QUARTERLY;
+    if (diffDays >= 365 && diffDays <= 366) return BudgetPeriodType.YEARLY;
+    return BudgetPeriodType.CUSTOM;
   }
 }

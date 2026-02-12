@@ -22,7 +22,7 @@ export class ApprovalChainCreatedEvent extends DomainEvent {
     return "approval-chain.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -49,7 +49,7 @@ export class ApprovalChainUpdatedEvent extends DomainEvent {
     return "approval-chain.updated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -72,7 +72,7 @@ export class ApproverSequenceChangedEvent extends DomainEvent {
     return "approval-chain.approver-sequence-changed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -94,7 +94,7 @@ export class ApprovalChainActivatedEvent extends DomainEvent {
     return "approval-chain.activated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -114,7 +114,7 @@ export class ApprovalChainDeactivatedEvent extends DomainEvent {
     return "approval-chain.deactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -134,7 +134,7 @@ export class ApprovalChainDeletedEvent extends DomainEvent {
     return "approval-chain.deleted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       chainId: this.chainId,
       workspaceId: this.workspaceId,
@@ -392,12 +392,13 @@ export class ApprovalChain extends AggregateRoot {
     }
 
     if (this.props.categoryIds && this.props.categoryIds.length > 0) {
-      if (
-        !params.categoryId ||
-        !this.props.categoryIds.some(
-          (id) => id.getValue() === params.categoryId,
-        )
-      ) {
+      if (!params.categoryId) {
+        return false;
+      }
+      const categoryIdSet = new Set(
+        this.props.categoryIds.map((id) => id.getValue()),
+      );
+      if (!categoryIdSet.has(params.categoryId)) {
         return false;
       }
     }

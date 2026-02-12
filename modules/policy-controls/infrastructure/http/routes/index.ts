@@ -7,6 +7,7 @@ import { PolicyController } from "../controllers/policy.controller";
 import { ViolationController } from "../controllers/violation.controller";
 import { ExemptionController } from "../controllers/exemption.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 interface PolicyControlsServices {
   policyController: PolicyController;
@@ -29,7 +30,7 @@ export async function registerPolicyControlsRoutes(
       // Then authorize workspace access
       instance.addHook("preHandler", async (request, reply) => {
         await workspaceAuthorizationMiddleware(
-          request as any,
+          request as AuthenticatedRequest,
           reply,
           services.prisma,
         );

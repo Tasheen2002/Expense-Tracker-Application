@@ -38,12 +38,15 @@ export class BankTransactionController {
       offset?: string;
     };
 
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+
     const result = await this.getPendingTransactionsHandler.handle({
       workspaceId,
       connectionId,
       options: {
-        limit: limit ? parseInt(limit) : undefined,
-        offset: offset ? parseInt(offset) : undefined,
+        limit: parsedLimit !== undefined ? Math.min(Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit), 100) : undefined,
+        offset: parsedOffset !== undefined ? Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset) : undefined,
       },
     });
 
@@ -151,13 +154,16 @@ export class BankTransactionController {
       offset?: string;
     };
 
+    const txLimit = limit ? parseInt(limit, 10) : undefined;
+    const txOffset = offset ? parseInt(offset, 10) : undefined;
+
     const result =
       await this.bankTransactionService.getTransactionsByConnection(
         workspaceId,
         connectionId,
         {
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
+          limit: txLimit !== undefined ? Math.min(Math.max(1, isNaN(txLimit) ? 50 : txLimit), 100) : undefined,
+          offset: txOffset !== undefined ? Math.max(0, isNaN(txOffset) ? 0 : txOffset) : undefined,
         },
       );
 

@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ApprovalChainController } from "../controllers/approval-chain.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
@@ -41,7 +42,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.createChain(request as any, reply),
+    (request, reply) => controller.createChain(request as AuthenticatedRequest, reply),
   );
 
   // List approval chains
@@ -68,7 +69,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.listChains(request as any, reply),
+    (request, reply) => controller.listChains(request as AuthenticatedRequest, reply),
   );
 
   // Get approval chain
@@ -88,7 +89,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.getChain(request as any, reply),
+    (request, reply) => controller.getChain(request as AuthenticatedRequest, reply),
   );
 
   // Update approval chain
@@ -122,7 +123,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.updateChain(request as any, reply),
+    (request, reply) => controller.updateChain(request as AuthenticatedRequest, reply),
   );
 
   // Activate approval chain
@@ -142,7 +143,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.activateChain(request as any, reply),
+    (request, reply) => controller.activateChain(request as AuthenticatedRequest, reply),
   );
 
   // Deactivate approval chain
@@ -162,7 +163,7 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.deactivateChain(request as any, reply),
+    (request, reply) => controller.deactivateChain(request as AuthenticatedRequest, reply),
   );
 
   // Delete approval chain
@@ -182,6 +183,6 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteChain(request as any, reply),
+    (request, reply) => controller.deleteChain(request as AuthenticatedRequest, reply),
   );
 }

@@ -20,20 +20,12 @@ export class GetViolationStatsHandler {
   constructor(private readonly violationRepository: ViolationRepository) {}
 
   async handle(input: GetViolationStatsInput): Promise<ViolationStatsResult> {
-    const violations = await this.violationRepository.findByWorkspace(
+    const result = await this.violationRepository.findByWorkspace(
       input.workspaceId,
+      { startDate: input.startDate, endDate: input.endDate },
     );
 
-    // Filter by date range if provided
-    let filtered = violations;
-    if (input.startDate || input.endDate) {
-      filtered = violations.filter((v) => {
-        const createdAt = v.getCreatedAt();
-        if (input.startDate && createdAt < input.startDate) return false;
-        if (input.endDate && createdAt > input.endDate) return false;
-        return true;
-      });
-    }
+    const violations = result.items;
 
     const byStatus: Record<ViolationStatus, number> = {
       [ViolationStatus.PENDING]: 0,
@@ -50,13 +42,13 @@ export class GetViolationStatsHandler {
       [ViolationSeverity.CRITICAL]: 0,
     };
 
-    for (const violation of filtered) {
+    for (const violation of violations) {
       byStatus[violation.getStatus()]++;
       bySeverity[violation.getSeverity()]++;
     }
 
     return {
-      total: filtered.length,
+      total: result.total,
       byStatus,
       bySeverity,
       pendingCount: byStatus[ViolationStatus.PENDING],

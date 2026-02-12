@@ -101,7 +101,7 @@ export class WorkspaceAuthHelper {
    * Get user info from request
    */
   getUserFromRequest(request: FastifyRequest): { userId: string } | null {
-    const user = (request as any).user
+    const user = request.user as { userId?: string } | undefined
     if (!user || !user.userId) {
       return null
     }

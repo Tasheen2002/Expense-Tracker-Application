@@ -11,7 +11,7 @@ import {
 } from "../validation/audit-log.schema";
 
 // Extend AuthenticatedRequest to include workspace context
-interface WorkspaceAuthenticatedRequest extends AuthenticatedRequest {
+export interface WorkspaceAuthenticatedRequest extends AuthenticatedRequest {
   workspace: {
     workspaceId: string;
     role: string;

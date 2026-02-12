@@ -1,5 +1,8 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
+import {
+  ReceiptMetadata,
+  LineItem,
+} from "../../domain/entities/receipt-metadata.entity";
 import { MetadataId } from "../../domain/value-objects/metadata-id";
 import { ReceiptId } from "../../domain/value-objects/receipt-id";
 import { IReceiptMetadataRepository } from "../../domain/repositories/receipt-metadata.repository";
@@ -96,28 +99,31 @@ export class ReceiptMetadataRepositoryImpl implements IReceiptMetadataRepository
     return count > 0;
   }
 
-  private toDomain(row: any): ReceiptMetadata {
+  private toDomain(
+    row: Prisma.ReceiptMetadataGetPayload<object>,
+  ): ReceiptMetadata {
     return ReceiptMetadata.fromPersistence({
       id: MetadataId.fromString(row.id),
       receiptId: ReceiptId.fromString(row.receiptId),
-      merchantName: row.merchantName,
-      merchantAddress: row.merchantAddress,
-      merchantPhone: row.merchantPhone,
-      merchantTaxId: row.merchantTaxId,
-      transactionDate: row.transactionDate,
-      transactionTime: row.transactionTime,
-      subtotal: row.subtotal,
-      taxAmount: row.taxAmount,
-      tipAmount: row.tipAmount,
-      totalAmount: row.totalAmount,
-      currency: row.currency,
-      paymentMethod: row.paymentMethod,
-      lastFourDigits: row.lastFourDigits,
-      invoiceNumber: row.invoiceNumber,
-      poNumber: row.poNumber,
-      lineItems: row.lineItems,
-      notes: row.notes,
-      customFields: row.customFields,
+      merchantName: row.merchantName ?? undefined,
+      merchantAddress: row.merchantAddress ?? undefined,
+      merchantPhone: row.merchantPhone ?? undefined,
+      merchantTaxId: row.merchantTaxId ?? undefined,
+      transactionDate: row.transactionDate ?? undefined,
+      transactionTime: row.transactionTime ?? undefined,
+      subtotal: row.subtotal ?? undefined,
+      taxAmount: row.taxAmount ?? undefined,
+      tipAmount: row.tipAmount ?? undefined,
+      totalAmount: row.totalAmount ?? undefined,
+      currency: row.currency ?? undefined,
+      paymentMethod: row.paymentMethod ?? undefined,
+      lastFourDigits: row.lastFourDigits ?? undefined,
+      invoiceNumber: row.invoiceNumber ?? undefined,
+      poNumber: row.poNumber ?? undefined,
+      lineItems: (row.lineItems as LineItem[] | null) ?? undefined,
+      notes: row.notes ?? undefined,
+      customFields:
+        (row.customFields as Record<string, any> | null) ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

@@ -25,7 +25,7 @@ export class BankConnectionCreatedEvent extends DomainEvent {
     return "BankConnectionCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -49,7 +49,7 @@ export class BankConnectionActivatedEvent extends DomainEvent {
     return "BankConnectionActivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -70,7 +70,7 @@ export class BankConnectionDisconnectedEvent extends DomainEvent {
     return "BankConnectionDisconnected";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -91,7 +91,7 @@ export class BankConnectionExpiredEvent extends DomainEvent {
     return "BankConnectionExpired";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -112,7 +112,7 @@ export class BankConnectionSyncedEvent extends DomainEvent {
     return "BankConnectionSynced";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -134,7 +134,7 @@ export class BankConnectionErrorEvent extends DomainEvent {
     return "BankConnectionError";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -156,7 +156,7 @@ export class BankConnectionTokenUpdatedEvent extends DomainEvent {
     return "BankConnectionTokenUpdated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       connectionId: this.connectionId,
       workspaceId: this.workspaceId,
@@ -280,10 +280,6 @@ export class BankConnection extends AggregateRoot {
     return this.props.currency;
   }
 
-  get accessToken(): string {
-    return this.props.accessToken;
-  }
-
   get status(): ConnectionStatus {
     return this.props.status;
   }
@@ -349,7 +345,21 @@ export class BankConnection extends AggregateRoot {
     return this.props.currency;
   }
 
-  getAccessToken(): string {
+  /**
+   * Returns a masked version of the access token for logging/display purposes.
+   * Use getAccessTokenForSync() for actual API calls.
+   */
+  getAccessTokenMasked(): string {
+    const token = this.props.accessToken;
+    if (token.length <= 8) return "****";
+    return token.substring(0, 4) + "****" + token.substring(token.length - 4);
+  }
+
+  /**
+   * Returns the actual access token for sync operations.
+   * @internal This should only be used by BankSyncService
+   */
+  getAccessTokenForSync(): string {
     return this.props.accessToken;
   }
 

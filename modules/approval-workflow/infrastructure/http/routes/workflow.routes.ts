@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { WorkflowController } from "../controllers/workflow.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
@@ -31,7 +32,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.initiateWorkflow(request as any, reply),
+    (request, reply) => controller.initiateWorkflow(request as AuthenticatedRequest, reply),
   );
 
   // Get workflow
@@ -51,7 +52,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.getWorkflow(request as any, reply),
+    (request, reply) => controller.getWorkflow(request as AuthenticatedRequest, reply),
   );
 
   // Approve step
@@ -77,7 +78,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.approveStep(request as any, reply),
+    (request, reply) => controller.approveStep(request as AuthenticatedRequest, reply),
   );
 
   // Reject step
@@ -104,7 +105,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectStep(request as any, reply),
+    (request, reply) => controller.rejectStep(request as AuthenticatedRequest, reply),
   );
 
   // Delegate step
@@ -131,7 +132,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.delegateStep(request as any, reply),
+    (request, reply) => controller.delegateStep(request as AuthenticatedRequest, reply),
   );
 
   // Cancel workflow
@@ -151,7 +152,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.cancelWorkflow(request as any, reply),
+    (request, reply) => controller.cancelWorkflow(request as AuthenticatedRequest, reply),
   );
 
   // List pending approvals
@@ -177,7 +178,7 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.listPendingApprovals(request as any, reply),
+    (request, reply) => controller.listPendingApprovals(request as AuthenticatedRequest, reply),
   );
 
   // List user workflows
@@ -203,6 +204,6 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) => controller.listUserWorkflows(request as any, reply),
+    (request, reply) => controller.listUserWorkflows(request as AuthenticatedRequest, reply),
   );
 }

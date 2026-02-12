@@ -14,7 +14,7 @@ export class ExpireExemptionsHandler {
 
   async handle(input: ExpireExemptionsInput): Promise<ExpireExemptionsResult> {
     // Get all approved exemptions and check which ones have expired
-    const exemptions = await this.exemptionRepository.findByWorkspace(
+    const result = await this.exemptionRepository.findByWorkspace(
       input.workspaceId,
       {
         status: ExemptionStatus.APPROVED,
@@ -22,7 +22,7 @@ export class ExpireExemptionsHandler {
     );
 
     let expiredCount = 0;
-    for (const exemption of exemptions) {
+    for (const exemption of result.items) {
       if (exemption.isExpired()) {
         exemption.markExpired();
         await this.exemptionRepository.save(exemption);

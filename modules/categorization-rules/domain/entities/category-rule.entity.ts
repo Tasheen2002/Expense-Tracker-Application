@@ -26,7 +26,7 @@ export class CategoryRuleCreatedEvent extends DomainEvent {
     return "CategoryRuleCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       ruleId: this.ruleId,
       workspaceId: this.workspaceId,
@@ -46,7 +46,7 @@ export class CategoryRuleActivatedEvent extends DomainEvent {
     return "CategoryRuleActivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { ruleId: this.ruleId };
   }
 }
@@ -60,7 +60,7 @@ export class CategoryRuleDeactivatedEvent extends DomainEvent {
     return "CategoryRuleDeactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { ruleId: this.ruleId };
   }
 }
@@ -77,7 +77,7 @@ export class CategoryRuleUpdatedEvent extends DomainEvent {
     return "CategoryRuleUpdated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       ruleId: this.ruleId,
       name: this.name,

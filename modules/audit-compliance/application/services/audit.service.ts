@@ -40,17 +40,24 @@ export interface ListAuditLogsFilters {
 }
 
 export class AuditService {
+  private consecutiveFailures = 0;
+  private static readonly FAILURE_ALERT_THRESHOLD = 5;
+
   constructor(private readonly auditRepository: AuditLogRepository) {}
 
-  /**
-   * Logs a domain event to the audit log.
-   */
   async log(event: DomainEvent): Promise<void> {
     try {
-      // Check if event has getPayload method (most domain events do)
-      const hasGetPayload = typeof (event as any).getPayload === 'function';
-      const payload = hasGetPayload ? (event as any).getPayload() : {};
-      const workspaceId = payload.workspaceId || "system";
+      const payload = event.getPayload();
+      const workspaceId = payload.workspaceId;
+
+      // Skip logging system-level events without a workspaceId
+      if (!workspaceId) {
+        console.debug(
+          `[AuditService] Skipping system-level event without workspaceId: ${event.eventType}`,
+        );
+        return;
+      }
+
       const userId = payload.triggeredBy || payload.userId || null;
 
       const action = AuditAction.create(event.eventType);
@@ -74,8 +81,31 @@ export class AuditService {
       });
 
       await this.auditRepository.save(auditLog);
+
+      // Reset failure counter on success
+      if (this.consecutiveFailures > 0) {
+        console.info(
+          `[AuditService] Audit logging recovered after ${this.consecutiveFailures} consecutive failures`,
+        );
+        this.consecutiveFailures = 0;
+      }
     } catch (error) {
-      console.error("[AuditService] Failed to log event:", error);
+      this.consecutiveFailures++;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      console.warn(
+        `[AuditService] AUDIT_FAILURE: Failed to log event "${event.eventType}" ` +
+          `(failure #${this.consecutiveFailures}): ${errorMessage}`,
+      );
+
+      // Escalate warning when consecutive failures exceed threshold
+      if (this.consecutiveFailures >= AuditService.FAILURE_ALERT_THRESHOLD) {
+        // Throw error for critical failures - caller or monitoring system should handle
+        throw new Error(
+          `[AuditService] CRITICAL: ${this.consecutiveFailures} consecutive audit failures. Audit trail integrity compromised.`,
+        );
+      }
     }
   }
 

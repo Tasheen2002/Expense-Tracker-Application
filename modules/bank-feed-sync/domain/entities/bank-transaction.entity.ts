@@ -26,7 +26,7 @@ export class BankTransactionSyncedEvent extends DomainEvent {
     return "BankTransactionSynced";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       transactionId: this.transactionId,
       workspaceId: this.workspaceId,
@@ -51,7 +51,7 @@ export class BankTransactionMatchedEvent extends DomainEvent {
     return "BankTransactionMatched";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       transactionId: this.transactionId,
       workspaceId: this.workspaceId,
@@ -73,7 +73,7 @@ export class BankTransactionImportedEvent extends DomainEvent {
     return "BankTransactionImported";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       transactionId: this.transactionId,
       workspaceId: this.workspaceId,
@@ -94,7 +94,7 @@ export class BankTransactionIgnoredEvent extends DomainEvent {
     return "BankTransactionIgnored";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       transactionId: this.transactionId,
       workspaceId: this.workspaceId,

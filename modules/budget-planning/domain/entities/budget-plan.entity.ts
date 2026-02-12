@@ -24,7 +24,7 @@ export class BudgetPlanCreatedEvent extends DomainEvent {
     return "BudgetPlanCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       planId: this.planId,
       workspaceId: this.workspaceId,
@@ -47,7 +47,7 @@ export class BudgetPlanStatusChangedEvent extends DomainEvent {
     return "BudgetPlanStatusChanged";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       planId: this.planId,
       oldStatus: this.oldStatus,
@@ -68,7 +68,7 @@ export class BudgetPlanUpdatedEvent extends DomainEvent {
     return "BudgetPlanUpdated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       planId: this.planId,
       name: this.name,

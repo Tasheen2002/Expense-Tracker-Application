@@ -99,6 +99,23 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
     return record ? this.toDomain(record) : null;
   }
 
+  async findByExternalIds(
+    workspaceId: WorkspaceId,
+    externalIds: string[],
+  ): Promise<Set<string>> {
+    if (externalIds.length === 0) return new Set();
+
+    const records = await this.prisma.bankTransaction.findMany({
+      where: {
+        workspaceId: workspaceId.getValue(),
+        externalId: { in: externalIds },
+      },
+      select: { externalId: true },
+    });
+
+    return new Set(records.map((r) => r.externalId));
+  }
+
   async findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,

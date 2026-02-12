@@ -33,7 +33,7 @@ export class PolicyViolationDetectedEvent extends DomainEvent {
     return "violation.detected";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       violationId: this.violationId,
       workspaceId: this.workspaceId,
@@ -64,7 +64,7 @@ export class ViolationAcknowledgedEvent extends DomainEvent {
     return "violation.acknowledged";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       violationId: this.violationId,
       workspaceId: this.workspaceId,
@@ -91,7 +91,7 @@ export class ViolationResolvedEvent extends DomainEvent {
     return "violation.resolved";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       violationId: this.violationId,
       workspaceId: this.workspaceId,

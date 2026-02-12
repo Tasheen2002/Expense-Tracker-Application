@@ -55,6 +55,6 @@ export const getBankConnectionsQuerySchema = z.object({
     .transform((val) => (val ? parseInt(val, 10) : 0)),
 });
 
-export type GetBankConnectionsQuery = z.infer<
+export type GetBankConnectionsQueryParams = z.infer<
   typeof getBankConnectionsQuerySchema
 >;

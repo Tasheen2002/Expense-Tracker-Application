@@ -21,7 +21,7 @@ export class UserCreatedEvent extends DomainEvent {
     return "UserCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       userId: this.userId,
       email: this.email,
@@ -42,7 +42,7 @@ export class UserEmailVerifiedEvent extends DomainEvent {
     return "UserEmailVerified";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       userId: this.userId,
       email: this.email,
@@ -59,7 +59,7 @@ export class UserDeactivatedEvent extends DomainEvent {
     return "UserDeactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { userId: this.userId };
   }
 }
@@ -73,7 +73,7 @@ export class UserPasswordChangedEvent extends DomainEvent {
     return "UserPasswordChanged";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { userId: this.userId };
   }
 }

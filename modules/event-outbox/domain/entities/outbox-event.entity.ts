@@ -2,6 +2,7 @@ import { OutboxEventId } from "../value-objects/outbox-event-id";
 import { AggregateId } from "../value-objects/aggregate-id";
 import { OutboxEventStatus } from "../enums/outbox-event-status.enum";
 import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { InvalidOutboxEventError } from "../errors/outbox-event.errors";
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -30,7 +31,7 @@ export class OutboxDomainEvent extends DomainEvent {
     return this._eventType;
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return this.payload;
   }
 }
@@ -44,7 +45,7 @@ export interface OutboxEventProps {
   aggregateType: string;
   aggregateId: AggregateId;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   status: OutboxEventStatus;
   createdAt: Date;
   processedAt?: Date;
@@ -59,7 +60,7 @@ export class OutboxEvent {
     aggregateType: string;
     aggregateId: string;
     eventType: string;
-    payload: Record<string, any>;
+    payload: Record<string, unknown>;
   }): OutboxEvent {
     return new OutboxEvent({
       id: OutboxEventId.create(),
@@ -94,7 +95,7 @@ export class OutboxEvent {
     return this.props.eventType;
   }
 
-  get payload(): Record<string, any> {
+  get payload(): Record<string, unknown> {
     return this.props.payload;
   }
 
@@ -121,7 +122,9 @@ export class OutboxEvent {
   // State transitions
   markAsProcessing(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
-      throw new Error("Cannot mark processed event as processing");
+      throw new InvalidOutboxEventError(
+        "Cannot mark processed event as processing",
+      );
     }
     this.props.status = OutboxEventStatus.PROCESSING;
   }
@@ -140,7 +143,9 @@ export class OutboxEvent {
 
   resetToPending(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
-      throw new Error("Cannot reset processed event to pending");
+      throw new InvalidOutboxEventError(
+        "Cannot reset processed event to pending",
+      );
     }
     this.props.status = OutboxEventStatus.PENDING;
   }

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definition.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
 import { IReceiptTagDefinitionRepository } from "../../domain/repositories/receipt-tag-definition.repository";
@@ -105,13 +105,15 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
     });
   }
 
-  private toDomain(row: any): ReceiptTagDefinition {
+  private toDomain(
+    row: Prisma.ReceiptTagDefinitionGetPayload<object>,
+  ): ReceiptTagDefinition {
     return ReceiptTagDefinition.fromPersistence({
       id: TagId.fromString(row.id),
       workspaceId: row.workspaceId,
       name: row.name,
-      color: row.color,
-      description: row.description,
+      color: row.color ?? undefined,
+      description: row.description ?? undefined,
       createdAt: row.createdAt,
     });
   }

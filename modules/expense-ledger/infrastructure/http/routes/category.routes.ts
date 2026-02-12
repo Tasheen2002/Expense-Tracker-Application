@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CategoryController } from "../controllers/category.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function categoryRoutes(
   fastify: FastifyInstance,
@@ -55,7 +56,7 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.createCategory(request as any, reply),
+    (request, reply) => controller.createCategory(request as AuthenticatedRequest, reply),
   );
 
   // Update category
@@ -107,7 +108,7 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.updateCategory(request as any, reply),
+    (request, reply) => controller.updateCategory(request as AuthenticatedRequest, reply),
   );
 
   // Delete category
@@ -137,7 +138,7 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteCategory(request as any, reply),
+    (request, reply) => controller.deleteCategory(request as AuthenticatedRequest, reply),
   );
 
   // Get category by ID
@@ -181,7 +182,7 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.getCategory(request as any, reply),
+    (request, reply) => controller.getCategory(request as AuthenticatedRequest, reply),
   );
 
   // List categories
@@ -247,6 +248,6 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.listCategories(request as any, reply),
+    (request, reply) => controller.listCategories(request as AuthenticatedRequest, reply),
   );
 }

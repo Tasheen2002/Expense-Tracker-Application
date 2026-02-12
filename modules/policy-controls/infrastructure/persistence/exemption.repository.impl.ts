@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   ExemptionRepository,
   ExemptionFilters,
@@ -64,7 +64,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     filters?: ExemptionFilters,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemption>> {
-    const where: any = { workspaceId };
+    const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -82,7 +82,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
         where,
         orderBy: { requestedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -98,7 +98,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
         where: { workspaceId, userId },
         orderBy: { requestedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -124,6 +124,32 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     return row ? this.toDomain(row) : null;
   }
 
+  async findActiveForUserPolicies(
+    workspaceId: string,
+    userId: string,
+    policyIds: string[],
+  ): Promise<Map<string, PolicyExemption>> {
+    if (policyIds.length === 0) return new Map();
+
+    const now = new Date();
+    const rows = await this.prisma.policyExemption.findMany({
+      where: {
+        workspaceId,
+        userId,
+        policyId: { in: policyIds },
+        status: ExemptionStatus.APPROVED,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+    });
+
+    const result = new Map<string, PolicyExemption>();
+    for (const row of rows) {
+      result.set(row.policyId, this.toDomain(row));
+    }
+    return result;
+  }
+
   async findPendingByWorkspace(
     workspaceId: string,
     options?: PaginationOptions,
@@ -137,7 +163,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
         },
         orderBy: { requestedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -146,7 +172,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     workspaceId: string,
     filters?: ExemptionFilters,
   ): Promise<number> {
-    const where: any = { workspaceId };
+    const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -164,7 +190,9 @@ export class PrismaExemptionRepository implements ExemptionRepository {
     });
   }
 
-  private toDomain(row: any): PolicyExemption {
+  private toDomain(
+    row: Prisma.PolicyExemptionGetPayload<object>,
+  ): PolicyExemption {
     return PolicyExemption.reconstitute({
       exemptionId: ExemptionId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
@@ -175,11 +203,11 @@ export class PrismaExemptionRepository implements ExemptionRepository {
       status: row.status as ExemptionStatus,
       startDate: row.validFrom,
       endDate: row.validUntil,
-      approvedBy: row.approvedBy,
-      approvedAt: row.approvedAt,
-      rejectedBy: row.rejectedBy,
-      rejectedAt: row.rejectedAt,
-      rejectionReason: row.rejectionReason,
+      approvedBy: row.approvedBy ?? undefined,
+      approvedAt: row.approvedAt ?? undefined,
+      rejectedBy: row.rejectedBy ?? undefined,
+      rejectedAt: row.rejectedAt ?? undefined,
+      rejectionReason: row.rejectionReason ?? undefined,
       createdAt: row.requestedAt,
       updatedAt: row.requestedAt,
     });

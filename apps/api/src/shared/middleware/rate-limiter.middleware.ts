@@ -131,7 +131,8 @@ export function endpointKeyGenerator(request: FastifyRequest): string {
  * Key generator for authenticated users.
  */
 export function userKeyGenerator(request: FastifyRequest): string {
-  const userId = (request as any).user?.id || "anonymous";
+  const user = request.user as { id?: string; userId?: string } | undefined;
+  const userId = user?.userId || user?.id || "anonymous";
   return `rate_limit:user:${userId}`;
 }
 

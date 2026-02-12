@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { OutboxEventController } from "../controllers/outbox-event.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function outboxEventRoutes(
   fastify: FastifyInstance,
@@ -38,7 +39,7 @@ export async function outboxEventRoutes(
         },
       },
     },
-    (request, reply) => controller.storeEvent(request as any, reply),
+    (request, reply) => controller.storeEvent(request as AuthenticatedRequest, reply),
   );
 
   // Get pending events (admin/monitoring endpoint)
@@ -88,7 +89,7 @@ export async function outboxEventRoutes(
         },
       },
     },
-    (request, reply) => controller.getPendingEvents(request as any, reply),
+    (request, reply) => controller.getPendingEvents(request as AuthenticatedRequest, reply),
   );
 
   // Get failed events (admin/monitoring endpoint)
@@ -139,6 +140,6 @@ export async function outboxEventRoutes(
         },
       },
     },
-    (request, reply) => controller.getFailedEvents(request as any, reply),
+    (request, reply) => controller.getFailedEvents(request as AuthenticatedRequest, reply),
   );
 }

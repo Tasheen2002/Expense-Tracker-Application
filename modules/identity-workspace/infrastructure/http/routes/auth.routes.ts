@@ -1,10 +1,24 @@
 import { FastifyInstance } from "fastify";
 import { AuthController } from "../controllers/auth.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+
+const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 
 export async function registerAuthRoutes(
   fastify: FastifyInstance,
   authController: AuthController,
 ) {
+  // Apply auth-specific rate limiting to login/register routes only
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.method === "POST" && request.url.startsWith("/auth/")) {
+      await authRateLimiter(request, reply);
+    }
+  });
+
   // Register user
   fastify.post(
     "/auth/register",
@@ -164,6 +178,6 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request, reply) => authController.me(request as any, reply),
+    (request, reply) => authController.me(request as AuthenticatedRequest, reply),
   );
 }

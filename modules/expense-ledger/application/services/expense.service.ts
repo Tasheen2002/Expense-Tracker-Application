@@ -494,4 +494,20 @@ export class ExpenseService {
   ): Promise<number> {
     return await this.expenseRepository.getCountByStatus(status, workspaceId);
   }
+
+  async getExpenseStatistics(
+    workspaceId: string,
+    userId?: string,
+    currency?: string,
+  ): Promise<{
+    totalAmount: number;
+    currency: string;
+    countByStatus: Record<ExpenseStatus, number>;
+  }> {
+    return await this.expenseRepository.getStatistics(
+      workspaceId,
+      userId,
+      currency,
+    );
+  }
 }

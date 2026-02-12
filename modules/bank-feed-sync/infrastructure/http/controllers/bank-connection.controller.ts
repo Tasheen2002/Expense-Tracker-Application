@@ -76,10 +76,13 @@ export class BankConnectionController {
       offset?: string;
     };
 
+    const parsedLimit = limit ? parseInt(limit, 10) : 50;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
+
     const result = await this.getBankConnectionsHandler.handle({
       workspaceId,
-      limit: limit ? parseInt(limit, 10) : 50,
-      offset: offset ? parseInt(offset, 10) : 0,
+      limit: Math.min(Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit), 100),
+      offset: Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset),
     });
 
     return reply.send({

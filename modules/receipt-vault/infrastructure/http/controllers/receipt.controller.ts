@@ -1,6 +1,9 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { UploadReceiptHandler } from "../../../application/commands/upload-receipt.command";
+import {
+  UploadReceiptHandler,
+  UploadReceiptDto,
+} from "../../../application/commands/upload-receipt.command";
 import { LinkReceiptToExpenseHandler } from "../../../application/commands/link-receipt-to-expense.command";
 import { UnlinkReceiptFromExpenseHandler } from "../../../application/commands/unlink-receipt-from-expense.command";
 import { ProcessReceiptHandler } from "../../../application/commands/process-receipt.command";
@@ -53,22 +56,16 @@ export class ReceiptController {
     private readonly getStatsHandler: GetReceiptStatsHandler,
   ) {}
 
-  async uploadReceipt(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: UploadReceiptInput;
-    }>,
-    reply: FastifyReply,
-  ) {
+  async uploadReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
     const userId = request.user.userId;
 
-    const { workspaceId } = request.params;
+    const { workspaceId } = request.params as { workspaceId: string };
 
     try {
       const receipt = await this.uploadReceiptHandler.handle({
         workspaceId,
         userId,
-        ...request.body,
+        ...(request.body as Omit<UploadReceiptDto, "workspaceId" | "userId">),
       });
 
       return reply.status(201).send({
@@ -82,13 +79,11 @@ export class ReceiptController {
     }
   }
 
-  async getReceipt(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    const { workspaceId, receiptId } = request.params;
+  async getReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
+    const { workspaceId, receiptId } = request.params as {
+      workspaceId: string;
+      receiptId: string;
+    };
 
     try {
       const receipt = await this.getReceiptHandler.handle({
@@ -115,15 +110,9 @@ export class ReceiptController {
     }
   }
 
-  async listReceipts(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: ListReceiptsQuery;
-    }>,
-    reply: FastifyReply,
-  ) {
-    const { workspaceId } = request.params;
-    const query = request.query;
+  async listReceipts(request: AuthenticatedRequest, reply: FastifyReply) {
+    const { workspaceId } = request.params as { workspaceId: string };
+    const query = request.query as ListReceiptsQuery;
 
     try {
       const result = await this.listReceiptsHandler.handle({
@@ -160,12 +149,13 @@ export class ReceiptController {
   }
 
   async getReceiptsByExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
-    const { workspaceId, expenseId } = request.params;
+    const { workspaceId, expenseId } = request.params as {
+      workspaceId: string;
+      expenseId: string;
+    };
 
     try {
       const receipts = await this.getReceiptsByExpenseHandler.handle({

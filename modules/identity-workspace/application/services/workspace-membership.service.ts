@@ -14,10 +14,12 @@ import {
 } from "../../domain/errors/identity.errors";
 
 import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { ICacheService } from "../../../../apps/api/src/shared/infrastructure/cache/cache.service";
 
 export class WorkspaceMembershipService {
   constructor(
     private readonly membershipRepository: IWorkspaceMembershipRepository,
+    private readonly cacheService: ICacheService,
   ) {}
 
   async addMember(
@@ -25,6 +27,9 @@ export class WorkspaceMembershipService {
   ): Promise<WorkspaceMembership> {
     const userId = UserId.fromString(data.userId);
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
+
+    // Invalidate cache
+    await this.cacheService.delete(`membership:${data.userId}:${data.workspaceId}`);
 
     // Check if membership already exists
     const existing = await this.membershipRepository.findByUserAndWorkspace(
@@ -82,6 +87,11 @@ export class WorkspaceMembershipService {
       throw new MembershipNotFoundError(membershipId);
     }
 
+    // Invalidate cache
+    await this.cacheService.delete(
+      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`,
+    );
+
     membership.changeRole(newRole);
     await this.membershipRepository.save(membership);
     return membership;
@@ -99,13 +109,26 @@ export class WorkspaceMembershipService {
       throw new CannotRemoveOwnerError();
     }
 
+    // Invalidate cache
+    await this.cacheService.delete(
+      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`,
+    );
+
     await this.membershipRepository.delete(id);
   }
 
   async isMember(userId: string, workspaceId: string): Promise<boolean> {
-    const userIdVO = UserId.fromString(userId);
-    const workspaceIdVO = WorkspaceId.fromString(workspaceId);
-    return await this.membershipRepository.exists(userIdVO, workspaceIdVO);
+    const cacheKey = `membership:${userId}:${workspaceId}`;
+
+    return await this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const userIdVO = UserId.fromString(userId);
+        const workspaceIdVO = WorkspaceId.fromString(workspaceId);
+        return await this.membershipRepository.exists(userIdVO, workspaceIdVO);
+      },
+      600, // 10 minutes TTL
+    );
   }
 
   async hasRole(

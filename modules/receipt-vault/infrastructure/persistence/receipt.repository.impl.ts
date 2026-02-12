@@ -1,4 +1,4 @@
-import { PrismaClient, Receipt as ReceiptModel } from "@prisma/client";
+import { PrismaClient, Prisma, Receipt as ReceiptModel } from "@prisma/client";
 import { Receipt } from "../../domain/entities/receipt.entity";
 import { ReceiptId } from "../../domain/value-objects/receipt-id";
 import { FileInfo } from "../../domain/value-objects/file-info";
@@ -173,8 +173,8 @@ export class ReceiptRepositoryImpl
     return await this.prisma.receipt.count({ where });
   }
 
-  private buildWhereClause(filters: ReceiptFilters): any {
-    const where: any = {
+  private buildWhereClause(filters: ReceiptFilters): Prisma.ReceiptWhereInput {
+    const where: Prisma.ReceiptWhereInput = {
       workspaceId: filters.workspaceId,
     };
 
@@ -205,11 +205,17 @@ export class ReceiptRepositoryImpl
     }
 
     if (filters.fromDate) {
-      where.createdAt = { ...where.createdAt, gte: filters.fromDate };
+      where.createdAt = {
+        ...(typeof where.createdAt === "object" ? where.createdAt : {}),
+        gte: filters.fromDate,
+      };
     }
 
     if (filters.toDate) {
-      where.createdAt = { ...where.createdAt, lte: filters.toDate };
+      where.createdAt = {
+        ...(typeof where.createdAt === "object" ? where.createdAt : {}),
+        lte: filters.toDate,
+      };
     }
 
     return where;
@@ -307,6 +313,23 @@ export class ReceiptRepositoryImpl
         deletedAt: null,
       },
     });
+  }
+
+  async getStatusCounts(workspaceId: string): Promise<Record<string, number>> {
+    const groups = await this.prisma.receipt.groupBy({
+      by: ["status"],
+      where: {
+        workspaceId,
+        deletedAt: null,
+      },
+      _count: { status: true },
+    });
+
+    const counts: Record<string, number> = {};
+    for (const group of groups) {
+      counts[group.status] = group._count.status;
+    }
+    return counts;
   }
 
   private toDomain(row: ReceiptModel): Receipt {

@@ -1,10 +1,27 @@
 import { FastifyInstance } from "fastify";
 import { BankConnectionController } from "../controllers/bank-connection.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function bankConnectionRoutes(
   fastify: FastifyInstance,
   controller: BankConnectionController,
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Create bank connection
   fastify.post(
     "/:workspaceId/bank-feed-sync/connections",
@@ -42,7 +59,7 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.connectBank(request as any, reply),
+    (request, reply) => controller.connectBank(request as AuthenticatedRequest, reply),
   );
 
   // Get all connections
@@ -59,7 +76,7 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.getConnections(request as any, reply),
+    (request, reply) => controller.getConnections(request as AuthenticatedRequest, reply),
   );
 
   // Get specific connection
@@ -77,7 +94,7 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.getConnection(request as any, reply),
+    (request, reply) => controller.getConnection(request as AuthenticatedRequest, reply),
   );
 
   // Update connection token
@@ -103,7 +120,7 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.updateConnectionToken(request as any, reply),
+    (request, reply) => controller.updateConnectionToken(request as AuthenticatedRequest, reply),
   );
 
   // Disconnect bank
@@ -121,7 +138,7 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.disconnectBank(request as any, reply),
+    (request, reply) => controller.disconnectBank(request as AuthenticatedRequest, reply),
   );
 
   // Delete connection
@@ -139,6 +156,6 @@ export async function bankConnectionRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteConnection(request as any, reply),
+    (request, reply) => controller.deleteConnection(request as AuthenticatedRequest, reply),
   );
 }

@@ -256,7 +256,7 @@ export class ExpenseSplitService {
   async getPendingSettlements(
     userId: string,
     workspaceId: string,
-  ): Promise<SplitSettlement[]> {
+  ): Promise<PaginatedResult<SplitSettlement>> {
     return await this.settlementRepository.findPendingForUser(
       userId,
       workspaceId,
@@ -267,7 +267,7 @@ export class ExpenseSplitService {
     splitId: string,
     workspaceId: string,
     userId: string,
-  ): Promise<SplitSettlement[]> {
+  ): Promise<PaginatedResult<SplitSettlement>> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
       workspaceId,

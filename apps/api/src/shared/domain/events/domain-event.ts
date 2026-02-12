@@ -30,7 +30,7 @@ export abstract class DomainEvent {
     };
   }
 
-  protected abstract getPayload(): Record<string, unknown>;
+  abstract getPayload(): Record<string, unknown>;
 }
 
 /**

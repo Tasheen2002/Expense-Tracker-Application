@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { NotificationController } from "../controllers/notification.controller";
 
 export function registerNotificationRoutes(
@@ -56,7 +57,7 @@ export function registerNotificationRoutes(
         },
       },
     },
-    (request, reply) => controller.getNotifications(request as any, reply),
+    (request, reply) => controller.getNotifications(request as AuthenticatedRequest, reply),
   );
 
   // Mark single notification as read
@@ -89,7 +90,7 @@ export function registerNotificationRoutes(
         },
       },
     },
-    (request, reply) => controller.markAsRead(request as any, reply),
+    (request, reply) => controller.markAsRead(request as AuthenticatedRequest, reply),
   );
 
   // Mark all notifications as read
@@ -121,7 +122,7 @@ export function registerNotificationRoutes(
         },
       },
     },
-    (request, reply) => controller.markAllAsRead(request as any, reply),
+    (request, reply) => controller.markAllAsRead(request as AuthenticatedRequest, reply),
   );
 
   // Get notification preferences
@@ -160,7 +161,7 @@ export function registerNotificationRoutes(
         },
       },
     },
-    (request, reply) => controller.getPreferences(request as any, reply),
+    (request, reply) => controller.getPreferences(request as AuthenticatedRequest, reply),
   );
 
   // Update notification preferences
@@ -207,6 +208,6 @@ export function registerNotificationRoutes(
         },
       },
     },
-    (request, reply) => controller.updatePreferences(request as any, reply),
+    (request, reply) => controller.updatePreferences(request as AuthenticatedRequest, reply),
   );
 }

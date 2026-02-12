@@ -21,6 +21,10 @@ import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastr
 import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
+type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
+  include: { category: true; tags: true; attachments: true };
+}>;
+
 export class ExpenseRepositoryImpl
   extends PrismaRepository<Expense>
   implements ExpenseRepository
@@ -153,8 +157,8 @@ export class ExpenseRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Expense>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.expense,
+    return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
+      this.prisma.expense as any,
       {
         where: { workspaceId },
         include: {
@@ -164,7 +168,7 @@ export class ExpenseRepositoryImpl
         },
         orderBy: { expenseDate: "desc" },
       },
-      (expense: any) => this.toDomain(expense),
+      (expense) => this.toDomain(expense),
       options,
     );
   }
@@ -174,8 +178,8 @@ export class ExpenseRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Expense>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.expense,
+    return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
+      this.prisma.expense as any,
       {
         where: { userId, workspaceId },
         include: {
@@ -185,7 +189,7 @@ export class ExpenseRepositoryImpl
         },
         orderBy: { expenseDate: "desc" },
       },
-      (expense: any) => this.toDomain(expense),
+      (expense) => this.toDomain(expense),
       options,
     );
   }
@@ -195,8 +199,8 @@ export class ExpenseRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Expense>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.expense,
+    return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
+      this.prisma.expense as any,
       {
         where: {
           categoryId: categoryId.getValue(),
@@ -209,7 +213,7 @@ export class ExpenseRepositoryImpl
         },
         orderBy: { expenseDate: "desc" },
       },
-      (expense: any) => this.toDomain(expense),
+      (expense) => this.toDomain(expense),
       options,
     );
   }
@@ -219,8 +223,8 @@ export class ExpenseRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Expense>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.expense,
+    return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
+      this.prisma.expense as any,
       {
         where: { status, workspaceId },
         include: {
@@ -230,7 +234,7 @@ export class ExpenseRepositoryImpl
         },
         orderBy: { expenseDate: "desc" },
       },
-      (expense: any) => this.toDomain(expense),
+      (expense) => this.toDomain(expense),
       options,
     );
   }
@@ -289,7 +293,7 @@ export class ExpenseRepositoryImpl
     ]);
 
     return {
-      items: rows.map((expense: any) => this.toDomain(expense)),
+      items: rows.map((expense) => this.toDomain(expense)),
       total,
       limit,
       offset,
@@ -416,13 +420,59 @@ export class ExpenseRepositoryImpl
       isReimbursable: data.isReimbursable,
       status: data.status as ExpenseStatus,
       tagIds: data.tags
-        ? data.tags.map((tag: any) => TagId.fromString(tag.tagId))
+        ? data.tags.map((tag) => TagId.fromString(tag.tagId))
         : [],
       attachmentIds: data.attachments
-        ? data.attachments.map((att: any) => AttachmentId.fromString(att.id))
+        ? data.attachments.map((att) => AttachmentId.fromString(att.id))
         : [],
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
+  }
+
+  async getStatistics(
+    workspaceId: string,
+    userId?: string,
+    currency?: string,
+  ): Promise<{
+    totalAmount: number;
+    currency: string;
+    countByStatus: Record<ExpenseStatus, number>;
+  }> {
+    const where: Prisma.ExpenseWhereInput = {
+      workspaceId,
+      ...(userId && { userId }),
+      ...(currency && { currency }),
+    };
+
+    const [stats, total] = await Promise.all([
+      this.prisma.expense.groupBy({
+        by: ["status"],
+        where,
+        _count: { _all: true },
+      }),
+      this.prisma.expense.aggregate({
+        where,
+        _sum: { amount: true },
+      }),
+    ]);
+
+    const countByStatus: Record<ExpenseStatus, number> = {
+      [ExpenseStatus.DRAFT]: 0,
+      [ExpenseStatus.SUBMITTED]: 0,
+      [ExpenseStatus.APPROVED]: 0,
+      [ExpenseStatus.REJECTED]: 0,
+      [ExpenseStatus.REIMBURSED]: 0,
+    };
+
+    stats.forEach((stat) => {
+      countByStatus[stat.status as ExpenseStatus] = stat._count._all;
+    });
+
+    return {
+      totalAmount: total._sum.amount?.toNumber() || 0,
+      currency: currency || "USD",
+      countByStatus,
+    };
   }
 }

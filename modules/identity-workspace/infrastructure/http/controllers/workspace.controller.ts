@@ -8,6 +8,7 @@ import {
   GetUserWorkspacesHandler,
 } from "../../../application/queries/get-workspace.query";
 import { WorkspaceAuthHelper } from "../middleware/workspace-auth.helper";
+import { Workspace } from "../../../domain/entities/workspace.entity";
 
 export class WorkspaceController {
   constructor(
@@ -123,7 +124,7 @@ export class WorkspaceController {
       success: true,
       statusCode: 200,
       data: {
-        items: workspaces.map((workspace: any) => ({
+        items: workspaces.map((workspace: Workspace) => ({
           workspaceId: workspace.getId().getValue(),
           name: workspace.getName(),
           slug: workspace.getSlug(),

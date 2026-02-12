@@ -116,25 +116,26 @@ export class AllocationManagementController {
   // Department
   // ==========================================
 
-  async createDepartment(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: CreateDepartmentBody;
-    }>,
-    reply: FastifyReply,
-  ) {
+  async createDepartment(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user.userId;
 
-      const { workspaceId } = request.params;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const body = request.body as {
+        name: string;
+        code: string;
+        description?: string;
+        managerId?: string;
+        parentDepartmentId?: string;
+      };
       const command = new CreateDepartmentCommand(
         workspaceId,
         userId,
-        request.body.name,
-        request.body.code,
-        request.body.description,
-        request.body.managerId,
-        request.body.parentDepartmentId,
+        body.name,
+        body.code,
+        body.description,
+        body.managerId,
+        body.parentDepartmentId,
       );
       const department = await this.createDepartmentHandler.handle(command);
 
@@ -154,18 +155,15 @@ export class AllocationManagementController {
     }
   }
 
-  async listDepartments(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async listDepartments(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user.userId;
 
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { limit, offset } = request.query as {
+        limit?: string;
+        offset?: string;
+      };
       const query = new ListDepartmentsQuery(
         workspaceId,
         limit ? parseInt(limit, 10) : undefined,

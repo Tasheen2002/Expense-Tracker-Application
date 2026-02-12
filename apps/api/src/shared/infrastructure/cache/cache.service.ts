@@ -95,12 +95,31 @@ export class InMemoryCacheService implements ICacheService {
   }
 
   async deletePattern(pattern: string): Promise<void> {
-    const regex = new RegExp(
-      "^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$",
+    if (!pattern.includes("*") && !pattern.includes("?")) {
+      this.cache.delete(pattern);
+      return;
+    }
+
+    // Use prefix-based filtering + safe glob matching to avoid ReDoS
+    const firstWildcard = Math.min(
+      pattern.indexOf("*") >= 0 ? pattern.indexOf("*") : Infinity,
+      pattern.indexOf("?") >= 0 ? pattern.indexOf("?") : Infinity,
     );
+    const prefix = pattern.substring(0, firstWildcard);
+
+    // Escape special regex chars in literal parts, convert glob wildcards safely
+    const escaped = pattern
+      .split(/(\*|\?)/)
+      .map((part) => {
+        if (part === "*") return "[^:]*";
+        if (part === "?") return ".";
+        return part.replace(/[.*+^${}()|[\]\\]/g, "\\$&");
+      })
+      .join("");
+    const regex = new RegExp("^" + escaped + "$");
 
     for (const key of this.cache.keys()) {
-      if (regex.test(key)) {
+      if (key.startsWith(prefix) && regex.test(key)) {
         this.cache.delete(key);
       }
     }
@@ -174,4 +193,6 @@ export const CacheKeys = {
   category: (categoryId: string) => `category:${categoryId}`,
   categoriesByWorkspace: (workspaceId: string) =>
     `workspace:${workspaceId}:categories`,
+  activePolicies: (workspaceId: string) =>
+    `workspace:${workspaceId}:active-policies`,
 };

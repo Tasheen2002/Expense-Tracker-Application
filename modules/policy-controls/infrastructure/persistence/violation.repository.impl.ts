@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   ViolationRepository,
   ViolationFilters,
@@ -82,7 +82,7 @@ export class PrismaViolationRepository implements ViolationRepository {
     filters?: ViolationFilters,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>> {
-    const where: any = { workspaceId };
+    const where: Prisma.PolicyViolationWhereInput = { workspaceId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -106,7 +106,7 @@ export class PrismaViolationRepository implements ViolationRepository {
         where,
         orderBy: { detectedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -117,7 +117,7 @@ export class PrismaViolationRepository implements ViolationRepository {
       orderBy: { detectedAt: "desc" },
     });
 
-    return rows.map((row: any) => this.toDomain(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByUser(
@@ -131,7 +131,7 @@ export class PrismaViolationRepository implements ViolationRepository {
         where: { workspaceId, userId },
         orderBy: { detectedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -149,7 +149,7 @@ export class PrismaViolationRepository implements ViolationRepository {
         },
         orderBy: { detectedAt: "desc" },
       },
-      (row: any) => this.toDomain(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -158,7 +158,7 @@ export class PrismaViolationRepository implements ViolationRepository {
     workspaceId: string,
     filters?: ViolationFilters,
   ): Promise<number> {
-    const where: any = { workspaceId };
+    const where: Prisma.PolicyViolationWhereInput = { workspaceId };
 
     if (filters?.status) {
       where.status = filters.status;
@@ -182,7 +182,9 @@ export class PrismaViolationRepository implements ViolationRepository {
     });
   }
 
-  private toDomain(row: any): PolicyViolation {
+  private toDomain(
+    row: Prisma.PolicyViolationGetPayload<object>,
+  ): PolicyViolation {
     return PolicyViolation.reconstitute({
       violationId: ViolationId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
@@ -194,11 +196,11 @@ export class PrismaViolationRepository implements ViolationRepository {
       violationDetails: row.violationDetails,
       expenseAmount: row.expenseAmount ? Number(row.expenseAmount) : undefined,
       currency: row.currency,
-      acknowledgedBy: row.acknowledgedBy,
-      acknowledgedAt: row.acknowledgedAt,
-      resolvedBy: row.resolvedBy,
-      resolvedAt: row.resolvedAt,
-      resolutionNotes: row.resolutionNote,
+      acknowledgedBy: row.acknowledgedBy ?? undefined,
+      acknowledgedAt: row.acknowledgedAt ?? undefined,
+      resolvedBy: row.resolvedBy ?? undefined,
+      resolvedAt: row.resolvedAt ?? undefined,
+      resolutionNotes: row.resolutionNote ?? undefined,
       createdAt: row.detectedAt,
       updatedAt: row.detectedAt,
     });

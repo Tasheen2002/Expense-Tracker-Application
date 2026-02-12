@@ -26,7 +26,7 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
       accountType: connection.getAccountType(),
       accountMask: connection.getAccountMask(),
       currency: connection.getCurrency(),
-      accessToken: connection.getAccessToken(),
+      accessToken: connection.getAccessTokenForSync(),
       status: connection.getStatus(),
       lastSyncAt: connection.getLastSyncAt(),
       tokenExpiresAt: connection.getTokenExpiresAt(),

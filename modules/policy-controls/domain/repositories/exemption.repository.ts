@@ -32,6 +32,11 @@ export interface ExemptionRepository {
     userId: string,
     policyId: string,
   ): Promise<PolicyExemption | null>;
+  findActiveForUserPolicies(
+    workspaceId: string,
+    userId: string,
+    policyIds: string[],
+  ): Promise<Map<string, PolicyExemption>>;
   findPendingByWorkspace(
     workspaceId: string,
     options?: PaginationOptions,

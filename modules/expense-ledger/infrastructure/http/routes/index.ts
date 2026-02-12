@@ -13,6 +13,7 @@ import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
 import { ExpenseSplitController } from "../controllers/expense-split.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function registerExpenseLedgerRoutes(
   fastify: FastifyInstance,
@@ -33,7 +34,11 @@ export async function registerExpenseLedgerRoutes(
         await fastify.authenticate(request);
       });
       instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          prisma,
+        );
       });
 
       await expenseRoutes(instance, controllers.expenseController);

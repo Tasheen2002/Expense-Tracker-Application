@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { TemplateController } from "../controllers/template.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export function registerTemplateRoutes(
   fastify: FastifyInstance,
@@ -48,7 +49,7 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.createTemplate(request as any, reply),
+    (request, reply) => controller.createTemplate(request as AuthenticatedRequest, reply),
   );
 
   // Get template by ID
@@ -68,7 +69,7 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.getTemplateById(request as any, reply),
+    (request, reply) => controller.getTemplateById(request as AuthenticatedRequest, reply),
   );
 
   // Get active template by type and channel
@@ -103,7 +104,7 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.getActiveTemplate(request as any, reply),
+    (request, reply) => controller.getActiveTemplate(request as AuthenticatedRequest, reply),
   );
 
   // Update template
@@ -130,7 +131,7 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.updateTemplate(request as any, reply),
+    (request, reply) => controller.updateTemplate(request as AuthenticatedRequest, reply),
   );
 
   // Activate template
@@ -150,7 +151,7 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.activateTemplate(request as any, reply),
+    (request, reply) => controller.activateTemplate(request as AuthenticatedRequest, reply),
   );
 
   // Deactivate template
@@ -170,6 +171,6 @@ export function registerTemplateRoutes(
         },
       },
     },
-    (request, reply) => controller.deactivateTemplate(request as any, reply),
+    (request, reply) => controller.deactivateTemplate(request as AuthenticatedRequest, reply),
   );
 }

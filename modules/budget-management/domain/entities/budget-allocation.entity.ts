@@ -26,7 +26,7 @@ export class BudgetAllocationCreatedEvent extends DomainEvent {
     return "budget-allocation.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       allocationId: this.allocationId,
       budgetId: this.budgetId,
@@ -52,7 +52,7 @@ export class BudgetAllocationUpdatedEvent extends DomainEvent {
     return "budget-allocation.updated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       allocationId: this.allocationId,
       budgetId: this.budgetId,
@@ -75,7 +75,7 @@ export class BudgetSpentIncrementedEvent extends DomainEvent {
     return "budget-allocation.spent-incremented";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       allocationId: this.allocationId,
       budgetId: this.budgetId,
@@ -99,7 +99,7 @@ export class BudgetSpentDecrementedEvent extends DomainEvent {
     return "budget-allocation.spent-decremented";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       allocationId: this.allocationId,
       budgetId: this.budgetId,
@@ -121,7 +121,7 @@ export class BudgetAllocationDeletedEvent extends DomainEvent {
     return "budget-allocation.deleted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       allocationId: this.allocationId,
       budgetId: this.budgetId,
