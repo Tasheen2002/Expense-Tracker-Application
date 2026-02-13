@@ -1,26 +1,27 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Public routes that don't require authentication
-const publicRoutes = ['/', '/login', '/register', '/pricing', '/about'];
+// ============================================================================
+// Authentication Middleware
+// ============================================================================
 
 // Routes that require authentication
-const protectedRoutes = ['/workspaces', '/account'];
+const protectedRoutes = [
+  '/workspaces',
+  '/account',
+  '/settings',
+];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if the route is public
-  const isPublicRoute = publicRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
-
-  // Check if the route is protected
+  // Check if route is protected
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
-  // Get token from cookies (adjust based on your auth implementation)
+  // Get token from localStorage (via cookie or header in production)
+  // Note: In production, you might want to use httpOnly cookies instead
   const token = request.cookies.get('auth-token')?.value;
 
   // Redirect to login if accessing protected route without token
@@ -30,8 +31,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to dashboard if accessing public route with token
-  if (isPublicRoute && token && pathname === '/') {
+  // Redirect to workspaces if accessing login/register with valid token
+  if ((pathname === '/login' || pathname === '/register') && token) {
     return NextResponse.redirect(new URL('/workspaces', request.url));
   }
 
