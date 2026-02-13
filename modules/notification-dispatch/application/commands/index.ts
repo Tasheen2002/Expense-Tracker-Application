@@ -1,5 +1,6 @@
-export * from "./send-notification.command";
-export * from "./mark-as-read.command";
-export * from "./mark-all-as-read.command";
-export * from "./update-preferences.command";
-export * from "./create-template.command";
+export { SendNotificationCommand, SendNotificationHandler } from "./send-notification.command";
+export { MarkAsReadHandler } from "./mark-as-read.command";
+export type { MarkAsReadCommand } from "./mark-as-read.command";
+export { MarkAllAsReadCommand, MarkAllAsReadHandler } from "./mark-all-as-read.command";
+export { UpdatePreferencesCommand, UpdatePreferencesHandler } from "./update-preferences.command";
+export { CreateTemplateCommand, CreateTemplateHandler } from "./create-template.command";
