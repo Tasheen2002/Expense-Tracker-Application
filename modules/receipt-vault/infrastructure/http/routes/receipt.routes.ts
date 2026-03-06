@@ -1,10 +1,27 @@
 import { FastifyInstance } from 'fastify'
 import { ReceiptController } from '../controllers/receipt.controller'
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface'
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware'
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+})
 
 export async function receiptRoutes(
   fastify: FastifyInstance,
   controller: ReceiptController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply)
+    }
+  })
   // Upload receipt
   fastify.post(
     '/:workspaceId/receipts/upload',
@@ -32,7 +49,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.uploadReceipt(request as any, reply)
+    (request, reply) => controller.uploadReceipt(request as AuthenticatedRequest, reply)
   )
 
   // Get receipt by ID
@@ -52,7 +69,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.getReceipt(request as any, reply)
+    (request, reply) => controller.getReceipt(request as AuthenticatedRequest, reply)
   )
 
   // List receipts
@@ -71,7 +88,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.listReceipts(request as any, reply)
+    (request, reply) => controller.listReceipts(request as AuthenticatedRequest, reply)
   )
 
   // Get receipts by expense
@@ -91,7 +108,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.getReceiptsByExpense(request as any, reply)
+    (request, reply) => controller.getReceiptsByExpense(request as AuthenticatedRequest, reply)
   )
 
   // Link receipt to expense
@@ -118,7 +135,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.linkToExpense(request as any, reply)
+    (request, reply) => controller.linkToExpense(request as AuthenticatedRequest, reply)
   )
 
   // Unlink receipt from expense
@@ -138,7 +155,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.unlinkFromExpense(request as any, reply)
+    (request, reply) => controller.unlinkFromExpense(request as AuthenticatedRequest, reply)
   )
 
   // Process receipt (OCR/AI extraction)
@@ -158,7 +175,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.processReceipt(request as any, reply)
+    (request, reply) => controller.processReceipt(request as AuthenticatedRequest, reply)
   )
 
   // Verify receipt
@@ -178,7 +195,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.verifyReceipt(request as any, reply)
+    (request, reply) => controller.verifyReceipt(request as AuthenticatedRequest, reply)
   )
 
   // Reject receipt
@@ -204,7 +221,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectReceipt(request as any, reply)
+    (request, reply) => controller.rejectReceipt(request as AuthenticatedRequest, reply)
   )
 
   // Delete receipt
@@ -224,7 +241,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteReceipt(request as any, reply)
+    (request, reply) => controller.deleteReceipt(request as AuthenticatedRequest, reply)
   )
 
   // Add metadata
@@ -267,7 +284,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.addMetadata(request as any, reply)
+    (request, reply) => controller.addMetadata(request as AuthenticatedRequest, reply)
   )
 
   // Update metadata
@@ -310,7 +327,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.updateMetadata(request as any, reply)
+    (request, reply) => controller.updateMetadata(request as AuthenticatedRequest, reply)
   )
 
   // Get metadata
@@ -330,7 +347,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.getMetadata(request as any, reply)
+    (request, reply) => controller.getMetadata(request as AuthenticatedRequest, reply)
   )
 
   // Add tag to receipt
@@ -357,7 +374,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.addTag(request as any, reply)
+    (request, reply) => controller.addTag(request as AuthenticatedRequest, reply)
   )
 
   // Remove tag from receipt
@@ -378,7 +395,7 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.removeTag(request as any, reply)
+    (request, reply) => controller.removeTag(request as AuthenticatedRequest, reply)
   )
 
   // Get receipt statistics
@@ -397,6 +414,6 @@ export async function receiptRoutes(
         },
       },
     },
-    (request, reply) => controller.getStats(request as any, reply)
+    (request, reply) => controller.getStats(request as AuthenticatedRequest, reply)
   )
 }

@@ -407,7 +407,6 @@ export class ReceiptService {
     totalAmount?: number | string;
     currency?: string;
     invoiceNumber?: string;
-    [key: string]: any;
   }): Promise<ReceiptMetadata> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(params.receiptId),
@@ -612,27 +611,14 @@ export class ReceiptService {
     failed: number;
     verified: number;
   }> {
-    const [total, pending, processing, processed, failed, verified] =
-      await Promise.all([
-        this.receiptRepository.countByWorkspace(workspaceId),
-        this.receiptRepository.countByStatus(
-          workspaceId,
-          ReceiptStatus.PENDING,
-        ),
-        this.receiptRepository.countByStatus(
-          workspaceId,
-          ReceiptStatus.PROCESSING,
-        ),
-        this.receiptRepository.countByStatus(
-          workspaceId,
-          ReceiptStatus.PROCESSED,
-        ),
-        this.receiptRepository.countByStatus(workspaceId, ReceiptStatus.FAILED),
-        this.receiptRepository.countByStatus(
-          workspaceId,
-          ReceiptStatus.VERIFIED,
-        ),
-      ]);
+    const counts = await this.receiptRepository.getStatusCounts(workspaceId);
+
+    const pending = counts[ReceiptStatus.PENDING] || 0;
+    const processing = counts[ReceiptStatus.PROCESSING] || 0;
+    const processed = counts[ReceiptStatus.PROCESSED] || 0;
+    const failed = counts[ReceiptStatus.FAILED] || 0;
+    const verified = counts[ReceiptStatus.VERIFIED] || 0;
+    const total = pending + processing + processed + failed + verified;
 
     return { total, pending, processing, processed, failed, verified };
   }

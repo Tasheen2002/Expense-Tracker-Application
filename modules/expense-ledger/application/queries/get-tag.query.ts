@@ -1,5 +1,7 @@
 import { TagNotFoundError } from "../../domain/errors/expense.errors";
 
+import { TagService } from "../services/tag.service";
+
 export class GetTagQuery {
   constructor(
     public readonly tagId: string,
@@ -8,7 +10,7 @@ export class GetTagQuery {
 }
 
 export class GetTagHandler {
-  constructor(private readonly tagService: any) {}
+  constructor(private readonly tagService: TagService) {}
 
   async handle(query: GetTagQuery) {
     const tag = await this.tagService.getTagById(

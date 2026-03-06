@@ -35,7 +35,7 @@ export class ApprovalWorkflowStartedEvent extends DomainEvent {
     return "approval.workflow_started";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workflowId: this.workflowId,
       expenseId: this.expenseId,
@@ -65,7 +65,7 @@ export class ApprovalStepCompletedEvent extends DomainEvent {
     return "approval.step_completed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workflowId: this.workflowId,
       stepId: this.stepId,
@@ -94,7 +94,7 @@ export class ApprovalWorkflowCompletedEvent extends DomainEvent {
     return "approval.workflow_completed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workflowId: this.workflowId,
       expenseId: this.expenseId,
@@ -122,7 +122,7 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
     return "approval.workflow_rejected";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workflowId: this.workflowId,
       expenseId: this.expenseId,
@@ -151,7 +151,7 @@ export class ApprovalWorkflowCancelledEvent extends DomainEvent {
     return "approval.workflow_cancelled";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workflowId: this.workflowId,
       expenseId: this.expenseId,

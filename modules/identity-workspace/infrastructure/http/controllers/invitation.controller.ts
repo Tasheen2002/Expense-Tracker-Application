@@ -1,4 +1,4 @@
-import { FastifyReply, FastifyRequest } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateInvitationHandler } from "../../../application/commands/create-invitation.command";
 import { AcceptInvitationHandler } from "../../../application/commands/accept-invitation.command";
@@ -11,6 +11,7 @@ import {
 import { WorkspaceAuthHelper } from "../middleware/workspace-auth.helper";
 import { WorkspaceRole } from "../../../domain/entities/workspace-membership.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { WorkspaceInvitation } from "../../../domain/entities/workspace-invitation.entity";
 
 export class InvitationController {
   constructor(
@@ -77,10 +78,10 @@ export class InvitationController {
   }
 
   async getInvitationByToken(
-    request: FastifyRequest<{ Params: { token: string } }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
-    const { token } = request.params;
+    const { token } = request.params as { token: string };
 
     try {
       const invitation = await this.getInvitationByTokenHandler.handle({
@@ -181,7 +182,7 @@ export class InvitationController {
         success: true,
         statusCode: 200,
         data: {
-          items: invitations.map((inv: any) => ({
+          items: invitations.map((inv: WorkspaceInvitation) => ({
             invitationId: inv.getId().getValue(),
             email: inv.getEmail(),
             role: inv.getRole(),

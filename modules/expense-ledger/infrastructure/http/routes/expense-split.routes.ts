@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ExpenseSplitController } from "../controllers/expense-split.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function expenseSplitRoutes(
   fastify: FastifyInstance,
@@ -48,7 +49,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.createSplit(request as any, reply),
+    (request, reply) => controller.createSplit(request as AuthenticatedRequest, reply),
   );
 
   fastify.get(
@@ -67,7 +68,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.getSplit(request as any, reply),
+    (request, reply) => controller.getSplit(request as AuthenticatedRequest, reply),
   );
 
   fastify.get(
@@ -86,7 +87,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.getSplitByExpense(request as any, reply),
+    (request, reply) => controller.getSplitByExpense(request as AuthenticatedRequest, reply),
   );
 
   fastify.get(
@@ -140,7 +141,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.listUserSplits(request as any, reply),
+    (request, reply) => controller.listUserSplits(request as AuthenticatedRequest, reply),
   );
 
   fastify.delete(
@@ -159,7 +160,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteSplit(request as any, reply),
+    (request, reply) => controller.deleteSplit(request as AuthenticatedRequest, reply),
   );
 
   fastify.post(
@@ -185,7 +186,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.recordPayment(request as any, reply),
+    (request, reply) => controller.recordPayment(request as AuthenticatedRequest, reply),
   );
 
   fastify.get(
@@ -243,7 +244,7 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.listUserSettlements(request as any, reply),
+    (request, reply) => controller.listUserSettlements(request as AuthenticatedRequest, reply),
   );
 
   fastify.get(
@@ -262,6 +263,6 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.getSplitSettlements(request as any, reply),
+    (request, reply) => controller.getSplitSettlements(request as AuthenticatedRequest, reply),
   );
 }

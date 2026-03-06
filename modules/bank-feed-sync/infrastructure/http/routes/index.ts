@@ -7,6 +7,7 @@ import { BankConnectionController } from "../controllers/bank-connection.control
 import { TransactionSyncController } from "../controllers/transaction-sync.controller";
 import { BankTransactionController } from "../controllers/bank-transaction.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function registerBankFeedSyncRoutes(
   fastify: FastifyInstance,
@@ -26,7 +27,11 @@ export async function registerBankFeedSyncRoutes(
 
       // Then authorize workspace access
       instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          prisma,
+        );
       });
 
       // Register bank connection routes

@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { MemberController } from "../controllers/member.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 const listMembersSchema = {
   schema: {
@@ -130,7 +131,7 @@ export async function registerMemberRoutes(
       ...listMembersSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.listMembers(request as any, reply),
+    async (request, reply) => controller.listMembers(request as AuthenticatedRequest, reply),
   );
 
   // Remove member from workspace
@@ -140,7 +141,7 @@ export async function registerMemberRoutes(
       ...removeMemberSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.removeMember(request as any, reply),
+    async (request, reply) => controller.removeMember(request as AuthenticatedRequest, reply),
   );
 
   // Change member role
@@ -150,6 +151,6 @@ export async function registerMemberRoutes(
       ...changeRoleSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.changeRole(request as any, reply),
+    async (request, reply) => controller.changeRole(request as AuthenticatedRequest, reply),
   );
 }

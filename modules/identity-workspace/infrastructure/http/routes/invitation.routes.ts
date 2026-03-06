@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { InvitationController } from "../controllers/invitation.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 const createInvitationSchema = {
   schema: {
@@ -197,7 +198,7 @@ export async function registerInvitationRoutes(
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.createInvitation(request as any, reply),
+      controller.createInvitation(request as AuthenticatedRequest, reply),
   );
 
   // Get invitation by token (public - no auth required)
@@ -205,7 +206,7 @@ export async function registerInvitationRoutes(
     "/invitations/:token",
     getInvitationByTokenSchema,
     async (request, reply) =>
-      controller.getInvitationByToken(request as any, reply),
+      controller.getInvitationByToken(request as AuthenticatedRequest, reply),
   );
 
   // Accept invitation
@@ -216,7 +217,7 @@ export async function registerInvitationRoutes(
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.acceptInvitation(request as any, reply),
+      controller.acceptInvitation(request as AuthenticatedRequest, reply),
   );
 
   // List workspace invitations
@@ -227,7 +228,7 @@ export async function registerInvitationRoutes(
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.listWorkspaceInvitations(request as any, reply),
+      controller.listWorkspaceInvitations(request as AuthenticatedRequest, reply),
   );
 
   // Cancel invitation
@@ -238,6 +239,6 @@ export async function registerInvitationRoutes(
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.cancelInvitation(request as any, reply),
+      controller.cancelInvitation(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,5 +1,6 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { PrismaClient } from "@prisma/client";
+import { AuthenticatedRequest } from "../interfaces/authenticated-request.interface";
 
 /**
  * Workspace Authorization Middleware
@@ -8,16 +9,16 @@ import { PrismaClient } from "@prisma/client";
  * This middleware should be applied to all workspace-scoped routes.
  *
  * @throws 401 - If user is not authenticated
- * @throws 400 - If workspaceId is missing from params
+ * @throws 400 - If workspaceId is missing or invalid format
  * @throws 403 - If user is not a member of the workspace
  */
 export async function workspaceAuthorizationMiddleware(
-  request: FastifyRequest<{ Params: { workspaceId: string } }>,
+  request: AuthenticatedRequest,
   reply: FastifyReply,
   prisma: PrismaClient,
 ) {
   const userId = request.user?.userId;
-  const { workspaceId } = request.params;
+  const { workspaceId } = request.params as { workspaceId: string };
 
   // Check authentication
   if (!userId) {
@@ -34,6 +35,17 @@ export async function workspaceAuthorizationMiddleware(
       success: false,
       statusCode: 400,
       message: "Workspace ID is required",
+    });
+  }
+
+  // Validate UUID format
+  const UUID_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!UUID_REGEX.test(workspaceId)) {
+    return reply.status(400).send({
+      success: false,
+      statusCode: 400,
+      message: "Invalid workspace ID format",
     });
   }
 

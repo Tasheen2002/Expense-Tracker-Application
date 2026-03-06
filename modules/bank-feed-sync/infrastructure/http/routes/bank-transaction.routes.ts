@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { BankTransactionController } from "../controllers/bank-transaction.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function bankTransactionRoutes(
   fastify: FastifyInstance,
@@ -28,7 +29,7 @@ export async function bankTransactionRoutes(
       },
     },
     (request, reply) =>
-      controller.getPendingTransactions(request as any, reply),
+      controller.getPendingTransactions(request as AuthenticatedRequest, reply),
   );
 
   // Get specific transaction
@@ -46,7 +47,7 @@ export async function bankTransactionRoutes(
         },
       },
     },
-    (request, reply) => controller.getTransaction(request as any, reply),
+    (request, reply) => controller.getTransaction(request as AuthenticatedRequest, reply),
   );
 
   // Process transaction (import/match/ignore)
@@ -72,7 +73,7 @@ export async function bankTransactionRoutes(
         },
       },
     },
-    (request, reply) => controller.processTransaction(request as any, reply),
+    (request, reply) => controller.processTransaction(request as AuthenticatedRequest, reply),
   );
 
   // Get transactions by connection
@@ -98,6 +99,6 @@ export async function bankTransactionRoutes(
       },
     },
     (request, reply) =>
-      controller.getTransactionsByConnection(request as any, reply),
+      controller.getTransactionsByConnection(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateExpenseHandler } from "../../../application/commands/create-expense.command";
 import { UpdateExpenseHandler } from "../../../application/commands/update-expense.command";
@@ -14,8 +14,14 @@ import { GetExpenseStatisticsHandler } from "../../../application/queries/get-ex
 import { Expense } from "../../../domain/entities/expense.entity";
 import { TagId } from "../../../domain/value-objects/tag-id";
 import { AttachmentId } from "../../../domain/value-objects/attachment-id";
-import { PaymentMethod } from "../../../domain/enums/payment-method";
-import { ExpenseStatus } from "../../../domain/enums/expense-status";
+import {
+  PaymentMethod,
+  isValidPaymentMethod,
+} from "../../../domain/enums/payment-method";
+import {
+  ExpenseStatus,
+  isValidExpenseStatus,
+} from "../../../domain/enums/expense-status";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class ExpenseController {
@@ -33,10 +39,18 @@ export class ExpenseController {
     private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler,
   ) {}
 
-  async createExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
+  async createExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const userId = request.user.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+      const { workspaceId } = request.params as { workspaceId: string };
+      const body = request.body as {
         title: string;
         description?: string;
         amount: number;
@@ -48,33 +62,28 @@ export class ExpenseController {
         isReimbursable: boolean;
         tagIds?: string[];
       };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user.userId;
-      if (!userId) {
-        return reply.status(401).send({
+
+      if (!isValidPaymentMethod(body.paymentMethod)) {
+        return reply.status(400).send({
           success: false,
-          statusCode: 401,
-          message: "User not authenticated",
+          statusCode: 400,
+          message: `Invalid payment method: ${body.paymentMethod}`,
         });
       }
-      const { workspaceId } = request.params as { workspaceId: string };
 
       const expense = await this.createExpenseHandler.handle({
         workspaceId,
         userId,
-        title: request.body.title,
-        description: request.body.description,
-        amount: request.body.amount,
-        currency: request.body.currency,
-        expenseDate: request.body.expenseDate,
-        categoryId: request.body.categoryId,
-        merchant: request.body.merchant,
-        paymentMethod: request.body.paymentMethod as PaymentMethod,
-        isReimbursable: request.body.isReimbursable,
-        tagIds: request.body.tagIds,
+        title: body.title,
+        description: body.description,
+        amount: body.amount,
+        currency: body.currency,
+        expenseDate: body.expenseDate,
+        categoryId: body.categoryId,
+        merchant: body.merchant,
+        paymentMethod: body.paymentMethod,
+        isReimbursable: body.isReimbursable,
+        tagIds: body.tagIds,
       });
 
       return reply.status(201).send({
@@ -110,10 +119,21 @@ export class ExpenseController {
     }
   }
 
-  async updateExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-      Body: {
+  async updateExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return reply.status(401).send({
+          success: false,
+          statusCode: 401,
+          message: "User not authenticated",
+        });
+      }
+      const { workspaceId, expenseId } = request.params as {
+        workspaceId: string;
+        expenseId: string;
+      };
+      const body = request.body as {
         title?: string;
         description?: string;
         amount?: number;
@@ -124,33 +144,28 @@ export class ExpenseController {
         paymentMethod?: string;
         isReimbursable?: boolean;
       };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
+
+      if (body.paymentMethod && !isValidPaymentMethod(body.paymentMethod)) {
+        return reply.status(400).send({
           success: false,
-          statusCode: 401,
-          message: "User not authenticated",
+          statusCode: 400,
+          message: `Invalid payment method: ${body.paymentMethod}`,
         });
       }
-      const { workspaceId, expenseId } = request.params;
 
       const expense = await this.updateExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
-        title: request.body.title,
-        description: request.body.description,
-        amount: request.body.amount,
-        currency: request.body.currency,
-        expenseDate: request.body.expenseDate,
-        categoryId: request.body.categoryId,
-        merchant: request.body.merchant,
-        paymentMethod: request.body.paymentMethod as PaymentMethod,
-        isReimbursable: request.body.isReimbursable,
+        title: body.title,
+        description: body.description,
+        amount: body.amount,
+        currency: body.currency,
+        expenseDate: body.expenseDate,
+        categoryId: body.categoryId,
+        merchant: body.merchant,
+        paymentMethod: body.paymentMethod as PaymentMethod | undefined,
+        isReimbursable: body.isReimbursable,
       });
 
       return reply.status(200).send({
@@ -339,6 +354,22 @@ export class ExpenseController {
       const { workspaceId } = request.params;
       const query = request.query;
 
+      if (query.status && !isValidExpenseStatus(query.status)) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          message: `Invalid expense status: ${query.status}`,
+        });
+      }
+
+      if (query.paymentMethod && !isValidPaymentMethod(query.paymentMethod)) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          message: `Invalid payment method: ${query.paymentMethod}`,
+        });
+      }
+
       const result = await this.filterExpensesHandler.handle({
         workspaceId,
         userId: query.userId,
@@ -392,15 +423,15 @@ export class ExpenseController {
   }
 
   async getExpenseStatistics(
-    request: FastifyRequest<{
-      Params: { workspaceId: string };
-      Querystring: { userId?: string; currency?: string };
-    }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params;
-      const { userId, currency } = request.query;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { userId, currency } = request.query as {
+        userId?: string;
+        currency?: string;
+      };
 
       const statistics = await this.getExpenseStatisticsHandler.handle({
         workspaceId,
@@ -419,12 +450,7 @@ export class ExpenseController {
     }
   }
 
-  async submitExpense(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async submitExpense(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
@@ -434,7 +460,10 @@ export class ExpenseController {
           message: "User not authenticated",
         });
       }
-      const { workspaceId, expenseId } = request.params;
+      const { workspaceId, expenseId } = request.params as {
+        workspaceId: string;
+        expenseId: string;
+      };
 
       const expense = await this.submitExpenseHandler.handle({
         expenseId,
@@ -457,12 +486,7 @@ export class ExpenseController {
     }
   }
 
-  async approveExpense(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async approveExpense(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
@@ -473,7 +497,10 @@ export class ExpenseController {
         });
       }
 
-      const { workspaceId, expenseId } = request.params;
+      const { workspaceId, expenseId } = request.params as {
+        workspaceId: string;
+        expenseId: string;
+      };
 
       const expense = await this.approveExpenseHandler.handle({
         expenseId,
@@ -496,13 +523,7 @@ export class ExpenseController {
     }
   }
 
-  async rejectExpense(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; expenseId: string };
-      Body?: { reason?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async rejectExpense(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
@@ -513,7 +534,10 @@ export class ExpenseController {
         });
       }
 
-      const { workspaceId, expenseId } = request.params;
+      const { workspaceId, expenseId } = request.params as {
+        workspaceId: string;
+        expenseId: string;
+      };
       const reason = (request.body as { reason?: string })?.reason;
 
       const expense = await this.rejectExpenseHandler.handle({
@@ -538,12 +562,7 @@ export class ExpenseController {
     }
   }
 
-  async reimburseExpense(
-    request: FastifyRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async reimburseExpense(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
@@ -554,7 +573,10 @@ export class ExpenseController {
         });
       }
 
-      const { workspaceId, expenseId } = request.params;
+      const { workspaceId, expenseId } = request.params as {
+        workspaceId: string;
+        expenseId: string;
+      };
 
       const expense = await this.reimburseExpenseHandler.handle({
         expenseId,

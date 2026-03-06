@@ -9,7 +9,7 @@ export interface AuthenticatedUser {
 }
 
 export interface AuthenticatedRequest<
-  RouteGeneric extends RouteGenericInterface = RouteGenericInterface,
+  RouteGeneric extends RouteGenericInterface = any,
 > extends FastifyRequest<RouteGeneric> {
   user: AuthenticatedUser;
 }

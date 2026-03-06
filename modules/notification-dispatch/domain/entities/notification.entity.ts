@@ -27,7 +27,7 @@ export class NotificationCreatedEvent extends DomainEvent {
     return "notification.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -57,7 +57,7 @@ export class NotificationSentEvent extends DomainEvent {
     return "notification.sent";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -87,7 +87,7 @@ export class NotificationFailedEvent extends DomainEvent {
     return "notification.failed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -116,7 +116,7 @@ export class NotificationReadEvent extends DomainEvent {
     return "notification.read";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,

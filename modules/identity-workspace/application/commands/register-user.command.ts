@@ -1,7 +1,7 @@
 import { UserManagementService } from "../services/user-management.service";
 import { User } from "../../domain/entities/user.entity";
 import { UserAlreadyExistsError } from "../../domain/errors/identity.errors";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 // Command Result pattern
 export class CommandResult<T> {

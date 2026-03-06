@@ -1,4 +1,5 @@
-import { PaymentMethod } from '../../domain/enums/payment-method'
+import { PaymentMethod } from "../../domain/enums/payment-method";
+import { ExpenseService } from "../services/expense.service";
 
 export class UpdateExpenseCommand {
   constructor(
@@ -13,12 +14,12 @@ export class UpdateExpenseCommand {
     public readonly categoryId?: string,
     public readonly merchant?: string,
     public readonly paymentMethod?: PaymentMethod,
-    public readonly isReimbursable?: boolean
+    public readonly isReimbursable?: boolean,
   ) {}
 }
 
 export class UpdateExpenseHandler {
-  constructor(private readonly expenseService: any) {}
+  constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(command: UpdateExpenseCommand) {
     return await this.expenseService.updateExpense(
@@ -35,7 +36,7 @@ export class UpdateExpenseHandler {
         merchant: command.merchant,
         paymentMethod: command.paymentMethod,
         isReimbursable: command.isReimbursable,
-      }
-    )
+      },
+    );
   }
 }

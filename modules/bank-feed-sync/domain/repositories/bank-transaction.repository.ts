@@ -20,6 +20,10 @@ export interface IBankTransactionRepository {
     workspaceId: WorkspaceId,
     externalId: string,
   ): Promise<BankTransaction | null>;
+  findByExternalIds(
+    workspaceId: WorkspaceId,
+    externalIds: string[],
+  ): Promise<Set<string>>;
   findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,

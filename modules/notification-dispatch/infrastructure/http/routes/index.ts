@@ -7,6 +7,7 @@ import { NotificationController } from "../controllers/notification.controller";
 import { TemplateController } from "../controllers/template.controller";
 import { PreferenceController } from "../controllers/preference.controller";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function registerNotificationDispatchRoutes(
   fastify: FastifyInstance,
@@ -26,7 +27,11 @@ export async function registerNotificationDispatchRoutes(
 
       // Add workspace authorization middleware to all routes
       instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          prisma,
+        );
       });
 
       // User-facing notification routes

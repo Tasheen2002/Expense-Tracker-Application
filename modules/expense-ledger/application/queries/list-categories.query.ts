@@ -1,4 +1,5 @@
 import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { CategoryService } from "../services/category.service";
 
 export class ListCategoriesQuery {
   constructor(
@@ -8,7 +9,7 @@ export class ListCategoriesQuery {
 }
 
 export class ListCategoriesHandler {
-  constructor(private readonly categoryService: any) {}
+  constructor(private readonly categoryService: CategoryService) {}
 
   async handle(query: ListCategoriesQuery): Promise<PaginatedResult<any>> {
     if (query.activeOnly) {

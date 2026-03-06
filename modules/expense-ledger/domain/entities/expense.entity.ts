@@ -36,7 +36,7 @@ export class ExpenseCreatedEvent extends DomainEvent {
     return "expense.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
@@ -66,7 +66,7 @@ export class ExpenseSubmittedEvent extends DomainEvent {
     return "expense.submitted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
@@ -95,7 +95,7 @@ export class ExpenseApprovedEvent extends DomainEvent {
     return "expense.approved";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
@@ -123,7 +123,7 @@ export class ExpenseRejectedEvent extends DomainEvent {
     return "expense.rejected";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
@@ -151,7 +151,7 @@ export class ExpenseReimbursedEvent extends DomainEvent {
     return "expense.reimbursed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
@@ -181,7 +181,7 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
     return "expense.status_changed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,

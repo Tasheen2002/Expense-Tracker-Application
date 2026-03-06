@@ -1,13 +1,30 @@
 import { FastifyInstance } from "fastify";
 import { ExpenseController } from "../controllers/expense.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function expenseRoutes(
   fastify: FastifyInstance,
   controller: ExpenseController,
 ) {
+  // Apply write rate limiting to all POST/PUT/PATCH/DELETE routes
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Create expense
   fastify.post(
-    "/:workspaceId/expenses",
+    "/workspaces/:workspaceId/expenses",
     {
       schema: {
         tags: ["Expense"],
@@ -88,12 +105,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.createExpense(request as any, reply),
+    (request, reply) => controller.createExpense(request as AuthenticatedRequest, reply),
   );
 
   // Update expense
   fastify.put(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -162,12 +179,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.updateExpense(request as any, reply),
+    (request, reply) => controller.updateExpense(request as AuthenticatedRequest, reply),
   );
 
   // Delete expense
   fastify.delete(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -192,12 +209,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteExpense(request as any, reply),
+    (request, reply) => controller.deleteExpense(request as AuthenticatedRequest, reply),
   );
 
   // Get expense by ID
   fastify.get(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -244,12 +261,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.getExpense(request as any, reply),
+    (request, reply) => controller.getExpense(request as AuthenticatedRequest, reply),
   );
 
   // List expenses
   fastify.get(
-    "/:workspaceId/expenses",
+    "/workspaces/:workspaceId/expenses",
     {
       schema: {
         tags: ["Expense"],
@@ -318,12 +335,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.listExpenses(request as any, reply),
+    (request, reply) => controller.listExpenses(request as AuthenticatedRequest, reply),
   );
 
   // Filter expenses
   fastify.get(
-    "/:workspaceId/expenses/filter",
+    "/workspaces/:workspaceId/expenses/filter",
     {
       schema: {
         tags: ["Expense"],
@@ -375,12 +392,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.filterExpenses(request as any, reply),
+    (request, reply) => controller.filterExpenses(request as AuthenticatedRequest, reply),
   );
 
   // Get expense statistics
   fastify.get(
-    "/:workspaceId/expenses/statistics",
+    "/workspaces/:workspaceId/expenses/statistics",
     {
       schema: {
         tags: ["Expense"],
@@ -401,12 +418,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.getExpenseStatistics(request as any, reply),
+    (request, reply) => controller.getExpenseStatistics(request as AuthenticatedRequest, reply),
   );
 
   // Submit expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/submit",
+    "/workspaces/:workspaceId/expenses/:expenseId/submit",
     {
       schema: {
         tags: ["Expense"],
@@ -439,12 +456,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.submitExpense(request as any, reply),
+    (request, reply) => controller.submitExpense(request as AuthenticatedRequest, reply),
   );
 
   // Approve expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/approve",
+    "/workspaces/:workspaceId/expenses/:expenseId/approve",
     {
       schema: {
         tags: ["Expense"],
@@ -477,12 +494,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.approveExpense(request as any, reply),
+    (request, reply) => controller.approveExpense(request as AuthenticatedRequest, reply),
   );
 
   // Reject expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/reject",
+    "/workspaces/:workspaceId/expenses/:expenseId/reject",
     {
       schema: {
         tags: ["Expense"],
@@ -515,12 +532,12 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectExpense(request as any, reply),
+    (request, reply) => controller.rejectExpense(request as AuthenticatedRequest, reply),
   );
 
   // Reimburse expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/reimburse",
+    "/workspaces/:workspaceId/expenses/:expenseId/reimburse",
     {
       schema: {
         tags: ["Expense"],
@@ -553,6 +570,6 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.reimburseExpense(request as any, reply),
+    (request, reply) => controller.reimburseExpense(request as AuthenticatedRequest, reply),
   );
 }

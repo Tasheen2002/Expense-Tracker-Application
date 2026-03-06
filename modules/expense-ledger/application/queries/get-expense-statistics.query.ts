@@ -1,46 +1,42 @@
-import { ExpenseStatus } from '../../domain/enums/expense-status'
+import { ExpenseStatus } from "../../domain/enums/expense-status";
+
+import { ExpenseService } from "../services/expense.service";
 
 export class GetExpenseStatisticsQuery {
   constructor(
     public readonly workspaceId: string,
     public readonly userId?: string,
-    public readonly currency?: string
+    public readonly currency?: string,
   ) {}
 }
 
 export class GetExpenseStatisticsHandler {
-  constructor(private readonly expenseService: any) {}
+  constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(query: GetExpenseStatisticsQuery) {
-    const [
-      totalExpense,
-      draftCount,
-      submittedCount,
-      approvedCount,
-      rejectedCount,
-      reimbursedCount,
-    ] = await Promise.all([
-      query.userId
-        ? this.expenseService.getTotalExpenseByUser(query.userId, query.workspaceId, query.currency)
-        : this.expenseService.getTotalExpenseByWorkspace(query.workspaceId, query.currency),
-      this.expenseService.getExpenseCountByStatus(ExpenseStatus.DRAFT, query.workspaceId),
-      this.expenseService.getExpenseCountByStatus(ExpenseStatus.SUBMITTED, query.workspaceId),
-      this.expenseService.getExpenseCountByStatus(ExpenseStatus.APPROVED, query.workspaceId),
-      this.expenseService.getExpenseCountByStatus(ExpenseStatus.REJECTED, query.workspaceId),
-      this.expenseService.getExpenseCountByStatus(ExpenseStatus.REIMBURSED, query.workspaceId),
-    ])
+    // Single optimized query instead of 6 separate queries
+    const stats = await this.expenseService.getExpenseStatistics(
+      query.workspaceId,
+      query.userId,
+      query.currency,
+    );
+
+    const totalCount = Object.values(stats.countByStatus).reduce(
+      (sum, count) => sum + count,
+      0,
+    );
 
     return {
-      totalExpense: totalExpense.total,
-      currency: query.currency || totalExpense.currency,
+      totalExpense: stats.totalAmount,
+      currency: stats.currency,
       expenseCountByStatus: {
-        draft: draftCount,
-        submitted: submittedCount,
-        approved: approvedCount,
-        rejected: rejectedCount,
-        reimbursed: reimbursedCount,
+        draft: stats.countByStatus[ExpenseStatus.DRAFT],
+        submitted: stats.countByStatus[ExpenseStatus.SUBMITTED],
+        approved: stats.countByStatus[ExpenseStatus.APPROVED],
+        rejected: stats.countByStatus[ExpenseStatus.REJECTED],
+        reimbursed: stats.countByStatus[ExpenseStatus.REIMBURSED],
       },
-      totalCount: draftCount + submittedCount + approvedCount + rejectedCount + reimbursedCount,
-    }
+      totalCount,
+    };
   }
 }

@@ -1,10 +1,27 @@
 import { FastifyInstance } from "fastify";
 import { BudgetController } from "../controllers/budget.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function budgetRoutes(
   fastify: FastifyInstance,
   controller: BudgetController,
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Create budget
   fastify.post(
     "/:workspaceId/budgets",
@@ -45,7 +62,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.createBudget(request as any, reply),
+    (request, reply) => controller.createBudget(request as AuthenticatedRequest, reply),
   );
 
   // List budgets
@@ -78,7 +95,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.listBudgets(request as any, reply),
+    (request, reply) => controller.listBudgets(request as AuthenticatedRequest, reply),
   );
 
   // Get budget by ID
@@ -98,7 +115,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.getBudget(request as any, reply),
+    (request, reply) => controller.getBudget(request as AuthenticatedRequest, reply),
   );
 
   // Update budget
@@ -126,7 +143,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.updateBudget(request as any, reply),
+    (request, reply) => controller.updateBudget(request as AuthenticatedRequest, reply),
   );
 
   // Activate budget
@@ -146,7 +163,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.activateBudget(request as any, reply),
+    (request, reply) => controller.activateBudget(request as AuthenticatedRequest, reply),
   );
 
   // Archive budget
@@ -166,7 +183,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.archiveBudget(request as any, reply),
+    (request, reply) => controller.archiveBudget(request as AuthenticatedRequest, reply),
   );
 
   // Delete budget
@@ -186,7 +203,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteBudget(request as any, reply),
+    (request, reply) => controller.deleteBudget(request as AuthenticatedRequest, reply),
   );
 
   // Add allocation
@@ -215,7 +232,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.addAllocation(request as any, reply),
+    (request, reply) => controller.addAllocation(request as AuthenticatedRequest, reply),
   );
 
   // Get allocations
@@ -235,7 +252,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.getAllocations(request as any, reply),
+    (request, reply) => controller.getAllocations(request as AuthenticatedRequest, reply),
   );
 
   // Update allocation
@@ -263,7 +280,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.updateAllocation(request as any, reply),
+    (request, reply) => controller.updateAllocation(request as AuthenticatedRequest, reply),
   );
 
   // Delete allocation
@@ -284,7 +301,7 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteAllocation(request as any, reply),
+    (request, reply) => controller.deleteAllocation(request as AuthenticatedRequest, reply),
   );
 
   // Get unread alerts
@@ -303,6 +320,6 @@ export async function budgetRoutes(
         },
       },
     },
-    (request, reply) => controller.getUnreadAlerts(request as any, reply),
+    (request, reply) => controller.getUnreadAlerts(request as AuthenticatedRequest, reply),
   );
 }

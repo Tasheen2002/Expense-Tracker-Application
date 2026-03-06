@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { RuleExecutionController } from "../controllers/rule-execution.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function ruleExecutionRoutes(
   fastify: FastifyInstance,
@@ -38,7 +39,7 @@ export async function ruleExecutionRoutes(
         },
       },
     },
-    (request, reply) => controller.evaluateRules(request as any, reply),
+    (request, reply) => controller.evaluateRules(request as AuthenticatedRequest, reply),
   );
 
   // Get executions by expense
@@ -59,7 +60,7 @@ export async function ruleExecutionRoutes(
       },
     },
     (request, reply) =>
-      controller.getExecutionsByExpense(request as any, reply),
+      controller.getExecutionsByExpense(request as AuthenticatedRequest, reply),
   );
 
   // Get executions by workspace
@@ -86,6 +87,6 @@ export async function ruleExecutionRoutes(
       },
     },
     (request, reply) =>
-      controller.getExecutionsByWorkspace(request as any, reply),
+      controller.getExecutionsByWorkspace(request as AuthenticatedRequest, reply),
   );
 }

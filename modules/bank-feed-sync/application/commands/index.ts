@@ -1,17 +1,10 @@
-export { ConnectBankCommand, ConnectBankHandler } from "./connect-bank.command";
-export {
-  UpdateConnectionTokenCommand,
-  UpdateConnectionTokenHandler,
-} from "./update-connection-token.command";
-export {
-  DisconnectBankCommand,
-  DisconnectBankHandler,
-} from "./disconnect-bank.command";
-export {
-  SyncTransactionsCommand,
-  SyncTransactionsHandler,
-} from "./sync-transactions.command";
-export {
-  ProcessTransactionCommand,
-  ProcessTransactionHandler,
-} from "./process-transaction.command";
+export { ConnectBankHandler } from "./connect-bank.command";
+export type { ConnectBankCommand } from "./connect-bank.command";
+export { UpdateConnectionTokenHandler } from "./update-connection-token.command";
+export type { UpdateConnectionTokenCommand } from "./update-connection-token.command";
+export { DisconnectBankHandler } from "./disconnect-bank.command";
+export type { DisconnectBankCommand } from "./disconnect-bank.command";
+export { SyncTransactionsHandler } from "./sync-transactions.command";
+export type { SyncTransactionsCommand } from "./sync-transactions.command";
+export { ProcessTransactionHandler } from "./process-transaction.command";
+export type { ProcessTransactionCommand } from "./process-transaction.command";

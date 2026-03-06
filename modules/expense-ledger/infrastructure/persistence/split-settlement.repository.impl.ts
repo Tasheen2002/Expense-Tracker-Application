@@ -93,7 +93,7 @@ export class SplitSettlementRepositoryImpl implements SplitSettlementRepository 
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
 
-    const where: any = {
+    const where: Prisma.SplitSettlementWhereInput = {
       split: { workspaceId },
       OR: [{ fromUserId: userId }, { toUserId: userId }],
     };

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { CategorySuggestionRepository } from "../../domain/repositories/category-suggestion.repository";
 import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
 import { SuggestionId } from "../../domain/value-objects/suggestion-id";
@@ -114,7 +114,9 @@ export class PrismaCategorySuggestionRepository
     });
   }
 
-  private toDomain(raw: any): CategorySuggestion {
+  private toDomain(
+    raw: Prisma.CategorySuggestionGetPayload<object>,
+  ): CategorySuggestion {
     return CategorySuggestion.reconstitute({
       id: SuggestionId.fromString(raw.id),
       workspaceId: WorkspaceId.fromString(raw.workspaceId),

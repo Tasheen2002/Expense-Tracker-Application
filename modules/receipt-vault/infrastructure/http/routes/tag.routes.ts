@@ -1,5 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { TagController } from '../controllers/tag.controller'
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface'
 
 export async function tagRoutes(
   fastify: FastifyInstance,
@@ -30,7 +31,7 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.createTag(request as any, reply)
+    (request, reply) => controller.createTag(request as AuthenticatedRequest, reply)
   )
 
   // Update receipt tag
@@ -58,7 +59,7 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.updateTag(request as any, reply)
+    (request, reply) => controller.updateTag(request as AuthenticatedRequest, reply)
   )
 
   // Delete receipt tag
@@ -78,7 +79,7 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteTag(request as any, reply)
+    (request, reply) => controller.deleteTag(request as AuthenticatedRequest, reply)
   )
 
   // List all receipt tags for a workspace
@@ -97,6 +98,6 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.listTags(request as any, reply)
+    (request, reply) => controller.listTags(request as AuthenticatedRequest, reply)
   )
 }

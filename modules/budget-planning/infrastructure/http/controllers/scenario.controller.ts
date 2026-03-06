@@ -96,7 +96,7 @@ export class ScenarioController {
         reply,
         200,
         "Scenarios retrieved successfully",
-        result.map((s) => ({
+        result.items.map((s) => ({
           id: s.getId().getValue(),
           planId: s.getPlanId().getValue(),
           name: s.getName(),

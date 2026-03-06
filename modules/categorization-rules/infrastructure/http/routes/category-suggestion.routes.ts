@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CategorySuggestionController } from "../controllers/category-suggestion.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function categorySuggestionRoutes(
   fastify: FastifyInstance,
@@ -31,7 +32,7 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.createSuggestion(request as any, reply),
+    (request, reply) => controller.createSuggestion(request as AuthenticatedRequest, reply),
   );
 
   // List category suggestions
@@ -58,7 +59,7 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.listSuggestions(request as any, reply),
+    (request, reply) => controller.listSuggestions(request as AuthenticatedRequest, reply),
   );
 
   // Get single category suggestion
@@ -78,7 +79,7 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.getSuggestionById(request as any, reply),
+    (request, reply) => controller.getSuggestionById(request as AuthenticatedRequest, reply),
   );
 
   // Get suggestions by expense
@@ -99,7 +100,7 @@ export async function categorySuggestionRoutes(
       },
     },
     (request, reply) =>
-      controller.getSuggestionsByExpense(request as any, reply),
+      controller.getSuggestionsByExpense(request as AuthenticatedRequest, reply),
   );
 
   // Accept suggestion
@@ -119,7 +120,7 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.acceptSuggestion(request as any, reply),
+    (request, reply) => controller.acceptSuggestion(request as AuthenticatedRequest, reply),
   );
 
   // Reject suggestion
@@ -139,7 +140,7 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectSuggestion(request as any, reply),
+    (request, reply) => controller.rejectSuggestion(request as AuthenticatedRequest, reply),
   );
 
   // Delete suggestion
@@ -159,6 +160,6 @@ export async function categorySuggestionRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteSuggestion(request as any, reply),
+    (request, reply) => controller.deleteSuggestion(request as AuthenticatedRequest, reply),
   );
 }

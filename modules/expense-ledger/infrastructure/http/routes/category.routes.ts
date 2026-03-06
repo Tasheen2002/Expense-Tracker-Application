@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CategoryController } from "../controllers/category.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function categoryRoutes(
   fastify: FastifyInstance,
@@ -7,7 +8,7 @@ export async function categoryRoutes(
 ) {
   // Create category
   fastify.post(
-    "/:workspaceId/categories",
+    "/workspaces/:workspaceId/categories",
     {
       schema: {
         tags: ["Category"],
@@ -55,12 +56,12 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.createCategory(request as any, reply),
+    (request, reply) => controller.createCategory(request as AuthenticatedRequest, reply),
   );
 
   // Update category
   fastify.put(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -107,12 +108,12 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.updateCategory(request as any, reply),
+    (request, reply) => controller.updateCategory(request as AuthenticatedRequest, reply),
   );
 
   // Delete category
   fastify.delete(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -137,12 +138,12 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteCategory(request as any, reply),
+    (request, reply) => controller.deleteCategory(request as AuthenticatedRequest, reply),
   );
 
   // Get category by ID
   fastify.get(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -181,12 +182,12 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.getCategory(request as any, reply),
+    (request, reply) => controller.getCategory(request as AuthenticatedRequest, reply),
   );
 
   // List categories
   fastify.get(
-    "/:workspaceId/categories",
+    "/workspaces/:workspaceId/categories",
     {
       schema: {
         tags: ["Category"],
@@ -247,6 +248,6 @@ export async function categoryRoutes(
         },
       },
     },
-    (request, reply) => controller.listCategories(request as any, reply),
+    (request, reply) => controller.listCategories(request as AuthenticatedRequest, reply),
   );
 }

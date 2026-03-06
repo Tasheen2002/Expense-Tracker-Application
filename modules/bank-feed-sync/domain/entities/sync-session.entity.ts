@@ -21,7 +21,7 @@ export class SyncSessionStartedEvent extends DomainEvent {
     return "SyncSessionStarted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       sessionId: this.sessionId,
       workspaceId: this.workspaceId,
@@ -46,7 +46,7 @@ export class SyncSessionCompletedEvent extends DomainEvent {
     return "SyncSessionCompleted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       sessionId: this.sessionId,
       workspaceId: this.workspaceId,
@@ -72,7 +72,7 @@ export class SyncSessionFailedEvent extends DomainEvent {
     return "SyncSessionFailed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       sessionId: this.sessionId,
       workspaceId: this.workspaceId,

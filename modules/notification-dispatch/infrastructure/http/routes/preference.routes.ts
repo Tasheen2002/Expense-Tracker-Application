@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { PreferenceController } from "../controllers/preference.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export function registerPreferenceRoutes(
   fastify: FastifyInstance,
@@ -25,7 +26,7 @@ export function registerPreferenceRoutes(
         },
       },
     },
-    (request, reply) => controller.getPreferences(request as any, reply),
+    (request, reply) => controller.getPreferences(request as AuthenticatedRequest, reply),
   );
 
   // Update global notification preferences
@@ -54,7 +55,7 @@ export function registerPreferenceRoutes(
       },
     },
     (request, reply) =>
-      controller.updateGlobalPreferences(request as any, reply),
+      controller.updateGlobalPreferences(request as AuthenticatedRequest, reply),
   );
 
   // Update notification preference for a specific type
@@ -94,7 +95,7 @@ export function registerPreferenceRoutes(
         },
       },
     },
-    (request, reply) => controller.updateTypePreference(request as any, reply),
+    (request, reply) => controller.updateTypePreference(request as AuthenticatedRequest, reply),
   );
 
   // Check if a channel is enabled for a notification type
@@ -136,6 +137,6 @@ export function registerPreferenceRoutes(
         },
       },
     },
-    (request, reply) => controller.checkChannelEnabled(request as any, reply),
+    (request, reply) => controller.checkChannelEnabled(request as AuthenticatedRequest, reply),
   );
 }

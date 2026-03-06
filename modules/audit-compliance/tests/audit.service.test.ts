@@ -15,7 +15,7 @@ class MockEvent extends DomainEvent {
   get eventType() {
     return "mock.event";
   }
-  protected getPayload() {
+  getPayload() {
     return {
       workspaceId: "123e4567-e89b-12d3-a456-426614174000",
       userId: "123e4567-e89b-12d3-a456-426614174001",

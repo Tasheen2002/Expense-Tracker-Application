@@ -4,6 +4,7 @@ import { AllocationId } from "../../domain/value-objects/allocation-id";
 import { BudgetId } from "../../domain/value-objects/budget-id";
 import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
 import { IBudgetAllocationRepository } from "../../domain/repositories/budget-allocation.repository";
+import { BudgetAllocationExceededError } from "../../domain/errors/budget-allocation-exceeded.error";
 import { Decimal } from "@prisma/client/runtime/library";
 import {
   PaginatedResult,
@@ -90,6 +91,66 @@ export class BudgetAllocationRepositoryImpl
         });
       }
     });
+
+    await this.dispatchEvents(allocation);
+  }
+
+  async saveWithBudgetValidation(
+    allocation: BudgetAllocation,
+    budgetTotalAmount: Decimal,
+    excludeAllocationId?: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(
+      async (tx) => {
+        // Atomically check total allocated within the transaction
+        const whereClause: Prisma.BudgetAllocationWhereInput = {
+          budgetId: allocation.getBudgetId().getValue(),
+        };
+        if (excludeAllocationId) {
+          whereClause.id = { not: excludeAllocationId };
+        }
+
+        const result = await tx.budgetAllocation.aggregate({
+          where: whereClause,
+          _sum: { allocatedAmount: true },
+        });
+
+        const currentAllocated = result._sum.allocatedAmount || new Decimal(0);
+        const newTotal = currentAllocated.plus(allocation.getAllocatedAmount());
+
+        if (newTotal.gt(budgetTotalAmount)) {
+          throw new BudgetAllocationExceededError(
+            allocation.getBudgetId().getValue(),
+            budgetTotalAmount.toNumber(),
+            newTotal.toNumber(),
+          );
+        }
+
+        // Save within the same transaction
+        await tx.budgetAllocation.upsert({
+          where: { id: allocation.getId().getValue() },
+          create: {
+            id: allocation.getId().getValue(),
+            budgetId: allocation.getBudgetId().getValue(),
+            categoryId: allocation.getCategoryId(),
+            allocatedAmount: allocation.getAllocatedAmount(),
+            spentAmount: allocation.getSpentAmount(),
+            description: allocation.getDescription(),
+            createdAt: allocation.getCreatedAt(),
+            updatedAt: allocation.getUpdatedAt(),
+          },
+          update: {
+            allocatedAmount: allocation.getAllocatedAmount(),
+            spentAmount: allocation.getSpentAmount(),
+            description: allocation.getDescription(),
+            updatedAt: allocation.getUpdatedAt(),
+          },
+        });
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
 
     await this.dispatchEvents(allocation);
   }

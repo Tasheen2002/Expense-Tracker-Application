@@ -21,7 +21,7 @@ export class WorkspaceCreatedEvent extends DomainEvent {
     return "WorkspaceCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       name: this.name,
@@ -43,7 +43,7 @@ export class WorkspaceRenamedEvent extends DomainEvent {
     return "WorkspaceRenamed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       oldName: this.oldName,
@@ -61,7 +61,7 @@ export class WorkspaceDeactivatedEvent extends DomainEvent {
     return "WorkspaceDeactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { workspaceId: this.workspaceId };
   }
 }

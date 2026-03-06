@@ -69,7 +69,7 @@ export class CategorySuggestionService {
   async getSuggestionsByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId
-  ): Promise<CategorySuggestion[]> {
+  ): Promise<PaginatedResult<CategorySuggestion>> {
     return this.suggestionRepository.findByExpenseId(expenseId, workspaceId)
   }
 

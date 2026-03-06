@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { auditLogRoutes } from "./audit-log.routes";
 import { AuditService } from "../../../application/services/audit.service";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function registerAuditComplianceRoutes(
   fastify: FastifyInstance,
@@ -18,7 +19,11 @@ export async function registerAuditComplianceRoutes(
 
       // Add workspace authorization middleware
       instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          prisma,
+        );
       });
 
       // Register audit log routes

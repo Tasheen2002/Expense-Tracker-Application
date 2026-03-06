@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { NotificationService } from "../../../application/services/notification.service";
 import { Notification } from "../../../domain/entities/notification.entity";
@@ -8,15 +8,12 @@ export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   async getNotifications(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
-    }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { limit, offset } = request.query as { limit?: string; offset?: string };
       const userId = request.user.userId;
 
       const result = await this.notificationService.getNotifications(
@@ -54,11 +51,11 @@ export class NotificationController {
   }
 
   async markAsRead(
-    request: AuthenticatedRequest<{ Params: { notificationId: string } }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { notificationId } = request.params;
+      const { notificationId } = request.params as { notificationId: string };
       const userId = request.user.userId;
 
       const notification = await this.notificationService.markAsRead(
@@ -78,11 +75,11 @@ export class NotificationController {
   }
 
   async markAllAsRead(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params;
+      const { workspaceId } = request.params as { workspaceId: string };
       const userId = request.user.userId;
 
       await this.notificationService.markAllAsRead(userId, workspaceId);
@@ -98,11 +95,11 @@ export class NotificationController {
   }
 
   async getPreferences(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params;
+      const { workspaceId } = request.params as { workspaceId: string };
       const userId = request.user.userId;
 
       const preferences = await this.notificationService.getPreferences(
@@ -132,19 +129,12 @@ export class NotificationController {
   }
 
   async updatePreferences(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        email?: boolean;
-        inApp?: boolean;
-        push?: boolean;
-      };
-    }>,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const { workspaceId } = request.params;
-      const { email, inApp, push } = request.body;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { email, inApp, push } = request.body as { email?: boolean; inApp?: boolean; push?: boolean };
       const userId = request.user.userId;
 
       const preferences = await this.notificationService.updatePreferences(

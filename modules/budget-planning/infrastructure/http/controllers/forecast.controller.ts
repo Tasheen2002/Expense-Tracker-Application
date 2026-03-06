@@ -154,7 +154,7 @@ export class ForecastController {
         reply,
         200,
         "Forecasts retrieved successfully",
-        result.map((f) => ({
+        result.items.map((f) => ({
           id: f.getId().getValue(),
           planId: f.getPlanId().getValue(),
           name: f.getName(),
@@ -185,7 +185,7 @@ export class ForecastController {
         reply,
         200,
         "Forecast items retrieved successfully",
-        result.map((item) => ({
+        result.items.map((item) => ({
           id: item.getId().getValue(),
           forecastId: item.getForecastId().getValue(),
           categoryId: item.getCategoryId().getValue(),

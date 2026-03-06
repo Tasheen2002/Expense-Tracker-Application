@@ -1,5 +1,7 @@
 import { ExpenseNotFoundError } from "../../domain/errors/expense.errors";
 
+import { ExpenseService } from "../services/expense.service";
+
 export class GetExpenseQuery {
   constructor(
     public readonly expenseId: string,
@@ -8,7 +10,7 @@ export class GetExpenseQuery {
 }
 
 export class GetExpenseHandler {
-  constructor(private readonly expenseService: any) {}
+  constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(query: GetExpenseQuery) {
     const expense = await this.expenseService.getExpenseById(

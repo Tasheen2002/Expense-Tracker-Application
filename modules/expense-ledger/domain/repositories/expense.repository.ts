@@ -120,4 +120,17 @@ export interface ExpenseRepository {
    * Get expense count by status
    */
   getCountByStatus(status: ExpenseStatus, workspaceId: string): Promise<number>;
+
+  /**
+   * Get aggregated statistics (optimized single query)
+   */
+  getStatistics(
+    workspaceId: string,
+    userId?: string,
+    currency?: string,
+  ): Promise<{
+    totalAmount: number;
+    currency: string;
+    countByStatus: Record<ExpenseStatus, number>;
+  }>;
 }

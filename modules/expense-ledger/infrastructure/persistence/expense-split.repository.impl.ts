@@ -1,4 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  SplitType as PrismaSplitType,
+} from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ExpenseSplitRepository } from "../../domain/repositories/expense-split.repository";
 import { ExpenseSplit } from "../../domain/entities/expense-split.entity";
@@ -31,14 +35,14 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
           paidBy: split.getPaidBy(),
           totalAmount: split.getTotalAmount().getAmount(),
           currency: split.getTotalAmount().getCurrency(),
-          splitType: split.getSplitType() as any,
+          splitType: split.getSplitType() as PrismaSplitType,
           createdAt: split.getCreatedAt(),
           updatedAt: split.getUpdatedAt(),
         },
         update: {
           totalAmount: split.getTotalAmount().getAmount(),
           currency: split.getTotalAmount().getCurrency(),
-          splitType: split.getSplitType() as any,
+          splitType: split.getSplitType() as PrismaSplitType,
           updatedAt: split.getUpdatedAt(),
         },
       });
@@ -222,7 +226,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   private toDomain(
     data: Prisma.ExpenseSplitGetPayload<{ include: { participants: true } }>,
   ): ExpenseSplit {
-    const participants = data.participants.map((p: any) =>
+    const participants = data.participants.map((p) =>
       SplitParticipant.reconstitute({
         id: SplitParticipantId.fromString(p.id),
         splitId: SplitId.fromString(p.splitId),
@@ -232,7 +236,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
           ? new Decimal(p.sharePercentage)
           : undefined,
         isPaid: p.isPaid,
-        paidAt: p.paidAt,
+        paidAt: p.paidAt ?? undefined,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       }),

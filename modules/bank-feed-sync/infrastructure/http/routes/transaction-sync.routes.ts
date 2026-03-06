@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { TransactionSyncController } from "../controllers/transaction-sync.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function transactionSyncRoutes(
   fastify: FastifyInstance,
@@ -27,7 +28,7 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.syncTransactions(request as any, reply),
+    (request, reply) => controller.syncTransactions(request as AuthenticatedRequest, reply),
   );
 
   // Get sync history for a connection
@@ -52,7 +53,7 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getSyncHistory(request as any, reply),
+    (request, reply) => controller.getSyncHistory(request as AuthenticatedRequest, reply),
   );
 
   // Get specific sync session
@@ -70,7 +71,7 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getSyncSession(request as any, reply),
+    (request, reply) => controller.getSyncSession(request as AuthenticatedRequest, reply),
   );
 
   // Get all active syncs
@@ -94,6 +95,6 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getActiveSyncs(request as any, reply),
+    (request, reply) => controller.getActiveSyncs(request as AuthenticatedRequest, reply),
   );
 }

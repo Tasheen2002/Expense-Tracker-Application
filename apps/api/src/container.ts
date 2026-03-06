@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 // Event Bus
 import { getEventBus } from "./shared/domain/events/event-bus";
+import { InMemoryCacheService } from "./shared/infrastructure/cache/cache.service";
 import { NotificationEventHandler } from "../../../modules/notification-dispatch/application/handlers/notification.handler";
 // Audit
 import { AuditLogRepositoryImpl } from "../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl";
@@ -357,7 +358,7 @@ import { OutboxEventController } from "../../../modules/event-outbox/infrastruct
  */
 export class Container {
   private static instance: Container;
-  private services: Map<string, any> = new Map();
+  private services: Map<string, unknown> = new Map();
 
   private constructor() {}
 
@@ -373,6 +374,7 @@ export class Container {
    */
   register(prisma: PrismaClient): void {
     const eventBus = getEventBus();
+    const cacheService = new InMemoryCacheService();
 
     // ============================================
     // Identity-Workspace Module
@@ -409,6 +411,7 @@ export class Container {
     );
     const workspaceMembershipService = new WorkspaceMembershipService(
       workspaceMembershipRepository,
+      cacheService,
     );
     const workspaceInvitationService = new WorkspaceInvitationService(
       workspaceInvitationRepository,
@@ -457,7 +460,10 @@ export class Container {
       categoryRepository,
       tagRepository,
     );
-    const categoryService = new CategoryService(categoryRepository);
+    const categoryService = new CategoryService(
+      categoryRepository,
+      cacheService,
+    );
     const tagService = new TagService(tagRepository);
     const attachmentService = new AttachmentService(
       attachmentRepository,
@@ -683,7 +689,7 @@ export class Container {
     // Services
     const fileStorageService = new LocalFileStorageAdapter(
       path.join(process.cwd(), "uploads"), // Verify this path is correct for your setup
-      "http://localhost:3000/uploads",
+      process.env.UPLOAD_BASE_URL || "http://localhost:3000/uploads",
     );
 
     const receiptService = new ReceiptService(
@@ -876,10 +882,10 @@ export class Container {
     // --- Event Subscriptions ---
 
     // 1. Notification Subscriptions
-    const notificationHandler = new NotificationEventHandler(
-      notificationService,
+    eventBus.subscribe(
+      "UserCreated",
+      notificationEventHandler.handleUserCreated,
     );
-    eventBus.subscribe("UserCreated", notificationHandler.handleUserCreated);
 
     // 2. Audit Subscriptions (Global listener)
     const auditListener = new AuditEventListener(auditService);
@@ -892,7 +898,11 @@ export class Container {
     eventBus.subscribe("expense.rejected", auditListener);
     eventBus.subscribe("expense.submitted", auditListener);
     eventBus.subscribe("budget.threshold_exceeded", auditListener);
+    eventBus.subscribe("budget.updated", auditListener);
     eventBus.subscribe("receipt.uploaded", auditListener);
+    eventBus.subscribe("WorkspaceCreated", auditListener);
+    eventBus.subscribe("MemberJoinedWorkspace", auditListener);
+    eventBus.subscribe("MemberRoleChanged", auditListener);
     eventBus.subscribe(
       "expense.status_changed",
       notificationEventHandler.handleExpenseStatusChanged,
@@ -1309,6 +1319,7 @@ export class Container {
       policyRepository,
       violationRepository,
       exemptionRepository,
+      cacheService,
     );
 
     this.services.set("policyService", policyService);

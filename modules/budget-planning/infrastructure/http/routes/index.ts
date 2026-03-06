@@ -7,6 +7,7 @@ import { budgetPlanningRoutes } from "./budget-plan.routes";
 import { forecastRoutes } from "./forecast.routes";
 import { scenarioRoutes } from "./scenario.routes";
 import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function registerBudgetPlanningRoutes(
   fastify: FastifyInstance,
@@ -26,7 +27,11 @@ export async function registerBudgetPlanningRoutes(
 
       // Add workspace authorization middleware
       instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(request as any, reply, prisma);
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          prisma,
+        );
       });
 
       await budgetPlanningRoutes(instance, options.budgetPlanController);

@@ -28,7 +28,7 @@ export class SpendingLimitCreatedEvent extends DomainEvent {
     return "spending-limit.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       limitId: this.limitId,
       workspaceId: this.workspaceId,
@@ -52,7 +52,7 @@ export class SpendingLimitUpdatedEvent extends DomainEvent {
     return "spending-limit.updated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       limitId: this.limitId,
       workspaceId: this.workspaceId,
@@ -74,7 +74,7 @@ export class SpendingLimitActivatedEvent extends DomainEvent {
     return "spending-limit.activated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       limitId: this.limitId,
       workspaceId: this.workspaceId,
@@ -94,7 +94,7 @@ export class SpendingLimitDeactivatedEvent extends DomainEvent {
     return "spending-limit.deactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       limitId: this.limitId,
       workspaceId: this.workspaceId,
@@ -114,7 +114,7 @@ export class SpendingLimitDeletedEvent extends DomainEvent {
     return "spending-limit.deleted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       limitId: this.limitId,
       workspaceId: this.workspaceId,

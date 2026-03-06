@@ -69,9 +69,13 @@ describe("RecurringExpenseService", () => {
     overdueDate.setDate(overdueDate.getDate() - 1);
     (mockRecurring as any).props.nextRunDate = overdueDate;
 
-    vi.mocked(mockRecurringRepo.findDueExpenses!).mockResolvedValue([
-      mockRecurring,
-    ]);
+    vi.mocked(mockRecurringRepo.findDueExpenses!).mockResolvedValue({
+      items: [mockRecurring],
+      total: 1,
+      limit: 50,
+      offset: 0,
+      hasMore: false,
+    });
     vi.mocked(mockExpenseService.createExpense!).mockResolvedValue({} as any);
 
     const processedCount = await service.processDueExpenses();

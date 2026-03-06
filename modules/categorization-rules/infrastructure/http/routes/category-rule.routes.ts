@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { CategoryRuleController } from "../controllers/category-rule.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function categoryRuleRoutes(
   fastify: FastifyInstance,
@@ -49,7 +50,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.createRule(request as any, reply),
+    (request, reply) => controller.createRule(request as AuthenticatedRequest, reply),
   );
 
   // List category rules
@@ -76,7 +77,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.listRules(request as any, reply),
+    (request, reply) => controller.listRules(request as AuthenticatedRequest, reply),
   );
 
   // Get single category rule
@@ -96,7 +97,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.getRuleById(request as any, reply),
+    (request, reply) => controller.getRuleById(request as AuthenticatedRequest, reply),
   );
 
   // Update category rule
@@ -138,7 +139,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.updateRule(request as any, reply),
+    (request, reply) => controller.updateRule(request as AuthenticatedRequest, reply),
   );
 
   // Delete category rule
@@ -158,7 +159,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteRule(request as any, reply),
+    (request, reply) => controller.deleteRule(request as AuthenticatedRequest, reply),
   );
 
   // Activate category rule
@@ -178,7 +179,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.activateRule(request as any, reply),
+    (request, reply) => controller.activateRule(request as AuthenticatedRequest, reply),
   );
 
   // Deactivate category rule
@@ -198,7 +199,7 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.deactivateRule(request as any, reply),
+    (request, reply) => controller.deactivateRule(request as AuthenticatedRequest, reply),
   );
 
   // Get rule executions
@@ -225,6 +226,6 @@ export async function categoryRuleRoutes(
         },
       },
     },
-    (request, reply) => controller.getRuleExecutions(request as any, reply),
+    (request, reply) => controller.getRuleExecutions(request as AuthenticatedRequest, reply),
   );
 }

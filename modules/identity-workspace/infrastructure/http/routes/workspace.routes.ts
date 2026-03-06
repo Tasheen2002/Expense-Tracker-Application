@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { WorkspaceController } from "../controllers/workspace.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 const createWorkspaceSchema = {
   schema: {
@@ -194,7 +195,7 @@ export async function registerWorkspaceRoutes(
       ...createWorkspaceSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.createWorkspace(request as any, reply),
+    async (request, reply) => controller.createWorkspace(request as AuthenticatedRequest, reply),
   );
 
   // Get user's workspaces (requires authentication)
@@ -205,7 +206,7 @@ export async function registerWorkspaceRoutes(
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.getUserWorkspaces(request as any, reply),
+      controller.getUserWorkspaces(request as AuthenticatedRequest, reply),
   );
 
   // Get workspace by ID (requires authentication)
@@ -215,7 +216,7 @@ export async function registerWorkspaceRoutes(
       ...getWorkspaceSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.getWorkspace(request as any, reply),
+    async (request, reply) => controller.getWorkspace(request as AuthenticatedRequest, reply),
   );
 
   // Update workspace (requires authentication)
@@ -225,7 +226,7 @@ export async function registerWorkspaceRoutes(
       ...updateWorkspaceSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.updateWorkspace(request as any, reply),
+    async (request, reply) => controller.updateWorkspace(request as AuthenticatedRequest, reply),
   );
 
   // Delete workspace (requires authentication)
@@ -235,6 +236,6 @@ export async function registerWorkspaceRoutes(
       ...deleteWorkspaceSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.deleteWorkspace(request as any, reply),
+    async (request, reply) => controller.deleteWorkspace(request as AuthenticatedRequest, reply),
   );
 }

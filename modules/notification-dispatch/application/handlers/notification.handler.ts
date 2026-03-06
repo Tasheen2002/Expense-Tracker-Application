@@ -18,18 +18,25 @@ export class NotificationEventHandler {
         const type = this.mapStatusToNotificationType(event.newStatus);
         if (!type) return;
 
-        await this.notificationService.send({
-          workspaceId: event.workspaceId,
-          recipientId: event.expenseOwnerId, // Notify the expense owner
-          type,
-          priority: NotificationPriority.MEDIUM,
-          data: {
-            expenseId: event.expenseId,
-            oldStatus: event.oldStatus,
-            newStatus: event.newStatus,
-            changedBy: event.changedBy,
-          },
-        });
+        try {
+          await this.notificationService.send({
+            workspaceId: event.workspaceId,
+            recipientId: event.expenseOwnerId, // Notify the expense owner
+            type,
+            priority: NotificationPriority.MEDIUM,
+            data: {
+              expenseId: event.expenseId,
+              oldStatus: event.oldStatus,
+              newStatus: event.newStatus,
+              changedBy: event.changedBy,
+            },
+          });
+        } catch (error) {
+          console.error(
+            `[NotificationHandler] NOTIFICATION_FAILED: Failed to send expense status notification for expense ${event.expenseId}:`,
+            error instanceof Error ? error.message : error,
+          );
+        }
       },
     };
 
@@ -47,33 +54,34 @@ export class NotificationEventHandler {
     {
       eventType: "approval.workflow_started",
       handle: async (event: ApprovalWorkflowStartedEvent): Promise<void> => {
-        await this.notificationService.send({
-          workspaceId: event.workspaceId,
-          recipientId: event.requesterId,
-          type: NotificationType.SYSTEM_ALERT, // Generic alert for now
-          priority: NotificationPriority.MEDIUM,
-          data: {
-            message: `Approval workflow started for your expense id: ${event.expenseId}`,
-            workflowId: event.workflowId,
-          },
-        });
+        try {
+          await this.notificationService.send({
+            workspaceId: event.workspaceId,
+            recipientId: event.requesterId,
+            type: NotificationType.SYSTEM_ALERT, // Generic alert for now
+            priority: NotificationPriority.MEDIUM,
+            data: {
+              message: `Approval workflow started for your expense id: ${event.expenseId}`,
+              workflowId: event.workflowId,
+            },
+          });
+        } catch (error) {
+          console.error(
+            `[NotificationHandler] NOTIFICATION_FAILED: Failed to send approval workflow notification for expense ${event.expenseId}:`,
+            error instanceof Error ? error.message : error,
+          );
+        }
       },
     };
 
   public handleUserCreated: DomainEventHandler<UserCreatedEvent> = {
     eventType: "UserCreated",
     handle: async (event: UserCreatedEvent): Promise<void> => {
-      await this.notificationService.send({
-        workspaceId: "system", // System notifications might need a special workspace or null
-        recipientId: event.userId,
-        type: NotificationType.SYSTEM_ALERT,
-        priority: NotificationPriority.HIGH,
-        title: "Welcome to Expense Tracker",
-        content: `Welcome ${event.fullName || event.email}! Your account has been created successfully.`,
-        data: {
-          email: event.email,
-        },
-      });
+      // Skip welcome notification for now - users don't have a workspace at creation time
+      // TODO: Implement email-based welcome notification or send after workspace creation
+      console.debug(
+        `[Notification] UserCreated event for ${event.email} - skipping in-app notification (no workspace context)`,
+      );
     },
   };
 

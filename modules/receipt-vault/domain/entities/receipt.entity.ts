@@ -34,7 +34,7 @@ export class ReceiptUploadedEvent extends DomainEvent {
     return "ReceiptUploaded";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       receiptId: this.receiptId,
       workspaceId: this.workspaceId,
@@ -57,7 +57,7 @@ export class ReceiptProcessedEvent extends DomainEvent {
     return "ReceiptProcessed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       receiptId: this.receiptId,
       ocrText: this.ocrText,
@@ -78,7 +78,7 @@ export class ReceiptLinkedToExpenseEvent extends DomainEvent {
     return "ReceiptLinkedToExpense";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       receiptId: this.receiptId,
       expenseId: this.expenseId,
@@ -95,7 +95,7 @@ export class ReceiptDeletedEvent extends DomainEvent {
     return "ReceiptDeleted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return { receiptId: this.receiptId };
   }
 }

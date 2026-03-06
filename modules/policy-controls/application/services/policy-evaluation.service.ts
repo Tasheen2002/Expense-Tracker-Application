@@ -5,6 +5,8 @@ import { ExpensePolicy } from "../../domain/entities/expense-policy.entity";
 import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
 import { PolicyType } from "../../domain/enums/policy-type.enum";
 import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+import { ICacheService } from "../../../../apps/api/src/shared/infrastructure/cache/cache.service";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export interface ExpenseContext {
   expenseId: string;
@@ -34,7 +36,21 @@ export class PolicyEvaluationService {
     private readonly policyRepository: PolicyRepository,
     private readonly violationRepository: ViolationRepository,
     private readonly exemptionRepository: ExemptionRepository,
+    private readonly cacheService?: ICacheService,
   ) {}
+
+  private async getActivePolicies(workspaceId: string): Promise<PaginatedResult<ExpensePolicy>> {
+    if (!this.cacheService) {
+      return this.policyRepository.findActiveByWorkspace(workspaceId);
+    }
+
+    const cacheKey = `workspace:${workspaceId}:active-policies`;
+    return this.cacheService.getOrSet(
+      cacheKey,
+      () => this.policyRepository.findActiveByWorkspace(workspaceId),
+      120, // 2 minutes TTL - policies change infrequently
+    );
+  }
 
   /**
    * Evaluate an expense against all active policies in the workspace
@@ -42,34 +58,34 @@ export class PolicyEvaluationService {
   async evaluateExpense(
     context: ExpenseContext,
   ): Promise<PolicyEvaluationResult> {
-    const policies = await this.policyRepository.findActiveByWorkspace(
-      context.workspaceId,
-    );
+    const policiesResult = await this.getActivePolicies(context.workspaceId);
 
     // Sort by priority (higher priority first)
-    policies.sort((a, b) => b.getPriority() - a.getPriority());
+    const policies = policiesResult.items.sort((a, b) => b.getPriority() - a.getPriority());
+
+    // Filter to applicable policies first
+    const applicablePolicies = policies.filter((policy) =>
+      policy.appliesTo({
+        categoryId: context.categoryId,
+        userRole: context.userRole,
+        amount: context.amount,
+      }),
+    );
+
+    // Batch fetch all exemptions in a single query instead of N+1
+    const policyIds = applicablePolicies.map((p) => p.getId().getValue());
+    const exemptionsMap = await this.exemptionRepository.findActiveForUserPolicies(
+      context.workspaceId,
+      context.userId,
+      policyIds,
+    );
 
     const violations: PolicyViolation[] = [];
     let blockedByPolicy: ExpensePolicy | undefined;
 
-    for (const policy of policies) {
-      // Check if policy applies to this expense context
-      if (
-        !policy.appliesTo({
-          categoryId: context.categoryId,
-          userRole: context.userRole,
-          amount: context.amount,
-        })
-      ) {
-        continue;
-      }
-
+    for (const policy of applicablePolicies) {
       // Check if user has an active exemption for this policy
-      const exemption = await this.exemptionRepository.findActiveForUser(
-        context.workspaceId,
-        context.userId,
-        policy.getId().getValue(),
-      );
+      const exemption = exemptionsMap.get(policy.getId().getValue());
       if (exemption && exemption.isActive()) {
         continue;
       }
@@ -223,9 +239,7 @@ export class PolicyEvaluationService {
       details: string;
     }>;
   }> {
-    const policies = await this.policyRepository.findActiveByWorkspace(
-      context.workspaceId,
-    );
+    const policiesResult = await this.getActivePolicies(context.workspaceId);
     const potentialViolations: Array<{
       policyName: string;
       policyType: PolicyType;
@@ -233,22 +247,25 @@ export class PolicyEvaluationService {
       details: string;
     }> = [];
 
-    for (const policy of policies) {
-      if (
-        !policy.appliesTo({
-          categoryId: context.categoryId,
-          userRole: context.userRole,
-          amount: context.amount,
-        })
-      ) {
-        continue;
-      }
+    // Filter to applicable policies first
+    const applicablePolicies = policiesResult.items.filter((policy) =>
+      policy.appliesTo({
+        categoryId: context.categoryId,
+        userRole: context.userRole,
+        amount: context.amount,
+      }),
+    );
 
-      const exemption = await this.exemptionRepository.findActiveForUser(
-        context.workspaceId,
-        context.userId,
-        policy.getId().getValue(),
-      );
+    // Batch fetch all exemptions in a single query
+    const policyIds = applicablePolicies.map((p) => p.getId().getValue());
+    const exemptionsMap = await this.exemptionRepository.findActiveForUserPolicies(
+      context.workspaceId,
+      context.userId,
+      policyIds,
+    );
+
+    for (const policy of applicablePolicies) {
+      const exemption = exemptionsMap.get(policy.getId().getValue());
       if (exemption && exemption.isActive()) {
         continue;
       }

@@ -16,7 +16,7 @@ export class GetSuggestionsByExpenseHandler {
       WorkspaceId.fromString(query.workspaceId)
     )
 
-    return suggestions.map((suggestion) => ({
+    return suggestions.items.map((suggestion) => ({
       id: suggestion.getId().getValue(),
       workspaceId: suggestion.getWorkspaceId().getValue(),
       expenseId: suggestion.getExpenseId().getValue(),

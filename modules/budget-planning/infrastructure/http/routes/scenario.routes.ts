@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ScenarioController } from "../controllers/scenario.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function scenarioRoutes(
   fastify: FastifyInstance,
@@ -36,7 +37,7 @@ export async function scenarioRoutes(
         },
       },
     },
-    (request, reply) => controller.create(request as any, reply),
+    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
   );
 
   // List scenarios for a plan
@@ -56,7 +57,7 @@ export async function scenarioRoutes(
         },
       },
     },
-    (request, reply) => controller.list(request as any, reply),
+    (request, reply) => controller.list(request as AuthenticatedRequest, reply),
   );
 
   // Get single scenario
@@ -76,7 +77,7 @@ export async function scenarioRoutes(
         },
       },
     },
-    (request, reply) => controller.get(request as any, reply),
+    (request, reply) => controller.get(request as AuthenticatedRequest, reply),
   );
 
   // Delete scenario
@@ -96,6 +97,6 @@ export async function scenarioRoutes(
         },
       },
     },
-    (request, reply) => controller.delete(request as any, reply),
+    (request, reply) => controller.delete(request as AuthenticatedRequest, reply),
   );
 }

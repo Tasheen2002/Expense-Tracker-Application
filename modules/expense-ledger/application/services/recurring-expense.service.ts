@@ -40,12 +40,12 @@ export class RecurringExpenseService {
 
   async processDueExpenses(limit = 100): Promise<number> {
     const now = new Date();
-    const dueExpenses =
+    const dueExpensesResult =
       await this.recurringExpenseRepository.findDueExpenses(now);
 
     let processedCount = 0;
 
-    for (const recurring of dueExpenses) {
+    for (const recurring of dueExpensesResult.items) {
       if (processedCount >= limit) break;
 
       try {

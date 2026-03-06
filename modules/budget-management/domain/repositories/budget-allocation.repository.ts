@@ -14,6 +14,16 @@ export interface IBudgetAllocationRepository {
     allocation: BudgetAllocation,
     alerts: BudgetAlert[],
   ): Promise<void>;
+  /**
+   * Atomically validates that the new allocation amount doesn't exceed the budget
+   * total, then saves the allocation within a serializable transaction.
+   * Prevents TOCTOU race conditions in concurrent allocation requests.
+   */
+  saveWithBudgetValidation(
+    allocation: BudgetAllocation,
+    budgetTotalAmount: Decimal,
+    excludeAllocationId?: string,
+  ): Promise<void>;
   findById(id: AllocationId): Promise<BudgetAllocation | null>;
   findByBudget(
     budgetId: BudgetId,

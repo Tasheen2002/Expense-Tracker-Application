@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { TemplateService } from "../../../application/services/template.service";
 import { NotificationTemplate } from "../../../domain/entities/notification-template.entity";
 import { NotificationType } from "../../../domain/enums/notification-type.enum";
@@ -8,19 +9,7 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 export class TemplateController {
   constructor(private readonly templateService: TemplateService) {}
 
-  async createTemplate(
-    request: FastifyRequest<{
-      Body: {
-        workspaceId?: string;
-        name: string;
-        type: string;
-        channel: string;
-        subjectTemplate: string;
-        bodyTemplate: string;
-      };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async createTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const {
         workspaceId,
@@ -29,7 +18,14 @@ export class TemplateController {
         channel,
         subjectTemplate,
         bodyTemplate,
-      } = request.body;
+      } = request.body as {
+        workspaceId?: string;
+        name: string;
+        type: string;
+        channel: string;
+        subjectTemplate: string;
+        bodyTemplate: string;
+      };
 
       const template = await this.templateService.createTemplate({
         workspaceId,
@@ -51,14 +47,9 @@ export class TemplateController {
     }
   }
 
-  async getTemplateById(
-    request: FastifyRequest<{
-      Params: { templateId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async getTemplateById(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { templateId } = request.params;
+      const { templateId } = request.params as { templateId: string };
       const template = await this.templateService.getTemplateById(templateId);
 
       return ResponseHelper.success(
@@ -72,18 +63,13 @@ export class TemplateController {
     }
   }
 
-  async getActiveTemplate(
-    request: FastifyRequest<{
-      Querystring: {
+  async getActiveTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const { workspaceId, type, channel } = request.query as {
         workspaceId?: string;
         type: string;
         channel: string;
       };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId, type, channel } = request.query;
 
       const template = await this.templateService.getActiveTemplate(
         workspaceId,
@@ -109,16 +95,13 @@ export class TemplateController {
     }
   }
 
-  async updateTemplate(
-    request: FastifyRequest<{
-      Params: { templateId: string };
-      Body: { subjectTemplate?: string; bodyTemplate?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async updateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { templateId } = request.params;
-      const { subjectTemplate, bodyTemplate } = request.body;
+      const { templateId } = request.params as { templateId: string };
+      const { subjectTemplate, bodyTemplate } = request.body as {
+        subjectTemplate?: string;
+        bodyTemplate?: string;
+      };
 
       const template = await this.templateService.updateTemplate(templateId, {
         subjectTemplate,
@@ -136,14 +119,9 @@ export class TemplateController {
     }
   }
 
-  async activateTemplate(
-    request: FastifyRequest<{
-      Params: { templateId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async activateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { templateId } = request.params;
+      const { templateId } = request.params as { templateId: string };
       const template = await this.templateService.activateTemplate(templateId);
 
       return ResponseHelper.success(
@@ -159,14 +137,9 @@ export class TemplateController {
     }
   }
 
-  async deactivateTemplate(
-    request: FastifyRequest<{
-      Params: { templateId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async deactivateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { templateId } = request.params;
+      const { templateId } = request.params as { templateId: string };
       const template =
         await this.templateService.deactivateTemplate(templateId);
 

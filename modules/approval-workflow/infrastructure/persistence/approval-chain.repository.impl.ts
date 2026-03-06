@@ -94,12 +94,31 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
     categoryId?: string;
     hasReceipt: boolean;
   }): Promise<ApprovalChain | null> {
-    const result = await this.findActiveByWorkspace(params.workspaceId, {
-      limit: 100,
-      offset: 0,
+    const where: Prisma.ApprovalChainWhereInput = {
+      workspaceId: params.workspaceId,
+      isActive: true,
+      OR: [
+        { minAmount: null },
+        { minAmount: { lte: params.amount } },
+      ],
+      AND: [
+        {
+          OR: [
+            { maxAmount: null },
+            { maxAmount: { gte: params.amount } },
+          ],
+        },
+      ],
+    };
+
+    const rows = await this.prisma.approvalChain.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
     });
 
-    for (const chain of result.items) {
+    // Apply remaining filters that can't be expressed in SQL (categoryId array, receipt)
+    for (const row of rows) {
+      const chain = this.toDomain(row);
       if (
         chain.appliesTo({
           amount: params.amount,

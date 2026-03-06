@@ -37,7 +37,7 @@ export class BudgetThresholdExceededEvent extends DomainEvent {
     return "budget.threshold_exceeded";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -66,7 +66,7 @@ export class BudgetExhaustedEvent extends DomainEvent {
     return "budget.exhausted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -95,7 +95,7 @@ export class BudgetSpendingRecordedEvent extends DomainEvent {
     return "budget.spending_recorded";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -126,7 +126,7 @@ export class BudgetCreatedEvent extends DomainEvent {
     return "budget.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -150,7 +150,7 @@ export class BudgetActivatedEvent extends DomainEvent {
     return "budget.activated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -170,7 +170,7 @@ export class BudgetArchivedEvent extends DomainEvent {
     return "budget.archived";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,
@@ -195,7 +195,7 @@ export class BudgetUpdatedEvent extends DomainEvent {
     return "budget.updated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       budgetId: this.budgetId,
       workspaceId: this.workspaceId,

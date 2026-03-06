@@ -7,27 +7,21 @@ import { ResponseHelper } from "../../../../../apps/api/src/shared/response.help
 export class ApprovalChainController {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async createChain(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        name: string;
-        description?: string;
-        minAmount?: number;
-        maxAmount?: number;
-        categoryIds?: string[];
-        requiresReceipt: boolean;
-        approverSequence: string[];
-      };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async createChain(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
+      const { workspaceId } = request.params as { workspaceId: string };
 
       const chain = await this.approvalChainService.createChain({
         workspaceId,
-        ...request.body,
+        ...(request.body as {
+          name: string;
+          description?: string;
+          minAmount?: number;
+          maxAmount?: number;
+          categoryIds?: string[];
+          requiresReceipt: boolean;
+          approverSequence: string[];
+        }),
       });
 
       return reply.status(201).send({
@@ -41,26 +35,23 @@ export class ApprovalChainController {
     }
   }
 
-  async updateChain(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
-      Body: {
-        name?: string;
-        description?: string;
-        minAmount?: number;
-        maxAmount?: number;
-        approverSequence?: string[];
-      };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async updateChain(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId, chainId } = request.params;
+      const { workspaceId, chainId } = request.params as {
+        workspaceId: string;
+        chainId: string;
+      };
 
       const chain = await this.approvalChainService.updateChain({
         chainId,
         workspaceId,
-        ...request.body,
+        ...(request.body as {
+          name?: string;
+          description?: string;
+          minAmount?: number;
+          maxAmount?: number;
+          approverSequence?: string[];
+        }),
       });
 
       return reply.status(200).send({
@@ -74,14 +65,12 @@ export class ApprovalChainController {
     }
   }
 
-  async getChain(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async getChain(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId, chainId } = request.params;
+      const { workspaceId, chainId } = request.params as {
+        workspaceId: string;
+        chainId: string;
+      };
 
       const chain = await this.approvalChainService.getChain(
         chainId,
@@ -99,21 +88,19 @@ export class ApprovalChainController {
     }
   }
 
-  async listChains(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { activeOnly?: string; limit?: string; offset?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
+  async listChains(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const { workspaceId } = request.params;
-      const activeOnly = request.query.activeOnly === "true";
-      const { limit, offset } = request.query;
+      const { workspaceId } = request.params as { workspaceId: string };
+      const { activeOnly, limit, offset } = request.query as {
+        activeOnly?: string;
+        limit?: string;
+        offset?: string;
+      };
+      const activeOnlyBool = activeOnly === "true";
 
       const result = await this.approvalChainService.listChains(
         workspaceId,
-        activeOnly,
+        activeOnlyBool,
         {
           limit: limit ? parseInt(limit, 10) : 50,
           offset: offset ? parseInt(offset, 10) : 0,

@@ -35,7 +35,7 @@ export class PolicyCreatedEvent extends DomainEvent {
     return "policy.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       policyId: this.policyId,
       workspaceId: this.workspaceId,
@@ -63,7 +63,7 @@ export class PolicyActivatedEvent extends DomainEvent {
     return "policy.activated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       policyId: this.policyId,
       workspaceId: this.workspaceId,
@@ -88,7 +88,7 @@ export class PolicyDeactivatedEvent extends DomainEvent {
     return "policy.deactivated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       policyId: this.policyId,
       workspaceId: this.workspaceId,
@@ -114,7 +114,7 @@ export class PolicyUpdatedEvent extends DomainEvent {
     return "policy.updated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       policyId: this.policyId,
       workspaceId: this.workspaceId,

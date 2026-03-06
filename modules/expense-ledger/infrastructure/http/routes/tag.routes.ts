@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { TagController } from "../controllers/tag.controller";
+import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function tagRoutes(
   fastify: FastifyInstance,
@@ -7,7 +8,7 @@ export async function tagRoutes(
 ) {
   // Create tag
   fastify.post(
-    "/:workspaceId/tags",
+    "/workspaces/:workspaceId/tags",
     {
       schema: {
         tags: ["Tag"],
@@ -49,12 +50,12 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.createTag(request as any, reply),
+    (request, reply) => controller.createTag(request as AuthenticatedRequest, reply),
   );
 
   // Update tag
   fastify.put(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -96,12 +97,12 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.updateTag(request as any, reply),
+    (request, reply) => controller.updateTag(request as AuthenticatedRequest, reply),
   );
 
   // Delete tag
   fastify.delete(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -126,12 +127,12 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteTag(request as any, reply),
+    (request, reply) => controller.deleteTag(request as AuthenticatedRequest, reply),
   );
 
   // Get tag by ID
   fastify.get(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -166,12 +167,12 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.getTag(request as any, reply),
+    (request, reply) => controller.getTag(request as AuthenticatedRequest, reply),
   );
 
   // List tags
   fastify.get(
-    "/:workspaceId/tags",
+    "/workspaces/:workspaceId/tags",
     {
       schema: {
         tags: ["Tag"],
@@ -222,6 +223,6 @@ export async function tagRoutes(
         },
       },
     },
-    (request, reply) => controller.listTags(request as any, reply),
+    (request, reply) => controller.listTags(request as AuthenticatedRequest, reply),
   );
 }
