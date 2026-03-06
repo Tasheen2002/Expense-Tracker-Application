@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useMemo } from 'react';
 import {
   Home,
   Receipt,
@@ -9,24 +10,42 @@ import {
   CheckSquare,
   Settings,
   Phone,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-// TODO: Get actual workspaceId from auth/context
-const WORKSPACE_ID = 'demo-workspace';
-
-const navigation = [
-  { name: 'Home', href: `/workspaces/${WORKSPACE_ID}`, icon: Home },
-  { name: 'Expenses', href: `/workspaces/${WORKSPACE_ID}/expenses`, icon: Receipt },
-  { name: 'Trips', href: `/workspaces/${WORKSPACE_ID}/trips`, icon: Plane },
-  { name: 'Approvals', href: `/workspaces/${WORKSPACE_ID}/approvals`, icon: CheckSquare },
-  { name: 'Settings', href: `/workspaces/${WORKSPACE_ID}/settings`, icon: Settings },
-  { name: 'Support', href: `/workspaces/${WORKSPACE_ID}/support`, icon: Phone },
-];
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useLogout } from '@/features/auth';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const logout = useLogout();
+
+  // Extract workspace ID from current pathname
+  const workspaceId = useMemo(() => {
+    const match = pathname.match(/\/workspaces\/([^\/]+)/);
+    return match ? match[1] : 'demo-workspace';
+  }, [pathname]);
+
+  const navigation = useMemo(() => [
+    { name: 'Home', href: `/workspaces/${workspaceId}`, icon: Home },
+    { name: 'Expenses', href: `/workspaces/${workspaceId}/expenses`, icon: Receipt },
+    { name: 'Trips', href: `/workspaces/${workspaceId}/trips`, icon: Plane },
+    { name: 'Approvals', href: `/workspaces/${workspaceId}/approvals`, icon: CheckSquare },
+    { name: 'Settings', href: `/workspaces/${workspaceId}/settings`, icon: Settings },
+    { name: 'Support', href: `/workspaces/${workspaceId}/support`, icon: Phone },
+  ], [workspaceId]);
+
+  const handleLogout = () => {
+    logout.mutate();
+  };
 
   return (
     <div className="flex h-screen w-64 flex-col bg-sidebar">
@@ -76,22 +95,44 @@ export function Sidebar() {
 
       {/* User Profile */}
       <div className="border-t border-border p-4">
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src="/avatar-placeholder.jpg" alt="User" />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              JC
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">
-              Janice Chandler
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              janice@company.com
-            </p>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center gap-3 rounded-lg p-2 hover:bg-sidebar-foreground/5 transition-colors">
+              <Avatar>
+                <AvatarImage src="/avatar-placeholder.jpg" alt="User" />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  JC
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 overflow-hidden text-left">
+                <p className="truncate text-sm font-medium text-sidebar-foreground">
+                  Janice Chandler
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  janice@company.com
+                </p>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-600 focus:text-red-600"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

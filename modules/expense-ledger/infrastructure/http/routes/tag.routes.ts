@@ -8,7 +8,7 @@ export async function tagRoutes(
 ) {
   // Create tag
   fastify.post(
-    "/:workspaceId/tags",
+    "/workspaces/:workspaceId/tags",
     {
       schema: {
         tags: ["Tag"],
@@ -55,7 +55,7 @@ export async function tagRoutes(
 
   // Update tag
   fastify.put(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -102,7 +102,7 @@ export async function tagRoutes(
 
   // Delete tag
   fastify.delete(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -132,7 +132,7 @@ export async function tagRoutes(
 
   // Get tag by ID
   fastify.get(
-    "/:workspaceId/tags/:tagId",
+    "/workspaces/:workspaceId/tags/:tagId",
     {
       schema: {
         tags: ["Tag"],
@@ -172,7 +172,7 @@ export async function tagRoutes(
 
   // List tags
   fastify.get(
-    "/:workspaceId/tags",
+    "/workspaces/:workspaceId/tags",
     {
       schema: {
         tags: ["Tag"],

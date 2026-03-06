@@ -24,7 +24,7 @@ export async function expenseRoutes(
   });
   // Create expense
   fastify.post(
-    "/:workspaceId/expenses",
+    "/workspaces/:workspaceId/expenses",
     {
       schema: {
         tags: ["Expense"],
@@ -110,7 +110,7 @@ export async function expenseRoutes(
 
   // Update expense
   fastify.put(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -184,7 +184,7 @@ export async function expenseRoutes(
 
   // Delete expense
   fastify.delete(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -214,7 +214,7 @@ export async function expenseRoutes(
 
   // Get expense by ID
   fastify.get(
-    "/:workspaceId/expenses/:expenseId",
+    "/workspaces/:workspaceId/expenses/:expenseId",
     {
       schema: {
         tags: ["Expense"],
@@ -266,7 +266,7 @@ export async function expenseRoutes(
 
   // List expenses
   fastify.get(
-    "/:workspaceId/expenses",
+    "/workspaces/:workspaceId/expenses",
     {
       schema: {
         tags: ["Expense"],
@@ -340,7 +340,7 @@ export async function expenseRoutes(
 
   // Filter expenses
   fastify.get(
-    "/:workspaceId/expenses/filter",
+    "/workspaces/:workspaceId/expenses/filter",
     {
       schema: {
         tags: ["Expense"],
@@ -397,7 +397,7 @@ export async function expenseRoutes(
 
   // Get expense statistics
   fastify.get(
-    "/:workspaceId/expenses/statistics",
+    "/workspaces/:workspaceId/expenses/statistics",
     {
       schema: {
         tags: ["Expense"],
@@ -423,7 +423,7 @@ export async function expenseRoutes(
 
   // Submit expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/submit",
+    "/workspaces/:workspaceId/expenses/:expenseId/submit",
     {
       schema: {
         tags: ["Expense"],
@@ -461,7 +461,7 @@ export async function expenseRoutes(
 
   // Approve expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/approve",
+    "/workspaces/:workspaceId/expenses/:expenseId/approve",
     {
       schema: {
         tags: ["Expense"],
@@ -499,7 +499,7 @@ export async function expenseRoutes(
 
   // Reject expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/reject",
+    "/workspaces/:workspaceId/expenses/:expenseId/reject",
     {
       schema: {
         tags: ["Expense"],
@@ -537,7 +537,7 @@ export async function expenseRoutes(
 
   // Reimburse expense
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/reimburse",
+    "/workspaces/:workspaceId/expenses/:expenseId/reimburse",
     {
       schema: {
         tags: ["Expense"],

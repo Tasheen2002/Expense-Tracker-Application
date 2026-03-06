@@ -1,4 +1,4 @@
-import { api } from '@/lib/api/client';
+import { rootApi } from '@expense-tracker/api-client';
 import type {
   RegisterDTO,
   LoginDTO,
@@ -15,21 +15,21 @@ export const authApi = {
   register: async (
     data: RegisterDTO
   ): Promise<ApiResponse<{ userId: string; email: string }>> => {
-    return api.post<ApiResponse<{ userId: string; email: string }>>(
+    return rootApi.post<ApiResponse<{ userId: string; email: string }>>(
       'auth/register',
       data
     );
   },
 
   login: async (data: LoginDTO): Promise<ApiResponse<AuthResponse>> => {
-    return api.post<ApiResponse<AuthResponse>>('auth/login', data);
+    return rootApi.post<ApiResponse<AuthResponse>>('auth/login', data);
   },
 
   /**
    * Get current authenticated user
    */
   me: async (): Promise<ApiResponse<CurrentUser>> => {
-    return api.get<ApiResponse<CurrentUser>>('auth/me');
+    return rootApi.get<ApiResponse<CurrentUser>>('auth/me');
   },
 
   /**

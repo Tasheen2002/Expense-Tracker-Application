@@ -2,7 +2,7 @@ import { IUserRepository } from '../../domain/repositories/user.repository'
 import { User, CreateUserData } from '../../domain/entities/user.entity'
 import { UserId } from '../../domain/value-objects/user-id.vo'
 import { Email } from '../../domain/value-objects/email.vo'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import {
   UserNotFoundError,
   UserAlreadyExistsError,

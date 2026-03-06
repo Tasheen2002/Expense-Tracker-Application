@@ -31,7 +31,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Redirect to workspaces if accessing login/register with valid token
+  // Redirect to workspaces redirect page if accessing login/register with valid token
   if ((pathname === '/login' || pathname === '/register') && token) {
     return NextResponse.redirect(new URL('/workspaces', request.url));
   }

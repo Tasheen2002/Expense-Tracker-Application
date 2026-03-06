@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["approval_workflow", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "event_outbox", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault", "audit_compliance"]
+  schemas  = ["approval_workflow", "audit_compliance", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "event_outbox", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault"]
 }
 
 model UserAccount {
@@ -109,10 +109,6 @@ model Expense {
   @@index([expenseDate])
   @@index([status])
   @@index([createdAt])
-  @@index([workspaceId, status, expenseDate])
-  @@index([workspaceId, userId, status])
-  @@index([workspaceId, categoryId, expenseDate])
-  @@index([userId, status, createdAt])
   @@map("expenses")
   @@schema("expense_ledger")
 }
@@ -242,8 +238,6 @@ model BudgetAllocation {
   @@unique([budgetId, categoryId], map: "budget_category_allocation")
   @@index([budgetId])
   @@index([categoryId])
-  @@index([budgetId, spentAmount])
-  @@index([categoryId, spentAmount])
   @@map("budget_allocations")
   @@schema("budget_management")
 }
@@ -452,9 +446,6 @@ model ApprovalStep {
   @@index([approverId])
   @@index([delegatedTo])
   @@index([status])
-  @@index([approverId, status])
-  @@index([delegatedTo, status])
-  @@index([workflowId, stepNumber, status])
   @@map("approval_steps")
   @@schema("approval_workflow")
 }
@@ -602,6 +593,379 @@ model ExpenseAllocation {
   @@index([createdBy])
   @@map("expense_allocations")
   @@schema("cost_allocation")
+}
+
+model CategoryRule {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @map("workspace_id") @db.Uuid
+  name             String            @db.VarChar(100)
+  description      String?           @db.VarChar(500)
+  priority         Int               @default(0)
+  isActive         Boolean           @default(true) @map("is_active")
+  conditionType    RuleConditionType @map("condition_type")
+  conditionValue   String            @map("condition_value") @db.VarChar(255)
+  targetCategoryId String            @map("target_category_id") @db.Uuid
+  createdBy        String            @map("created_by") @db.Uuid
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("category_rules")
+  @@schema("categorization_rules")
+}
+
+model RuleExecution {
+  id                String   @id @default(uuid()) @db.Uuid
+  ruleId            String   @map("rule_id") @db.Uuid
+  expenseId         String   @map("expense_id") @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  appliedCategoryId String   @map("applied_category_id") @db.Uuid
+  executedAt        DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
+
+  @@map("rule_executions")
+  @@schema("categorization_rules")
+}
+
+model CategorySuggestion {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  expenseId           String    @map("expense_id") @db.Uuid
+  suggestedCategoryId String    @map("suggested_category_id") @db.Uuid
+  confidence          Float
+  reason              String?   @db.VarChar(500)
+  isAccepted          Boolean?  @map("is_accepted")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondedAt         DateTime? @map("responded_at") @db.Timestamptz(6)
+
+  @@map("category_suggestions")
+  @@schema("categorization_rules")
+}
+
+model BudgetPlan {
+  id          String           @id @default(uuid()) @db.Uuid
+  workspaceId String           @map("workspace_id") @db.Uuid
+  name        String           @db.VarChar(100)
+  description String?          @db.VarChar(500)
+  periodType  BudgetPeriodType @map("period_type")
+  startDate   DateTime         @map("start_date") @db.Date
+  endDate     DateTime         @map("end_date") @db.Date
+  status      PlanStatus       @default(DRAFT)
+  createdBy   String           @map("created_by") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  forecasts   Forecast[]
+  scenarios   Scenario[]
+
+  @@index([workspaceId, status])
+  @@map("budget_plans")
+  @@schema("budget_planning")
+}
+
+model Forecast {
+  id        String         @id @default(uuid()) @db.Uuid
+  planId    String         @map("plan_id") @db.Uuid
+  name      String         @db.VarChar(100)
+  type      ForecastType
+  isActive  Boolean        @default(true) @map("is_active")
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items     ForecastItem[]
+  plan      BudgetPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, name])
+  @@index([planId])
+  @@map("forecasts")
+  @@schema("budget_planning")
+}
+
+model Scenario {
+  id          String     @id @default(uuid()) @db.Uuid
+  planId      String     @map("plan_id") @db.Uuid
+  name        String     @db.VarChar(100)
+  description String?    @db.VarChar(500)
+  assumptions Json?
+  createdBy   String     @map("created_by") @db.Uuid
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  plan        BudgetPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, name])
+  @@index([planId])
+  @@map("scenarios")
+  @@schema("budget_planning")
+}
+
+model ForecastItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  forecastId String   @map("forecast_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  amount     Decimal  @db.Decimal(12, 2)
+  notes      String?  @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  forecast   Forecast @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+
+  @@unique([forecastId, categoryId])
+  @@index([forecastId])
+  @@index([categoryId])
+  @@map("forecast_items")
+  @@schema("budget_planning")
+}
+
+model ExpenseSplit {
+  id           String             @id @default(uuid()) @db.Uuid
+  expenseId    String             @unique @map("expense_id") @db.Uuid
+  workspaceId  String             @map("workspace_id") @db.Uuid
+  paidBy       String             @map("paid_by") @db.Uuid
+  totalAmount  Decimal            @map("total_amount") @db.Decimal(12, 2)
+  currency     String             @default("USD") @db.VarChar(3)
+  splitType    SplitType          @map("split_type")
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  participants SplitParticipant[]
+  settlements  SplitSettlement[]
+
+  @@index([workspaceId])
+  @@index([paidBy])
+  @@index([expenseId])
+  @@map("expense_splits")
+  @@schema("expense_ledger")
+}
+
+model SplitParticipant {
+  id              String       @id @default(uuid()) @db.Uuid
+  splitId         String       @map("split_id") @db.Uuid
+  userId          String       @map("user_id") @db.Uuid
+  shareAmount     Decimal      @map("share_amount") @db.Decimal(12, 2)
+  sharePercentage Decimal?     @map("share_percentage") @db.Decimal(5, 2)
+  isPaid          Boolean      @default(false) @map("is_paid")
+  paidAt          DateTime?    @map("paid_at") @db.Timestamptz(6)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  split           ExpenseSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, userId])
+  @@index([splitId])
+  @@index([userId])
+  @@map("split_participants")
+  @@schema("expense_ledger")
+}
+
+model SplitSettlement {
+  id              String           @id @default(uuid()) @db.Uuid
+  splitId         String           @map("split_id") @db.Uuid
+  fromUserId      String           @map("from_user_id") @db.Uuid
+  toUserId        String           @map("to_user_id") @db.Uuid
+  totalOwedAmount Decimal          @map("total_owed_amount") @db.Decimal(12, 2)
+  paidAmount      Decimal          @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  currency        String           @default("USD") @db.VarChar(3)
+  status          SettlementStatus @default(PENDING)
+  settledAt       DateTime?        @map("settled_at") @db.Timestamptz(6)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  split           ExpenseSplit     @relation(fields: [splitId], references: [id], onDelete: Cascade)
+
+  @@unique([splitId, fromUserId, toUserId])
+  @@index([splitId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
+  @@map("split_settlements")
+  @@schema("expense_ledger")
+}
+
+model AuditLog {
+  id          String   @id @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String   @db.VarChar(100)
+  entityType  String   @map("entity_type") @db.VarChar(100)
+  entityId    String   @map("entity_id") @db.Uuid
+  details     Json?
+  metadata    Json?
+  ipAddress   String?  @map("ip_address") @db.Inet
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([workspaceId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+  @@schema("audit_compliance")
+}
+
+model ExpensePolicy {
+  id            String            @id @default(uuid()) @db.Uuid
+  workspaceId   String            @map("workspace_id") @db.Uuid
+  name          String            @db.VarChar(100)
+  description   String?
+  policyType    PolicyType        @map("policy_type")
+  severity      ViolationSeverity
+  configuration Json
+  priority      Int               @default(0)
+  isActive      Boolean           @default(true) @map("is_active")
+  createdBy     String            @map("created_by") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  exemptions    PolicyExemption[]
+  violations    PolicyViolation[]
+
+  @@index([workspaceId])
+  @@index([isActive])
+  @@index([policyType])
+  @@map("expense_policies")
+  @@schema("policy_controls")
+}
+
+model PolicyViolation {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @map("workspace_id") @db.Uuid
+  policyId         String            @map("policy_id") @db.Uuid
+  expenseId        String            @map("expense_id") @db.Uuid
+  userId           String            @map("user_id") @db.Uuid
+  status           ViolationStatus   @default(PENDING)
+  severity         ViolationSeverity
+  violationDetails String            @map("violation_details")
+  expenseAmount    Decimal           @map("expense_amount") @db.Decimal(12, 2)
+  currency         String            @default("USD") @db.VarChar(3)
+  detectedAt       DateTime          @default(now()) @map("detected_at") @db.Timestamptz(6)
+  acknowledgedAt   DateTime?         @map("acknowledged_at") @db.Timestamptz(6)
+  acknowledgedBy   String?           @map("acknowledged_by") @db.Uuid
+  resolvedAt       DateTime?         @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy       String?           @map("resolved_by") @db.Uuid
+  resolutionNote   String?           @map("resolution_note")
+  exemptionId      String?           @map("exemption_id") @db.Uuid
+  overriddenBy     String?           @map("overridden_by") @db.Uuid
+  overrideReason   String?           @map("override_reason")
+  policy           ExpensePolicy     @relation(fields: [policyId], references: [id])
+
+  @@index([workspaceId])
+  @@index([policyId])
+  @@index([expenseId])
+  @@index([userId])
+  @@index([status])
+  @@index([detectedAt])
+  @@map("policy_violations")
+  @@schema("policy_controls")
+}
+
+model PolicyExemption {
+  id              String          @id @default(uuid()) @db.Uuid
+  workspaceId     String          @map("workspace_id") @db.Uuid
+  policyId        String          @map("policy_id") @db.Uuid
+  userId          String          @map("user_id") @db.Uuid
+  status          ExemptionStatus @default(PENDING)
+  reason          String
+  requestedBy     String          @map("requested_by") @db.Uuid
+  requestedAt     DateTime        @default(now()) @map("requested_at") @db.Timestamptz(6)
+  approvedBy      String?         @map("approved_by") @db.Uuid
+  approvedAt      DateTime?       @map("approved_at") @db.Timestamptz(6)
+  approvalNote    String?         @map("approval_note")
+  rejectedBy      String?         @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime?       @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?         @map("rejection_reason")
+  validFrom       DateTime        @map("valid_from") @db.Timestamptz(6)
+  validUntil      DateTime        @map("valid_until") @db.Timestamptz(6)
+  scope           Json?
+  policy          ExpensePolicy   @relation(fields: [policyId], references: [id])
+
+  @@index([workspaceId])
+  @@index([policyId])
+  @@index([userId])
+  @@index([status])
+  @@index([validFrom, validUntil])
+  @@map("policy_exemptions")
+  @@schema("policy_controls")
+}
+
+model BankConnection {
+  id              String            @id @default(uuid())
+  workspaceId     String            @map("workspace_id")
+  userId          String            @map("user_id")
+  institutionId   String            @map("institution_id")
+  institutionName String            @map("institution_name")
+  accountId       String            @map("account_id")
+  accountName     String            @map("account_name")
+  accountType     String            @map("account_type")
+  accountMask     String?           @map("account_mask")
+  currency        String
+  accessToken     String            @map("access_token")
+  status          ConnectionStatus
+  lastSyncAt      DateTime?         @map("last_sync_at")
+  tokenExpiresAt  DateTime?         @map("token_expires_at")
+  errorMessage    String?           @map("error_message")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  transactions    BankTransaction[]
+  syncSessions    SyncSession[]
+
+  @@unique([workspaceId, institutionId, accountId])
+  @@map("bank_connection")
+  @@schema("bank_feed_sync")
+}
+
+model SyncSession {
+  id                    String            @id @default(uuid())
+  workspaceId           String            @map("workspace_id")
+  connectionId          String            @map("connection_id")
+  status                SyncStatus
+  startedAt             DateTime          @map("started_at")
+  completedAt           DateTime?         @map("completed_at")
+  transactionsFetched   Int               @default(0) @map("transactions_fetched")
+  transactionsImported  Int               @default(0) @map("transactions_imported")
+  transactionsDuplicate Int               @default(0) @map("transactions_duplicate")
+  errorMessage          String?           @map("error_message")
+  metadata              Json?
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  transactions          BankTransaction[]
+  connection            BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@map("sync_session")
+  @@schema("bank_feed_sync")
+}
+
+model BankTransaction {
+  id              String            @id @default(uuid())
+  workspaceId     String            @map("workspace_id")
+  connectionId    String            @map("connection_id")
+  sessionId       String            @map("session_id")
+  externalId      String            @map("external_id")
+  amount          Float
+  currency        String
+  description     String
+  merchantName    String?           @map("merchant_name")
+  categoryName    String?           @map("category_name")
+  transactionDate DateTime          @map("transaction_date")
+  postedDate      DateTime?         @map("posted_date")
+  status          TransactionStatus
+  expenseId       String?           @map("expense_id")
+  metadata        Json?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  connection      BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  session         SyncSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, externalId])
+  @@map("bank_transaction")
+  @@schema("bank_feed_sync")
+}
+
+model OutboxEvent {
+  id            String            @id @default(uuid())
+  aggregateType String            @map("aggregate_type")
+  aggregateId   String            @map("aggregate_id")
+  eventType     String            @map("event_type")
+  payload       Json
+  status        OutboxEventStatus
+  createdAt     DateTime          @default(now()) @map("created_at")
+  processedAt   DateTime?         @map("processed_at")
+  retryCount    Int               @default(0) @map("retry_count")
+  error         String?
+
+  @@index([status, createdAt])
+  @@index([aggregateId])
+  @@map("outbox_event")
+  @@schema("event_outbox")
 }
 
 enum PaymentMethod {
@@ -757,10 +1121,6 @@ enum NotificationStatus {
   @@schema("notification_dispatch")
 }
 
-// ==========================================
-// Categorization Rules Module
-// ==========================================
-
 enum RuleConditionType {
   MERCHANT_CONTAINS
   MERCHANT_EQUALS
@@ -772,55 +1132,6 @@ enum RuleConditionType {
 
   @@schema("categorization_rules")
 }
-
-model CategoryRule {
-  id                String            @id @default(uuid()) @db.Uuid
-  workspaceId       String            @map("workspace_id") @db.Uuid
-  name              String            @db.VarChar(100)
-  description       String?           @db.VarChar(500)
-  priority          Int               @default(0)
-  isActive          Boolean           @default(true) @map("is_active")
-  conditionType     RuleConditionType @map("condition_type")
-  conditionValue    String            @map("condition_value") @db.VarChar(255)
-  targetCategoryId  String            @map("target_category_id") @db.Uuid
-  createdBy         String            @map("created_by") @db.Uuid
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@map("category_rules")
-  @@schema("categorization_rules")
-}
-
-model RuleExecution {
-  id                 String   @id @default(uuid()) @db.Uuid
-  ruleId             String   @map("rule_id") @db.Uuid
-  expenseId          String   @map("expense_id") @db.Uuid
-  workspaceId        String   @map("workspace_id") @db.Uuid
-  appliedCategoryId  String   @map("applied_category_id") @db.Uuid
-  executedAt         DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
-
-  @@map("rule_executions")
-  @@schema("categorization_rules")
-}
-
-model CategorySuggestion {
-  id                   String    @id @default(uuid()) @db.Uuid
-  workspaceId          String    @map("workspace_id") @db.Uuid
-  expenseId            String    @map("expense_id") @db.Uuid
-  suggestedCategoryId  String    @map("suggested_category_id") @db.Uuid
-  confidence           Float
-  reason               String?   @db.VarChar(500)
-  isAccepted           Boolean?  @map("is_accepted")
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  respondedAt          DateTime? @map("responded_at") @db.Timestamptz(6)
-
-  @@map("category_suggestions")
-  @@schema("categorization_rules")
-}
-
-// ==========================================
-// Budget Planning Module
-// ==========================================
 
 enum ForecastType {
   BASELINE
@@ -840,139 +1151,6 @@ enum PlanStatus {
   @@schema("budget_planning")
 }
 
-model BudgetPlan {
-  id          String       @id @default(uuid()) @db.Uuid
-  workspaceId String       @map("workspace_id") @db.Uuid
-  name        String       @db.VarChar(100)
-  description String?      @db.VarChar(500)
-  periodType  BudgetPeriodType @map("period_type")
-  startDate   DateTime     @map("start_date") @db.Date
-  endDate     DateTime     @map("end_date") @db.Date
-  status      PlanStatus   @default(DRAFT)
-  createdBy   String       @map("created_by") @db.Uuid
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  forecasts   Forecast[]
-  scenarios   Scenario[]
-
-  @@index([workspaceId, status])
-  @@map("budget_plans")
-  @@schema("budget_planning")
-}
-
-model Forecast {
-  id        String       @id @default(uuid()) @db.Uuid
-  planId    String       @map("plan_id") @db.Uuid
-  name      String       @db.VarChar(100)
-  type      ForecastType
-  isActive  Boolean      @default(true) @map("is_active")
-  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  plan      BudgetPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
-  items     ForecastItem[]
-
-  @@unique([planId, name])
-  @@index([planId])
-  @@map("forecasts")
-  @@schema("budget_planning")
-}
-
-model Scenario {
-  id          String     @id @default(uuid()) @db.Uuid
-  planId      String     @map("plan_id") @db.Uuid
-  name        String     @db.VarChar(100)
-  description String?    @db.VarChar(500)
-  assumptions Json?
-  createdBy   String     @map("created_by") @db.Uuid
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
-  plan        BudgetPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-
-  @@unique([planId, name])
-  @@index([planId])
-  @@map("scenarios")
-  @@schema("budget_planning")
-}
-
-model ForecastItem {
-  id         String   @id @default(uuid()) @db.Uuid
-  forecastId String   @map("forecast_id") @db.Uuid
-  categoryId String   @map("category_id") @db.Uuid
-  amount     Decimal  @db.Decimal(12, 2)
-  notes      String?  @db.VarChar(500)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  forecast   Forecast @relation(fields: [forecastId], references: [id], onDelete: Cascade)
-
-  @@unique([forecastId, categoryId])
-  @@index([forecastId])
-  @@index([categoryId])
-  @@map("forecast_items")
-  @@schema("budget_planning")
-}
-
-model ExpenseSplit {
-  id           String             @id @default(uuid()) @db.Uuid
-  expenseId    String             @unique @map("expense_id") @db.Uuid
-  workspaceId  String             @map("workspace_id") @db.Uuid
-  paidBy       String             @map("paid_by") @db.Uuid
-  totalAmount  Decimal            @map("total_amount") @db.Decimal(12, 2)
-  currency     String             @default("USD") @db.VarChar(3)
-  splitType    SplitType          @map("split_type")
-  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  participants SplitParticipant[]
-  settlements  SplitSettlement[]
-
-  @@index([workspaceId])
-  @@index([paidBy])
-  @@index([expenseId])
-  @@map("expense_splits")
-  @@schema("expense_ledger")
-}
-
-model SplitParticipant {
-  id              String       @id @default(uuid()) @db.Uuid
-  splitId         String       @map("split_id") @db.Uuid
-  userId          String       @map("user_id") @db.Uuid
-  shareAmount     Decimal      @map("share_amount") @db.Decimal(12, 2)
-  sharePercentage Decimal?     @map("share_percentage") @db.Decimal(5, 2)
-  isPaid          Boolean      @default(false) @map("is_paid")
-  paidAt          DateTime?    @map("paid_at") @db.Timestamptz(6)
-  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  split           ExpenseSplit @relation(fields: [splitId], references: [id], onDelete: Cascade)
-
-  @@unique([splitId, userId])
-  @@index([splitId])
-  @@index([userId])
-  @@map("split_participants")
-  @@schema("expense_ledger")
-}
-
-model SplitSettlement {
-  id              String           @id @default(uuid()) @db.Uuid
-  splitId         String           @map("split_id") @db.Uuid
-  fromUserId      String           @map("from_user_id") @db.Uuid
-  toUserId        String           @map("to_user_id") @db.Uuid
-  totalOwedAmount Decimal          @map("total_owed_amount") @db.Decimal(12, 2)
-  paidAmount      Decimal          @default(0) @map("paid_amount") @db.Decimal(12, 2)
-  currency        String           @default("USD") @db.VarChar(3)
-  status          SettlementStatus @default(PENDING)
-  settledAt       DateTime?        @map("settled_at") @db.Timestamptz(6)
-  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  split           ExpenseSplit     @relation(fields: [splitId], references: [id], onDelete: Cascade)
-
-  @@unique([splitId, fromUserId, toUserId])
-  @@index([splitId])
-  @@index([fromUserId])
-  @@index([toUserId])
-  @@index([status])
-  @@map("split_settlements")
-  @@schema("expense_ledger")
-}
-
 enum SplitType {
   EQUAL
   EXACT
@@ -987,114 +1165,6 @@ enum SettlementStatus {
   SETTLED
 
   @@schema("expense_ledger")
-}
-
-model AuditLog {
-  id          String   @id @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  userId      String?  @map("user_id") @db.Uuid
-  action      String   @db.VarChar(100)
-  entityType  String   @map("entity_type") @db.VarChar(100)
-  entityId    String   @map("entity_id") @db.Uuid
-  details     Json?
-  metadata    Json?
-  ipAddress   String?  @map("ip_address") @db.Inet
-  userAgent   String?  @map("user_agent")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([workspaceId])
-  @@index([entityType, entityId])
-  @@index([createdAt])
-  @@map("audit_logs")
-  @@schema("audit_compliance")
-}
-
-// ============================================================================
-// Policy Controls Schema
-// ============================================================================
-
-model ExpensePolicy {
-  id            String                   @id @default(uuid()) @db.Uuid
-  workspaceId   String                   @map("workspace_id") @db.Uuid
-  name          String                   @db.VarChar(100)
-  description   String?
-  policyType    PolicyType               @map("policy_type")
-  severity      ViolationSeverity
-  configuration Json
-  priority      Int                      @default(0)
-  isActive      Boolean                  @default(true) @map("is_active")
-  createdBy     String                   @map("created_by") @db.Uuid
-  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
-  violations    PolicyViolation[]
-  exemptions    PolicyExemption[]
-
-  @@index([workspaceId])
-  @@index([isActive])
-  @@index([policyType])
-  @@map("expense_policies")
-  @@schema("policy_controls")
-}
-
-model PolicyViolation {
-  id               String            @id @default(uuid()) @db.Uuid
-  workspaceId      String            @map("workspace_id") @db.Uuid
-  policyId         String            @map("policy_id") @db.Uuid
-  expenseId        String            @map("expense_id") @db.Uuid
-  userId           String            @map("user_id") @db.Uuid
-  status           ViolationStatus   @default(PENDING)
-  severity         ViolationSeverity
-  violationDetails String            @map("violation_details")
-  expenseAmount    Decimal           @map("expense_amount") @db.Decimal(12, 2)
-  currency         String            @default("USD") @db.VarChar(3)
-  detectedAt       DateTime          @default(now()) @map("detected_at") @db.Timestamptz(6)
-  acknowledgedAt   DateTime?         @map("acknowledged_at") @db.Timestamptz(6)
-  acknowledgedBy   String?           @map("acknowledged_by") @db.Uuid
-  resolvedAt       DateTime?         @map("resolved_at") @db.Timestamptz(6)
-  resolvedBy       String?           @map("resolved_by") @db.Uuid
-  resolutionNote   String?           @map("resolution_note")
-  exemptionId      String?           @map("exemption_id") @db.Uuid
-  overriddenBy     String?           @map("overridden_by") @db.Uuid
-  overrideReason   String?           @map("override_reason")
-  policy           ExpensePolicy     @relation(fields: [policyId], references: [id])
-
-  @@index([workspaceId])
-  @@index([policyId])
-  @@index([expenseId])
-  @@index([userId])
-  @@index([status])
-  @@index([detectedAt])
-  @@map("policy_violations")
-  @@schema("policy_controls")
-}
-
-model PolicyExemption {
-  id              String          @id @default(uuid()) @db.Uuid
-  workspaceId     String          @map("workspace_id") @db.Uuid
-  policyId        String          @map("policy_id") @db.Uuid
-  userId          String          @map("user_id") @db.Uuid
-  status          ExemptionStatus @default(PENDING)
-  reason          String
-  requestedBy     String          @map("requested_by") @db.Uuid
-  requestedAt     DateTime        @default(now()) @map("requested_at") @db.Timestamptz(6)
-  approvedBy      String?         @map("approved_by") @db.Uuid
-  approvedAt      DateTime?       @map("approved_at") @db.Timestamptz(6)
-  approvalNote    String?         @map("approval_note")
-  rejectedBy      String?         @map("rejected_by") @db.Uuid
-  rejectedAt      DateTime?       @map("rejected_at") @db.Timestamptz(6)
-  rejectionReason String?         @map("rejection_reason")
-  validFrom       DateTime        @map("valid_from") @db.Timestamptz(6)
-  validUntil      DateTime        @map("valid_until") @db.Timestamptz(6)
-  scope           Json?
-  policy          ExpensePolicy   @relation(fields: [policyId], references: [id])
-
-  @@index([workspaceId])
-  @@index([policyId])
-  @@index([userId])
-  @@index([status])
-  @@index([validFrom, validUntil])
-  @@map("policy_exemptions")
-  @@schema("policy_controls")
 }
 
 enum PolicyType {
@@ -1140,83 +1210,6 @@ enum ExemptionStatus {
   @@schema("policy_controls")
 }
 
-// ============================================================================
-// Bank Feed Sync Schema
-// ============================================================================
-
-model BankConnection {
-  id              String            @id @default(uuid())
-  workspaceId     String            @map("workspace_id")
-  userId          String            @map("user_id")
-  institutionId   String            @map("institution_id")
-  institutionName String            @map("institution_name")
-  accountId       String            @map("account_id")
-  accountName     String            @map("account_name")
-  accountType     String            @map("account_type")
-  accountMask     String?           @map("account_mask")
-  currency        String
-  accessToken     String            @map("access_token")
-  status          ConnectionStatus
-  lastSyncAt      DateTime?         @map("last_sync_at")
-  tokenExpiresAt  DateTime?         @map("token_expires_at")
-  errorMessage    String?           @map("error_message")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  syncSessions    SyncSession[]
-  transactions    BankTransaction[]
-
-  @@unique([workspaceId, institutionId, accountId])
-  @@map("bank_connection")
-  @@schema("bank_feed_sync")
-}
-
-model SyncSession {
-  id                    String            @id @default(uuid())
-  workspaceId           String            @map("workspace_id")
-  connectionId          String            @map("connection_id")
-  status                SyncStatus
-  startedAt             DateTime          @map("started_at")
-  completedAt           DateTime?         @map("completed_at")
-  transactionsFetched   Int               @default(0) @map("transactions_fetched")
-  transactionsImported  Int               @default(0) @map("transactions_imported")
-  transactionsDuplicate Int               @default(0) @map("transactions_duplicate")
-  errorMessage          String?           @map("error_message")
-  metadata              Json?
-  createdAt             DateTime          @default(now()) @map("created_at")
-  updatedAt             DateTime          @updatedAt @map("updated_at")
-  connection            BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  transactions          BankTransaction[]
-
-  @@map("sync_session")
-  @@schema("bank_feed_sync")
-}
-
-model BankTransaction {
-  id              String            @id @default(uuid())
-  workspaceId     String            @map("workspace_id")
-  connectionId    String            @map("connection_id")
-  sessionId       String            @map("session_id")
-  externalId      String            @map("external_id")
-  amount          Float
-  currency        String
-  description     String
-  merchantName    String?           @map("merchant_name")
-  categoryName    String?           @map("category_name")
-  transactionDate DateTime          @map("transaction_date")
-  postedDate      DateTime?         @map("posted_date")
-  status          TransactionStatus
-  expenseId       String?           @map("expense_id")
-  metadata        Json?
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  connection      BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  session         SyncSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@unique([workspaceId, externalId])
-  @@map("bank_transaction")
-  @@schema("bank_feed_sync")
-}
-
 enum ConnectionStatus {
   PENDING
   CONNECTED
@@ -1245,25 +1238,6 @@ enum TransactionStatus {
   DUPLICATE
 
   @@schema("bank_feed_sync")
-}
-
-// Event Outbox Schema
-model OutboxEvent {
-  id            String   @id @default(uuid())
-  aggregateType String   @map("aggregate_type")
-  aggregateId   String   @map("aggregate_id")
-  eventType     String   @map("event_type")
-  payload       Json
-  status        OutboxEventStatus
-  createdAt     DateTime @default(now()) @map("created_at")
-  processedAt   DateTime? @map("processed_at")
-  retryCount    Int      @default(0) @map("retry_count")
-  error         String?
-
-  @@index([status, createdAt])
-  @@index([aggregateId])
-  @@map("outbox_event")
-  @@schema("event_outbox")
 }
 
 enum OutboxEventStatus {

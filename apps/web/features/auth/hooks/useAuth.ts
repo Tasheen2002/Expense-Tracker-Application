@@ -48,22 +48,25 @@ export function useRegister() {
 // ============================================================================
 
 export function useLogin() {
-  const router = useRouter();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: authApi.login,
-    onSuccess: (response: ApiResponse<AuthResponse>) => {
-      // Store token in localStorage
+    onSuccess: async (response: ApiResponse<AuthResponse>) => {
+      // Store token in localStorage and cookies
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth-token', response.data.token);
+        // Also set as cookie for middleware
+        document.cookie = `auth-token=${response.data.token}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
       }
 
       // Invalidate and refetch current user
       queryClient.invalidateQueries({ queryKey: authKeys.me() });
 
-      // Redirect to workspaces (will need to select workspace)
-      router.push('/workspaces');
+      // Redirect to /workspaces which will handle workspace fetching/creation and redirect
+      setTimeout(() => {
+        window.location.href = '/workspaces';
+      }, 100);
     },
   });
 }
@@ -79,6 +82,12 @@ export function useLogout() {
   return useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
+      // Clear localStorage and cookies
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth-token');
+        document.cookie = 'auth-token=; path=/; max-age=0'; // Clear cookie
+      }
+
       // Clear all cached data
       queryClient.clear();
 

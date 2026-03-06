@@ -8,7 +8,7 @@ export async function categoryRoutes(
 ) {
   // Create category
   fastify.post(
-    "/:workspaceId/categories",
+    "/workspaces/:workspaceId/categories",
     {
       schema: {
         tags: ["Category"],
@@ -61,7 +61,7 @@ export async function categoryRoutes(
 
   // Update category
   fastify.put(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -113,7 +113,7 @@ export async function categoryRoutes(
 
   // Delete category
   fastify.delete(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -143,7 +143,7 @@ export async function categoryRoutes(
 
   // Get category by ID
   fastify.get(
-    "/:workspaceId/categories/:categoryId",
+    "/workspaces/:workspaceId/categories/:categoryId",
     {
       schema: {
         tags: ["Category"],
@@ -187,7 +187,7 @@ export async function categoryRoutes(
 
   // List categories
   fastify.get(
-    "/:workspaceId/categories",
+    "/workspaces/:workspaceId/categories",
     {
       schema: {
         tags: ["Category"],
