@@ -1,317 +1,323 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 // Event Bus
-import { getEventBus } from "./shared/domain/events/event-bus";
-import { InMemoryCacheService } from "./shared/infrastructure/cache/cache.service";
-import { NotificationEventHandler } from "../../../modules/notification-dispatch/application/handlers/notification.handler";
+import { getEventBus } from './shared/domain/events/event-bus';
+import { InMemoryCacheService } from './shared/infrastructure/cache/cache.service';
+import { NotificationEventHandler } from '../../../modules/notification-dispatch/application/handlers/notification.handler';
 // Audit
-import { AuditLogRepositoryImpl } from "../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl";
-import { AuditService } from "../../../modules/audit-compliance/application/services/audit.service";
-import { AuditEventListener } from "../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener";
+import { AuditLogRepositoryImpl } from '../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl';
+import { AuditService } from '../../../modules/audit-compliance/application/services/audit.service';
+import { AuditEventListener } from '../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener';
 
 // Identity-Workspace Module
-import { UserRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl";
-import { WorkspaceRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/workspace.repository.impl";
-import { WorkspaceMembershipRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/workspace-membership.repository.impl";
-import { WorkspaceInvitationRepositoryImpl } from "../../../modules/identity-workspace/infrastructure/persistence/workspace-invitation.repository.impl";
-import { UserManagementService } from "../../../modules/identity-workspace/application/services/user-management.service";
-import { WorkspaceManagementService } from "../../../modules/identity-workspace/application/services/workspace-management.service";
-import { WorkspaceMembershipService } from "../../../modules/identity-workspace/application/services/workspace-membership.service";
-import { WorkspaceInvitationService } from "../../../modules/identity-workspace/application/services/workspace-invitation.service";
+import { UserRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl';
+import { WorkspaceRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/workspace.repository.impl';
+import { WorkspaceMembershipRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/workspace-membership.repository.impl';
+import { WorkspaceInvitationRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/workspace-invitation.repository.impl';
+import { UserManagementService } from '../../../modules/identity-workspace/application/services/user-management.service';
+import { WorkspaceManagementService } from '../../../modules/identity-workspace/application/services/workspace-management.service';
+import { WorkspaceMembershipService } from '../../../modules/identity-workspace/application/services/workspace-membership.service';
+import { WorkspaceInvitationService } from '../../../modules/identity-workspace/application/services/workspace-invitation.service';
 
-import { ExpenseRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl";
-import { CategoryRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl";
-import { TagRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl";
-import { AttachmentRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl";
-import { ExpenseSplitRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl";
-import { SplitSettlementRepositoryImpl } from "../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl";
+import { ExpenseRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl';
+import { CategoryRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl';
+import { TagRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl';
+import { AttachmentRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl';
+import { ExpenseSplitRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl';
+import { SplitSettlementRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl';
 
-import { ExpenseService } from "../../../modules/expense-ledger/application/services/expense.service";
-import { CategoryService } from "../../../modules/expense-ledger/application/services/category.service";
-import { TagService } from "../../../modules/expense-ledger/application/services/tag.service";
-import { AttachmentService } from "../../../modules/expense-ledger/application/services/attachment.service";
-import { ExpenseSplitService } from "../../../modules/expense-ledger/application/services/expense-split.service";
+import { ExpenseService } from '../../../modules/expense-ledger/application/services/expense.service';
+import { CategoryService } from '../../../modules/expense-ledger/application/services/category.service';
+import { TagService } from '../../../modules/expense-ledger/application/services/tag.service';
+import { AttachmentService } from '../../../modules/expense-ledger/application/services/attachment.service';
+import { ExpenseSplitService } from '../../../modules/expense-ledger/application/services/expense-split.service';
 
 // Expense-Ledger Module - Command Handlers
-import { CreateExpenseHandler } from "../../../modules/expense-ledger/application/commands/create-expense.command";
-import { UpdateExpenseHandler } from "../../../modules/expense-ledger/application/commands/update-expense.command";
-import { DeleteExpenseHandler } from "../../../modules/expense-ledger/application/commands/delete-expense.command";
-import { SubmitExpenseHandler } from "../../../modules/expense-ledger/application/commands/submit-expense.command";
-import { ApproveExpenseHandler } from "../../../modules/expense-ledger/application/commands/approve-expense.command";
-import { RejectExpenseHandler } from "../../../modules/expense-ledger/application/commands/reject-expense.command";
-import { ReimburseExpenseHandler } from "../../../modules/expense-ledger/application/commands/reimburse-expense.command";
-import { CreateCategoryHandler } from "../../../modules/expense-ledger/application/commands/create-category.command";
-import { UpdateCategoryHandler } from "../../../modules/expense-ledger/application/commands/update-category.command";
-import { DeleteCategoryHandler } from "../../../modules/expense-ledger/application/commands/delete-category.command";
-import { CreateTagHandler } from "../../../modules/expense-ledger/application/commands/create-tag.command";
-import { UpdateTagHandler } from "../../../modules/expense-ledger/application/commands/update-tag.command";
-import { DeleteTagHandler } from "../../../modules/expense-ledger/application/commands/delete-tag.command";
-import { CreateAttachmentHandler } from "../../../modules/expense-ledger/application/commands/create-attachment.command";
-import { DeleteAttachmentHandler } from "../../../modules/expense-ledger/application/commands/delete-attachment.command";
+import { CreateExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-expense.command';
+import { UpdateExpenseHandler } from '../../../modules/expense-ledger/application/commands/update-expense.command';
+import { DeleteExpenseHandler } from '../../../modules/expense-ledger/application/commands/delete-expense.command';
+import { SubmitExpenseHandler } from '../../../modules/expense-ledger/application/commands/submit-expense.command';
+import { ApproveExpenseHandler } from '../../../modules/expense-ledger/application/commands/approve-expense.command';
+import { RejectExpenseHandler } from '../../../modules/expense-ledger/application/commands/reject-expense.command';
+import { ReimburseExpenseHandler } from '../../../modules/expense-ledger/application/commands/reimburse-expense.command';
+import { CreateCategoryHandler } from '../../../modules/expense-ledger/application/commands/create-category.command';
+import { UpdateCategoryHandler } from '../../../modules/expense-ledger/application/commands/update-category.command';
+import { DeleteCategoryHandler } from '../../../modules/expense-ledger/application/commands/delete-category.command';
+import { CreateTagHandler } from '../../../modules/expense-ledger/application/commands/create-tag.command';
+import { UpdateTagHandler } from '../../../modules/expense-ledger/application/commands/update-tag.command';
+import { DeleteTagHandler } from '../../../modules/expense-ledger/application/commands/delete-tag.command';
+import { CreateAttachmentHandler } from '../../../modules/expense-ledger/application/commands/create-attachment.command';
+import { DeleteAttachmentHandler } from '../../../modules/expense-ledger/application/commands/delete-attachment.command';
+import { CreateSplitHandler } from '../../../modules/expense-ledger/application/commands/create-split.command';
+import { DeleteSplitHandler } from '../../../modules/expense-ledger/application/commands/delete-split.command';
+import { RecordPaymentHandler } from '../../../modules/expense-ledger/application/commands/record-payment.command';
+import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
+import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
+import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
 
 // Expense-Ledger Module - Query Handlers
-import { GetExpenseHandler } from "../../../modules/expense-ledger/application/queries/get-expense.query";
-import { FilterExpensesHandler } from "../../../modules/expense-ledger/application/queries/filter-expenses.query";
-import { GetExpenseStatisticsHandler } from "../../../modules/expense-ledger/application/queries/get-expense-statistics.query";
-import { GetCategoryHandler } from "../../../modules/expense-ledger/application/queries/get-category.query";
-import { ListCategoriesHandler } from "../../../modules/expense-ledger/application/queries/list-categories.query";
-import { GetTagHandler } from "../../../modules/expense-ledger/application/queries/get-tag.query";
-import { ListTagsHandler } from "../../../modules/expense-ledger/application/queries/list-tags.query";
-import { GetAttachmentHandler } from "../../../modules/expense-ledger/application/queries/get-attachment.query";
-import { ListAttachmentsHandler } from "../../../modules/expense-ledger/application/queries/list-attachments.query";
+import { GetExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-expense.query';
+import { FilterExpensesHandler } from '../../../modules/expense-ledger/application/queries/filter-expenses.query';
+import { GetExpenseStatisticsHandler } from '../../../modules/expense-ledger/application/queries/get-expense-statistics.query';
+import { GetCategoryHandler } from '../../../modules/expense-ledger/application/queries/get-category.query';
+import { ListCategoriesHandler } from '../../../modules/expense-ledger/application/queries/list-categories.query';
+import { GetTagHandler } from '../../../modules/expense-ledger/application/queries/get-tag.query';
+import { ListTagsHandler } from '../../../modules/expense-ledger/application/queries/list-tags.query';
+import { GetAttachmentHandler } from '../../../modules/expense-ledger/application/queries/get-attachment.query';
+import { ListAttachmentsHandler } from '../../../modules/expense-ledger/application/queries/list-attachments.query';
 
-import { ExpenseController } from "../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller";
-import { CategoryController } from "../../../modules/expense-ledger/infrastructure/http/controllers/category.controller";
-import { TagController } from "../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller";
-import { AttachmentController } from "../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller";
-import { ExpenseSplitController } from "../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller";
+import { ExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller';
+import { CategoryController } from '../../../modules/expense-ledger/infrastructure/http/controllers/category.controller';
+import { TagController } from '../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller';
+import { AttachmentController } from '../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller';
+import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller';
 
 // Recurring Expense
-import { PrismaRecurringExpenseRepository } from "../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl";
-import { RecurringExpenseService } from "../../../modules/expense-ledger/application/services/recurring-expense.service";
-import { RecurringExpenseController } from "../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller";
+import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
+import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
+import { RecurringExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller';
 
 // Budget Management Module - Repositories
-import { BudgetRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget.repository.impl";
-import { BudgetAllocationRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget-allocation.repository.impl";
-import { BudgetAlertRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/budget-alert.repository.impl";
-import { SpendingLimitRepositoryImpl } from "../../../modules/budget-management/infrastructure/persistence/spending-limit.repository.impl";
+import { BudgetRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget.repository.impl';
+import { BudgetAllocationRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget-allocation.repository.impl';
+import { BudgetAlertRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget-alert.repository.impl';
+import { SpendingLimitRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/spending-limit.repository.impl';
 
 // Budget Management Module - Services
-import { BudgetService } from "../../../modules/budget-management/application/services/budget.service";
-import { SpendingLimitService } from "../../../modules/budget-management/application/services/spending-limit.service";
+import { BudgetService } from '../../../modules/budget-management/application/services/budget.service';
+import { SpendingLimitService } from '../../../modules/budget-management/application/services/spending-limit.service';
 
 // Budget Management Module - Command Handlers
-import { CreateBudgetHandler } from "../../../modules/budget-management/application/commands/create-budget.command";
-import { UpdateBudgetHandler } from "../../../modules/budget-management/application/commands/update-budget.command";
-import { DeleteBudgetHandler } from "../../../modules/budget-management/application/commands/delete-budget.command";
-import { ActivateBudgetHandler } from "../../../modules/budget-management/application/commands/activate-budget.command";
-import { ArchiveBudgetHandler } from "../../../modules/budget-management/application/commands/archive-budget.command";
-import { AddAllocationHandler } from "../../../modules/budget-management/application/commands/add-allocation.command";
-import { UpdateAllocationHandler } from "../../../modules/budget-management/application/commands/update-allocation.command";
-import { DeleteAllocationHandler } from "../../../modules/budget-management/application/commands/delete-allocation.command";
-import { CreateSpendingLimitHandler } from "../../../modules/budget-management/application/commands/create-spending-limit.command";
-import { UpdateSpendingLimitHandler } from "../../../modules/budget-management/application/commands/update-spending-limit.command";
-import { DeleteSpendingLimitHandler } from "../../../modules/budget-management/application/commands/delete-spending-limit.command";
+import { CreateBudgetHandler } from '../../../modules/budget-management/application/commands/create-budget.command';
+import { UpdateBudgetHandler } from '../../../modules/budget-management/application/commands/update-budget.command';
+import { DeleteBudgetHandler } from '../../../modules/budget-management/application/commands/delete-budget.command';
+import { ActivateBudgetHandler } from '../../../modules/budget-management/application/commands/activate-budget.command';
+import { ArchiveBudgetHandler } from '../../../modules/budget-management/application/commands/archive-budget.command';
+import { AddAllocationHandler } from '../../../modules/budget-management/application/commands/add-allocation.command';
+import { UpdateAllocationHandler } from '../../../modules/budget-management/application/commands/update-allocation.command';
+import { DeleteAllocationHandler } from '../../../modules/budget-management/application/commands/delete-allocation.command';
+import { CreateSpendingLimitHandler } from '../../../modules/budget-management/application/commands/create-spending-limit.command';
+import { UpdateSpendingLimitHandler } from '../../../modules/budget-management/application/commands/update-spending-limit.command';
+import { DeleteSpendingLimitHandler } from '../../../modules/budget-management/application/commands/delete-spending-limit.command';
 
 // Budget Management Module - Query Handlers
-import { GetBudgetHandler } from "../../../modules/budget-management/application/queries/get-budget.query";
-import { ListBudgetsHandler } from "../../../modules/budget-management/application/queries/list-budgets.query";
-import { GetAllocationsHandler } from "../../../modules/budget-management/application/queries/get-allocations.query";
-import { GetUnreadAlertsHandler } from "../../../modules/budget-management/application/queries/get-unread-alerts.query";
-import { ListSpendingLimitsHandler } from "../../../modules/budget-management/application/queries/list-spending-limits.query";
+import { GetBudgetHandler } from '../../../modules/budget-management/application/queries/get-budget.query';
+import { ListBudgetsHandler } from '../../../modules/budget-management/application/queries/list-budgets.query';
+import { GetAllocationsHandler } from '../../../modules/budget-management/application/queries/get-allocations.query';
+import { GetUnreadAlertsHandler } from '../../../modules/budget-management/application/queries/get-unread-alerts.query';
+import { ListSpendingLimitsHandler } from '../../../modules/budget-management/application/queries/list-spending-limits.query';
 
 // Budget Management Module - Controllers
-import { BudgetController } from "../../../modules/budget-management/infrastructure/http/controllers/budget.controller";
-import { SpendingLimitController } from "../../../modules/budget-management/infrastructure/http/controllers/spending-limit.controller";
+import { BudgetController } from '../../../modules/budget-management/infrastructure/http/controllers/budget.controller';
+import { SpendingLimitController } from '../../../modules/budget-management/infrastructure/http/controllers/spending-limit.controller';
 
 // Receipt Vault Module - Repositories
-import { ReceiptRepositoryImpl } from "../../../modules/receipt-vault/infrastructure/persistence/receipt.repository.impl";
-import { ReceiptMetadataRepositoryImpl } from "../../../modules/receipt-vault/infrastructure/persistence/receipt-metadata.repository.impl";
-import { ReceiptTagDefinitionRepositoryImpl } from "../../../modules/receipt-vault/infrastructure/persistence/receipt-tag-definition.repository.impl";
-import { ReceiptTagRepositoryImpl } from "../../../modules/receipt-vault/infrastructure/persistence/receipt-tag.repository.impl";
+import { ReceiptRepositoryImpl } from '../../../modules/receipt-vault/infrastructure/persistence/receipt.repository.impl';
+import { ReceiptMetadataRepositoryImpl } from '../../../modules/receipt-vault/infrastructure/persistence/receipt-metadata.repository.impl';
+import { ReceiptTagDefinitionRepositoryImpl } from '../../../modules/receipt-vault/infrastructure/persistence/receipt-tag-definition.repository.impl';
+import { ReceiptTagRepositoryImpl } from '../../../modules/receipt-vault/infrastructure/persistence/receipt-tag.repository.impl';
 
 // Receipt Vault Module - Services
-import { ReceiptService } from "../../../modules/receipt-vault/application/services/receipt.service";
-import { TagService as ReceiptTagService } from "../../../modules/receipt-vault/application/services/tag.service";
-import { LocalFileStorageAdapter } from "../../../modules/receipt-vault/infrastructure/adapters/local-file-storage.adapter";
-import * as path from "path";
+import { ReceiptService } from '../../../modules/receipt-vault/application/services/receipt.service';
+import { TagService as ReceiptTagService } from '../../../modules/receipt-vault/application/services/tag.service';
+import { LocalFileStorageAdapter } from '../../../modules/receipt-vault/infrastructure/adapters/local-file-storage.adapter';
+import * as path from 'path';
 
 // Receipt Vault Module - Command Handlers
-import { UploadReceiptHandler } from "../../../modules/receipt-vault/application/commands/upload-receipt.command";
-import { LinkReceiptToExpenseHandler } from "../../../modules/receipt-vault/application/commands/link-receipt-to-expense.command";
-import { UnlinkReceiptFromExpenseHandler } from "../../../modules/receipt-vault/application/commands/unlink-receipt-from-expense.command";
-import { ProcessReceiptHandler } from "../../../modules/receipt-vault/application/commands/process-receipt.command";
-import { VerifyReceiptHandler } from "../../../modules/receipt-vault/application/commands/verify-receipt.command";
-import { RejectReceiptHandler } from "../../../modules/receipt-vault/application/commands/reject-receipt.command";
-import { DeleteReceiptHandler } from "../../../modules/receipt-vault/application/commands/delete-receipt.command";
-import { AddReceiptMetadataHandler } from "../../../modules/receipt-vault/application/commands/add-receipt-metadata.command";
-import { UpdateReceiptMetadataHandler } from "../../../modules/receipt-vault/application/commands/update-receipt-metadata.command";
-import { AddReceiptTagHandler } from "../../../modules/receipt-vault/application/commands/add-receipt-tag.command";
-import { RemoveReceiptTagHandler } from "../../../modules/receipt-vault/application/commands/remove-receipt-tag.command";
-import { CreateTagHandler as CreateReceiptTagHandler } from "../../../modules/receipt-vault/application/commands/create-tag.command";
-import { UpdateTagHandler as UpdateReceiptTagHandler } from "../../../modules/receipt-vault/application/commands/update-tag.command";
-import { DeleteTagHandler as DeleteReceiptTagHandler } from "../../../modules/receipt-vault/application/commands/delete-tag.command";
+import { UploadReceiptHandler } from '../../../modules/receipt-vault/application/commands/upload-receipt.command';
+import { LinkReceiptToExpenseHandler } from '../../../modules/receipt-vault/application/commands/link-receipt-to-expense.command';
+import { UnlinkReceiptFromExpenseHandler } from '../../../modules/receipt-vault/application/commands/unlink-receipt-from-expense.command';
+import { ProcessReceiptHandler } from '../../../modules/receipt-vault/application/commands/process-receipt.command';
+import { VerifyReceiptHandler } from '../../../modules/receipt-vault/application/commands/verify-receipt.command';
+import { RejectReceiptHandler } from '../../../modules/receipt-vault/application/commands/reject-receipt.command';
+import { DeleteReceiptHandler } from '../../../modules/receipt-vault/application/commands/delete-receipt.command';
+import { AddReceiptMetadataHandler } from '../../../modules/receipt-vault/application/commands/add-receipt-metadata.command';
+import { UpdateReceiptMetadataHandler } from '../../../modules/receipt-vault/application/commands/update-receipt-metadata.command';
+import { AddReceiptTagHandler } from '../../../modules/receipt-vault/application/commands/add-receipt-tag.command';
+import { RemoveReceiptTagHandler } from '../../../modules/receipt-vault/application/commands/remove-receipt-tag.command';
+import { CreateTagHandler as CreateReceiptTagHandler } from '../../../modules/receipt-vault/application/commands/create-tag.command';
+import { UpdateTagHandler as UpdateReceiptTagHandler } from '../../../modules/receipt-vault/application/commands/update-tag.command';
+import { DeleteTagHandler as DeleteReceiptTagHandler } from '../../../modules/receipt-vault/application/commands/delete-tag.command';
 
 // Receipt Vault Module - Query Handlers
-import { GetReceiptHandler } from "../../../modules/receipt-vault/application/queries/get-receipt.query";
-import { ListReceiptsHandler } from "../../../modules/receipt-vault/application/queries/list-receipts.query";
-import { GetReceiptsByExpenseHandler } from "../../../modules/receipt-vault/application/queries/get-receipts-by-expense.query";
-import { GetReceiptMetadataHandler } from "../../../modules/receipt-vault/application/queries/get-receipt-metadata.query";
-import { GetReceiptStatsHandler } from "../../../modules/receipt-vault/application/queries/get-receipt-stats.query";
-import { ListTagsHandler as ListReceiptTagsHandler } from "../../../modules/receipt-vault/application/queries/list-tags.query";
+import { GetReceiptHandler } from '../../../modules/receipt-vault/application/queries/get-receipt.query';
+import { ListReceiptsHandler } from '../../../modules/receipt-vault/application/queries/list-receipts.query';
+import { GetReceiptsByExpenseHandler } from '../../../modules/receipt-vault/application/queries/get-receipts-by-expense.query';
+import { GetReceiptMetadataHandler } from '../../../modules/receipt-vault/application/queries/get-receipt-metadata.query';
+import { GetReceiptStatsHandler } from '../../../modules/receipt-vault/application/queries/get-receipt-stats.query';
+import { ListTagsHandler as ListReceiptTagsHandler } from '../../../modules/receipt-vault/application/queries/list-tags.query';
 
 // Receipt Vault Module - Controllers
-import { ReceiptController } from "../../../modules/receipt-vault/infrastructure/http/controllers/receipt.controller";
-import { TagController as ReceiptTagController } from "../../../modules/receipt-vault/infrastructure/http/controllers/tag.controller";
+import { ReceiptController } from '../../../modules/receipt-vault/infrastructure/http/controllers/receipt.controller';
+import { TagController as ReceiptTagController } from '../../../modules/receipt-vault/infrastructure/http/controllers/tag.controller';
 
 // Approval Workflow Module - Repositories
-import { PrismaApprovalChainRepository } from "../../../modules/approval-workflow/infrastructure/persistence/approval-chain.repository.impl";
-import { PrismaExpenseWorkflowRepository } from "../../../modules/approval-workflow/infrastructure/persistence/expense-workflow.repository.impl";
+import { PrismaApprovalChainRepository } from '../../../modules/approval-workflow/infrastructure/persistence/approval-chain.repository.impl';
+import { PrismaExpenseWorkflowRepository } from '../../../modules/approval-workflow/infrastructure/persistence/expense-workflow.repository.impl';
 
 // Approval Workflow Module - Services
-import { ApprovalChainService } from "../../../modules/approval-workflow/application/services/approval-chain.service";
-import { WorkflowService } from "../../../modules/approval-workflow/application/services/workflow.service";
+import { ApprovalChainService } from '../../../modules/approval-workflow/application/services/approval-chain.service';
+import { WorkflowService } from '../../../modules/approval-workflow/application/services/workflow.service';
 
 // Approval Workflow Module - Controllers
-import { ApprovalChainController } from "../../../modules/approval-workflow/infrastructure/http/controllers/approval-chain.controller";
-import { WorkflowController } from "../../../modules/approval-workflow/infrastructure/http/controllers/workflow.controller";
+import { ApprovalChainController } from '../../../modules/approval-workflow/infrastructure/http/controllers/approval-chain.controller';
+import { WorkflowController } from '../../../modules/approval-workflow/infrastructure/http/controllers/workflow.controller';
 
 // Notification Dispatch Module - Repositories
-import { NotificationRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification.repository.impl";
-import { NotificationTemplateRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification-template.repository.impl";
-import { NotificationPreferenceRepositoryImpl } from "../../../modules/notification-dispatch/infrastructure/persistence/notification-preference.repository.impl";
+import { NotificationRepositoryImpl } from '../../../modules/notification-dispatch/infrastructure/persistence/notification.repository.impl';
+import { NotificationTemplateRepositoryImpl } from '../../../modules/notification-dispatch/infrastructure/persistence/notification-template.repository.impl';
+import { NotificationPreferenceRepositoryImpl } from '../../../modules/notification-dispatch/infrastructure/persistence/notification-preference.repository.impl';
 
 // Notification Dispatch Module - Services
-import { NotificationService } from "../../../modules/notification-dispatch/application/services/notification.service";
-import { TemplateService } from "../../../modules/notification-dispatch/application/services/template.service";
-import { PreferenceService } from "../../../modules/notification-dispatch/application/services/preference.service";
+import { NotificationService } from '../../../modules/notification-dispatch/application/services/notification.service';
+import { TemplateService } from '../../../modules/notification-dispatch/application/services/template.service';
+import { PreferenceService } from '../../../modules/notification-dispatch/application/services/preference.service';
 
 // Notification Dispatch Module - Controllers
-import { NotificationController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/notification.controller";
-import { TemplateController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/template.controller";
-import { PreferenceController } from "../../../modules/notification-dispatch/infrastructure/http/controllers/preference.controller";
+import { NotificationController } from '../../../modules/notification-dispatch/infrastructure/http/controllers/notification.controller';
+import { TemplateController } from '../../../modules/notification-dispatch/infrastructure/http/controllers/template.controller';
+import { PreferenceController } from '../../../modules/notification-dispatch/infrastructure/http/controllers/preference.controller';
 
 // Cost Allocation Module - Repositories
-import { DepartmentRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/department.repository.impl";
-import { CostCenterRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/cost-center.repository.impl";
-import { ProjectRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/project.repository.impl";
-import { ExpenseAllocationRepositoryImpl } from "../../../modules/cost-allocation/infrastructure/persistence/expense-allocation.repository.impl";
+import { DepartmentRepositoryImpl } from '../../../modules/cost-allocation/infrastructure/persistence/department.repository.impl';
+import { CostCenterRepositoryImpl } from '../../../modules/cost-allocation/infrastructure/persistence/cost-center.repository.impl';
+import { ProjectRepositoryImpl } from '../../../modules/cost-allocation/infrastructure/persistence/project.repository.impl';
+import { ExpenseAllocationRepositoryImpl } from '../../../modules/cost-allocation/infrastructure/persistence/expense-allocation.repository.impl';
 
 // Cost Allocation Module - Services
-import { AllocationManagementService } from "../../../modules/cost-allocation/application/services/allocation-management.service";
-import { ExpenseAllocationService } from "../../../modules/cost-allocation/application/services/expense-allocation.service";
+import { AllocationManagementService } from '../../../modules/cost-allocation/application/services/allocation-management.service';
+import { ExpenseAllocationService } from '../../../modules/cost-allocation/application/services/expense-allocation.service';
 
 // Cost Allocation Module - Adapters
-import { PrismaExpenseLookupAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-expense-lookup.adapter";
-import { PrismaAllocationSummaryAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-allocation-summary.adapter";
-import { PrismaWorkspaceAccessAdapter } from "../../../modules/cost-allocation/infrastructure/adapters/prisma-workspace-access.adapter";
+import { PrismaExpenseLookupAdapter } from '../../../modules/cost-allocation/infrastructure/adapters/prisma-expense-lookup.adapter';
+import { PrismaAllocationSummaryAdapter } from '../../../modules/cost-allocation/infrastructure/adapters/prisma-allocation-summary.adapter';
+import { PrismaWorkspaceAccessAdapter } from '../../../modules/cost-allocation/infrastructure/adapters/prisma-workspace-access.adapter';
 
 // Cost Allocation Module - Command Handlers
-import { CreateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/create-department.command";
-import { UpdateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/update-department.command";
-import { DeleteDepartmentHandler } from "../../../modules/cost-allocation/application/commands/delete-department.command";
-import { ActivateDepartmentHandler } from "../../../modules/cost-allocation/application/commands/activate-department.command";
-import { CreateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/create-cost-center.command";
-import { UpdateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/update-cost-center.command";
-import { DeleteCostCenterHandler } from "../../../modules/cost-allocation/application/commands/delete-cost-center.command";
-import { ActivateCostCenterHandler } from "../../../modules/cost-allocation/application/commands/activate-cost-center.command";
-import { CreateProjectHandler } from "../../../modules/cost-allocation/application/commands/create-project.command";
-import { UpdateProjectHandler } from "../../../modules/cost-allocation/application/commands/update-project.command";
-import { DeleteProjectHandler } from "../../../modules/cost-allocation/application/commands/delete-project.command";
-import { ActivateProjectHandler } from "../../../modules/cost-allocation/application/commands/activate-project.command";
-import { AllocateExpenseHandler } from "../../../modules/cost-allocation/application/commands/allocate-expense.command";
-import { DeleteAllocationsHandler } from "../../../modules/cost-allocation/application/commands/delete-allocations.command";
+import { CreateDepartmentHandler } from '../../../modules/cost-allocation/application/commands/create-department.command';
+import { UpdateDepartmentHandler } from '../../../modules/cost-allocation/application/commands/update-department.command';
+import { DeleteDepartmentHandler } from '../../../modules/cost-allocation/application/commands/delete-department.command';
+import { ActivateDepartmentHandler } from '../../../modules/cost-allocation/application/commands/activate-department.command';
+import { CreateCostCenterHandler } from '../../../modules/cost-allocation/application/commands/create-cost-center.command';
+import { UpdateCostCenterHandler } from '../../../modules/cost-allocation/application/commands/update-cost-center.command';
+import { DeleteCostCenterHandler } from '../../../modules/cost-allocation/application/commands/delete-cost-center.command';
+import { ActivateCostCenterHandler } from '../../../modules/cost-allocation/application/commands/activate-cost-center.command';
+import { CreateProjectHandler } from '../../../modules/cost-allocation/application/commands/create-project.command';
+import { UpdateProjectHandler } from '../../../modules/cost-allocation/application/commands/update-project.command';
+import { DeleteProjectHandler } from '../../../modules/cost-allocation/application/commands/delete-project.command';
+import { ActivateProjectHandler } from '../../../modules/cost-allocation/application/commands/activate-project.command';
+import { AllocateExpenseHandler } from '../../../modules/cost-allocation/application/commands/allocate-expense.command';
+import { DeleteAllocationsHandler } from '../../../modules/cost-allocation/application/commands/delete-allocations.command';
 
 // Cost Allocation Module - Query Handlers
-import { GetDepartmentHandler } from "../../../modules/cost-allocation/application/queries/get-department.query";
-import { ListDepartmentsHandler } from "../../../modules/cost-allocation/application/queries/list-departments.query";
-import { GetCostCenterHandler } from "../../../modules/cost-allocation/application/queries/get-cost-center.query";
-import { ListCostCentersHandler } from "../../../modules/cost-allocation/application/queries/list-cost-centers.query";
-import { GetProjectHandler } from "../../../modules/cost-allocation/application/queries/get-project.query";
-import { ListProjectsHandler } from "../../../modules/cost-allocation/application/queries/list-projects.query";
-import { GetExpenseAllocationsHandler } from "../../../modules/cost-allocation/application/queries/get-expense-allocations.query";
-import { GetAllocationSummaryHandler } from "../../../modules/cost-allocation/application/queries/get-allocation-summary.query";
+import { GetDepartmentHandler } from '../../../modules/cost-allocation/application/queries/get-department.query';
+import { ListDepartmentsHandler } from '../../../modules/cost-allocation/application/queries/list-departments.query';
+import { GetCostCenterHandler } from '../../../modules/cost-allocation/application/queries/get-cost-center.query';
+import { ListCostCentersHandler } from '../../../modules/cost-allocation/application/queries/list-cost-centers.query';
+import { GetProjectHandler } from '../../../modules/cost-allocation/application/queries/get-project.query';
+import { ListProjectsHandler } from '../../../modules/cost-allocation/application/queries/list-projects.query';
+import { GetExpenseAllocationsHandler } from '../../../modules/cost-allocation/application/queries/get-expense-allocations.query';
+import { GetAllocationSummaryHandler } from '../../../modules/cost-allocation/application/queries/get-allocation-summary.query';
 
 // Cost Allocation Module - Controllers
-import { AllocationManagementController } from "../../../modules/cost-allocation/infrastructure/http/controllers/allocation-management.controller";
-import { ExpenseAllocationController } from "../../../modules/cost-allocation/infrastructure/http/controllers/expense-allocation.controller";
+import { AllocationManagementController } from '../../../modules/cost-allocation/infrastructure/http/controllers/allocation-management.controller';
+import { ExpenseAllocationController } from '../../../modules/cost-allocation/infrastructure/http/controllers/expense-allocation.controller';
 
 // Categorization Rules Module - Repositories
-import { PrismaCategoryRuleRepository } from "../../../modules/categorization-rules/infrastructure/persistence/category-rule.repository.impl";
-import { PrismaRuleExecutionRepository } from "../../../modules/categorization-rules/infrastructure/persistence/rule-execution.repository.impl";
-import { PrismaCategorySuggestionRepository } from "../../../modules/categorization-rules/infrastructure/persistence/category-suggestion.repository.impl";
+import { PrismaCategoryRuleRepository } from '../../../modules/categorization-rules/infrastructure/persistence/category-rule.repository.impl';
+import { PrismaRuleExecutionRepository } from '../../../modules/categorization-rules/infrastructure/persistence/rule-execution.repository.impl';
+import { PrismaCategorySuggestionRepository } from '../../../modules/categorization-rules/infrastructure/persistence/category-suggestion.repository.impl';
 
 // Categorization Rules Module - Services
-import { CategoryRuleService } from "../../../modules/categorization-rules/application/services/category-rule.service";
-import { RuleExecutionService } from "../../../modules/categorization-rules/application/services/rule-execution.service";
-import { CategorySuggestionService } from "../../../modules/categorization-rules/application/services/category-suggestion.service";
+import { CategoryRuleService } from '../../../modules/categorization-rules/application/services/category-rule.service';
+import { RuleExecutionService } from '../../../modules/categorization-rules/application/services/rule-execution.service';
+import { CategorySuggestionService } from '../../../modules/categorization-rules/application/services/category-suggestion.service';
 
 // Categorization Rules Module - Command Handlers
-import { CreateCategoryRuleHandler } from "../../../modules/categorization-rules/application/commands/create-category-rule.command";
-import { UpdateCategoryRuleHandler } from "../../../modules/categorization-rules/application/commands/update-category-rule.command";
-import { DeleteCategoryRuleHandler } from "../../../modules/categorization-rules/application/commands/delete-category-rule.command";
-import { ActivateCategoryRuleHandler } from "../../../modules/categorization-rules/application/commands/activate-category-rule.command";
-import { DeactivateCategoryRuleHandler } from "../../../modules/categorization-rules/application/commands/deactivate-category-rule.command";
-import { EvaluateRulesHandler } from "../../../modules/categorization-rules/application/commands/evaluate-rules.command";
-import { CreateSuggestionHandler } from "../../../modules/categorization-rules/application/commands/create-suggestion.command";
-import { AcceptSuggestionHandler } from "../../../modules/categorization-rules/application/commands/accept-suggestion.command";
-import { RejectSuggestionHandler } from "../../../modules/categorization-rules/application/commands/reject-suggestion.command";
-import { DeleteSuggestionHandler } from "../../../modules/categorization-rules/application/commands/delete-suggestion.command";
+import { CreateCategoryRuleHandler } from '../../../modules/categorization-rules/application/commands/create-category-rule.command';
+import { UpdateCategoryRuleHandler } from '../../../modules/categorization-rules/application/commands/update-category-rule.command';
+import { DeleteCategoryRuleHandler } from '../../../modules/categorization-rules/application/commands/delete-category-rule.command';
+import { ActivateCategoryRuleHandler } from '../../../modules/categorization-rules/application/commands/activate-category-rule.command';
+import { DeactivateCategoryRuleHandler } from '../../../modules/categorization-rules/application/commands/deactivate-category-rule.command';
+import { EvaluateRulesHandler } from '../../../modules/categorization-rules/application/commands/evaluate-rules.command';
+import { CreateSuggestionHandler } from '../../../modules/categorization-rules/application/commands/create-suggestion.command';
+import { AcceptSuggestionHandler } from '../../../modules/categorization-rules/application/commands/accept-suggestion.command';
+import { RejectSuggestionHandler } from '../../../modules/categorization-rules/application/commands/reject-suggestion.command';
+import { DeleteSuggestionHandler } from '../../../modules/categorization-rules/application/commands/delete-suggestion.command';
 
 // Categorization Rules Module - Query Handlers
-import { GetRuleByIdHandler } from "../../../modules/categorization-rules/application/queries/get-rule-by-id.query";
-import { GetRulesByWorkspaceHandler } from "../../../modules/categorization-rules/application/queries/get-rules-by-workspace.query";
-import { GetActiveRulesByWorkspaceHandler } from "../../../modules/categorization-rules/application/queries/get-active-rules-by-workspace.query";
-import { GetExecutionsByRuleHandler } from "../../../modules/categorization-rules/application/queries/get-executions-by-rule.query";
-import { GetExecutionsByExpenseHandler } from "../../../modules/categorization-rules/application/queries/get-executions-by-expense.query";
-import { GetExecutionsByWorkspaceHandler } from "../../../modules/categorization-rules/application/queries/get-executions-by-workspace.query";
-import { GetSuggestionByIdHandler } from "../../../modules/categorization-rules/application/queries/get-suggestion-by-id.query";
-import { GetSuggestionsByExpenseHandler } from "../../../modules/categorization-rules/application/queries/get-suggestions-by-expense.query";
-import { GetPendingSuggestionsByWorkspaceHandler } from "../../../modules/categorization-rules/application/queries/get-pending-suggestions-by-workspace.query";
-import { GetSuggestionsByWorkspaceHandler } from "../../../modules/categorization-rules/application/queries/get-suggestions-by-workspace.query";
+import { GetRuleByIdHandler } from '../../../modules/categorization-rules/application/queries/get-rule-by-id.query';
+import { GetRulesByWorkspaceHandler } from '../../../modules/categorization-rules/application/queries/get-rules-by-workspace.query';
+import { GetActiveRulesByWorkspaceHandler } from '../../../modules/categorization-rules/application/queries/get-active-rules-by-workspace.query';
+import { GetExecutionsByRuleHandler } from '../../../modules/categorization-rules/application/queries/get-executions-by-rule.query';
+import { GetExecutionsByExpenseHandler } from '../../../modules/categorization-rules/application/queries/get-executions-by-expense.query';
+import { GetExecutionsByWorkspaceHandler } from '../../../modules/categorization-rules/application/queries/get-executions-by-workspace.query';
+import { GetSuggestionByIdHandler } from '../../../modules/categorization-rules/application/queries/get-suggestion-by-id.query';
+import { GetSuggestionsByExpenseHandler } from '../../../modules/categorization-rules/application/queries/get-suggestions-by-expense.query';
+import { GetPendingSuggestionsByWorkspaceHandler } from '../../../modules/categorization-rules/application/queries/get-pending-suggestions-by-workspace.query';
+import { GetSuggestionsByWorkspaceHandler } from '../../../modules/categorization-rules/application/queries/get-suggestions-by-workspace.query';
 
 // Categorization Rules Module - Controllers
-import { CategoryRuleController } from "../../../modules/categorization-rules/infrastructure/http/controllers/category-rule.controller";
-import { RuleExecutionController } from "../../../modules/categorization-rules/infrastructure/http/controllers/rule-execution.controller";
-import { CategorySuggestionController } from "../../../modules/categorization-rules/infrastructure/http/controllers/category-suggestion.controller";
+import { CategoryRuleController } from '../../../modules/categorization-rules/infrastructure/http/controllers/category-rule.controller';
+import { RuleExecutionController } from '../../../modules/categorization-rules/infrastructure/http/controllers/rule-execution.controller';
+import { CategorySuggestionController } from '../../../modules/categorization-rules/infrastructure/http/controllers/category-suggestion.controller';
 
 // Budget Planning Module - Repositories
-import { BudgetPlanRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/budget-plan.repository.impl";
-import { ForecastRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/forecast.repository.impl";
-import { ScenarioRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/scenario.repository.impl";
-import { ForecastItemRepositoryImpl } from "../../../modules/budget-planning/infrastructure/persistence/forecast-item.repository.impl";
+import { BudgetPlanRepositoryImpl } from '../../../modules/budget-planning/infrastructure/persistence/budget-plan.repository.impl';
+import { ForecastRepositoryImpl } from '../../../modules/budget-planning/infrastructure/persistence/forecast.repository.impl';
+import { ScenarioRepositoryImpl } from '../../../modules/budget-planning/infrastructure/persistence/scenario.repository.impl';
+import { ForecastItemRepositoryImpl } from '../../../modules/budget-planning/infrastructure/persistence/forecast-item.repository.impl';
 
 // Budget Planning Module - Services
-import { BudgetPlanService } from "../../../modules/budget-planning/application/services/budget-plan.service";
-import { ForecastService } from "../../../modules/budget-planning/application/services/forecast.service";
-import { ScenarioService } from "../../../modules/budget-planning/application/services/scenario.service";
+import { BudgetPlanService } from '../../../modules/budget-planning/application/services/budget-plan.service';
+import { ForecastService } from '../../../modules/budget-planning/application/services/forecast.service';
+import { ScenarioService } from '../../../modules/budget-planning/application/services/scenario.service';
 
 // Budget Planning Module - Command Handlers
-import { CreateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/create-budget-plan.command";
-import { UpdateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/update-budget-plan.command";
-import { ActivateBudgetPlanHandler } from "../../../modules/budget-planning/application/commands/activate-budget-plan.command";
-import { CreateForecastHandler } from "../../../modules/budget-planning/application/commands/create-forecast.command";
-import { AddForecastItemHandler } from "../../../modules/budget-planning/application/commands/add-forecast-item.command";
-import { CreateScenarioHandler } from "../../../modules/budget-planning/application/commands/create-scenario.command";
+import { CreateBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/create-budget-plan.command';
+import { UpdateBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/update-budget-plan.command';
+import { ActivateBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/activate-budget-plan.command';
+import { CreateForecastHandler } from '../../../modules/budget-planning/application/commands/create-forecast.command';
+import { AddForecastItemHandler } from '../../../modules/budget-planning/application/commands/add-forecast-item.command';
+import { CreateScenarioHandler } from '../../../modules/budget-planning/application/commands/create-scenario.command';
 
 // Budget Planning Module - Query Handlers
-import { GetBudgetPlanHandler } from "../../../modules/budget-planning/application/queries/get-budget-plan.query";
-import { ListBudgetPlansHandler } from "../../../modules/budget-planning/application/queries/list-budget-plans.query";
-import { GetForecastHandler } from "../../../modules/budget-planning/application/queries/get-forecast.query";
-import { ListForecastsHandler } from "../../../modules/budget-planning/application/queries/list-forecasts.query";
-import { GetForecastItemsHandler } from "../../../modules/budget-planning/application/queries/get-forecast-items.query";
+import { GetBudgetPlanHandler } from '../../../modules/budget-planning/application/queries/get-budget-plan.query';
+import { ListBudgetPlansHandler } from '../../../modules/budget-planning/application/queries/list-budget-plans.query';
+import { GetForecastHandler } from '../../../modules/budget-planning/application/queries/get-forecast.query';
+import { ListForecastsHandler } from '../../../modules/budget-planning/application/queries/list-forecasts.query';
+import { GetForecastItemsHandler } from '../../../modules/budget-planning/application/queries/get-forecast-items.query';
 
 // Budget Planning Module - Controllers
-import { BudgetPlanController } from "../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller";
-import { ForecastController } from "../../../modules/budget-planning/infrastructure/http/controllers/forecast.controller";
-import { ScenarioController } from "../../../modules/budget-planning/infrastructure/http/controllers/scenario.controller";
+import { BudgetPlanController } from '../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller';
+import { ForecastController } from '../../../modules/budget-planning/infrastructure/http/controllers/forecast.controller';
+import { ScenarioController } from '../../../modules/budget-planning/infrastructure/http/controllers/scenario.controller';
 
 // Policy Controls Module - Repositories
-import { PrismaPolicyRepository } from "../../../modules/policy-controls/infrastructure/persistence/policy.repository.impl";
-import { PrismaViolationRepository } from "../../../modules/policy-controls/infrastructure/persistence/violation.repository.impl";
-import { PrismaExemptionRepository } from "../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl";
+import { PrismaPolicyRepository } from '../../../modules/policy-controls/infrastructure/persistence/policy.repository.impl';
+import { PrismaViolationRepository } from '../../../modules/policy-controls/infrastructure/persistence/violation.repository.impl';
+import { PrismaExemptionRepository } from '../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl';
 
 // Policy Controls Module - Services
-import { PolicyService } from "../../../modules/policy-controls/application/services/policy.service";
-import { ViolationService } from "../../../modules/policy-controls/application/services/violation.service";
-import { ExemptionService } from "../../../modules/policy-controls/application/services/exemption.service";
-import { PolicyEvaluationService } from "../../../modules/policy-controls/application/services/policy-evaluation.service";
+import { PolicyService } from '../../../modules/policy-controls/application/services/policy.service';
+import { ViolationService } from '../../../modules/policy-controls/application/services/violation.service';
+import { ExemptionService } from '../../../modules/policy-controls/application/services/exemption.service';
+import { PolicyEvaluationService } from '../../../modules/policy-controls/application/services/policy-evaluation.service';
 
 // Policy Controls Module - Controllers
-import { PolicyController } from "../../../modules/policy-controls/infrastructure/http/controllers/policy.controller";
-import { ViolationController } from "../../../modules/policy-controls/infrastructure/http/controllers/violation.controller";
-import { ExemptionController } from "../../../modules/policy-controls/infrastructure/http/controllers/exemption.controller";
+import { PolicyController } from '../../../modules/policy-controls/infrastructure/http/controllers/policy.controller';
+import { ViolationController } from '../../../modules/policy-controls/infrastructure/http/controllers/violation.controller';
+import { ExemptionController } from '../../../modules/policy-controls/infrastructure/http/controllers/exemption.controller';
 
 // Bank Feed Sync Module - Repositories
-import { PrismaBankConnectionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/bank-connection.repository.impl";
-import { PrismaSyncSessionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/sync-session.repository.impl";
-import { PrismaBankTransactionRepository } from "../../../modules/bank-feed-sync/infrastructure/persistence/bank-transaction.repository.impl";
+import { PrismaBankConnectionRepository } from '../../../modules/bank-feed-sync/infrastructure/persistence/bank-connection.repository.impl';
+import { PrismaSyncSessionRepository } from '../../../modules/bank-feed-sync/infrastructure/persistence/sync-session.repository.impl';
+import { PrismaBankTransactionRepository } from '../../../modules/bank-feed-sync/infrastructure/persistence/bank-transaction.repository.impl';
 
 // Bank Feed Sync Module - Services
-import { BankConnectionService } from "../../../modules/bank-feed-sync/application/services/bank-connection.service";
-import { TransactionSyncService } from "../../../modules/bank-feed-sync/application/services/transaction-sync.service";
-import { BankTransactionService } from "../../../modules/bank-feed-sync/application/services/bank-transaction.service";
+import { BankConnectionService } from '../../../modules/bank-feed-sync/application/services/bank-connection.service';
+import { TransactionSyncService } from '../../../modules/bank-feed-sync/application/services/transaction-sync.service';
+import { BankTransactionService } from '../../../modules/bank-feed-sync/application/services/bank-transaction.service';
 
 // Bank Feed Sync Module - Command Handlers
 import {
@@ -320,36 +326,36 @@ import {
   UpdateConnectionTokenHandler,
   SyncTransactionsHandler,
   ProcessTransactionHandler,
-} from "../../../modules/bank-feed-sync/application/commands";
+} from '../../../modules/bank-feed-sync/application/commands';
 
 // Bank Feed Sync Module - Query Handlers
 import {
   GetBankConnectionsHandler,
   GetSyncHistoryHandler,
   GetPendingTransactionsHandler,
-} from "../../../modules/bank-feed-sync/application/queries";
+} from '../../../modules/bank-feed-sync/application/queries';
 
 // Bank Feed Sync Module - Controllers
-import { BankConnectionController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-connection.controller";
-import { TransactionSyncController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/transaction-sync.controller";
-import { BankTransactionController } from "../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-transaction.controller";
+import { BankConnectionController } from '../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-connection.controller';
+import { TransactionSyncController } from '../../../modules/bank-feed-sync/infrastructure/http/controllers/transaction-sync.controller';
+import { BankTransactionController } from '../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-transaction.controller';
 
 // Event Outbox Module - Repositories
-import { OutboxEventRepositoryImpl } from "../../../modules/event-outbox/infrastructure/persistence/outbox-event.repository.impl";
-import { IOutboxEventRepository } from "../../../modules/event-outbox/domain/repositories/outbox-event.repository";
+import { OutboxEventRepositoryImpl } from '../../../modules/event-outbox/infrastructure/persistence/outbox-event.repository.impl';
+import { IOutboxEventRepository } from '../../../modules/event-outbox/domain/repositories/outbox-event.repository';
 
 // Event Outbox Module - Services
-import { OutboxEventService } from "../../../modules/event-outbox/application/services/outbox-event.service";
+import { OutboxEventService } from '../../../modules/event-outbox/application/services/outbox-event.service';
 
 // Event Outbox Module - Command Handlers
-import { StoreOutboxEventHandler } from "../../../modules/event-outbox/application/commands/store-outbox-event.command";
+import { StoreOutboxEventHandler } from '../../../modules/event-outbox/application/commands/store-outbox-event.command';
 
 // Event Outbox Module - Query Handlers
-import { ProcessPendingEventsHandler } from "../../../modules/event-outbox/application/queries/process-pending-events.query";
-import { GetFailedEventsHandler } from "../../../modules/event-outbox/application/queries/get-failed-events.query";
+import { ProcessPendingEventsHandler } from '../../../modules/event-outbox/application/queries/process-pending-events.query';
+import { GetFailedEventsHandler } from '../../../modules/event-outbox/application/queries/get-failed-events.query';
 
 // Event Outbox Module - Controllers
-import { OutboxEventController } from "../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller";
+import { OutboxEventController } from '../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller';
 
 /**
  * Dependency Injection Container
@@ -384,44 +390,44 @@ export class Container {
     const workspaceRepository = new WorkspaceRepositoryImpl(prisma, eventBus);
     const workspaceMembershipRepository = new WorkspaceMembershipRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
     const workspaceInvitationRepository = new WorkspaceInvitationRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
 
-    this.services.set("userRepository", userRepository);
-    this.services.set("workspaceRepository", workspaceRepository);
+    this.services.set('userRepository', userRepository);
+    this.services.set('workspaceRepository', workspaceRepository);
     this.services.set(
-      "workspaceMembershipRepository",
-      workspaceMembershipRepository,
+      'workspaceMembershipRepository',
+      workspaceMembershipRepository
     );
     this.services.set(
-      "workspaceInvitationRepository",
-      workspaceInvitationRepository,
+      'workspaceInvitationRepository',
+      workspaceInvitationRepository
     );
 
     // Services
     const userManagementService = new UserManagementService(userRepository);
     const workspaceManagementService = new WorkspaceManagementService(
       workspaceRepository,
-      workspaceMembershipRepository,
+      workspaceMembershipRepository
     );
     const workspaceMembershipService = new WorkspaceMembershipService(
       workspaceMembershipRepository,
-      cacheService,
+      cacheService
     );
     const workspaceInvitationService = new WorkspaceInvitationService(
       workspaceInvitationRepository,
       workspaceMembershipRepository,
-      userRepository,
+      userRepository
     );
 
-    this.services.set("userManagementService", userManagementService);
-    this.services.set("workspaceManagementService", workspaceManagementService);
-    this.services.set("workspaceMembershipService", workspaceMembershipService);
-    this.services.set("workspaceInvitationService", workspaceInvitationService);
+    this.services.set('userManagementService', userManagementService);
+    this.services.set('workspaceManagementService', workspaceManagementService);
+    this.services.set('workspaceMembershipService', workspaceMembershipService);
+    this.services.set('workspaceInvitationService', workspaceInvitationService);
 
     // ============================================
     // Expense-Ledger Module
@@ -434,60 +440,59 @@ export class Container {
     const attachmentRepository = new AttachmentRepositoryImpl(prisma, eventBus);
     const recurringExpenseRepository = new PrismaRecurringExpenseRepository(
       prisma,
-      eventBus,
+      eventBus
     );
     const expenseSplitRepository = new ExpenseSplitRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
     const splitSettlementRepository = new SplitSettlementRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
 
-    this.services.set("expenseRepository", expenseRepository);
-    this.services.set("categoryRepository", categoryRepository);
-    this.services.set("tagRepository", tagRepository);
-    this.services.set("attachmentRepository", attachmentRepository);
-    this.services.set("recurringExpenseRepository", recurringExpenseRepository);
-    this.services.set("expenseSplitRepository", expenseSplitRepository);
-    this.services.set("splitSettlementRepository", splitSettlementRepository);
+    this.services.set('expenseRepository', expenseRepository);
+    this.services.set('categoryRepository', categoryRepository);
+    this.services.set('tagRepository', tagRepository);
+    this.services.set('attachmentRepository', attachmentRepository);
+    this.services.set('recurringExpenseRepository', recurringExpenseRepository);
+    this.services.set('expenseSplitRepository', expenseSplitRepository);
+    this.services.set('splitSettlementRepository', splitSettlementRepository);
 
     // Services
-    const expenseService = new ExpenseService(
-      expenseRepository,
-      categoryRepository,
-      tagRepository,
-    );
+    const expenseService = new ExpenseService(expenseRepository);
     const categoryService = new CategoryService(
       categoryRepository,
-      cacheService,
+      cacheService
     );
     const tagService = new TagService(tagRepository);
-    const attachmentService = new AttachmentService(
-      attachmentRepository,
-      expenseRepository,
-    );
+    const attachmentService = new AttachmentService(attachmentRepository);
     const recurringExpenseService = new RecurringExpenseService(
       recurringExpenseRepository,
-      expenseService,
+      expenseService
     );
     const expenseSplitService = new ExpenseSplitService(
       expenseSplitRepository,
-      splitSettlementRepository,
-      expenseRepository,
+      splitSettlementRepository
     );
 
-    this.services.set("expenseService", expenseService);
-    this.services.set("categoryService", categoryService);
-    this.services.set("tagService", tagService);
-    this.services.set("attachmentService", attachmentService);
-    this.services.set("recurringExpenseService", recurringExpenseService);
-    this.services.set("expenseSplitService", expenseSplitService);
+    this.services.set('expenseService', expenseService);
+    this.services.set('categoryService', categoryService);
+    this.services.set('tagService', tagService);
+    this.services.set('attachmentService', attachmentService);
+    this.services.set('recurringExpenseService', recurringExpenseService);
+    this.services.set('expenseSplitService', expenseSplitService);
 
     // Command Handlers
-    const createExpenseHandler = new CreateExpenseHandler(expenseService);
-    const updateExpenseHandler = new UpdateExpenseHandler(expenseService);
+    const createExpenseHandler = new CreateExpenseHandler(
+      expenseService,
+      categoryRepository,
+      tagRepository
+    );
+    const updateExpenseHandler = new UpdateExpenseHandler(
+      expenseService,
+      categoryRepository
+    );
     const deleteExpenseHandler = new DeleteExpenseHandler(expenseService);
     const submitExpenseHandler = new SubmitExpenseHandler(expenseService);
     const approveExpenseHandler = new ApproveExpenseHandler(expenseService);
@@ -496,7 +501,10 @@ export class Container {
 
     const createCategoryHandler = new CreateCategoryHandler(categoryService);
     const updateCategoryHandler = new UpdateCategoryHandler(categoryService);
-    const deleteCategoryHandler = new DeleteCategoryHandler(categoryService);
+    const deleteCategoryHandler = new DeleteCategoryHandler(
+      categoryService,
+      expenseRepository
+    );
 
     const createTagHandler = new CreateTagHandler(tagService);
     const updateTagHandler = new UpdateTagHandler(tagService);
@@ -504,16 +512,18 @@ export class Container {
 
     const createAttachmentHandler = new CreateAttachmentHandler(
       attachmentService,
+      expenseService
     );
     const deleteAttachmentHandler = new DeleteAttachmentHandler(
       attachmentService,
+      expenseService
     );
 
     // Query Handlers
     const getExpenseHandler = new GetExpenseHandler(expenseService);
     const filterExpensesHandler = new FilterExpensesHandler(expenseService);
     const getExpenseStatisticsHandler = new GetExpenseStatisticsHandler(
-      expenseService,
+      expenseService
     );
 
     const getCategoryHandler = new GetCategoryHandler(categoryService);
@@ -524,7 +534,7 @@ export class Container {
 
     const getAttachmentHandler = new GetAttachmentHandler(attachmentService);
     const listAttachmentsHandler = new ListAttachmentsHandler(
-      attachmentService,
+      attachmentService
     );
 
     // Controllers
@@ -538,7 +548,7 @@ export class Container {
       reimburseExpenseHandler,
       getExpenseHandler,
       filterExpensesHandler,
-      getExpenseStatisticsHandler,
+      getExpenseStatisticsHandler
     );
 
     const categoryController = new CategoryController(
@@ -546,7 +556,7 @@ export class Container {
       updateCategoryHandler,
       deleteCategoryHandler,
       getCategoryHandler,
-      listCategoriesHandler,
+      listCategoriesHandler
     );
 
     const tagController = new TagController(
@@ -554,30 +564,50 @@ export class Container {
       updateTagHandler,
       deleteTagHandler,
       getTagHandler,
-      listTagsHandler,
+      listTagsHandler
     );
 
     const attachmentController = new AttachmentController(
       createAttachmentHandler,
       deleteAttachmentHandler,
       getAttachmentHandler,
-      listAttachmentsHandler,
+      listAttachmentsHandler
     );
 
     const recurringExpenseController = new RecurringExpenseController(
-      recurringExpenseService,
+      recurringExpenseService
+    );
+
+    const createSplitHandler = new CreateSplitHandler(
+      expenseSplitService,
+      expenseService
+    );
+    const deleteSplitHandler = new DeleteSplitHandler(expenseSplitService);
+    const recordPaymentHandler = new RecordPaymentHandler(expenseSplitService);
+    const getSplitHandler = new GetSplitHandler(expenseSplitService);
+    const listUserSplitsHandler = new ListUserSplitsHandler(
+      expenseSplitService
+    );
+    const listUserSettlementsHandler = new ListUserSettlementsHandler(
+      expenseSplitService
     );
 
     const expenseSplitController = new ExpenseSplitController(
-      expenseSplitService,
+      createSplitHandler,
+      deleteSplitHandler,
+      recordPaymentHandler,
+      getSplitHandler,
+      listUserSplitsHandler,
+      listUserSettlementsHandler,
+      expenseSplitService
     );
 
-    this.services.set("expenseController", expenseController);
-    this.services.set("categoryController", categoryController);
-    this.services.set("tagController", tagController);
-    this.services.set("attachmentController", attachmentController);
-    this.services.set("recurringExpenseController", recurringExpenseController);
-    this.services.set("expenseSplitController", expenseSplitController);
+    this.services.set('expenseController', expenseController);
+    this.services.set('categoryController', categoryController);
+    this.services.set('tagController', tagController);
+    this.services.set('attachmentController', attachmentController);
+    this.services.set('recurringExpenseController', recurringExpenseController);
+    this.services.set('expenseSplitController', expenseSplitController);
 
     // ============================================
     // Budget Management Module
@@ -587,28 +617,28 @@ export class Container {
     const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
 
-    this.services.set("budgetRepository", budgetRepository);
-    this.services.set("budgetAllocationRepository", budgetAllocationRepository);
-    this.services.set("budgetAlertRepository", budgetAlertRepository);
-    this.services.set("spendingLimitRepository", spendingLimitRepository);
+    this.services.set('budgetRepository', budgetRepository);
+    this.services.set('budgetAllocationRepository', budgetAllocationRepository);
+    this.services.set('budgetAlertRepository', budgetAlertRepository);
+    this.services.set('spendingLimitRepository', spendingLimitRepository);
 
     // Services
     const budgetService = new BudgetService(
       budgetRepository,
       budgetAllocationRepository,
-      budgetAlertRepository,
+      budgetAlertRepository
     );
     const spendingLimitService = new SpendingLimitService(
-      spendingLimitRepository,
+      spendingLimitRepository
     );
 
-    this.services.set("budgetService", budgetService);
-    this.services.set("spendingLimitService", spendingLimitService);
+    this.services.set('budgetService', budgetService);
+    this.services.set('spendingLimitService', spendingLimitService);
 
     // Command Handlers
     const createBudgetHandler = new CreateBudgetHandler(budgetService);
@@ -620,13 +650,13 @@ export class Container {
     const updateAllocationHandler = new UpdateAllocationHandler(budgetService);
     const deleteAllocationHandler = new DeleteAllocationHandler(budgetService);
     const createSpendingLimitHandler = new CreateSpendingLimitHandler(
-      spendingLimitService,
+      spendingLimitService
     );
     const updateSpendingLimitHandler = new UpdateSpendingLimitHandler(
-      spendingLimitService,
+      spendingLimitService
     );
     const deleteSpendingLimitHandler = new DeleteSpendingLimitHandler(
-      spendingLimitService,
+      spendingLimitService
     );
 
     // Query Handlers
@@ -635,7 +665,7 @@ export class Container {
     const getAllocationsHandler = new GetAllocationsHandler(budgetService);
     const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
-      spendingLimitService,
+      spendingLimitService
     );
 
     // Controllers
@@ -651,18 +681,18 @@ export class Container {
       getBudgetHandler,
       listBudgetsHandler,
       getAllocationsHandler,
-      getUnreadAlertsHandler,
+      getUnreadAlertsHandler
     );
 
     const spendingLimitController = new SpendingLimitController(
       createSpendingLimitHandler,
       updateSpendingLimitHandler,
       deleteSpendingLimitHandler,
-      listSpendingLimitsHandler,
+      listSpendingLimitsHandler
     );
 
-    this.services.set("budgetController", budgetController);
-    this.services.set("spendingLimitController", spendingLimitController);
+    this.services.set('budgetController', budgetController);
+    this.services.set('spendingLimitController', spendingLimitController);
 
     // ============================================
     // Receipt Vault Module
@@ -675,77 +705,77 @@ export class Container {
       new ReceiptTagDefinitionRepositoryImpl(prisma);
     const receiptTagRepository = new ReceiptTagRepositoryImpl(prisma);
 
-    this.services.set("receiptRepository", receiptRepository);
-    this.services.set("receiptMetadataRepository", receiptMetadataRepository);
+    this.services.set('receiptRepository', receiptRepository);
+    this.services.set('receiptMetadataRepository', receiptMetadataRepository);
     this.services.set(
-      "receiptTagDefinitionRepository",
-      receiptTagDefinitionRepository,
+      'receiptTagDefinitionRepository',
+      receiptTagDefinitionRepository
     );
-    this.services.set("receiptTagRepository", receiptTagRepository);
+    this.services.set('receiptTagRepository', receiptTagRepository);
 
     // Services
     const fileStorageService = new LocalFileStorageAdapter(
-      path.join(process.cwd(), "uploads"), // Verify this path is correct for your setup
-      process.env.UPLOAD_BASE_URL || "http://localhost:3000/uploads",
+      path.join(process.cwd(), 'uploads'), // Verify this path is correct for your setup
+      process.env.UPLOAD_BASE_URL || 'http://localhost:3000/uploads'
     );
 
     const receiptService = new ReceiptService(
       receiptRepository,
       receiptMetadataRepository,
       receiptTagRepository,
-      fileStorageService,
+      fileStorageService
     );
     const receiptTagService = new ReceiptTagService(
       receiptTagDefinitionRepository,
-      receiptTagRepository,
+      receiptTagRepository
     );
 
-    this.services.set("fileStorageService", fileStorageService);
-    this.services.set("receiptService", receiptService);
-    this.services.set("receiptTagService", receiptTagService);
+    this.services.set('fileStorageService', fileStorageService);
+    this.services.set('receiptService', receiptService);
+    this.services.set('receiptTagService', receiptTagService);
 
     // Command Handlers
     const uploadReceiptHandler = new UploadReceiptHandler(receiptService);
     const linkReceiptToExpenseHandler = new LinkReceiptToExpenseHandler(
-      receiptService,
+      receiptService
     );
     const unlinkReceiptFromExpenseHandler = new UnlinkReceiptFromExpenseHandler(
-      receiptService,
+      receiptService
     );
     const processReceiptHandler = new ProcessReceiptHandler(receiptService);
     const verifyReceiptHandler = new VerifyReceiptHandler(receiptService);
     const rejectReceiptHandler = new RejectReceiptHandler(receiptService);
     const deleteReceiptHandler = new DeleteReceiptHandler(receiptService);
     const addReceiptMetadataHandler = new AddReceiptMetadataHandler(
-      receiptService,
+      receiptService
     );
     const updateReceiptMetadataHandler = new UpdateReceiptMetadataHandler(
-      receiptService,
+      receiptService
     );
     const addReceiptTagHandler = new AddReceiptTagHandler(receiptService);
     const removeReceiptTagHandler = new RemoveReceiptTagHandler(receiptService);
     const createReceiptTagHandler = new CreateReceiptTagHandler(
-      receiptTagService,
+      receiptTagService
     );
     const updateReceiptTagHandler = new UpdateReceiptTagHandler(
-      receiptTagService,
+      receiptTagService
     );
     const deleteReceiptTagHandler = new DeleteReceiptTagHandler(
-      receiptTagService,
+      receiptTagService
     );
 
     // Query Handlers
     const getReceiptHandler = new GetReceiptHandler(receiptService);
     const listReceiptsHandler = new ListReceiptsHandler(receiptService);
     const getReceiptsByExpenseHandler = new GetReceiptsByExpenseHandler(
-      receiptService,
+      receiptService
     );
     const getReceiptMetadataHandler = new GetReceiptMetadataHandler(
-      receiptService,
+      receiptService
     );
     const getReceiptStatsHandler = new GetReceiptStatsHandler(receiptService);
     const listReceiptTagsHandler = new ListReceiptTagsHandler(
-      receiptTagService,
+      receiptTagService
     );
 
     // Controllers
@@ -765,18 +795,18 @@ export class Container {
       listReceiptsHandler,
       getReceiptsByExpenseHandler,
       getReceiptMetadataHandler,
-      getReceiptStatsHandler,
+      getReceiptStatsHandler
     );
 
     const receiptTagController = new ReceiptTagController(
       createReceiptTagHandler,
       updateReceiptTagHandler,
       deleteReceiptTagHandler,
-      listReceiptTagsHandler,
+      listReceiptTagsHandler
     );
 
-    this.services.set("receiptController", receiptController);
-    this.services.set("receiptTagController", receiptTagController);
+    this.services.set('receiptController', receiptController);
+    this.services.set('receiptTagController', receiptTagController);
 
     // ============================================
     // Approval Workflow Module
@@ -785,32 +815,32 @@ export class Container {
     // Repositories
     const approvalChainRepository = new PrismaApprovalChainRepository(prisma);
     const expenseWorkflowRepository = new PrismaExpenseWorkflowRepository(
-      prisma,
+      prisma
     );
 
-    this.services.set("approvalChainRepository", approvalChainRepository);
-    this.services.set("expenseWorkflowRepository", expenseWorkflowRepository);
+    this.services.set('approvalChainRepository', approvalChainRepository);
+    this.services.set('expenseWorkflowRepository', expenseWorkflowRepository);
 
     // Services
     const approvalChainService = new ApprovalChainService(
-      approvalChainRepository,
+      approvalChainRepository
     );
     const workflowService = new WorkflowService(
       expenseWorkflowRepository,
-      approvalChainRepository,
+      approvalChainRepository
     );
 
-    this.services.set("approvalChainService", approvalChainService);
-    this.services.set("workflowService", workflowService);
+    this.services.set('approvalChainService', approvalChainService);
+    this.services.set('workflowService', workflowService);
 
     // Controllers
     const approvalChainController = new ApprovalChainController(
-      approvalChainService,
+      approvalChainService
     );
     const workflowController = new WorkflowController(workflowService);
 
-    this.services.set("approvalChainController", approvalChainController);
-    this.services.set("workflowController", workflowController);
+    this.services.set('approvalChainController', approvalChainController);
+    this.services.set('workflowController', workflowController);
 
     // ============================================
     // Notification Dispatch Module
@@ -819,25 +849,25 @@ export class Container {
     // Repositories - Notification
     const notificationRepository = new NotificationRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
     const notificationTemplateRepository =
       new NotificationTemplateRepositoryImpl(prisma);
 
     // Repositories - Audit
     const auditRepository = new AuditLogRepositoryImpl(prisma, eventBus);
-    this.services.set("auditLogRepository", auditRepository);
+    this.services.set('auditLogRepository', auditRepository);
     const notificationPreferenceRepository =
       new NotificationPreferenceRepositoryImpl(prisma);
 
-    this.services.set("notificationRepository", notificationRepository);
+    this.services.set('notificationRepository', notificationRepository);
     this.services.set(
-      "notificationTemplateRepository",
-      notificationTemplateRepository,
+      'notificationTemplateRepository',
+      notificationTemplateRepository
     );
     this.services.set(
-      "notificationPreferenceRepository",
-      notificationPreferenceRepository,
+      'notificationPreferenceRepository',
+      notificationPreferenceRepository
     );
 
     // Services - Notification
@@ -845,43 +875,43 @@ export class Container {
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
-      userRepository,
+      userRepository
     );
-    this.services.set("notificationService", notificationService);
+    this.services.set('notificationService', notificationService);
 
     // Services - Audit
     const auditService = new AuditService(auditRepository);
-    this.services.set("auditService", auditService);
+    this.services.set('auditService', auditService);
     const templateService = new TemplateService(notificationTemplateRepository);
     const preferenceService = new PreferenceService(
-      notificationPreferenceRepository,
+      notificationPreferenceRepository
     );
 
-    this.services.set("templateService", templateService);
-    this.services.set("preferenceService", preferenceService);
+    this.services.set('templateService', templateService);
+    this.services.set('preferenceService', preferenceService);
 
     // Controllers
     const notificationController = new NotificationController(
-      notificationService,
+      notificationService
     );
     const templateController = new TemplateController(templateService);
     const preferenceController = new PreferenceController(preferenceService);
 
-    this.services.set("notificationController", notificationController);
-    this.services.set("templateController", templateController);
-    this.services.set("preferenceController", preferenceController);
+    this.services.set('notificationController', notificationController);
+    this.services.set('templateController', templateController);
+    this.services.set('preferenceController', preferenceController);
 
     // Event Handlers & Subscriptions
     const notificationEventHandler = new NotificationEventHandler(
-      notificationService,
+      notificationService
     );
 
     // --- Event Subscriptions ---
 
     // 1. Notification Subscriptions
     eventBus.subscribe(
-      "UserCreated",
-      notificationEventHandler.handleUserCreated,
+      'UserCreated',
+      notificationEventHandler.handleUserCreated
     );
 
     // 2. Audit Subscriptions (Global listener)
@@ -889,35 +919,35 @@ export class Container {
 
     // Subscribe to all known critical events
     // Ideally we'd valid wildcard support, but manual for now
-    eventBus.subscribe("UserCreated", auditListener);
-    eventBus.subscribe("expense.created", auditListener);
-    eventBus.subscribe("expense.approved", auditListener);
-    eventBus.subscribe("expense.rejected", auditListener);
-    eventBus.subscribe("expense.submitted", auditListener);
-    eventBus.subscribe("budget.threshold_exceeded", auditListener);
-    eventBus.subscribe("budget.updated", auditListener);
-    eventBus.subscribe("receipt.uploaded", auditListener);
-    eventBus.subscribe("WorkspaceCreated", auditListener);
-    eventBus.subscribe("MemberJoinedWorkspace", auditListener);
-    eventBus.subscribe("MemberRoleChanged", auditListener);
+    eventBus.subscribe('UserCreated', auditListener);
+    eventBus.subscribe('expense.created', auditListener);
+    eventBus.subscribe('expense.approved', auditListener);
+    eventBus.subscribe('expense.rejected', auditListener);
+    eventBus.subscribe('expense.submitted', auditListener);
+    eventBus.subscribe('budget.threshold_exceeded', auditListener);
+    eventBus.subscribe('budget.updated', auditListener);
+    eventBus.subscribe('receipt.uploaded', auditListener);
+    eventBus.subscribe('WorkspaceCreated', auditListener);
+    eventBus.subscribe('MemberJoinedWorkspace', auditListener);
+    eventBus.subscribe('MemberRoleChanged', auditListener);
     eventBus.subscribe(
-      "expense.status_changed",
-      notificationEventHandler.handleExpenseStatusChanged,
+      'expense.status_changed',
+      notificationEventHandler.handleExpenseStatusChanged
     );
     eventBus.subscribe(
-      "budget.threshold_exceeded",
-      notificationEventHandler.handleBudgetExceeded,
+      'budget.threshold_exceeded',
+      notificationEventHandler.handleBudgetExceeded
     );
     eventBus.subscribe(
-      "approval.workflow_started",
-      notificationEventHandler.handleApprovalStarted,
+      'approval.workflow_started',
+      notificationEventHandler.handleApprovalStarted
     );
     eventBus.subscribe(
-      "UserCreated",
-      notificationEventHandler.handleUserCreated,
+      'UserCreated',
+      notificationEventHandler.handleUserCreated
     );
 
-    console.log("[Container] Notification Event Handlers registered");
+    console.log('[Container] Notification Event Handlers registered');
 
     // ============================================
     // Cost Allocation Module
@@ -929,15 +959,15 @@ export class Container {
     const projectRepository = new ProjectRepositoryImpl(prisma, eventBus);
     const expenseAllocationRepository = new ExpenseAllocationRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
 
-    this.services.set("departmentRepository", departmentRepository);
-    this.services.set("costCenterRepository", costCenterRepository);
-    this.services.set("projectRepository", projectRepository);
+    this.services.set('departmentRepository', departmentRepository);
+    this.services.set('costCenterRepository', costCenterRepository);
+    this.services.set('projectRepository', projectRepository);
     this.services.set(
-      "expenseAllocationRepository",
-      expenseAllocationRepository,
+      'expenseAllocationRepository',
+      expenseAllocationRepository
     );
 
     // Services
@@ -946,90 +976,90 @@ export class Container {
       departmentRepository,
       costCenterRepository,
       projectRepository,
-      workspaceAccessAdapter,
+      workspaceAccessAdapter
     );
     const expenseLookupAdapter = new PrismaExpenseLookupAdapter(prisma);
     const allocationSummaryAdapter = new PrismaAllocationSummaryAdapter(prisma);
     const expenseAllocationService = new ExpenseAllocationService(
       expenseAllocationRepository,
       expenseLookupAdapter,
-      allocationSummaryAdapter,
+      allocationSummaryAdapter
     );
 
     this.services.set(
-      "allocationManagementService",
-      allocationManagementService,
+      'allocationManagementService',
+      allocationManagementService
     );
-    this.services.set("expenseAllocationService", expenseAllocationService);
+    this.services.set('expenseAllocationService', expenseAllocationService);
 
     // Command Handlers
     const createDepartmentHandler = new CreateDepartmentHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const updateDepartmentHandler = new UpdateDepartmentHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const deleteDepartmentHandler = new DeleteDepartmentHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const activateDepartmentHandler = new ActivateDepartmentHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const createCostCenterHandler = new CreateCostCenterHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const updateCostCenterHandler = new UpdateCostCenterHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const deleteCostCenterHandler = new DeleteCostCenterHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const activateCostCenterHandler = new ActivateCostCenterHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const createProjectHandler = new CreateProjectHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const updateProjectHandler = new UpdateProjectHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const deleteProjectHandler = new DeleteProjectHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const activateProjectHandler = new ActivateProjectHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const allocateExpenseHandler = new AllocateExpenseHandler(
-      expenseAllocationService,
+      expenseAllocationService
     );
     const deleteAllocationsHandler = new DeleteAllocationsHandler(
-      expenseAllocationService,
+      expenseAllocationService
     );
 
     // Query Handlers
     const getDepartmentHandler = new GetDepartmentHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const listDepartmentsHandler = new ListDepartmentsHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const getCostCenterHandler = new GetCostCenterHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const listCostCentersHandler = new ListCostCentersHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const getProjectHandler = new GetProjectHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const listProjectsHandler = new ListProjectsHandler(
-      allocationManagementService,
+      allocationManagementService
     );
     const getExpenseAllocationsHandler = new GetExpenseAllocationsHandler(
-      expenseAllocationService,
+      expenseAllocationService
     );
     const getAllocationSummaryHandler = new GetAllocationSummaryHandler(
-      expenseAllocationService,
+      expenseAllocationService
     );
 
     // Controllers
@@ -1051,22 +1081,22 @@ export class Container {
       deleteProjectHandler,
       activateProjectHandler,
       getProjectHandler,
-      listProjectsHandler,
+      listProjectsHandler
     );
     const expenseAllocationController = new ExpenseAllocationController(
       allocateExpenseHandler,
       deleteAllocationsHandler,
       getExpenseAllocationsHandler,
-      getAllocationSummaryHandler,
+      getAllocationSummaryHandler
     );
 
     this.services.set(
-      "allocationManagementController",
-      allocationManagementController,
+      'allocationManagementController',
+      allocationManagementController
     );
     this.services.set(
-      "expenseAllocationController",
-      expenseAllocationController,
+      'expenseAllocationController',
+      expenseAllocationController
     );
 
     // ============================================
@@ -1079,47 +1109,47 @@ export class Container {
     const scenarioRepository = new ScenarioRepositoryImpl(prisma, eventBus);
     const forecastItemRepository = new ForecastItemRepositoryImpl(
       prisma,
-      eventBus,
+      eventBus
     );
 
     // Adapters
     const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
 
-    this.services.set("budgetPlanRepository", budgetPlanRepository);
-    this.services.set("forecastRepository", forecastRepository);
-    this.services.set("scenarioRepository", scenarioRepository);
-    this.services.set("forecastItemRepository", forecastItemRepository);
+    this.services.set('budgetPlanRepository', budgetPlanRepository);
+    this.services.set('forecastRepository', forecastRepository);
+    this.services.set('scenarioRepository', scenarioRepository);
+    this.services.set('forecastItemRepository', forecastItemRepository);
 
     // Services
     const budgetPlanService = new BudgetPlanService(
       budgetPlanRepository,
-      workspaceAccessPlanning,
+      workspaceAccessPlanning
     );
     const forecastService = new ForecastService(
       forecastRepository,
       forecastItemRepository,
       budgetPlanRepository,
-      workspaceAccessPlanning,
+      workspaceAccessPlanning
     );
     const scenarioService = new ScenarioService(
       scenarioRepository,
       budgetPlanRepository,
-      workspaceAccessPlanning,
+      workspaceAccessPlanning
     );
 
-    this.services.set("budgetPlanService", budgetPlanService);
-    this.services.set("forecastService", forecastService);
-    this.services.set("scenarioService", scenarioService);
+    this.services.set('budgetPlanService', budgetPlanService);
+    this.services.set('forecastService', forecastService);
+    this.services.set('scenarioService', scenarioService);
 
     // Command Handlers
     const createBudgetPlanHandler = new CreateBudgetPlanHandler(
-      budgetPlanService,
+      budgetPlanService
     );
     const updateBudgetPlanHandler = new UpdateBudgetPlanHandler(
-      budgetPlanService,
+      budgetPlanService
     );
     const activateBudgetPlanHandler = new ActivateBudgetPlanHandler(
-      budgetPlanService,
+      budgetPlanService
     );
     const createForecastHandler = new CreateForecastHandler(forecastService);
     const addForecastItemHandler = new AddForecastItemHandler(forecastService);
@@ -1128,12 +1158,12 @@ export class Container {
     // Query Handlers
     const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
     const listBudgetPlansHandler = new ListBudgetPlansHandler(
-      budgetPlanService,
+      budgetPlanService
     );
     const getForecastHandler = new GetForecastHandler(forecastService);
     const listForecastsHandler = new ListForecastsHandler(forecastService);
     const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastService,
+      forecastService
     );
 
     // Controllers
@@ -1143,7 +1173,7 @@ export class Container {
       activateBudgetPlanHandler,
       getBudgetPlanHandler,
       listBudgetPlansHandler,
-      budgetPlanService,
+      budgetPlanService
     );
 
     const forecastController = new ForecastController(
@@ -1152,17 +1182,17 @@ export class Container {
       getForecastHandler,
       listForecastsHandler,
       getForecastItemsHandler,
-      forecastService,
+      forecastService
     );
 
     const scenarioController = new ScenarioController(
       createScenarioHandler,
-      scenarioService,
+      scenarioService
     );
 
-    this.services.set("budgetPlanController", budgetPlanController);
-    this.services.set("forecastController", forecastController);
-    this.services.set("scenarioController", scenarioController);
+    this.services.set('budgetPlanController', budgetPlanController);
+    this.services.set('forecastController', forecastController);
+    this.services.set('scenarioController', scenarioController);
 
     // ============================================
     // Categorization Rules Module
@@ -1171,89 +1201,89 @@ export class Container {
     // Repositories
     const categoryRuleRepository = new PrismaCategoryRuleRepository(
       prisma,
-      eventBus,
+      eventBus
     );
     const ruleExecutionRepository = new PrismaRuleExecutionRepository(prisma);
     const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
       prisma,
-      eventBus,
+      eventBus
     );
 
-    this.services.set("categoryRuleRepository", categoryRuleRepository);
-    this.services.set("ruleExecutionRepository", ruleExecutionRepository);
+    this.services.set('categoryRuleRepository', categoryRuleRepository);
+    this.services.set('ruleExecutionRepository', ruleExecutionRepository);
     this.services.set(
-      "categorySuggestionRepository",
-      categorySuggestionRepository,
+      'categorySuggestionRepository',
+      categorySuggestionRepository
     );
 
     // Services
     const categoryRuleService = new CategoryRuleService(
       categoryRuleRepository,
-      workspaceAccessPlanning,
+      workspaceAccessPlanning
     );
     const ruleExecutionService = new RuleExecutionService(
       categoryRuleRepository,
-      ruleExecutionRepository,
+      ruleExecutionRepository
     );
     const categorySuggestionService = new CategorySuggestionService(
-      categorySuggestionRepository,
+      categorySuggestionRepository
     );
 
-    this.services.set("categoryRuleService", categoryRuleService);
-    this.services.set("ruleExecutionService", ruleExecutionService);
-    this.services.set("categorySuggestionService", categorySuggestionService);
+    this.services.set('categoryRuleService', categoryRuleService);
+    this.services.set('ruleExecutionService', ruleExecutionService);
+    this.services.set('categorySuggestionService', categorySuggestionService);
 
     // Command Handlers
     const createCategoryRuleHandler = new CreateCategoryRuleHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const updateCategoryRuleHandler = new UpdateCategoryRuleHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const deleteCategoryRuleHandler = new DeleteCategoryRuleHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const activateCategoryRuleHandler = new ActivateCategoryRuleHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const deactivateCategoryRuleHandler = new DeactivateCategoryRuleHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const evaluateRulesHandler = new EvaluateRulesHandler(ruleExecutionService);
     const createSuggestionHandler = new CreateSuggestionHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
     const acceptSuggestionHandler = new AcceptSuggestionHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
     const rejectSuggestionHandler = new RejectSuggestionHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
     const deleteSuggestionHandler = new DeleteSuggestionHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
 
     // Query Handlers
     const getRuleByIdHandler = new GetRuleByIdHandler(categoryRuleService);
     const getRulesByWorkspaceHandler = new GetRulesByWorkspaceHandler(
-      categoryRuleService,
+      categoryRuleService
     );
     const getActiveRulesByWorkspaceHandler =
       new GetActiveRulesByWorkspaceHandler(categoryRuleService);
     const getExecutionsByRuleHandler = new GetExecutionsByRuleHandler(
-      ruleExecutionService,
+      ruleExecutionService
     );
     const getExecutionsByExpenseHandler = new GetExecutionsByExpenseHandler(
-      ruleExecutionService,
+      ruleExecutionService
     );
     const getExecutionsByWorkspaceHandler = new GetExecutionsByWorkspaceHandler(
-      ruleExecutionService,
+      ruleExecutionService
     );
     const getSuggestionByIdHandler = new GetSuggestionByIdHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
     const getSuggestionsByExpenseHandler = new GetSuggestionsByExpenseHandler(
-      categorySuggestionService,
+      categorySuggestionService
     );
     const getPendingSuggestionsByWorkspaceHandler =
       new GetPendingSuggestionsByWorkspaceHandler(categorySuggestionService);
@@ -1270,12 +1300,12 @@ export class Container {
       getRuleByIdHandler,
       getRulesByWorkspaceHandler,
       getActiveRulesByWorkspaceHandler,
-      getExecutionsByRuleHandler,
+      getExecutionsByRuleHandler
     );
     const ruleExecutionController = new RuleExecutionController(
       evaluateRulesHandler,
       getExecutionsByExpenseHandler,
-      getExecutionsByWorkspaceHandler,
+      getExecutionsByWorkspaceHandler
     );
     const categorySuggestionController = new CategorySuggestionController(
       createSuggestionHandler,
@@ -1285,14 +1315,14 @@ export class Container {
       getSuggestionByIdHandler,
       getSuggestionsByExpenseHandler,
       getPendingSuggestionsByWorkspaceHandler,
-      getSuggestionsByWorkspaceHandler,
+      getSuggestionsByWorkspaceHandler
     );
 
-    this.services.set("categoryRuleController", categoryRuleController);
-    this.services.set("ruleExecutionController", ruleExecutionController);
+    this.services.set('categoryRuleController', categoryRuleController);
+    this.services.set('ruleExecutionController', ruleExecutionController);
     this.services.set(
-      "categorySuggestionController",
-      categorySuggestionController,
+      'categorySuggestionController',
+      categorySuggestionController
     );
 
     // ============================================
@@ -1304,9 +1334,9 @@ export class Container {
     const violationRepository = new PrismaViolationRepository(prisma);
     const exemptionRepository = new PrismaExemptionRepository(prisma);
 
-    this.services.set("policyRepository", policyRepository);
-    this.services.set("violationRepository", violationRepository);
-    this.services.set("exemptionRepository", exemptionRepository);
+    this.services.set('policyRepository', policyRepository);
+    this.services.set('violationRepository', violationRepository);
+    this.services.set('exemptionRepository', exemptionRepository);
 
     // Services
     const policyService = new PolicyService(policyRepository);
@@ -1316,22 +1346,22 @@ export class Container {
       policyRepository,
       violationRepository,
       exemptionRepository,
-      cacheService,
+      cacheService
     );
 
-    this.services.set("policyService", policyService);
-    this.services.set("violationService", violationService);
-    this.services.set("exemptionService", exemptionService);
-    this.services.set("policyEvaluationService", policyEvaluationService);
+    this.services.set('policyService', policyService);
+    this.services.set('violationService', violationService);
+    this.services.set('exemptionService', exemptionService);
+    this.services.set('policyEvaluationService', policyEvaluationService);
 
     // Controllers
     const policyController = new PolicyController(policyService);
     const violationController = new ViolationController(violationService);
     const exemptionController = new ExemptionController(exemptionService);
 
-    this.services.set("policyController", policyController);
-    this.services.set("violationController", violationController);
-    this.services.set("exemptionController", exemptionController);
+    this.services.set('policyController', policyController);
+    this.services.set('violationController', violationController);
+    this.services.set('exemptionController', exemptionController);
 
     // ============================================
     // Bank Feed Sync Module
@@ -1341,19 +1371,19 @@ export class Container {
     const bankConnectionRepository = new PrismaBankConnectionRepository(prisma);
     const syncSessionRepository = new PrismaSyncSessionRepository(prisma);
     const bankTransactionRepository = new PrismaBankTransactionRepository(
-      prisma,
+      prisma
     );
 
-    this.services.set("bankConnectionRepository", bankConnectionRepository);
-    this.services.set("syncSessionRepository", syncSessionRepository);
-    this.services.set("bankTransactionRepository", bankTransactionRepository);
+    this.services.set('bankConnectionRepository', bankConnectionRepository);
+    this.services.set('syncSessionRepository', syncSessionRepository);
+    this.services.set('bankTransactionRepository', bankTransactionRepository);
 
     // Stub Bank API Client (to be implemented with real bank API integration)
     const stubBankAPIClient = {
       async fetchTransactions(
         accessToken: string,
         fromDate: Date,
-        toDate: Date,
+        toDate: Date
       ) {
         // Stub implementation - will be replaced with real bank API integration
         return [];
@@ -1362,46 +1392,46 @@ export class Container {
 
     // Services
     const bankConnectionService = new BankConnectionService(
-      bankConnectionRepository,
+      bankConnectionRepository
     );
     const transactionSyncService = new TransactionSyncService(
       bankConnectionRepository,
       syncSessionRepository,
       bankTransactionRepository,
-      stubBankAPIClient,
+      stubBankAPIClient
     );
     const bankTransactionService = new BankTransactionService(
-      bankTransactionRepository,
+      bankTransactionRepository
     );
 
-    this.services.set("bankConnectionService", bankConnectionService);
-    this.services.set("transactionSyncService", transactionSyncService);
-    this.services.set("bankTransactionService", bankTransactionService);
+    this.services.set('bankConnectionService', bankConnectionService);
+    this.services.set('transactionSyncService', transactionSyncService);
+    this.services.set('bankTransactionService', bankTransactionService);
 
     // Command Handlers
     const connectBankHandler = new ConnectBankHandler(bankConnectionService);
     const disconnectBankHandler = new DisconnectBankHandler(
-      bankConnectionService,
+      bankConnectionService
     );
     const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(
-      bankConnectionService,
+      bankConnectionService
     );
     const syncTransactionsHandler = new SyncTransactionsHandler(
-      transactionSyncService,
+      transactionSyncService
     );
     const processTransactionHandler = new ProcessTransactionHandler(
-      bankTransactionService,
+      bankTransactionService
     );
 
     // Query Handlers
     const getBankConnectionsHandler = new GetBankConnectionsHandler(
-      bankConnectionService,
+      bankConnectionService
     );
     const getSyncHistoryHandler = new GetSyncHistoryHandler(
-      transactionSyncService,
+      transactionSyncService
     );
     const getPendingTransactionsHandler = new GetPendingTransactionsHandler(
-      bankTransactionService,
+      bankTransactionService
     );
 
     // Controllers
@@ -1410,22 +1440,22 @@ export class Container {
       disconnectBankHandler,
       updateConnectionTokenHandler,
       getBankConnectionsHandler,
-      bankConnectionService,
+      bankConnectionService
     );
     const transactionSyncController = new TransactionSyncController(
       syncTransactionsHandler,
       getSyncHistoryHandler,
-      transactionSyncService,
+      transactionSyncService
     );
     const bankTransactionController = new BankTransactionController(
       processTransactionHandler,
       getPendingTransactionsHandler,
-      bankTransactionService,
+      bankTransactionService
     );
 
-    this.services.set("bankConnectionController", bankConnectionController);
-    this.services.set("transactionSyncController", transactionSyncController);
-    this.services.set("bankTransactionController", bankTransactionController);
+    this.services.set('bankConnectionController', bankConnectionController);
+    this.services.set('transactionSyncController', transactionSyncController);
+    this.services.set('bankTransactionController', bankTransactionController);
 
     // ============================================
     // Event Outbox Module
@@ -1434,38 +1464,38 @@ export class Container {
     // Repositories
     const outboxEventRepository: IOutboxEventRepository =
       new OutboxEventRepositoryImpl(prisma);
-    this.services.set("outboxEventRepository", outboxEventRepository);
+    this.services.set('outboxEventRepository', outboxEventRepository);
 
     // Services
     const outboxEventService = new OutboxEventService(
       outboxEventRepository,
-      eventBus,
+      eventBus
     );
-    this.services.set("outboxEventService", outboxEventService);
+    this.services.set('outboxEventService', outboxEventService);
 
     // Command Handlers
     const storeOutboxEventHandler = new StoreOutboxEventHandler(
-      outboxEventRepository,
+      outboxEventRepository
     );
 
     // Query Handlers
     const processPendingEventsHandler = new ProcessPendingEventsHandler(
-      outboxEventRepository,
+      outboxEventRepository
     );
     const getFailedEventsHandler = new GetFailedEventsHandler(
-      outboxEventRepository,
+      outboxEventRepository
     );
 
     // Controllers
     const outboxEventController = new OutboxEventController(
       storeOutboxEventHandler,
       processPendingEventsHandler,
-      getFailedEventsHandler,
+      getFailedEventsHandler
     );
-    this.services.set("outboxEventController", outboxEventController);
+    this.services.set('outboxEventController', outboxEventController);
 
     // Store Prisma for module route registration
-    this.services.set("prisma", prisma);
+    this.services.set('prisma', prisma);
   }
 
   /**
@@ -1492,18 +1522,18 @@ export class Container {
   getIdentityWorkspaceServices() {
     return {
       userManagementService: this.get<UserManagementService>(
-        "userManagementService",
+        'userManagementService'
       ),
       workspaceManagementService: this.get<WorkspaceManagementService>(
-        "workspaceManagementService",
+        'workspaceManagementService'
       ),
       workspaceMembershipService: this.get<WorkspaceMembershipService>(
-        "workspaceMembershipService",
+        'workspaceMembershipService'
       ),
       workspaceInvitationService: this.get<WorkspaceInvitationService>(
-        "workspaceInvitationService",
+        'workspaceInvitationService'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1512,19 +1542,19 @@ export class Container {
    */
   getExpenseLedgerServices() {
     return {
-      expenseController: this.get<ExpenseController>("expenseController"),
-      categoryController: this.get<CategoryController>("categoryController"),
-      tagController: this.get<TagController>("tagController"),
+      expenseController: this.get<ExpenseController>('expenseController'),
+      categoryController: this.get<CategoryController>('categoryController'),
+      tagController: this.get<TagController>('tagController'),
       attachmentController: this.get<AttachmentController>(
-        "attachmentController",
+        'attachmentController'
       ),
       recurringExpenseController: this.get<RecurringExpenseController>(
-        "recurringExpenseController",
+        'recurringExpenseController'
       ),
       expenseSplitController: this.get<ExpenseSplitController>(
-        "expenseSplitController",
+        'expenseSplitController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1533,11 +1563,11 @@ export class Container {
    */
   getBudgetManagementServices() {
     return {
-      budgetController: this.get<BudgetController>("budgetController"),
+      budgetController: this.get<BudgetController>('budgetController'),
       spendingLimitController: this.get<SpendingLimitController>(
-        "spendingLimitController",
+        'spendingLimitController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1546,9 +1576,9 @@ export class Container {
    */
   getReceiptVaultServices() {
     return {
-      receiptController: this.get<ReceiptController>("receiptController"),
-      tagController: this.get<ReceiptTagController>("receiptTagController"),
-      prisma: this.get<PrismaClient>("prisma"),
+      receiptController: this.get<ReceiptController>('receiptController'),
+      tagController: this.get<ReceiptTagController>('receiptTagController'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1558,10 +1588,10 @@ export class Container {
   getApprovalWorkflowServices() {
     return {
       approvalChainController: this.get<ApprovalChainController>(
-        "approvalChainController",
+        'approvalChainController'
       ),
-      workflowController: this.get<WorkflowController>("workflowController"),
-      prisma: this.get<PrismaClient>("prisma"),
+      workflowController: this.get<WorkflowController>('workflowController'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1571,13 +1601,13 @@ export class Container {
   getNotificationDispatchServices() {
     return {
       notificationController: this.get<NotificationController>(
-        "notificationController",
+        'notificationController'
       ),
-      templateController: this.get<TemplateController>("templateController"),
+      templateController: this.get<TemplateController>('templateController'),
       preferenceController: this.get<PreferenceController>(
-        "preferenceController",
+        'preferenceController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1587,12 +1617,12 @@ export class Container {
   getCostAllocationServices() {
     return {
       allocationManagementController: this.get<AllocationManagementController>(
-        "allocationManagementController",
+        'allocationManagementController'
       ),
       expenseAllocationController: this.get<ExpenseAllocationController>(
-        "expenseAllocationController",
+        'expenseAllocationController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1602,15 +1632,15 @@ export class Container {
   getCategorizationRulesServices() {
     return {
       categoryRuleController: this.get<CategoryRuleController>(
-        "categoryRuleController",
+        'categoryRuleController'
       ),
       ruleExecutionController: this.get<RuleExecutionController>(
-        "ruleExecutionController",
+        'ruleExecutionController'
       ),
       categorySuggestionController: this.get<CategorySuggestionController>(
-        "categorySuggestionController",
+        'categorySuggestionController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1620,11 +1650,11 @@ export class Container {
   getBudgetPlanningServices() {
     return {
       budgetPlanController: this.get<BudgetPlanController>(
-        "budgetPlanController",
+        'budgetPlanController'
       ),
-      forecastController: this.get<ForecastController>("forecastController"),
-      scenarioController: this.get<ScenarioController>("scenarioController"),
-      prisma: this.get<PrismaClient>("prisma"),
+      forecastController: this.get<ForecastController>('forecastController'),
+      scenarioController: this.get<ScenarioController>('scenarioController'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
   /**
@@ -1632,8 +1662,8 @@ export class Container {
    */
   getAuditComplianceServices() {
     return {
-      auditService: this.get<AuditService>("auditService"),
-      prisma: this.get<PrismaClient>("prisma"),
+      auditService: this.get<AuditService>('auditService'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1642,16 +1672,16 @@ export class Container {
    */
   getPolicyControlsServices() {
     return {
-      policyController: this.get<PolicyController>("policyController"),
-      violationController: this.get<ViolationController>("violationController"),
-      exemptionController: this.get<ExemptionController>("exemptionController"),
-      policyService: this.get<PolicyService>("policyService"),
-      violationService: this.get<ViolationService>("violationService"),
-      exemptionService: this.get<ExemptionService>("exemptionService"),
+      policyController: this.get<PolicyController>('policyController'),
+      violationController: this.get<ViolationController>('violationController'),
+      exemptionController: this.get<ExemptionController>('exemptionController'),
+      policyService: this.get<PolicyService>('policyService'),
+      violationService: this.get<ViolationService>('violationService'),
+      exemptionService: this.get<ExemptionService>('exemptionService'),
       policyEvaluationService: this.get<PolicyEvaluationService>(
-        "policyEvaluationService",
+        'policyEvaluationService'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1661,15 +1691,15 @@ export class Container {
   getBankFeedSyncServices() {
     return {
       bankConnectionController: this.get<BankConnectionController>(
-        "bankConnectionController",
+        'bankConnectionController'
       ),
       transactionSyncController: this.get<TransactionSyncController>(
-        "transactionSyncController",
+        'transactionSyncController'
       ),
       bankTransactionController: this.get<BankTransactionController>(
-        "bankTransactionController",
+        'bankTransactionController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -1679,9 +1709,9 @@ export class Container {
   getEventOutboxServices() {
     return {
       outboxEventController: this.get<OutboxEventController>(
-        "outboxEventController",
+        'outboxEventController'
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 }
