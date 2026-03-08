@@ -1,14 +1,14 @@
-import { SplitId } from "../value-objects/split-id";
-import { ExpenseId } from "../value-objects/expense-id";
-import { Money } from "../value-objects/money";
-import { SplitType } from "../enums/split-type";
-import { SplitParticipant } from "./split-participant.entity";
+import { SplitId } from '../value-objects/split-id';
+import { ExpenseId } from '../value-objects/expense-id';
+import { Money } from '../value-objects/money';
+import { SplitType } from '../enums/split-type';
+import { SplitParticipant } from './split-participant.entity';
 import {
   InvalidSplitAmountError,
   InvalidSplitPercentageError,
   InsufficientParticipantsError,
-} from "../errors/split-expense.errors";
-import { Decimal } from "@prisma/client/runtime/library";
+} from '../errors/split-expense.errors';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export interface ExpenseSplitProps {
   id: SplitId;
@@ -48,7 +48,7 @@ export class ExpenseSplit {
 
     if (params.splitType === SplitType.EQUAL) {
       const shareAmount = totalAmountDecimal.dividedBy(
-        params.participants.length,
+        params.participants.length
       );
 
       participantEntities = params.participants.map((p) =>
@@ -57,18 +57,18 @@ export class ExpenseSplit {
           userId: p.userId,
           shareAmount: Money.create(
             shareAmount.toNumber(),
-            params.totalAmount.getCurrency(),
+            params.totalAmount.getCurrency()
           ),
           sharePercentage: new Decimal(100).dividedBy(
-            params.participants.length,
+            params.participants.length
           ),
-        }),
+        })
       );
     } else if (params.splitType === SplitType.EXACT) {
       const totalSpecified = params.participants.reduce((sum, p) => {
         if (!p.shareAmount) {
           throw new InvalidSplitAmountError(
-            "Share amount required for EXACT split type",
+            'Share amount required for EXACT split type'
           );
         }
         return sum.plus(p.shareAmount.getAmount());
@@ -76,7 +76,7 @@ export class ExpenseSplit {
 
       if (!totalSpecified.equals(totalAmountDecimal)) {
         throw new InvalidSplitAmountError(
-          `Total split amounts (${totalSpecified}) must equal expense total (${totalAmountDecimal})`,
+          `Total split amounts (${totalSpecified}) must equal expense total (${totalAmountDecimal})`
         );
       }
 
@@ -114,7 +114,7 @@ export class ExpenseSplit {
           userId: p.userId,
           shareAmount: Money.create(
             shareAmount.toNumber(),
-            params.totalAmount.getCurrency(),
+            params.totalAmount.getCurrency()
           ),
           sharePercentage: p.sharePercentage,
         });
@@ -193,12 +193,60 @@ export class ExpenseSplit {
       .filter((p) => p.getUserId() !== this.props.paidBy && !p.isPaidStatus())
       .reduce(
         (sum, p) => sum.plus(p.getShareAmount().getAmount()),
-        new Decimal(0),
+        new Decimal(0)
       );
 
     return Money.create(
       outstanding.toNumber(),
-      this.props.totalAmount.getCurrency(),
+      this.props.totalAmount.getCurrency()
     );
   }
+
+  toJSON(): ExpenseSplitDTO {
+    return {
+      id: this.getId().getValue(),
+      expenseId: this.getExpenseId().getValue(),
+      workspaceId: this.getWorkspaceId(),
+      paidBy: this.getPaidBy(),
+      totalAmount: this.getTotalAmount().getAmount().toString(),
+      currency: this.getTotalAmount().getCurrency(),
+      splitType: this.getSplitType(),
+      participants: this.getParticipants().map((p) => ({
+        id: p.getId().getValue(),
+        userId: p.getUserId(),
+        shareAmount: p.getShareAmount().getAmount().toString(),
+        sharePercentage: p.getSharePercentage()?.toNumber(),
+        isPaid: p.isPaidStatus(),
+        paidAt: p.getPaidAt()?.toISOString(),
+      })),
+      isFullySettled: this.isFullySettled(),
+      outstandingAmount: this.getOutstandingAmount().getAmount().toString(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ExpenseSplitParticipantDTO {
+  id: string;
+  userId: string;
+  shareAmount: string;
+  sharePercentage?: number;
+  isPaid: boolean;
+  paidAt?: string;
+}
+
+export interface ExpenseSplitDTO {
+  id: string;
+  expenseId: string;
+  workspaceId: string;
+  paidBy: string;
+  totalAmount: string;
+  currency: string;
+  splitType: string;
+  participants: ExpenseSplitParticipantDTO[];
+  isFullySettled: boolean;
+  outstandingAmount: string;
+  createdAt: string;
+  updatedAt: string;
 }

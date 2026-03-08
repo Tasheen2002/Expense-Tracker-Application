@@ -1,9 +1,9 @@
-import { TagId } from "../value-objects/tag-id";
+import { TagId } from '../value-objects/tag-id';
 import {
   TagNameRequiredError,
   TagNameTooLongError,
   InvalidHexColorError,
-} from "../errors/expense.errors";
+} from '../errors/expense.errors';
 
 export interface TagProps {
   id: TagId;
@@ -20,7 +20,7 @@ export class Tag {
     this.props = props;
   }
 
-  static create(props: Omit<TagProps, "id" | "createdAt">): Tag {
+  static create(props: Omit<TagProps, 'id' | 'createdAt'>): Tag {
     this.validateName(props.name);
     this.validateColor(props.color);
 
@@ -85,4 +85,22 @@ export class Tag {
     Tag.validateColor(color);
     this.props.color = color;
   }
+
+  toJSON(): TagDTO {
+    return {
+      tagId: this.id.getValue(),
+      workspaceId: this.workspaceId,
+      name: this.name,
+      color: this.color,
+      createdAt: this.createdAt.toISOString(),
+    };
+  }
+}
+
+export interface TagDTO {
+  tagId: string;
+  workspaceId: string;
+  name: string;
+  color?: string;
+  createdAt: string;
 }

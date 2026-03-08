@@ -1,13 +1,13 @@
-import { ExpenseId } from "../value-objects/expense-id";
-import { CategoryId } from "../value-objects/category-id";
-import { TagId } from "../value-objects/tag-id";
-import { AttachmentId } from "../value-objects/attachment-id";
-import { Money } from "../value-objects/money";
-import { ExpenseDate } from "../value-objects/expense-date";
-import { PaymentMethod } from "../enums/payment-method";
-import { ExpenseStatus, canTransitionTo } from "../enums/expense-status";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { ExpenseId } from '../value-objects/expense-id';
+import { CategoryId } from '../value-objects/category-id';
+import { TagId } from '../value-objects/tag-id';
+import { AttachmentId } from '../value-objects/attachment-id';
+import { Money } from '../value-objects/money';
+import { ExpenseDate } from '../value-objects/expense-date';
+import { PaymentMethod } from '../enums/payment-method';
+import { ExpenseStatus, canTransitionTo } from '../enums/expense-status';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 import {
   ExpenseTitleRequiredError,
   ExpenseTitleTooLongError,
@@ -15,7 +15,7 @@ import {
   MerchantNameTooLongError,
   InvalidExpenseStatusError,
   NonReimbursableError,
-} from "../errors/expense.errors";
+} from '../errors/expense.errors';
 
 /**
  * Emitted when a new expense is created.
@@ -27,13 +27,13 @@ export class ExpenseCreatedEvent extends DomainEvent {
     public readonly userId: string,
     public readonly amount: number,
     public readonly currency: string,
-    public readonly title: string,
+    public readonly title: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.created";
+    return 'expense.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -57,13 +57,13 @@ export class ExpenseSubmittedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly submittedBy: string,
     public readonly amount: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.submitted";
+    return 'expense.submitted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -86,13 +86,13 @@ export class ExpenseApprovedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly approvedBy: string,
     public readonly amount: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.approved";
+    return 'expense.approved';
   }
 
   getPayload(): Record<string, unknown> {
@@ -114,13 +114,13 @@ export class ExpenseRejectedEvent extends DomainEvent {
     public readonly expenseId: string,
     public readonly workspaceId: string,
     public readonly rejectedBy: string,
-    public readonly reason?: string,
+    public readonly reason?: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.rejected";
+    return 'expense.rejected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -142,13 +142,13 @@ export class ExpenseReimbursedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly userId: string,
     public readonly amount: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.reimbursed";
+    return 'expense.reimbursed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -171,14 +171,14 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly oldStatus: string,
     public readonly newStatus: string,
-    public readonly changedBy: string = "system",
-    public readonly expenseOwnerId: string,
+    public readonly changedBy: string = 'system',
+    public readonly expenseOwnerId: string
   ) {
-    super(expenseId, "Expense");
+    super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return "expense.status_changed";
+    return 'expense.status_changed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -216,6 +216,26 @@ export interface ExpenseProps {
   updatedAt: Date;
 }
 
+export interface ExpenseDTO {
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
+  title: string;
+  description?: string;
+  amount: string;
+  currency: string;
+  expenseDate: string;
+  categoryId?: string;
+  merchant?: string;
+  paymentMethod: PaymentMethod;
+  isReimbursable: boolean;
+  status: ExpenseStatus;
+  tagIds: string[];
+  attachmentIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class Expense extends AggregateRoot {
   private readonly props: ExpenseProps;
 
@@ -225,7 +245,7 @@ export class Expense extends AggregateRoot {
   }
 
   static create(
-    props: Omit<ExpenseProps, "id" | "createdAt" | "updatedAt">,
+    props: Omit<ExpenseProps, 'id' | 'createdAt' | 'updatedAt'>
   ): Expense {
     this.validateTitle(props.title);
     this.validateDescription(props.description);
@@ -245,8 +265,8 @@ export class Expense extends AggregateRoot {
         expense.userId,
         expense.amount.getAmount().toNumber(),
         expense.amount.getCurrency(),
-        expense.title,
-      ),
+        expense.title
+      )
     );
 
     return expense;
@@ -417,7 +437,7 @@ export class Expense extends AggregateRoot {
 
   removeAttachment(attachmentId: AttachmentId): void {
     const index = this.props.attachmentIds.findIndex((id) =>
-      id.equals(attachmentId),
+      id.equals(attachmentId)
     );
     if (index !== -1) {
       this.props.attachmentIds.splice(index, 1);
@@ -439,7 +459,7 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        `transition to ${newStatus}`,
+        `transition to ${newStatus}`
       );
     }
     this.props.status = newStatus;
@@ -451,12 +471,21 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        "submit",
+        'submit'
       );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.SUBMITTED);
 
+    this.addDomainEvent(
+      new ExpenseSubmittedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        userId,
+        this.props.amount.getAmount().toNumber(),
+        this.props.amount.getCurrency()
+      )
+    );
     this.addDomainEvent(
       new ExpenseStatusChangedEvent(
         this.id.getValue(),
@@ -464,8 +493,8 @@ export class Expense extends AggregateRoot {
         oldStatus,
         ExpenseStatus.SUBMITTED,
         userId,
-        this.props.userId,
-      ),
+        this.props.userId
+      )
     );
   }
 
@@ -474,12 +503,21 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        "approve",
+        'approve'
       );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.APPROVED);
 
+    this.addDomainEvent(
+      new ExpenseApprovedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        userId,
+        this.props.amount.getAmount().toNumber(),
+        this.props.amount.getCurrency()
+      )
+    );
     this.addDomainEvent(
       new ExpenseStatusChangedEvent(
         this.id.getValue(),
@@ -487,8 +525,8 @@ export class Expense extends AggregateRoot {
         oldStatus,
         ExpenseStatus.APPROVED,
         userId,
-        this.props.userId,
-      ),
+        this.props.userId
+      )
     );
   }
 
@@ -497,12 +535,20 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        "reject",
+        'reject'
       );
     }
     const oldStatus = this.props.status;
     this.transitionToStatus(ExpenseStatus.REJECTED);
 
+    this.addDomainEvent(
+      new ExpenseRejectedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        userId,
+        reason
+      )
+    );
     this.addDomainEvent(
       new ExpenseStatusChangedEvent(
         this.id.getValue(),
@@ -510,8 +556,8 @@ export class Expense extends AggregateRoot {
         oldStatus,
         ExpenseStatus.REJECTED,
         userId,
-        this.props.userId,
-      ),
+        this.props.userId
+      )
     );
   }
 
@@ -523,7 +569,7 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        "revert to draft",
+        'revert to draft'
       );
     }
     const oldStatus = this.props.status;
@@ -536,8 +582,8 @@ export class Expense extends AggregateRoot {
         oldStatus,
         ExpenseStatus.DRAFT,
         userId,
-        this.props.userId,
-      ),
+        this.props.userId
+      )
     );
   }
 
@@ -546,7 +592,7 @@ export class Expense extends AggregateRoot {
       throw new InvalidExpenseStatusError(
         this.id.getValue(),
         this.props.status,
-        "mark as reimbursed",
+        'mark as reimbursed'
       );
     }
     if (!this.props.isReimbursable) {
@@ -556,14 +602,23 @@ export class Expense extends AggregateRoot {
     this.transitionToStatus(ExpenseStatus.REIMBURSED);
 
     this.addDomainEvent(
+      new ExpenseReimbursedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.props.userId,
+        this.props.amount.getAmount().toNumber(),
+        this.props.amount.getCurrency()
+      )
+    );
+    this.addDomainEvent(
       new ExpenseStatusChangedEvent(
         this.id.getValue(),
         this.workspaceId,
         oldStatus,
         ExpenseStatus.REIMBURSED,
         userId,
-        this.props.userId,
-      ),
+        this.props.userId
+      )
     );
   }
 
@@ -600,5 +655,27 @@ export class Expense extends AggregateRoot {
       this.props.status === ExpenseStatus.DRAFT ||
       this.props.status === ExpenseStatus.REJECTED
     );
+  }
+
+  toJSON(): ExpenseDTO {
+    return {
+      expenseId: this.id.getValue(),
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      title: this.title,
+      description: this.description,
+      amount: this.amount.getAmount().toString(),
+      currency: this.amount.getCurrency(),
+      expenseDate: this.expenseDate.toDateString(),
+      categoryId: this.categoryId?.getValue(),
+      merchant: this.merchant,
+      paymentMethod: this.paymentMethod,
+      isReimbursable: this.isReimbursable,
+      status: this.status,
+      tagIds: this.tagIds.map((id) => id.getValue()),
+      attachmentIds: this.attachmentIds.map((id) => id.getValue()),
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+    };
   }
 }

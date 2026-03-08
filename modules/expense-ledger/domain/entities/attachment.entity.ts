@@ -1,4 +1,4 @@
-import { AttachmentId } from "../value-objects/attachment-id";
+import { AttachmentId } from '../value-objects/attachment-id';
 import {
   FileNameRequiredError,
   FileNameTooLongError,
@@ -9,7 +9,7 @@ import {
   MimeTypeRequiredError,
   MimeTypeTooLongError,
   InvalidFileTypeError,
-} from "../errors/expense.errors";
+} from '../errors/expense.errors';
 
 export interface AttachmentProps {
   id: AttachmentId;
@@ -29,7 +29,7 @@ export class Attachment {
     this.props = props;
   }
 
-  static create(props: Omit<AttachmentProps, "id" | "createdAt">): Attachment {
+  static create(props: Omit<AttachmentProps, 'id' | 'createdAt'>): Attachment {
     this.validateFileName(props.fileName);
     this.validateFilePath(props.filePath);
     this.validateFileSize(props.fileSize);
@@ -86,16 +86,16 @@ export class Attachment {
 
     // Validate allowed MIME types for receipts and documents
     const allowedMimeTypes = [
-      "image/jpeg",
-      "image/jpg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-      "application/pdf",
-      "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
 
     if (!allowedMimeTypes.includes(mimeType)) {
@@ -138,26 +138,26 @@ export class Attachment {
 
   // Helper methods
   isImage(): boolean {
-    return this.props.mimeType.startsWith("image/");
+    return this.props.mimeType.startsWith('image/');
   }
 
   isPDF(): boolean {
-    return this.props.mimeType === "application/pdf";
+    return this.props.mimeType === 'application/pdf';
   }
 
   isDocument(): boolean {
     return (
-      this.props.mimeType === "application/msword" ||
+      this.props.mimeType === 'application/msword' ||
       this.props.mimeType ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     );
   }
 
   isSpreadsheet(): boolean {
     return (
-      this.props.mimeType === "application/vnd.ms-excel" ||
+      this.props.mimeType === 'application/vnd.ms-excel' ||
       this.props.mimeType ===
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     );
   }
 
@@ -168,4 +168,28 @@ export class Attachment {
   getFileSizeInMB(): number {
     return Math.round((this.props.fileSize / (1024 * 1024)) * 100) / 100;
   }
+
+  toJSON(): AttachmentDTO {
+    return {
+      attachmentId: this.id.getValue(),
+      expenseId: this.expenseId,
+      fileName: this.fileName,
+      filePath: this.filePath,
+      fileSize: this.fileSize,
+      mimeType: this.mimeType,
+      uploadedBy: this.uploadedBy,
+      createdAt: this.createdAt.toISOString(),
+    };
+  }
+}
+
+export interface AttachmentDTO {
+  attachmentId: string;
+  expenseId: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  createdAt: string;
 }
