@@ -1,12 +1,11 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { CreateCategoryHandler } from "../../../application/commands/create-category.command";
-import { UpdateCategoryHandler } from "../../../application/commands/update-category.command";
-import { DeleteCategoryHandler } from "../../../application/commands/delete-category.command";
-import { GetCategoryHandler } from "../../../application/queries/get-category.query";
-import { ListCategoriesHandler } from "../../../application/queries/list-categories.query";
-import { Category } from "../../../domain/entities/category.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CreateCategoryHandler } from '../../../application/commands/create-category.command';
+import { UpdateCategoryHandler } from '../../../application/commands/update-category.command';
+import { DeleteCategoryHandler } from '../../../application/commands/delete-category.command';
+import { GetCategoryHandler } from '../../../application/queries/get-category.query';
+import { ListCategoriesHandler } from '../../../application/queries/list-categories.query';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class CategoryController {
   constructor(
@@ -14,7 +13,7 @@ export class CategoryController {
     private readonly updateCategoryHandler: UpdateCategoryHandler,
     private readonly deleteCategoryHandler: DeleteCategoryHandler,
     private readonly getCategoryHandler: GetCategoryHandler,
-    private readonly listCategoriesHandler: ListCategoriesHandler,
+    private readonly listCategoriesHandler: ListCategoriesHandler
   ) {}
 
   async createCategory(
@@ -27,7 +26,7 @@ export class CategoryController {
         icon?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
@@ -40,23 +39,24 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create category");
+      if (!result.success) {
+        return ResponseHelper.badRequest(
+          reply,
+          result.error ?? 'Failed to create category'
+        );
+      }
+
+      if (!result.data) {
+        return ResponseHelper.badRequest(reply, 'Category data unavailable');
       }
 
       const category = result.data;
 
-      return ResponseHelper.created(reply, "Category created successfully", {
-        categoryId: category.id.getValue(),
-        workspaceId: category.workspaceId,
-        name: category.name,
-        description: category.description,
-        color: category.color,
-        icon: category.icon,
-        isActive: category.isActive,
-        createdAt: category.createdAt.toISOString(),
-        updatedAt: category.updatedAt.toISOString(),
-      });
+      return ResponseHelper.created(
+        reply,
+        'Category created successfully',
+        category.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -72,7 +72,7 @@ export class CategoryController {
         icon?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
@@ -86,22 +86,24 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(reply, result.error ?? "Failed to update category");
+      if (!result.success) {
+        return ResponseHelper.badRequest(
+          reply,
+          result.error ?? 'Failed to update category'
+        );
+      }
+
+      if (!result.data) {
+        return ResponseHelper.notFound(reply, 'Category not found');
       }
 
       const category = result.data;
 
-      return ResponseHelper.ok(reply, "Category updated successfully", {
-        categoryId: category.id.getValue(),
-        workspaceId: category.workspaceId,
-        name: category.name,
-        description: category.description,
-        color: category.color,
-        icon: category.icon,
-        isActive: category.isActive,
-        updatedAt: category.updatedAt.toISOString(),
-      });
+      return ResponseHelper.ok(
+        reply,
+        'Category updated successfully',
+        category.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -111,7 +113,7 @@ export class CategoryController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
@@ -122,10 +124,13 @@ export class CategoryController {
       });
 
       if (!result.success) {
-        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete category");
+        return ResponseHelper.badRequest(
+          reply,
+          result.error ?? 'Failed to delete category'
+        );
       }
 
-      return ResponseHelper.ok(reply, "Category deleted successfully");
+      return ResponseHelper.ok(reply, 'Category deleted successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -135,7 +140,7 @@ export class CategoryController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
@@ -146,22 +151,19 @@ export class CategoryController {
       });
 
       if (!result.success || !result.data) {
-        return ResponseHelper.notFound(reply, result.error ?? "Category not found");
+        return ResponseHelper.notFound(
+          reply,
+          result.error ?? 'Category not found'
+        );
       }
 
       const category = result.data;
 
-      return ResponseHelper.ok(reply, "Category retrieved successfully", {
-        categoryId: category.id.getValue(),
-        workspaceId: category.workspaceId,
-        name: category.name,
-        description: category.description,
-        color: category.color,
-        icon: category.icon,
-        isActive: category.isActive,
-        createdAt: category.createdAt.toISOString(),
-        updatedAt: category.updatedAt.toISOString(),
-      });
+      return ResponseHelper.ok(
+        reply,
+        'Category retrieved successfully',
+        category.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -170,35 +172,40 @@ export class CategoryController {
   async listCategories(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string };
+      Querystring: { activeOnly?: string; limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
-      const { activeOnly } = request.query;
+      const { activeOnly, limit, offset } = request.query;
 
       const result = await this.listCategoriesHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === "true",
+        activeOnly: activeOnly === 'true',
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve categories");
+      if (!result.success) {
+        return ResponseHelper.badRequest(
+          reply,
+          result.error ?? 'Failed to retrieve categories'
+        );
       }
 
-      return ResponseHelper.ok(reply, "Categories retrieved successfully", {
-        items: result.data.map((category: Category) => ({
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        })),
+      if (!result.data) {
+        return ResponseHelper.badRequest(reply, 'Categories data unavailable');
+      }
+
+      return ResponseHelper.ok(reply, 'Categories retrieved successfully', {
+        items: result.data.items.map((category) => category.toJSON()),
+        pagination: {
+          total: result.data.total,
+          limit: result.data.limit,
+          offset: result.data.offset,
+          hasMore: result.data.hasMore,
+        },
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
