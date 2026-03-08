@@ -1,19 +1,27 @@
-import { AttachmentService } from '../services/attachment.service'
+import { ICommand, ICommandHandler, CommandResult } from "../../../../apps/api/src/shared/application";
+import { AttachmentService } from "../services/attachment.service";
 
-export interface DeleteAttachmentDto {
-  attachmentId: string
-  expenseId: string
-  workspaceId: string
+export interface DeleteAttachmentCommand extends ICommand {
+  readonly attachmentId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
-export class DeleteAttachmentHandler {
+export class DeleteAttachmentHandler implements ICommandHandler<DeleteAttachmentCommand, CommandResult<void>> {
   constructor(private readonly attachmentService: AttachmentService) {}
 
-  async handle(dto: DeleteAttachmentDto): Promise<void> {
-    await this.attachmentService.deleteAttachment(
-      dto.attachmentId,
-      dto.expenseId,
-      dto.workspaceId
-    )
+  async handle(command: DeleteAttachmentCommand): Promise<CommandResult<void>> {
+    try {
+      await this.attachmentService.deleteAttachment(
+        command.attachmentId,
+        command.expenseId,
+        command.workspaceId,
+      );
+      return CommandResult.success();
+    } catch (error) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : "Failed to delete attachment",
+      );
+    }
   }
 }
