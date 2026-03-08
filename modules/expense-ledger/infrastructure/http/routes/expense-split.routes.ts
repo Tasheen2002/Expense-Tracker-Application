@@ -1,44 +1,62 @@
-import { FastifyInstance } from "fastify";
-import { ExpenseSplitController } from "../controllers/expense-split.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { ExpenseSplitController } from '../controllers/expense-split.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function expenseSplitRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseSplitController,
+  controller: ExpenseSplitController
 ) {
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/split",
+    '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
       schema: {
-        tags: ["Expense Split"],
-        description: "Create an expense split",
+        tags: ['Expense Split'],
+        description: 'Create an expense split',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
-          required: ["splitType", "participants"],
+          type: 'object',
+          required: ['splitType', 'participants'],
+          additionalProperties: false,
           properties: {
             splitType: {
-              type: "string",
-              enum: ["EQUAL", "EXACT", "PERCENTAGE"],
+              type: 'string',
+              enum: ['EQUAL', 'EXACT', 'PERCENTAGE'],
             },
             participants: {
-              type: "array",
+              type: 'array',
               minItems: 2,
               items: {
-                type: "object",
-                required: ["userId"],
+                type: 'object',
+                required: ['userId'],
+                additionalProperties: false,
                 properties: {
-                  userId: { type: "string", format: "uuid" },
-                  shareAmount: { type: "number", minimum: 0.01 },
+                  userId: { type: 'string', format: 'uuid' },
+                  shareAmount: { type: 'number', minimum: 0.01 },
                   sharePercentage: {
-                    type: "number",
+                    type: 'number',
                     minimum: 0,
                     maximum: 100,
                   },
@@ -49,220 +67,229 @@ export async function expenseSplitRoutes(
         },
       },
     },
-    (request, reply) => controller.createSplit(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createSplit(request as AuthenticatedRequest, reply)
   );
 
   fastify.get(
-    "/:workspaceId/splits/:splitId",
+    '/workspaces/:workspaceId/splits/:splitId',
     {
       schema: {
-        tags: ["Expense Split"],
-        description: "Get split by ID",
+        tags: ['Expense Split'],
+        description: 'Get split by ID',
         params: {
-          type: "object",
-          required: ["workspaceId", "splitId"],
+          type: 'object',
+          required: ['workspaceId', 'splitId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            splitId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            splitId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getSplit(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSplit(request as AuthenticatedRequest, reply)
   );
 
   fastify.get(
-    "/:workspaceId/expenses/:expenseId/split",
+    '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
       schema: {
-        tags: ["Expense Split"],
-        description: "Get split by expense ID",
+        tags: ['Expense Split'],
+        description: 'Get split by expense ID',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getSplitByExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSplitByExpense(request as AuthenticatedRequest, reply)
   );
 
   fastify.get(
-    "/:workspaceId/splits",
+    '/workspaces/:workspaceId/splits',
     {
       schema: {
-        tags: ["Expense Split"],
+        tags: ['Expense Split'],
         description: "List user's splits",
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
-            limit: { type: "string" },
-            offset: { type: "string" },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
               items: {
-                type: "array",
+                type: 'array',
                 items: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    id: { type: "string" },
-                    expenseId: { type: "string" },
-                    paidBy: { type: "string" },
-                    totalAmount: { type: "string" },
-                    currency: { type: "string" },
-                    splitType: { type: "string" },
-                    participantCount: { type: "number" },
-                    isFullySettled: { type: "boolean" },
-                    outstandingAmount: { type: "string" },
-                    createdAt: { type: "string" },
+                    id: { type: 'string' },
+                    expenseId: { type: 'string' },
+                    paidBy: { type: 'string' },
+                    totalAmount: { type: 'string' },
+                    currency: { type: 'string' },
+                    splitType: { type: 'string' },
+                    participantCount: { type: 'number' },
+                    isFullySettled: { type: 'boolean' },
+                    outstandingAmount: { type: 'string' },
+                    createdAt: { type: 'string' },
                   },
                 },
               },
-              total: { type: "number" },
-              limit: { type: "number" },
-              offset: { type: "number" },
-              hasMore: { type: "boolean" },
+              total: { type: 'number' },
+              limit: { type: 'number' },
+              offset: { type: 'number' },
+              hasMore: { type: 'boolean' },
             },
           },
         },
       },
     },
-    (request, reply) => controller.listUserSplits(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listUserSplits(request as AuthenticatedRequest, reply)
   );
 
   fastify.delete(
-    "/:workspaceId/splits/:splitId",
+    '/workspaces/:workspaceId/splits/:splitId',
     {
       schema: {
-        tags: ["Expense Split"],
-        description: "Delete split",
+        tags: ['Expense Split'],
+        description: 'Delete split',
         params: {
-          type: "object",
-          required: ["workspaceId", "splitId"],
+          type: 'object',
+          required: ['workspaceId', 'splitId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            splitId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            splitId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.deleteSplit(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteSplit(request as AuthenticatedRequest, reply)
   );
 
   fastify.post(
-    "/:workspaceId/settlements/:settlementId/payment",
+    '/workspaces/:workspaceId/settlements/:settlementId/payment',
     {
       schema: {
-        tags: ["Split Settlement"],
-        description: "Record a payment for settlement",
+        tags: ['Split Settlement'],
+        description: 'Record a payment for settlement',
         params: {
-          type: "object",
-          required: ["workspaceId", "settlementId"],
+          type: 'object',
+          required: ['workspaceId', 'settlementId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            settlementId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            settlementId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
-          required: ["amount"],
+          type: 'object',
+          required: ['amount'],
+          additionalProperties: false,
           properties: {
-            amount: { type: "number", minimum: 0.01 },
+            amount: { type: 'number', minimum: 0.01 },
           },
         },
       },
     },
-    (request, reply) => controller.recordPayment(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.recordPayment(request as AuthenticatedRequest, reply)
   );
 
   fastify.get(
-    "/:workspaceId/settlements",
+    '/workspaces/:workspaceId/settlements',
     {
       schema: {
-        tags: ["Split Settlement"],
+        tags: ['Split Settlement'],
         description: "List user's settlements",
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
             status: {
-              type: "string",
-              enum: ["PENDING", "PARTIAL", "SETTLED"],
+              type: 'string',
+              enum: ['PENDING', 'PARTIAL', 'SETTLED'],
             },
-            limit: { type: "string" },
-            offset: { type: "string" },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
               items: {
-                type: "array",
+                type: 'array',
                 items: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    id: { type: "string" },
-                    splitId: { type: "string" },
-                    fromUserId: { type: "string" },
-                    toUserId: { type: "string" },
-                    totalOwedAmount: { type: "string" },
-                    paidAmount: { type: "string" },
-                    remainingAmount: { type: "string" },
-                    status: { type: "string" },
-                    settledAt: { type: "string", nullable: true }, // nullable based on logic
-                    createdAt: { type: "string" },
+                    id: { type: 'string' },
+                    splitId: { type: 'string' },
+                    fromUserId: { type: 'string' },
+                    toUserId: { type: 'string' },
+                    totalOwedAmount: { type: 'string' },
+                    paidAmount: { type: 'string' },
+                    remainingAmount: { type: 'string' },
+                    status: { type: 'string' },
+                    settledAt: { type: 'string', nullable: true }, // nullable based on logic
+                    createdAt: { type: 'string' },
                   },
                 },
               },
-              total: { type: "number" },
-              limit: { type: "number" },
-              offset: { type: "number" },
-              hasMore: { type: "boolean" },
+              total: { type: 'number' },
+              limit: { type: 'number' },
+              offset: { type: 'number' },
+              hasMore: { type: 'boolean' },
             },
           },
         },
       },
     },
-    (request, reply) => controller.listUserSettlements(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listUserSettlements(request as AuthenticatedRequest, reply)
   );
 
   fastify.get(
-    "/:workspaceId/splits/:splitId/settlements",
+    '/workspaces/:workspaceId/splits/:splitId/settlements',
     {
       schema: {
-        tags: ["Split Settlement"],
-        description: "Get settlements for a split",
+        tags: ['Split Settlement'],
+        description: 'Get settlements for a split',
         params: {
-          type: "object",
-          required: ["workspaceId", "splitId"],
+          type: 'object',
+          required: ['workspaceId', 'splitId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            splitId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            splitId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getSplitSettlements(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSplitSettlements(request as AuthenticatedRequest, reply)
   );
 }

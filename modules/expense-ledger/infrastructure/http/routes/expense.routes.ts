@@ -1,11 +1,11 @@
-import { FastifyInstance } from "fastify";
-import { ExpenseController } from "../controllers/expense.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { ExpenseController } from '../controllers/expense.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -14,90 +14,92 @@ const writeRateLimiter = createRateLimiter({
 
 export async function expenseRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseController,
+  controller: ExpenseController
 ) {
+  fastify.addHook('preHandler', (fastify as any).authenticate);
   // Apply write rate limiting to all POST/PUT/PATCH/DELETE routes
-  fastify.addHook("preHandler", async (request, reply) => {
-    if (request.method !== "GET") {
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
   // Create expense
   fastify.post(
-    "/workspaces/:workspaceId/expenses",
+    '/workspaces/:workspaceId/expenses',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Create a new expense",
+        tags: ['Expense'],
+        description: 'Create a new expense',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
           required: [
-            "title",
-            "amount",
-            "currency",
-            "expenseDate",
-            "paymentMethod",
-            "isReimbursable",
+            'title',
+            'amount',
+            'currency',
+            'expenseDate',
+            'paymentMethod',
+            'isReimbursable',
           ],
+          additionalProperties: false,
           properties: {
-            title: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string", maxLength: 5000 },
-            amount: { type: "number", minimum: 0 },
-            currency: { type: "string", minLength: 3, maxLength: 3 },
-            expenseDate: { type: "string", format: "date" },
-            categoryId: { type: "string", format: "uuid" },
-            merchant: { type: "string", maxLength: 255 },
+            title: { type: 'string', minLength: 1, maxLength: 255 },
+            description: { type: 'string', maxLength: 5000 },
+            amount: { type: 'number', minimum: 0 },
+            currency: { type: 'string', minLength: 3, maxLength: 3 },
+            expenseDate: { type: 'string', format: 'date' },
+            categoryId: { type: 'string', format: 'uuid' },
+            merchant: { type: 'string', maxLength: 255 },
             paymentMethod: {
-              type: "string",
+              type: 'string',
               enum: [
-                "CASH",
-                "CREDIT_CARD",
-                "DEBIT_CARD",
-                "BANK_TRANSFER",
-                "CHECK",
-                "DIGITAL_WALLET",
-                "OTHER",
+                'CASH',
+                'CREDIT_CARD',
+                'DEBIT_CARD',
+                'BANK_TRANSFER',
+                'CHECK',
+                'DIGITAL_WALLET',
+                'OTHER',
               ],
             },
-            isReimbursable: { type: "boolean" },
+            isReimbursable: { type: 'boolean' },
             tagIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
             },
           },
         },
         response: {
           201: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  workspaceId: { type: "string" },
-                  userId: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  amount: { type: "string" },
-                  currency: { type: "string" },
-                  expenseDate: { type: "string" },
-                  categoryId: { type: "string" },
-                  merchant: { type: "string" },
-                  paymentMethod: { type: "string" },
-                  isReimbursable: { type: "boolean" },
-                  status: { type: "string" },
-                  createdAt: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  workspaceId: { type: 'string' },
+                  userId: { type: 'string' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  amount: { type: 'string' },
+                  currency: { type: 'string' },
+                  expenseDate: { type: 'string' },
+                  categoryId: { type: 'string' },
+                  merchant: { type: 'string' },
+                  paymentMethod: { type: 'string' },
+                  isReimbursable: { type: 'boolean' },
+                  status: { type: 'string' },
+                  createdAt: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -105,73 +107,75 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.createExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createExpense(request as AuthenticatedRequest, reply)
   );
 
   // Update expense
   fastify.put(
-    "/workspaces/:workspaceId/expenses/:expenseId",
+    '/workspaces/:workspaceId/expenses/:expenseId',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Update an expense",
+        tags: ['Expense'],
+        description: 'Update an expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
+          additionalProperties: false,
           properties: {
-            title: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string", maxLength: 5000 },
-            amount: { type: "number", minimum: 0 },
-            currency: { type: "string", minLength: 3, maxLength: 3 },
-            expenseDate: { type: "string", format: "date" },
-            categoryId: { type: "string", format: "uuid" },
-            merchant: { type: "string", maxLength: 255 },
+            title: { type: 'string', minLength: 1, maxLength: 255 },
+            description: { type: 'string', maxLength: 5000 },
+            amount: { type: 'number', minimum: 0 },
+            currency: { type: 'string', minLength: 3, maxLength: 3 },
+            expenseDate: { type: 'string', format: 'date' },
+            categoryId: { type: 'string', format: 'uuid' },
+            merchant: { type: 'string', maxLength: 255 },
             paymentMethod: {
-              type: "string",
+              type: 'string',
               enum: [
-                "CASH",
-                "CREDIT_CARD",
-                "DEBIT_CARD",
-                "BANK_TRANSFER",
-                "CHECK",
-                "DIGITAL_WALLET",
-                "OTHER",
+                'CASH',
+                'CREDIT_CARD',
+                'DEBIT_CARD',
+                'BANK_TRANSFER',
+                'CHECK',
+                'DIGITAL_WALLET',
+                'OTHER',
               ],
             },
-            isReimbursable: { type: "boolean" },
+            isReimbursable: { type: 'boolean' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  workspaceId: { type: "string" },
-                  userId: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  amount: { type: "string" },
-                  currency: { type: "string" },
-                  expenseDate: { type: "string" },
-                  categoryId: { type: "string" },
-                  merchant: { type: "string" },
-                  paymentMethod: { type: "string" },
-                  isReimbursable: { type: "boolean" },
-                  status: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  workspaceId: { type: 'string' },
+                  userId: { type: 'string' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  amount: { type: 'string' },
+                  currency: { type: 'string' },
+                  expenseDate: { type: 'string' },
+                  categoryId: { type: 'string' },
+                  merchant: { type: 'string' },
+                  paymentMethod: { type: 'string' },
+                  isReimbursable: { type: 'boolean' },
+                  status: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -179,81 +183,83 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.updateExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.updateExpense(request as AuthenticatedRequest, reply)
   );
 
   // Delete expense
   fastify.delete(
-    "/workspaces/:workspaceId/expenses/:expenseId",
+    '/workspaces/:workspaceId/expenses/:expenseId',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Delete an expense",
+        tags: ['Expense'],
+        description: 'Delete an expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
             },
           },
         },
       },
     },
-    (request, reply) => controller.deleteExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteExpense(request as AuthenticatedRequest, reply)
   );
 
   // Get expense by ID
   fastify.get(
-    "/workspaces/:workspaceId/expenses/:expenseId",
+    '/workspaces/:workspaceId/expenses/:expenseId',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Get expense by ID",
+        tags: ['Expense'],
+        description: 'Get expense by ID',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  workspaceId: { type: "string" },
-                  userId: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  amount: { type: "string" },
-                  currency: { type: "string" },
-                  expenseDate: { type: "string" },
-                  categoryId: { type: "string" },
-                  merchant: { type: "string" },
-                  paymentMethod: { type: "string" },
-                  isReimbursable: { type: "boolean" },
-                  status: { type: "string" },
-                  tagIds: { type: "array", items: { type: "string" } },
-                  attachmentIds: { type: "array", items: { type: "string" } },
-                  createdAt: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  workspaceId: { type: 'string' },
+                  userId: { type: 'string' },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  amount: { type: 'string' },
+                  currency: { type: 'string' },
+                  expenseDate: { type: 'string' },
+                  categoryId: { type: 'string' },
+                  merchant: { type: 'string' },
+                  paymentMethod: { type: 'string' },
+                  isReimbursable: { type: 'boolean' },
+                  status: { type: 'string' },
+                  tagIds: { type: 'array', items: { type: 'string' } },
+                  attachmentIds: { type: 'array', items: { type: 'string' } },
+                  createdAt: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -261,71 +267,72 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.getExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getExpense(request as AuthenticatedRequest, reply)
   );
 
   // List expenses
   fastify.get(
-    "/workspaces/:workspaceId/expenses",
+    '/workspaces/:workspaceId/expenses',
     {
       schema: {
-        tags: ["Expense"],
-        description: "List all expenses",
+        tags: ['Expense'],
+        description: 'List all expenses',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
-            userId: { type: "string", format: "uuid" },
-            limit: { type: "string" },
-            offset: { type: "string" },
+            userId: { type: 'string', format: 'uuid' },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
                   items: {
-                    type: "array",
+                    type: 'array',
                     items: {
-                      type: "object",
+                      type: 'object',
                       properties: {
-                        expenseId: { type: "string" },
-                        workspaceId: { type: "string" },
-                        userId: { type: "string" },
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        amount: { type: "string" },
-                        currency: { type: "string" },
-                        expenseDate: { type: "string" },
-                        categoryId: { type: "string" },
-                        merchant: { type: "string" },
-                        paymentMethod: { type: "string" },
-                        isReimbursable: { type: "boolean" },
-                        status: { type: "string" },
-                        createdAt: { type: "string" },
-                        updatedAt: { type: "string" },
+                        expenseId: { type: 'string' },
+                        workspaceId: { type: 'string' },
+                        userId: { type: 'string' },
+                        title: { type: 'string' },
+                        description: { type: 'string' },
+                        amount: { type: 'string' },
+                        currency: { type: 'string' },
+                        expenseDate: { type: 'string' },
+                        categoryId: { type: 'string' },
+                        merchant: { type: 'string' },
+                        paymentMethod: { type: 'string' },
+                        isReimbursable: { type: 'boolean' },
+                        status: { type: 'string' },
+                        createdAt: { type: 'string' },
+                        updatedAt: { type: 'string' },
                       },
                     },
                   },
                   pagination: {
-                    type: "object",
+                    type: 'object',
                     properties: {
-                      total: { type: "number" },
-                      limit: { type: "number" },
-                      offset: { type: "number" },
-                      hasMore: { type: "boolean" },
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
                     },
                   },
                 },
@@ -335,120 +342,123 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.listExpenses(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listExpenses(request as AuthenticatedRequest, reply)
   );
 
   // Filter expenses
   fastify.get(
-    "/workspaces/:workspaceId/expenses/filter",
+    '/workspaces/:workspaceId/expenses/filter',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Filter expenses",
+        tags: ['Expense'],
+        description: 'Filter expenses',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
-            userId: { type: "string", format: "uuid" },
-            categoryId: { type: "string", format: "uuid" },
+            userId: { type: 'string', format: 'uuid' },
+            categoryId: { type: 'string', format: 'uuid' },
             status: {
-              type: "string",
+              type: 'string',
               enum: [
-                "DRAFT",
-                "SUBMITTED",
-                "APPROVED",
-                "REJECTED",
-                "REIMBURSED",
+                'DRAFT',
+                'SUBMITTED',
+                'APPROVED',
+                'REJECTED',
+                'REIMBURSED',
               ],
             },
             paymentMethod: {
-              type: "string",
+              type: 'string',
               enum: [
-                "CASH",
-                "CREDIT_CARD",
-                "DEBIT_CARD",
-                "BANK_TRANSFER",
-                "CHECK",
-                "DIGITAL_WALLET",
-                "OTHER",
+                'CASH',
+                'CREDIT_CARD',
+                'DEBIT_CARD',
+                'BANK_TRANSFER',
+                'CHECK',
+                'DIGITAL_WALLET',
+                'OTHER',
               ],
             },
-            isReimbursable: { type: "string", enum: ["true", "false"] },
-            startDate: { type: "string", format: "date" },
-            endDate: { type: "string", format: "date" },
-            minAmount: { type: "string" },
-            maxAmount: { type: "string" },
-            currency: { type: "string" },
-            searchText: { type: "string" },
-            limit: { type: "string" },
-            offset: { type: "string" },
+            isReimbursable: { type: 'string', enum: ['true', 'false'] },
+            startDate: { type: 'string', format: 'date' },
+            endDate: { type: 'string', format: 'date' },
+            minAmount: { type: 'string' },
+            maxAmount: { type: 'string' },
+            currency: { type: 'string' },
+            searchText: { type: 'string' },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
           },
         },
       },
     },
-    (request, reply) => controller.filterExpenses(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.filterExpenses(request as AuthenticatedRequest, reply)
   );
 
   // Get expense statistics
   fastify.get(
-    "/workspaces/:workspaceId/expenses/statistics",
+    '/workspaces/:workspaceId/expenses/statistics',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Get expense statistics",
+        tags: ['Expense'],
+        description: 'Get expense statistics',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
-            userId: { type: "string", format: "uuid" },
-            currency: { type: "string" },
+            userId: { type: 'string', format: 'uuid' },
+            currency: { type: 'string' },
           },
         },
       },
     },
-    (request, reply) => controller.getExpenseStatistics(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getExpenseStatistics(request as AuthenticatedRequest, reply)
   );
 
   // Submit expense
   fastify.post(
-    "/workspaces/:workspaceId/expenses/:expenseId/submit",
+    '/workspaces/:workspaceId/expenses/:expenseId/submit',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Submit expense for approval",
+        tags: ['Expense'],
+        description: 'Submit expense for approval',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  status: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  status: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -456,37 +466,38 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.submitExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.submitExpense(request as AuthenticatedRequest, reply)
   );
 
   // Approve expense
   fastify.post(
-    "/workspaces/:workspaceId/expenses/:expenseId/approve",
+    '/workspaces/:workspaceId/expenses/:expenseId/approve',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Approve submitted expense",
+        tags: ['Expense'],
+        description: 'Approve submitted expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  status: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  status: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -494,37 +505,38 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.approveExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.approveExpense(request as AuthenticatedRequest, reply)
   );
 
   // Reject expense
   fastify.post(
-    "/workspaces/:workspaceId/expenses/:expenseId/reject",
+    '/workspaces/:workspaceId/expenses/:expenseId/reject',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Reject submitted expense",
+        tags: ['Expense'],
+        description: 'Reject submitted expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  status: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  status: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -532,37 +544,38 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.rejectExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.rejectExpense(request as AuthenticatedRequest, reply)
   );
 
   // Reimburse expense
   fastify.post(
-    "/workspaces/:workspaceId/expenses/:expenseId/reimburse",
+    '/workspaces/:workspaceId/expenses/:expenseId/reimburse',
     {
       schema: {
-        tags: ["Expense"],
-        description: "Mark approved expense as reimbursed",
+        tags: ['Expense'],
+        description: 'Mark approved expense as reimbursed',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         response: {
           200: {
-            type: "object",
+            type: 'object',
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  expenseId: { type: "string" },
-                  status: { type: "string" },
-                  updatedAt: { type: "string" },
+                  expenseId: { type: 'string' },
+                  status: { type: 'string' },
+                  updatedAt: { type: 'string' },
                 },
               },
             },
@@ -570,6 +583,7 @@ export async function expenseRoutes(
         },
       },
     },
-    (request, reply) => controller.reimburseExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.reimburseExpense(request as AuthenticatedRequest, reply)
   );
 }
