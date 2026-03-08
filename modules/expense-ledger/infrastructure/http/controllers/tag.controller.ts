@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateTagHandler } from "../../../application/commands/create-tag.command";
 import { UpdateTagHandler } from "../../../application/commands/update-tag.command";
@@ -30,23 +30,24 @@ export class TagController {
     try {
       const { workspaceId } = request.params;
 
-      const tag = await this.createTagHandler.handle({
+      const result = await this.createTagHandler.handle({
         workspaceId,
         name: request.body.name,
         color: request.body.color,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Tag created successfully",
-        data: {
-          tagId: tag.id.getValue(),
-          workspaceId: tag.workspaceId,
-          name: tag.name,
-          color: tag.color,
-          createdAt: tag.createdAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create tag");
+      }
+
+      const tag = result.data;
+
+      return ResponseHelper.created(reply, "Tag created successfully", {
+        tagId: tag.id.getValue(),
+        workspaceId: tag.workspaceId,
+        name: tag.name,
+        color: tag.color,
+        createdAt: tag.createdAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -66,24 +67,25 @@ export class TagController {
     try {
       const { workspaceId, tagId } = request.params;
 
-      const tag = await this.updateTagHandler.handle({
+      const result = await this.updateTagHandler.handle({
         tagId,
         workspaceId,
         name: request.body.name,
         color: request.body.color,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Tag updated successfully",
-        data: {
-          tagId: tag.id.getValue(),
-          workspaceId: tag.workspaceId,
-          name: tag.name,
-          color: tag.color,
-          createdAt: tag.createdAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to update tag");
+      }
+
+      const tag = result.data;
+
+      return ResponseHelper.ok(reply, "Tag updated successfully", {
+        tagId: tag.id.getValue(),
+        workspaceId: tag.workspaceId,
+        name: tag.name,
+        color: tag.color,
+        createdAt: tag.createdAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -99,16 +101,16 @@ export class TagController {
     try {
       const { workspaceId, tagId } = request.params;
 
-      await this.deleteTagHandler.handle({
+      const result = await this.deleteTagHandler.handle({
         tagId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Tag deleted successfully",
-      });
+      if (!result.success) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete tag");
+      }
+
+      return ResponseHelper.ok(reply, "Tag deleted successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -123,22 +125,23 @@ export class TagController {
     try {
       const { workspaceId, tagId } = request.params;
 
-      const tag = await this.getTagHandler.handle({
+      const result = await this.getTagHandler.handle({
         tagId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Tag retrieved successfully",
-        data: {
-          tagId: tag.id.getValue(),
-          workspaceId: tag.workspaceId,
-          name: tag.name,
-          color: tag.color,
-          createdAt: tag.createdAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, result.error ?? "Tag not found");
+      }
+
+      const tag = result.data;
+
+      return ResponseHelper.ok(reply, "Tag retrieved successfully", {
+        tagId: tag.id.getValue(),
+        workspaceId: tag.workspaceId,
+        name: tag.name,
+        color: tag.color,
+        createdAt: tag.createdAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -154,29 +157,20 @@ export class TagController {
     try {
       const { workspaceId } = request.params;
 
-      const tags = await this.listTagsHandler.handle({
-        workspaceId,
-      });
+      const result = await this.listTagsHandler.handle({ workspaceId });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Tags retrieved successfully",
-        data: {
-          items: tags.items.map((tag: Tag) => ({
-            tagId: tag.id.getValue(),
-            workspaceId: tag.workspaceId,
-            name: tag.name,
-            color: tag.color,
-            createdAt: tag.createdAt.toISOString(),
-          })),
-          pagination: {
-            total: tags.total,
-            limit: tags.limit,
-            offset: tags.offset,
-            hasMore: tags.hasMore,
-          },
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve tags");
+      }
+
+      return ResponseHelper.ok(reply, "Tags retrieved successfully", {
+        items: result.data.map((tag: Tag) => ({
+          tagId: tag.id.getValue(),
+          workspaceId: tag.workspaceId,
+          name: tag.name,
+          color: tag.color,
+          createdAt: tag.createdAt.toISOString(),
+        })),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

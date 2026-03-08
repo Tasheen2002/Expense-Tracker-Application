@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { RecurringExpenseService } from "../../../application/services/recurring-expense.service";
 import { RecurrenceFrequency } from "../../../domain/enums/recurrence-frequency";
@@ -30,40 +30,30 @@ export class RecurringExpenseController {
     }
     const body = request.body;
 
-    // Basic validation
-    // Ideally we use a schema validator (zod/ajv) attached to the route
-
     try {
-      const expense = await this.recurringExpenseService.createRecurringExpense(
-        {
-          workspaceId,
-          userId,
-          frequency: body.frequency,
-          interval: body.interval,
-          startDate: new Date(body.startDate),
-          endDate: body.endDate ? new Date(body.endDate) : undefined,
-          template: body.template,
-        },
-      );
+      const expense = await this.recurringExpenseService.createRecurringExpense({
+        workspaceId,
+        userId,
+        frequency: body.frequency,
+        interval: body.interval,
+        startDate: new Date(body.startDate),
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+        template: body.template,
+      });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Recurring expense created successfully",
-        data: {
-          id: expense.id,
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          frequency: expense.frequency,
-          interval: expense.interval,
-          startDate: expense.startDate.toISOString(),
-          endDate: expense.endDate?.toISOString(),
-          nextRunDate: expense.nextRunDate.toISOString(),
-          status: expense.status,
-          template: expense.template,
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      return ResponseHelper.created(reply, "Recurring expense created successfully", {
+        id: expense.id,
+        workspaceId: expense.workspaceId,
+        userId: expense.userId,
+        frequency: expense.frequency,
+        interval: expense.interval,
+        startDate: expense.startDate.toISOString(),
+        endDate: expense.endDate?.toISOString(),
+        nextRunDate: expense.nextRunDate.toISOString(),
+        status: expense.status,
+        template: expense.template,
+        createdAt: expense.createdAt.toISOString(),
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -80,11 +70,7 @@ export class RecurringExpenseController {
 
     try {
       await this.recurringExpenseService.pauseRecurringExpense(id);
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Recurring expense paused",
-      });
+      return ResponseHelper.ok(reply, "Recurring expense paused");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -100,11 +86,7 @@ export class RecurringExpenseController {
 
     try {
       await this.recurringExpenseService.resumeRecurringExpense(id);
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Recurring expense resumed",
-      });
+      return ResponseHelper.ok(reply, "Recurring expense resumed");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -120,29 +102,21 @@ export class RecurringExpenseController {
 
     try {
       await this.recurringExpenseService.stopRecurringExpense(id);
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Recurring expense stopped",
-      });
+      return ResponseHelper.ok(reply, "Recurring expense stopped");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async trigger(request: AuthenticatedRequest, reply: FastifyReply) {
-    // This endpoint should be secured by a system API key
-    // For now, we assume middleware handles auth or it's internal
-
     try {
       const processedCount =
         await this.recurringExpenseService.processDueExpenses();
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: `Processed ${processedCount} recurring expenses`,
-        data: { count: processedCount },
-      });
+      return ResponseHelper.ok(
+        reply,
+        `Processed ${processedCount} recurring expenses`,
+        { count: processedCount },
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

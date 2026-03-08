@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateSplitHandler } from "../../../application/commands/create-split.command";
 import { DeleteSplitHandler } from "../../../application/commands/delete-split.command";
@@ -9,6 +9,7 @@ import { ListUserSettlementsHandler } from "../../../application/queries/list-us
 import { ExpenseSplitService } from "../../../application/services/expense-split.service";
 import { SplitType } from "../../../domain/enums/split-type";
 import { SettlementStatus } from "../../../domain/enums/settlement-status";
+import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class ExpenseSplitController {
   private readonly createSplitHandler: CreateSplitHandler;
@@ -47,34 +48,44 @@ export class ExpenseSplitController {
     const { splitType, participants } = request.body;
     const userId = request.user.userId;
 
-    const split = await this.createSplitHandler.handle({
-      expenseId,
-      workspaceId,
-      userId,
-      splitType,
-      participants,
-    });
+    try {
+      const result = await this.createSplitHandler.handle({
+        expenseId,
+        workspaceId,
+        userId,
+        splitType,
+        participants,
+      });
 
-    return reply.status(201).send({
-      id: split.getId().getValue(),
-      expenseId: split.getExpenseId().getValue(),
-      paidBy: split.getPaidBy(),
-      totalAmount: split.getTotalAmount().getAmount(),
-      currency: split.getTotalAmount().getCurrency(),
-      splitType: split.getSplitType(),
-      participants: split.getParticipants().map((p) => ({
-        id: p.getId().getValue(),
-        userId: p.getUserId(),
-        shareAmount: p.getShareAmount().getAmount(),
-        sharePercentage: p.getSharePercentage()?.toNumber(),
-        isPaid: p.isPaidStatus(),
-        paidAt: p.getPaidAt(),
-      })),
-      isFullySettled: split.isFullySettled(),
-      outstandingAmount: split.getOutstandingAmount().getAmount(),
-      createdAt: split.getCreatedAt(),
-      updatedAt: split.getUpdatedAt(),
-    });
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create split");
+      }
+
+      const split = result.data;
+
+      return ResponseHelper.created(reply, "Split created successfully", {
+        id: split.getId().getValue(),
+        expenseId: split.getExpenseId().getValue(),
+        paidBy: split.getPaidBy(),
+        totalAmount: split.getTotalAmount().getAmount(),
+        currency: split.getTotalAmount().getCurrency(),
+        splitType: split.getSplitType(),
+        participants: split.getParticipants().map((p: any) => ({
+          id: p.getId().getValue(),
+          userId: p.getUserId(),
+          shareAmount: p.getShareAmount().getAmount(),
+          sharePercentage: p.getSharePercentage()?.toNumber(),
+          isPaid: p.isPaidStatus(),
+          paidAt: p.getPaidAt(),
+        })),
+        isFullySettled: split.isFullySettled(),
+        outstandingAmount: split.getOutstandingAmount().getAmount(),
+        createdAt: split.getCreatedAt(),
+        updatedAt: split.getUpdatedAt(),
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async getSplit(
@@ -86,36 +97,42 @@ export class ExpenseSplitController {
     const { workspaceId, splitId } = request.params;
     const userId = request.user.userId;
 
-    const split = await this.getSplitHandler.handle({
-      splitId,
-      workspaceId,
-      userId,
-    });
+    try {
+      const result = await this.getSplitHandler.handle({
+        splitId,
+        workspaceId,
+        userId,
+      });
 
-    if (!split) {
-      return reply.status(404).send({ error: "Split not found" });
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, result.error ?? "Split not found");
+      }
+
+      const split = result.data;
+
+      return ResponseHelper.ok(reply, "Split retrieved successfully", {
+        id: split.getId().getValue(),
+        expenseId: split.getExpenseId().getValue(),
+        paidBy: split.getPaidBy(),
+        totalAmount: split.getTotalAmount().getAmount(),
+        currency: split.getTotalAmount().getCurrency(),
+        splitType: split.getSplitType(),
+        participants: split.getParticipants().map((p: any) => ({
+          id: p.getId().getValue(),
+          userId: p.getUserId(),
+          shareAmount: p.getShareAmount().getAmount(),
+          sharePercentage: p.getSharePercentage()?.toNumber(),
+          isPaid: p.isPaidStatus(),
+          paidAt: p.getPaidAt(),
+        })),
+        isFullySettled: split.isFullySettled(),
+        outstandingAmount: split.getOutstandingAmount().getAmount(),
+        createdAt: split.getCreatedAt(),
+        updatedAt: split.getUpdatedAt(),
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    return reply.send({
-      id: split.getId().getValue(),
-      expenseId: split.getExpenseId().getValue(),
-      paidBy: split.getPaidBy(),
-      totalAmount: split.getTotalAmount().getAmount(),
-      currency: split.getTotalAmount().getCurrency(),
-      splitType: split.getSplitType(),
-      participants: split.getParticipants().map((p) => ({
-        id: p.getId().getValue(),
-        userId: p.getUserId(),
-        shareAmount: p.getShareAmount().getAmount(),
-        sharePercentage: p.getSharePercentage()?.toNumber(),
-        isPaid: p.isPaidStatus(),
-        paidAt: p.getPaidAt(),
-      })),
-      isFullySettled: split.isFullySettled(),
-      outstandingAmount: split.getOutstandingAmount().getAmount(),
-      createdAt: split.getCreatedAt(),
-      updatedAt: split.getUpdatedAt(),
-    });
   }
 
   async getSplitByExpense(
@@ -127,36 +144,40 @@ export class ExpenseSplitController {
     const { workspaceId, expenseId } = request.params;
     const userId = request.user.userId;
 
-    const split = await this.splitService.getSplitByExpenseId(
-      expenseId,
-      workspaceId,
-      userId,
-    );
+    try {
+      const split = await this.splitService.getSplitByExpenseId(
+        expenseId,
+        workspaceId,
+        userId,
+      );
 
-    if (!split) {
-      return reply.status(404).send({ error: "Split not found" });
+      if (!split) {
+        return ResponseHelper.notFound(reply, "Split not found");
+      }
+
+      return ResponseHelper.ok(reply, "Split retrieved successfully", {
+        id: split.getId().getValue(),
+        expenseId: split.getExpenseId().getValue(),
+        paidBy: split.getPaidBy(),
+        totalAmount: split.getTotalAmount().getAmount(),
+        currency: split.getTotalAmount().getCurrency(),
+        splitType: split.getSplitType(),
+        participants: split.getParticipants().map((p: any) => ({
+          id: p.getId().getValue(),
+          userId: p.getUserId(),
+          shareAmount: p.getShareAmount().getAmount(),
+          sharePercentage: p.getSharePercentage()?.toNumber(),
+          isPaid: p.isPaidStatus(),
+          paidAt: p.getPaidAt(),
+        })),
+        isFullySettled: split.isFullySettled(),
+        outstandingAmount: split.getOutstandingAmount().getAmount(),
+        createdAt: split.getCreatedAt(),
+        updatedAt: split.getUpdatedAt(),
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    return reply.send({
-      id: split.getId().getValue(),
-      expenseId: split.getExpenseId().getValue(),
-      paidBy: split.getPaidBy(),
-      totalAmount: split.getTotalAmount().getAmount(),
-      currency: split.getTotalAmount().getCurrency(),
-      splitType: split.getSplitType(),
-      participants: split.getParticipants().map((p) => ({
-        id: p.getId().getValue(),
-        userId: p.getUserId(),
-        shareAmount: p.getShareAmount().getAmount(),
-        sharePercentage: p.getSharePercentage()?.toNumber(),
-        isPaid: p.isPaidStatus(),
-        paidAt: p.getPaidAt(),
-      })),
-      isFullySettled: split.isFullySettled(),
-      outstandingAmount: split.getOutstandingAmount().getAmount(),
-      createdAt: split.getCreatedAt(),
-      updatedAt: split.getUpdatedAt(),
-    });
   }
 
   async listUserSplits(
@@ -170,31 +191,41 @@ export class ExpenseSplitController {
     const { limit, offset } = request.query;
     const userId = request.user.userId;
 
-    const result = await this.listUserSplitsHandler.handle({
-      userId,
-      workspaceId,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
-    });
+    try {
+      const result = await this.listUserSplitsHandler.handle({
+        userId,
+        workspaceId,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
 
-    return reply.send({
-      items: result.items.map((split) => ({
-        id: split.getId().getValue(),
-        expenseId: split.getExpenseId().getValue(),
-        paidBy: split.getPaidBy(),
-        totalAmount: split.getTotalAmount().getAmount(),
-        currency: split.getTotalAmount().getCurrency(),
-        splitType: split.getSplitType(),
-        participantCount: split.getParticipants().length,
-        isFullySettled: split.isFullySettled(),
-        outstandingAmount: split.getOutstandingAmount().getAmount(),
-        createdAt: split.getCreatedAt(),
-      })),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve splits");
+      }
+
+      return ResponseHelper.ok(reply, "Splits retrieved successfully", {
+        items: result.data.items.map((split: any) => ({
+          id: split.getId().getValue(),
+          expenseId: split.getExpenseId().getValue(),
+          paidBy: split.getPaidBy(),
+          totalAmount: split.getTotalAmount().getAmount(),
+          currency: split.getTotalAmount().getCurrency(),
+          splitType: split.getSplitType(),
+          participantCount: split.getParticipants().length,
+          isFullySettled: split.isFullySettled(),
+          outstandingAmount: split.getOutstandingAmount().getAmount(),
+          createdAt: split.getCreatedAt(),
+        })),
+        pagination: {
+          total: result.data.total,
+          limit: result.data.limit,
+          offset: result.data.offset,
+          hasMore: result.data.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async deleteSplit(
@@ -206,13 +237,21 @@ export class ExpenseSplitController {
     const { workspaceId, splitId } = request.params;
     const userId = request.user.userId;
 
-    await this.deleteSplitHandler.handle({
-      splitId,
-      workspaceId,
-      userId,
-    });
+    try {
+      const result = await this.deleteSplitHandler.handle({
+        splitId,
+        workspaceId,
+        userId,
+      });
 
-    return reply.status(204).send();
+      if (!result.success) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete split");
+      }
+
+      return ResponseHelper.ok(reply, "Split deleted successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async recordPayment(
@@ -226,25 +265,35 @@ export class ExpenseSplitController {
     const { amount } = request.body;
     const userId = request.user.userId;
 
-    const settlement = await this.recordPaymentHandler.handle({
-      settlementId,
-      workspaceId,
-      userId,
-      amount,
-    });
+    try {
+      const result = await this.recordPaymentHandler.handle({
+        settlementId,
+        workspaceId,
+        userId,
+        amount,
+      });
 
-    return reply.send({
-      id: settlement.getId().getValue(),
-      splitId: settlement.getSplitId().getValue(),
-      fromUserId: settlement.getFromUserId(),
-      toUserId: settlement.getToUserId(),
-      totalOwedAmount: settlement.getTotalOwedAmount().getAmount(),
-      paidAmount: settlement.getPaidAmount().getAmount(),
-      remainingAmount: settlement.getRemainingAmount().getAmount(),
-      status: settlement.getStatus(),
-      settledAt: settlement.getSettledAt(),
-      updatedAt: settlement.getUpdatedAt(),
-    });
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to record payment");
+      }
+
+      const settlement = result.data;
+
+      return ResponseHelper.ok(reply, "Payment recorded successfully", {
+        id: settlement.getId().getValue(),
+        splitId: settlement.getSplitId().getValue(),
+        fromUserId: settlement.getFromUserId(),
+        toUserId: settlement.getToUserId(),
+        totalOwedAmount: settlement.getTotalOwedAmount().getAmount(),
+        paidAmount: settlement.getPaidAmount().getAmount(),
+        remainingAmount: settlement.getRemainingAmount().getAmount(),
+        status: settlement.getStatus(),
+        settledAt: settlement.getSettledAt(),
+        updatedAt: settlement.getUpdatedAt(),
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async listUserSettlements(
@@ -262,32 +311,42 @@ export class ExpenseSplitController {
     const { status, limit, offset } = request.query;
     const userId = request.user.userId;
 
-    const result = await this.listUserSettlementsHandler.handle({
-      userId,
-      workspaceId,
-      status,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
-    });
+    try {
+      const result = await this.listUserSettlementsHandler.handle({
+        userId,
+        workspaceId,
+        status,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
 
-    return reply.send({
-      items: result.items.map((s) => ({
-        id: s.getId().getValue(),
-        splitId: s.getSplitId().getValue(),
-        fromUserId: s.getFromUserId(),
-        toUserId: s.getToUserId(),
-        totalOwedAmount: s.getTotalOwedAmount().getAmount(),
-        paidAmount: s.getPaidAmount().getAmount(),
-        remainingAmount: s.getRemainingAmount().getAmount(),
-        status: s.getStatus(),
-        settledAt: s.getSettledAt(),
-        createdAt: s.getCreatedAt(),
-      })),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve settlements");
+      }
+
+      return ResponseHelper.ok(reply, "Settlements retrieved successfully", {
+        items: result.data.items.map((s: any) => ({
+          id: s.getId().getValue(),
+          splitId: s.getSplitId().getValue(),
+          fromUserId: s.getFromUserId(),
+          toUserId: s.getToUserId(),
+          totalOwedAmount: s.getTotalOwedAmount().getAmount(),
+          paidAmount: s.getPaidAmount().getAmount(),
+          remainingAmount: s.getRemainingAmount().getAmount(),
+          status: s.getStatus(),
+          settledAt: s.getSettledAt(),
+          createdAt: s.getCreatedAt(),
+        })),
+        pagination: {
+          total: result.data.total,
+          limit: result.data.limit,
+          offset: result.data.offset,
+          hasMore: result.data.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async getSplitSettlements(
@@ -299,24 +358,28 @@ export class ExpenseSplitController {
     const { workspaceId, splitId } = request.params;
     const userId = request.user.userId;
 
-    const settlements = await this.splitService.getSplitSettlements(
-      splitId,
-      workspaceId,
-      userId,
-    );
+    try {
+      const settlements = await this.splitService.getSplitSettlements(
+        splitId,
+        workspaceId,
+        userId,
+      );
 
-    return reply.send({
-      items: settlements.items.map((s) => ({
-        id: s.getId().getValue(),
-        fromUserId: s.getFromUserId(),
-        toUserId: s.getToUserId(),
-        totalOwedAmount: s.getTotalOwedAmount().getAmount(),
-        paidAmount: s.getPaidAmount().getAmount(),
-        remainingAmount: s.getRemainingAmount().getAmount(),
-        status: s.getStatus(),
-        settledAt: s.getSettledAt(),
-        createdAt: s.getCreatedAt(),
-      })),
-    });
+      return ResponseHelper.ok(reply, "Split settlements retrieved successfully", {
+        items: settlements.items.map((s: any) => ({
+          id: s.getId().getValue(),
+          fromUserId: s.getFromUserId(),
+          toUserId: s.getToUserId(),
+          totalOwedAmount: s.getTotalOwedAmount().getAmount(),
+          paidAmount: s.getPaidAmount().getAmount(),
+          remainingAmount: s.getRemainingAmount().getAmount(),
+          status: s.getStatus(),
+          settledAt: s.getSettledAt(),
+          createdAt: s.getCreatedAt(),
+        })),
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

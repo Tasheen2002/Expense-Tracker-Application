@@ -8,7 +8,6 @@ import { ApproveExpenseHandler } from "../../../application/commands/approve-exp
 import { RejectExpenseHandler } from "../../../application/commands/reject-expense.command";
 import { ReimburseExpenseHandler } from "../../../application/commands/reimburse-expense.command";
 import { GetExpenseHandler } from "../../../application/queries/get-expense.query";
-import { ListExpensesHandler } from "../../../application/queries/list-expenses.query";
 import { FilterExpensesHandler } from "../../../application/queries/filter-expenses.query";
 import { GetExpenseStatisticsHandler } from "../../../application/queries/get-expense-statistics.query";
 import { Expense } from "../../../domain/entities/expense.entity";
@@ -34,7 +33,6 @@ export class ExpenseController {
     private readonly rejectExpenseHandler: RejectExpenseHandler,
     private readonly reimburseExpenseHandler: ReimburseExpenseHandler,
     private readonly getExpenseHandler: GetExpenseHandler,
-    private readonly listExpensesHandler: ListExpensesHandler,
     private readonly filterExpensesHandler: FilterExpensesHandler,
     private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler,
   ) {}
@@ -43,12 +41,9 @@ export class ExpenseController {
     try {
       const userId = request.user.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
+
       const { workspaceId } = request.params as { workspaceId: string };
       const body = request.body as {
         title: string;
@@ -64,14 +59,10 @@ export class ExpenseController {
       };
 
       if (!isValidPaymentMethod(body.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${body.paymentMethod}`,
-        });
+        return ResponseHelper.badRequest(reply, `Invalid payment method: ${body.paymentMethod}`);
       }
 
-      const expense = await this.createExpenseHandler.handle({
+      const result = await this.createExpenseHandler.handle({
         workspaceId,
         userId,
         title: body.title,
@@ -86,33 +77,34 @@ export class ExpenseController {
         tagIds: body.tagIds,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Expense created successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          tagIds: expense.tagIds
-            ? expense.tagIds.map((id: TagId) => id.getValue())
-            : [],
-          attachmentIds: expense.attachmentIds
-            ? expense.attachmentIds.map((id: AttachmentId) => id.getValue())
-            : [],
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.created(reply, "Expense created successfully", {
+        expenseId: expense.id.getValue(),
+        workspaceId: expense.workspaceId,
+        userId: expense.userId,
+        title: expense.title,
+        description: expense.description,
+        amount: expense.amount.getAmount().toString(),
+        currency: expense.amount.getCurrency(),
+        expenseDate: expense.expenseDate.toDateString(),
+        categoryId: expense.categoryId?.getValue(),
+        merchant: expense.merchant,
+        paymentMethod: expense.paymentMethod,
+        isReimbursable: expense.isReimbursable,
+        status: expense.status,
+        tagIds: expense.tagIds
+          ? expense.tagIds.map((id: TagId) => id.getValue())
+          : [],
+        attachmentIds: expense.attachmentIds
+          ? expense.attachmentIds.map((id: AttachmentId) => id.getValue())
+          : [],
+        createdAt: expense.createdAt.toISOString(),
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -123,12 +115,9 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
+
       const { workspaceId, expenseId } = request.params as {
         workspaceId: string;
         expenseId: string;
@@ -146,14 +135,10 @@ export class ExpenseController {
       };
 
       if (body.paymentMethod && !isValidPaymentMethod(body.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${body.paymentMethod}`,
-        });
+        return ResponseHelper.badRequest(reply, `Invalid payment method: ${body.paymentMethod}`);
       }
 
-      const expense = await this.updateExpenseHandler.handle({
+      const result = await this.updateExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
@@ -168,26 +153,27 @@ export class ExpenseController {
         isReimbursable: body.isReimbursable,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense updated successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to update expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense updated successfully", {
+        expenseId: expense.id.getValue(),
+        workspaceId: expense.workspaceId,
+        userId: expense.userId,
+        title: expense.title,
+        description: expense.description,
+        amount: expense.amount.getAmount().toString(),
+        currency: expense.amount.getCurrency(),
+        expenseDate: expense.expenseDate.toDateString(),
+        categoryId: expense.categoryId?.getValue(),
+        merchant: expense.merchant,
+        paymentMethod: expense.paymentMethod,
+        isReimbursable: expense.isReimbursable,
+        status: expense.status,
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -203,25 +189,22 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
+
       const { workspaceId, expenseId } = request.params;
 
-      await this.deleteExpenseHandler.handle({
+      const result = await this.deleteExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense deleted successfully",
-      });
+      if (!result.success) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete expense");
+      }
+
+      return ResponseHelper.ok(reply, "Expense deleted successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -236,36 +219,37 @@ export class ExpenseController {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const expense = await this.getExpenseHandler.handle({
+      const result = await this.getExpenseHandler.handle({
         expenseId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense retrieved successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          tagIds: expense.tagIds.map((id: TagId) => id.getValue()),
-          attachmentIds: expense.attachmentIds.map((id: AttachmentId) =>
-            id.getValue(),
-          ),
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, result.error ?? "Expense not found");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense retrieved successfully", {
+        expenseId: expense.id.getValue(),
+        workspaceId: expense.workspaceId,
+        userId: expense.userId,
+        title: expense.title,
+        description: expense.description,
+        amount: expense.amount.getAmount().toString(),
+        currency: expense.amount.getCurrency(),
+        expenseDate: expense.expenseDate.toDateString(),
+        categoryId: expense.categoryId?.getValue(),
+        merchant: expense.merchant,
+        paymentMethod: expense.paymentMethod,
+        isReimbursable: expense.isReimbursable,
+        status: expense.status,
+        tagIds: expense.tagIds.map((id: TagId) => id.getValue()),
+        attachmentIds: expense.attachmentIds.map((id: AttachmentId) =>
+          id.getValue(),
+        ),
+        createdAt: expense.createdAt.toISOString(),
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -287,41 +271,42 @@ export class ExpenseController {
       const { workspaceId } = request.params;
       const { userId, limit, offset } = request.query;
 
-      const result = await this.listExpensesHandler.handle({
+      const result = await this.filterExpensesHandler.handle({
         workspaceId,
-        userId: userId || request.user?.userId, // Default to own expenses if no specific user requested (Privacy Fix)
+        userId: userId || request.user?.userId,
         limit: limit ? parseInt(limit) : undefined,
         offset: offset ? parseInt(offset) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expenses retrieved successfully",
-        data: {
-          items: result.items.map((expense: Expense) => ({
-            expenseId: expense.id.getValue(),
-            workspaceId: expense.workspaceId,
-            userId: expense.userId,
-            title: expense.title,
-            description: expense.description,
-            amount: expense.amount.getAmount().toString(),
-            currency: expense.amount.getCurrency(),
-            expenseDate: expense.expenseDate.toDateString(),
-            categoryId: expense.categoryId?.getValue(),
-            merchant: expense.merchant,
-            paymentMethod: expense.paymentMethod,
-            isReimbursable: expense.isReimbursable,
-            status: expense.status,
-            createdAt: expense.createdAt.toISOString(),
-            updatedAt: expense.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve expenses");
+      }
+
+      const data = result.data;
+
+      return ResponseHelper.ok(reply, "Expenses retrieved successfully", {
+        items: data.items.map((expense: Expense) => ({
+          expenseId: expense.id.getValue(),
+          workspaceId: expense.workspaceId,
+          userId: expense.userId,
+          title: expense.title,
+          description: expense.description,
+          amount: expense.amount.getAmount().toString(),
+          currency: expense.amount.getCurrency(),
+          expenseDate: expense.expenseDate.toDateString(),
+          categoryId: expense.categoryId?.getValue(),
+          merchant: expense.merchant,
+          paymentMethod: expense.paymentMethod,
+          isReimbursable: expense.isReimbursable,
+          status: expense.status,
+          createdAt: expense.createdAt.toISOString(),
+          updatedAt: expense.updatedAt.toISOString(),
+        })),
+        pagination: {
+          total: data.total,
+          limit: data.limit,
+          offset: data.offset,
+          hasMore: data.hasMore,
         },
       });
     } catch (error: unknown) {
@@ -355,19 +340,11 @@ export class ExpenseController {
       const query = request.query;
 
       if (query.status && !isValidExpenseStatus(query.status)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid expense status: ${query.status}`,
-        });
+        return ResponseHelper.badRequest(reply, `Invalid expense status: ${query.status}`);
       }
 
       if (query.paymentMethod && !isValidPaymentMethod(query.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${query.paymentMethod}`,
-        });
+        return ResponseHelper.badRequest(reply, `Invalid payment method: ${query.paymentMethod}`);
       }
 
       const result = await this.filterExpensesHandler.handle({
@@ -387,34 +364,35 @@ export class ExpenseController {
         offset: query.offset ? parseInt(query.offset) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expenses filtered successfully",
-        data: {
-          items: result.items.map((expense: Expense) => ({
-            expenseId: expense.id.getValue(),
-            workspaceId: expense.workspaceId,
-            userId: expense.userId,
-            title: expense.title,
-            description: expense.description,
-            amount: expense.amount.getAmount().toString(),
-            currency: expense.amount.getCurrency(),
-            expenseDate: expense.expenseDate.toDateString(),
-            categoryId: expense.categoryId?.getValue(),
-            merchant: expense.merchant,
-            paymentMethod: expense.paymentMethod,
-            isReimbursable: expense.isReimbursable,
-            status: expense.status,
-            createdAt: expense.createdAt.toISOString(),
-            updatedAt: expense.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to filter expenses");
+      }
+
+      const data = result.data;
+
+      return ResponseHelper.ok(reply, "Expenses filtered successfully", {
+        items: data.items.map((expense: Expense) => ({
+          expenseId: expense.id.getValue(),
+          workspaceId: expense.workspaceId,
+          userId: expense.userId,
+          title: expense.title,
+          description: expense.description,
+          amount: expense.amount.getAmount().toString(),
+          currency: expense.amount.getCurrency(),
+          expenseDate: expense.expenseDate.toDateString(),
+          categoryId: expense.categoryId?.getValue(),
+          merchant: expense.merchant,
+          paymentMethod: expense.paymentMethod,
+          isReimbursable: expense.isReimbursable,
+          status: expense.status,
+          createdAt: expense.createdAt.toISOString(),
+          updatedAt: expense.updatedAt.toISOString(),
+        })),
+        pagination: {
+          total: data.total,
+          limit: data.limit,
+          offset: data.offset,
+          hasMore: data.hasMore,
         },
       });
     } catch (error: unknown) {
@@ -433,18 +411,17 @@ export class ExpenseController {
         currency?: string;
       };
 
-      const statistics = await this.getExpenseStatisticsHandler.handle({
+      const result = await this.getExpenseStatisticsHandler.handle({
         workspaceId,
         userId,
         currency,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense statistics retrieved successfully",
-        data: statistics,
-      });
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to get expense statistics");
+      }
+
+      return ResponseHelper.ok(reply, "Expense statistics retrieved successfully", result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -454,32 +431,30 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
+
       const { workspaceId, expenseId } = request.params as {
         workspaceId: string;
         expenseId: string;
       };
 
-      const expense = await this.submitExpenseHandler.handle({
+      const result = await this.submitExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense submitted successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to submit expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense submitted successfully", {
+        expenseId: expense.id.getValue(),
+        status: expense.status,
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -490,11 +465,7 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
       const { workspaceId, expenseId } = request.params as {
@@ -502,21 +473,22 @@ export class ExpenseController {
         expenseId: string;
       };
 
-      const expense = await this.approveExpenseHandler.handle({
+      const result = await this.approveExpenseHandler.handle({
         expenseId,
         workspaceId,
         approverId: userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense approved successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to approve expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense approved successfully", {
+        expenseId: expense.id.getValue(),
+        status: expense.status,
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -527,11 +499,7 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
       const { workspaceId, expenseId } = request.params as {
@@ -540,22 +508,23 @@ export class ExpenseController {
       };
       const reason = (request.body as { reason?: string })?.reason;
 
-      const expense = await this.rejectExpenseHandler.handle({
+      const result = await this.rejectExpenseHandler.handle({
         expenseId,
         workspaceId,
         rejecterId: userId,
         reason,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense rejected successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to reject expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense rejected successfully", {
+        expenseId: expense.id.getValue(),
+        status: expense.status,
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -566,11 +535,7 @@ export class ExpenseController {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
       const { workspaceId, expenseId } = request.params as {
@@ -578,21 +543,22 @@ export class ExpenseController {
         expenseId: string;
       };
 
-      const expense = await this.reimburseExpenseHandler.handle({
+      const result = await this.reimburseExpenseHandler.handle({
         expenseId,
         workspaceId,
         processedBy: userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense marked as reimbursed successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to reimburse expense");
+      }
+
+      const expense = result.data;
+
+      return ResponseHelper.ok(reply, "Expense marked as reimbursed successfully", {
+        expenseId: expense.id.getValue(),
+        status: expense.status,
+        updatedAt: expense.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

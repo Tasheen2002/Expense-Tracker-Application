@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateCategoryHandler } from "../../../application/commands/create-category.command";
 import { UpdateCategoryHandler } from "../../../application/commands/update-category.command";
@@ -32,7 +32,7 @@ export class CategoryController {
     try {
       const { workspaceId } = request.params;
 
-      const category = await this.createCategoryHandler.handle({
+      const result = await this.createCategoryHandler.handle({
         workspaceId,
         name: request.body.name,
         description: request.body.description,
@@ -40,21 +40,22 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Category created successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create category");
+      }
+
+      const category = result.data;
+
+      return ResponseHelper.created(reply, "Category created successfully", {
+        categoryId: category.id.getValue(),
+        workspaceId: category.workspaceId,
+        name: category.name,
+        description: category.description,
+        color: category.color,
+        icon: category.icon,
+        isActive: category.isActive,
+        createdAt: category.createdAt.toISOString(),
+        updatedAt: category.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -76,7 +77,7 @@ export class CategoryController {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      const category = await this.updateCategoryHandler.handle({
+      const result = await this.updateCategoryHandler.handle({
         categoryId,
         workspaceId,
         name: request.body.name,
@@ -85,20 +86,21 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category updated successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          updatedAt: category.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to update category");
+      }
+
+      const category = result.data;
+
+      return ResponseHelper.ok(reply, "Category updated successfully", {
+        categoryId: category.id.getValue(),
+        workspaceId: category.workspaceId,
+        name: category.name,
+        description: category.description,
+        color: category.color,
+        icon: category.icon,
+        isActive: category.isActive,
+        updatedAt: category.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -114,16 +116,16 @@ export class CategoryController {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      await this.deleteCategoryHandler.handle({
+      const result = await this.deleteCategoryHandler.handle({
         categoryId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category deleted successfully",
-      });
+      if (!result.success) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete category");
+      }
+
+      return ResponseHelper.ok(reply, "Category deleted successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -138,26 +140,27 @@ export class CategoryController {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      const category = await this.getCategoryHandler.handle({
+      const result = await this.getCategoryHandler.handle({
         categoryId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category retrieved successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, result.error ?? "Category not found");
+      }
+
+      const category = result.data;
+
+      return ResponseHelper.ok(reply, "Category retrieved successfully", {
+        categoryId: category.id.getValue(),
+        workspaceId: category.workspaceId,
+        name: category.name,
+        description: category.description,
+        color: category.color,
+        icon: category.icon,
+        isActive: category.isActive,
+        createdAt: category.createdAt.toISOString(),
+        updatedAt: category.updatedAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -175,34 +178,27 @@ export class CategoryController {
       const { workspaceId } = request.params;
       const { activeOnly } = request.query;
 
-      const categories = await this.listCategoriesHandler.handle({
+      const result = await this.listCategoriesHandler.handle({
         workspaceId,
         activeOnly: activeOnly === "true",
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Categories retrieved successfully",
-        data: {
-          items: categories.items.map((category: Category) => ({
-            categoryId: category.id.getValue(),
-            workspaceId: category.workspaceId,
-            name: category.name,
-            description: category.description,
-            color: category.color,
-            icon: category.icon,
-            isActive: category.isActive,
-            createdAt: category.createdAt.toISOString(),
-            updatedAt: category.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: categories.total,
-            limit: categories.limit,
-            offset: categories.offset,
-            hasMore: categories.hasMore,
-          },
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve categories");
+      }
+
+      return ResponseHelper.ok(reply, "Categories retrieved successfully", {
+        items: result.data.map((category: Category) => ({
+          categoryId: category.id.getValue(),
+          workspaceId: category.workspaceId,
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          icon: category.icon,
+          isActive: category.isActive,
+          createdAt: category.createdAt.toISOString(),
+          updatedAt: category.updatedAt.toISOString(),
+        })),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,9 +1,10 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { CreateAttachmentHandler } from "../../../application/commands/create-attachment.command";
 import { DeleteAttachmentHandler } from "../../../application/commands/delete-attachment.command";
 import { GetAttachmentHandler } from "../../../application/queries/get-attachment.query";
 import { ListAttachmentsHandler } from "../../../application/queries/list-attachments.query";
+import { Attachment } from "../../../domain/entities/attachment.entity";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
 
 export class AttachmentController {
@@ -29,16 +30,12 @@ export class AttachmentController {
     try {
       const userId = request.user.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
       const { workspaceId, expenseId } = request.params;
 
-      const attachment = await this.createAttachmentHandler.handle({
+      const result = await this.createAttachmentHandler.handle({
         expenseId,
         workspaceId,
         fileName: request.body.fileName,
@@ -48,20 +45,21 @@ export class AttachmentController {
         uploadedBy: userId,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Attachment created successfully",
-        data: {
-          attachmentId: attachment.id.getValue(),
-          expenseId: attachment.expenseId,
-          fileName: attachment.fileName,
-          filePath: attachment.filePath,
-          fileSize: attachment.fileSize,
-          mimeType: attachment.mimeType,
-          uploadedBy: attachment.uploadedBy,
-          createdAt: attachment.createdAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to create attachment");
+      }
+
+      const attachment = result.data;
+
+      return ResponseHelper.created(reply, "Attachment created successfully", {
+        attachmentId: attachment.id.getValue(),
+        expenseId: attachment.expenseId,
+        fileName: attachment.fileName,
+        filePath: attachment.filePath,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+        uploadedBy: attachment.uploadedBy,
+        createdAt: attachment.createdAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -77,17 +75,17 @@ export class AttachmentController {
     try {
       const { workspaceId, expenseId, attachmentId } = request.params;
 
-      await this.deleteAttachmentHandler.handle({
+      const result = await this.deleteAttachmentHandler.handle({
         attachmentId,
         expenseId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Attachment deleted successfully",
-      });
+      if (!result.success) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to delete attachment");
+      }
+
+      return ResponseHelper.ok(reply, "Attachment deleted successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -102,26 +100,27 @@ export class AttachmentController {
     try {
       const { workspaceId, expenseId, attachmentId } = request.params;
 
-      const attachment = await this.getAttachmentHandler.handle({
+      const result = await this.getAttachmentHandler.handle({
         attachmentId,
         expenseId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Attachment retrieved successfully",
-        data: {
-          attachmentId: attachment.id.getValue(),
-          expenseId: attachment.expenseId,
-          fileName: attachment.fileName,
-          filePath: attachment.filePath,
-          fileSize: attachment.fileSize,
-          mimeType: attachment.mimeType,
-          uploadedBy: attachment.uploadedBy,
-          createdAt: attachment.createdAt.toISOString(),
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, result.error ?? "Attachment not found");
+      }
+
+      const attachment = result.data;
+
+      return ResponseHelper.ok(reply, "Attachment retrieved successfully", {
+        attachmentId: attachment.id.getValue(),
+        expenseId: attachment.expenseId,
+        fileName: attachment.fileName,
+        filePath: attachment.filePath,
+        fileSize: attachment.fileSize,
+        mimeType: attachment.mimeType,
+        uploadedBy: attachment.uploadedBy,
+        createdAt: attachment.createdAt.toISOString(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -142,28 +141,21 @@ export class AttachmentController {
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Attachments retrieved successfully",
-        data: {
-          items: result.items.map((attachment) => ({
-            attachmentId: attachment.id.getValue(),
-            expenseId: attachment.expenseId,
-            fileName: attachment.fileName,
-            filePath: attachment.filePath,
-            fileSize: attachment.fileSize,
-            mimeType: attachment.mimeType,
-            uploadedBy: attachment.uploadedBy,
-            createdAt: attachment.createdAt.toISOString(),
-          })),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
+      if (!result.success || !result.data) {
+        return ResponseHelper.badRequest(reply, result.error ?? "Failed to retrieve attachments");
+      }
+
+      return ResponseHelper.ok(reply, "Attachments retrieved successfully", {
+        items: result.data.map((attachment: Attachment) => ({
+          attachmentId: attachment.id.getValue(),
+          expenseId: attachment.expenseId,
+          fileName: attachment.fileName,
+          filePath: attachment.filePath,
+          fileSize: attachment.fileSize,
+          mimeType: attachment.mimeType,
+          uploadedBy: attachment.uploadedBy,
+          createdAt: attachment.createdAt.toISOString(),
+        })),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
