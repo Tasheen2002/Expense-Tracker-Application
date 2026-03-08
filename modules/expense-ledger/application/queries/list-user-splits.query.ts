@@ -1,5 +1,11 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
-import { ExpenseSplitService } from "../services/expense-split.service";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseSplitService } from '../services/expense-split.service';
+import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export interface ListUserSplitsQuery extends IQuery {
   readonly userId: string;
@@ -8,20 +14,25 @@ export interface ListUserSplitsQuery extends IQuery {
   readonly offset?: number;
 }
 
-export class ListUserSplitsHandler implements IQueryHandler<ListUserSplitsQuery, QueryResult<any>> {
+export class ListUserSplitsHandler implements IQueryHandler<
+  ListUserSplitsQuery,
+  QueryResult<PaginatedResult<ExpenseSplit>>
+> {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(query: ListUserSplitsQuery): Promise<QueryResult<any>> {
+  async handle(
+    query: ListUserSplitsQuery
+  ): Promise<QueryResult<PaginatedResult<ExpenseSplit>>> {
     try {
       const result = await this.splitService.listUserSplits(
         query.userId,
         query.workspaceId,
-        { limit: query.limit, offset: query.offset },
+        { limit: query.limit, offset: query.offset }
       );
       return QueryResult.success(result);
     } catch (error) {
       return QueryResult.failure(
-        error instanceof Error ? error.message : "Failed to list user splits",
+        error instanceof Error ? error.message : 'Failed to list user splits'
       );
     }
   }

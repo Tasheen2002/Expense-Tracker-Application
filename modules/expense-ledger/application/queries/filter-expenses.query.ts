@@ -1,7 +1,20 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
-import { ExpenseService } from "../services/expense.service";
-import { ExpenseStatus } from "../../domain/enums/expense-status";
-import { PaymentMethod } from "../../domain/enums/payment-method";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseService } from '../services/expense.service';
+import { Expense } from '../../domain/entities/expense.entity';
+import { ExpenseStatus } from '../../domain/enums/expense-status';
+import { PaymentMethod } from '../../domain/enums/payment-method';
+
+export interface FilterExpensesResult {
+  items: Expense[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 
 export interface FilterExpensesQuery extends IQuery {
   readonly workspaceId: string;
@@ -20,10 +33,15 @@ export interface FilterExpensesQuery extends IQuery {
   readonly offset?: number;
 }
 
-export class FilterExpensesHandler implements IQueryHandler<FilterExpensesQuery, QueryResult<any>> {
+export class FilterExpensesHandler implements IQueryHandler<
+  FilterExpensesQuery,
+  QueryResult<FilterExpensesResult>
+> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(query: FilterExpensesQuery): Promise<QueryResult<any>> {
+  async handle(
+    query: FilterExpensesQuery
+  ): Promise<QueryResult<FilterExpensesResult>> {
     try {
       const result = await this.expenseService.getExpensesWithFilters({
         workspaceId: query.workspaceId,
@@ -43,7 +61,7 @@ export class FilterExpensesHandler implements IQueryHandler<FilterExpensesQuery,
       return QueryResult.success(result);
     } catch (error) {
       return QueryResult.failure(
-        error instanceof Error ? error.message : "Failed to filter expenses",
+        error instanceof Error ? error.message : 'Failed to filter expenses'
       );
     }
   }

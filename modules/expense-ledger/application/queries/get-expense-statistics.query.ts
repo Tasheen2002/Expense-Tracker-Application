@@ -1,6 +1,10 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
-import { ExpenseService } from "../services/expense.service";
-import { ExpenseStatus } from "../../domain/enums/expense-status";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseService } from '../services/expense.service';
+import { ExpenseStatus } from '../../domain/enums/expense-status';
 
 export interface GetExpenseStatisticsQuery extends IQuery {
   readonly workspaceId: string;
@@ -8,20 +12,38 @@ export interface GetExpenseStatisticsQuery extends IQuery {
   readonly currency?: string;
 }
 
-export class GetExpenseStatisticsHandler implements IQueryHandler<GetExpenseStatisticsQuery, QueryResult<any>> {
+export interface ExpenseStatisticsResult {
+  totalExpense: number;
+  currency: string;
+  expenseCountByStatus: {
+    draft: number;
+    submitted: number;
+    approved: number;
+    rejected: number;
+    reimbursed: number;
+  };
+  totalCount: number;
+}
+
+export class GetExpenseStatisticsHandler implements IQueryHandler<
+  GetExpenseStatisticsQuery,
+  QueryResult<ExpenseStatisticsResult>
+> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(query: GetExpenseStatisticsQuery): Promise<QueryResult<any>> {
+  async handle(
+    query: GetExpenseStatisticsQuery
+  ): Promise<QueryResult<ExpenseStatisticsResult>> {
     try {
       const stats = await this.expenseService.getExpenseStatistics(
         query.workspaceId,
         query.userId,
-        query.currency,
+        query.currency
       );
 
       const totalCount = Object.values(stats.countByStatus).reduce(
         (sum, count) => sum + count,
-        0,
+        0
       );
 
       return QueryResult.success({
@@ -38,7 +60,9 @@ export class GetExpenseStatisticsHandler implements IQueryHandler<GetExpenseStat
       });
     } catch (error) {
       return QueryResult.failure(
-        error instanceof Error ? error.message : "Failed to get expense statistics",
+        error instanceof Error
+          ? error.message
+          : 'Failed to get expense statistics'
       );
     }
   }
