@@ -41,11 +41,20 @@ export class CreateAttachmentHandler implements ICommandHandler<
         uploadedBy: command.uploadedBy,
       });
 
-      await this.expenseService.addAttachmentRecord(
-        command.expenseId,
-        command.workspaceId,
-        AttachmentId.fromString(attachment.id.getValue())
-      );
+      try {
+        await this.expenseService.addAttachmentRecord(
+          command.expenseId,
+          command.workspaceId,
+          AttachmentId.fromString(attachment.id.getValue())
+        );
+      } catch (linkError) {
+        // Compensate: remove the orphaned attachment row so state is consistent
+        await this.attachmentService.deleteAttachment(
+          attachment.id.getValue(),
+          command.expenseId
+        );
+        throw linkError;
+      }
 
       return CommandResult.success(attachment);
     } catch (error) {
