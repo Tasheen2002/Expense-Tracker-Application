@@ -180,36 +180,6 @@ export class ExpenseService {
     );
   }
 
-  async getExpensesByWorkspace(
-    workspaceId: string
-  ): Promise<PaginatedResult<Expense>> {
-    return await this.expenseRepository.findByWorkspace(workspaceId);
-  }
-
-  async getExpensesByUser(
-    userId: string,
-    workspaceId: string
-  ): Promise<PaginatedResult<Expense>> {
-    return await this.expenseRepository.findByUser(userId, workspaceId);
-  }
-
-  async getExpensesByCategory(
-    categoryId: string,
-    workspaceId: string
-  ): Promise<PaginatedResult<Expense>> {
-    return await this.expenseRepository.findByCategory(
-      CategoryId.fromString(categoryId),
-      workspaceId
-    );
-  }
-
-  async getExpensesByStatus(
-    status: ExpenseStatus,
-    workspaceId: string
-  ): Promise<PaginatedResult<Expense>> {
-    return await this.expenseRepository.findByStatus(status, workspaceId);
-  }
-
   async getExpensesWithFilters(
     filters: ExpenseFilters
   ): Promise<PaginatedResult<Expense>> {
@@ -302,31 +272,6 @@ export class ExpenseService {
     return expense;
   }
 
-  async revertExpenseToDraft(
-    expenseId: string,
-    workspaceId: string,
-    userId: string
-  ): Promise<Expense> {
-    const expense = await this.expenseRepository.findById(
-      ExpenseId.fromString(expenseId),
-      workspaceId
-    );
-
-    if (!expense) {
-      throw new ExpenseNotFoundError(expenseId, workspaceId);
-    }
-
-    if (expense.userId !== userId) {
-      throw new UnauthorizedExpenseAccessError(expenseId, userId);
-    }
-
-    expense.revertToDraft(userId);
-
-    await this.expenseRepository.update(expense);
-
-    return expense;
-  }
-
   async markExpenseAsReimbursed(
     expenseId: string,
     workspaceId: string,
@@ -355,97 +300,6 @@ export class ExpenseService {
     await this.expenseRepository.update(expense);
 
     return expense;
-  }
-
-  async addTagToExpense(
-    expenseId: string,
-    workspaceId: string,
-    userId: string,
-    tagId: string
-  ): Promise<Expense> {
-    const expense = await this.expenseRepository.findById(
-      ExpenseId.fromString(expenseId),
-      workspaceId
-    );
-
-    if (!expense) {
-      throw new ExpenseNotFoundError(expenseId, workspaceId);
-    }
-
-    if (expense.userId !== userId) {
-      throw new UnauthorizedExpenseAccessError(expenseId, userId, 'update');
-    }
-
-    if (!expense.canBeEdited()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, 'edit');
-    }
-
-    expense.addTag(TagId.fromString(tagId));
-
-    await this.expenseRepository.update(expense);
-
-    return expense;
-  }
-
-  async removeTagFromExpense(
-    expenseId: string,
-    workspaceId: string,
-    userId: string,
-    tagId: string
-  ): Promise<Expense> {
-    const expense = await this.expenseRepository.findById(
-      ExpenseId.fromString(expenseId),
-      workspaceId
-    );
-
-    if (!expense) {
-      throw new ExpenseNotFoundError(expenseId, workspaceId);
-    }
-
-    if (expense.userId !== userId) {
-      throw new UnauthorizedExpenseAccessError(expenseId, userId, 'update');
-    }
-
-    if (!expense.canBeEdited()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, 'edit');
-    }
-
-    expense.removeTag(TagId.fromString(tagId));
-
-    await this.expenseRepository.update(expense);
-
-    return expense;
-  }
-
-  async getTotalExpenseByWorkspace(
-    workspaceId: string,
-    currency?: string
-  ): Promise<{ total: number; currency?: string }> {
-    const total = await this.expenseRepository.getTotalByWorkspace(
-      workspaceId,
-      currency
-    );
-    return { total, currency };
-  }
-
-  async getTotalExpenseByUser(
-    userId: string,
-    workspaceId: string,
-    currency?: string
-  ): Promise<{ total: number; currency?: string }> {
-    const total = await this.expenseRepository.getTotalByUser(
-      userId,
-      workspaceId,
-      currency
-    );
-    return { total, currency };
-  }
-
-  async getExpenseCountByStatus(
-    status: ExpenseStatus,
-    workspaceId: string
-  ): Promise<number> {
-    return await this.expenseRepository.getCountByStatus(status, workspaceId);
   }
 
   async getExpenseStatistics(

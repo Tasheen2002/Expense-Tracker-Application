@@ -137,18 +137,6 @@ export class ExpenseSplitService {
     return await this.splitRepository.findByUser(userId, workspaceId, options);
   }
 
-  async listSplitsByPaidBy(
-    userId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<ExpenseSplit>> {
-    return await this.splitRepository.findByPaidBy(
-      userId,
-      workspaceId,
-      options
-    );
-  }
-
   async deleteSplit(
     splitId: string,
     workspaceId: string,
@@ -228,16 +216,6 @@ export class ExpenseSplitService {
       workspaceId,
       status,
       options
-    );
-  }
-
-  async getPendingSettlements(
-    userId: string,
-    workspaceId: string
-  ): Promise<PaginatedResult<SplitSettlement>> {
-    return await this.settlementRepository.findPendingForUser(
-      userId,
-      workspaceId
     );
   }
 

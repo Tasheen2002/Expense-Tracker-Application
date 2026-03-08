@@ -1,11 +1,14 @@
-import { TagRepository } from "../../domain/repositories/tag.repository";
-import { Tag } from "../../domain/entities/tag.entity";
-import { TagId } from "../../domain/value-objects/tag-id";
+import { TagRepository } from '../../domain/repositories/tag.repository';
+import { Tag } from '../../domain/entities/tag.entity';
+import { TagId } from '../../domain/value-objects/tag-id';
 import {
   TagNotFoundError,
   TagAlreadyExistsError,
-} from "../../domain/errors/expense.errors";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../domain/errors/expense.errors';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export class TagService {
   constructor(private readonly tagRepository: TagRepository) {}
@@ -18,7 +21,7 @@ export class TagService {
     // Check if tag with the same name already exists
     const existingTag = await this.tagRepository.findByName(
       params.name,
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (existingTag) {
@@ -42,11 +45,11 @@ export class TagService {
     params: {
       name?: string;
       color?: string;
-    },
+    }
   ): Promise<Tag> {
     const tag = await this.tagRepository.findById(
       TagId.fromString(tagId),
-      workspaceId,
+      workspaceId
     );
 
     if (!tag) {
@@ -57,7 +60,7 @@ export class TagService {
     if (params.name && params.name !== tag.name) {
       const existingTag = await this.tagRepository.findByName(
         params.name,
-        workspaceId,
+        workspaceId
       );
       if (existingTag) {
         throw new TagAlreadyExistsError(params.name, workspaceId);
@@ -77,7 +80,7 @@ export class TagService {
   async deleteTag(tagId: string, workspaceId: string): Promise<void> {
     const tag = await this.tagRepository.findById(
       TagId.fromString(tagId),
-      workspaceId,
+      workspaceId
     );
 
     if (!tag) {
@@ -90,11 +93,14 @@ export class TagService {
   async getTagById(tagId: string, workspaceId: string): Promise<Tag | null> {
     return await this.tagRepository.findById(
       TagId.fromString(tagId),
-      workspaceId,
+      workspaceId
     );
   }
 
-  async getTagsByWorkspace(workspaceId: string): Promise<PaginatedResult<Tag>> {
-    return await this.tagRepository.findByWorkspace(workspaceId);
+  async getTagsByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<Tag>> {
+    return await this.tagRepository.findByWorkspace(workspaceId, options);
   }
 }

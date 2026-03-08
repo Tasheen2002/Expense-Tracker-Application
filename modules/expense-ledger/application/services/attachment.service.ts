@@ -77,8 +77,4 @@ export class AttachmentService {
   ): Promise<PaginatedResult<Attachment>> {
     return await this.attachmentRepository.findByExpense(expenseId);
   }
-
-  async getTotalSizeByExpense(expenseId: string): Promise<number> {
-    return await this.attachmentRepository.getTotalSizeByExpense(expenseId);
-  }
 }
