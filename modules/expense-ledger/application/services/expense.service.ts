@@ -2,31 +2,24 @@ import {
   ExpenseRepository,
   ExpenseFilters,
   PaginatedResult,
-} from "../../domain/repositories/expense.repository";
-import { CategoryRepository } from "../../domain/repositories/category.repository";
-import { TagRepository } from "../../domain/repositories/tag.repository";
-import { Expense } from "../../domain/entities/expense.entity";
-import { ExpenseId } from "../../domain/value-objects/expense-id";
-import { CategoryId } from "../../domain/value-objects/category-id";
-import { TagId } from "../../domain/value-objects/tag-id";
-import { Money } from "../../domain/value-objects/money";
-import { ExpenseDate } from "../../domain/value-objects/expense-date";
-import { PaymentMethod } from "../../domain/enums/payment-method";
-import { ExpenseStatus } from "../../domain/enums/expense-status";
+} from '../../domain/repositories/expense.repository';
+import { Expense } from '../../domain/entities/expense.entity';
+import { ExpenseId } from '../../domain/value-objects/expense-id';
+import { CategoryId } from '../../domain/value-objects/category-id';
+import { TagId } from '../../domain/value-objects/tag-id';
+import { AttachmentId } from '../../domain/value-objects/attachment-id';
+import { Money } from '../../domain/value-objects/money';
+import { ExpenseDate } from '../../domain/value-objects/expense-date';
+import { PaymentMethod } from '../../domain/enums/payment-method';
+import { ExpenseStatus } from '../../domain/enums/expense-status';
 import {
-  CategoryNotFoundError,
   ExpenseNotFoundError,
   UnauthorizedExpenseAccessError,
   InvalidExpenseStatusError,
-  TagNotFoundError,
-} from "../../domain/errors/expense.errors";
+} from '../../domain/errors/expense.errors';
 
 export class ExpenseService {
-  constructor(
-    private readonly expenseRepository: ExpenseRepository,
-    private readonly categoryRepository: CategoryRepository,
-    private readonly tagRepository: TagRepository,
-  ) {}
+  constructor(private readonly expenseRepository: ExpenseRepository) {}
 
   async createExpense(params: {
     workspaceId: string;
@@ -42,31 +35,6 @@ export class ExpenseService {
     isReimbursable: boolean;
     tagIds?: string[];
   }): Promise<Expense> {
-    // Validate category exists if provided
-    if (params.categoryId) {
-      const categoryExists = await this.categoryRepository.exists(
-        CategoryId.fromString(params.categoryId),
-        params.workspaceId,
-      );
-      if (!categoryExists) {
-        throw new CategoryNotFoundError(params.categoryId, params.workspaceId);
-      }
-    }
-
-    // Validate tags exist if provided
-    if (params.tagIds && params.tagIds.length > 0) {
-      // Deduplicate tag IDs to prevent validation errors
-      const uniqueTagIds = Array.from(new Set(params.tagIds));
-      const tagIdObjects = uniqueTagIds.map((id) => TagId.fromString(id));
-      const tags = await this.tagRepository.findByIds(
-        tagIdObjects,
-        params.workspaceId,
-      );
-      if (tags.length !== uniqueTagIds.length) {
-        throw new TagNotFoundError("one_or_more", params.workspaceId);
-      }
-    }
-
     // Deduplicate tag IDs before creating expense
     const uniqueTagIds = params.tagIds
       ? Array.from(new Set(params.tagIds))
@@ -109,11 +77,11 @@ export class ExpenseService {
       merchant?: string;
       paymentMethod?: PaymentMethod;
       isReimbursable?: boolean;
-    },
+    }
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -127,7 +95,7 @@ export class ExpenseService {
 
     // Check if expense can be edited
     if (!expense.canBeEdited()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, "edit");
+      throw new InvalidExpenseStatusError(expenseId, expense.status, 'edit');
     }
 
     // Update fields
@@ -149,13 +117,6 @@ export class ExpenseService {
 
     if (params.categoryId !== undefined) {
       if (params.categoryId) {
-        const categoryExists = await this.categoryRepository.exists(
-          CategoryId.fromString(params.categoryId),
-          workspaceId,
-        );
-        if (!categoryExists) {
-          throw new CategoryNotFoundError(params.categoryId, workspaceId);
-        }
         expense.updateCategory(CategoryId.fromString(params.categoryId));
       } else {
         expense.updateCategory(undefined);
@@ -182,11 +143,11 @@ export class ExpenseService {
   async deleteExpense(
     expenseId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<void> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -200,57 +161,57 @@ export class ExpenseService {
 
     // Check if expense can be deleted
     if (!expense.canBeDeleted()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, "delete");
+      throw new InvalidExpenseStatusError(expenseId, expense.status, 'delete');
     }
 
     await this.expenseRepository.delete(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
   }
 
   async getExpenseById(
     expenseId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Expense | null> {
     return await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
   }
 
   async getExpensesByWorkspace(
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByWorkspace(workspaceId);
   }
 
   async getExpensesByUser(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByUser(userId, workspaceId);
   }
 
   async getExpensesByCategory(
     categoryId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByCategory(
       CategoryId.fromString(categoryId),
-      workspaceId,
+      workspaceId
     );
   }
 
   async getExpensesByStatus(
     status: ExpenseStatus,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findByStatus(status, workspaceId);
   }
 
   async getExpensesWithFilters(
-    filters: ExpenseFilters,
+    filters: ExpenseFilters
   ): Promise<PaginatedResult<Expense>> {
     return await this.expenseRepository.findWithFilters(filters);
   }
@@ -258,11 +219,11 @@ export class ExpenseService {
   async submitExpense(
     expenseId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -283,11 +244,11 @@ export class ExpenseService {
   async approveExpense(
     expenseId: string,
     workspaceId: string,
-    approverId: string,
+    approverId: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -299,7 +260,7 @@ export class ExpenseService {
       throw new UnauthorizedExpenseAccessError(
         expenseId,
         approverId,
-        "approve (self-approval)",
+        'approve (self-approval)'
       );
     }
 
@@ -314,11 +275,11 @@ export class ExpenseService {
     expenseId: string,
     workspaceId: string,
     rejecterId: string,
-    reason?: string,
+    reason?: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -330,7 +291,7 @@ export class ExpenseService {
       throw new UnauthorizedExpenseAccessError(
         expenseId,
         rejecterId,
-        "reject (self-rejection)",
+        'reject (self-rejection)'
       );
     }
 
@@ -344,11 +305,11 @@ export class ExpenseService {
   async revertExpenseToDraft(
     expenseId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -369,11 +330,11 @@ export class ExpenseService {
   async markExpenseAsReimbursed(
     expenseId: string,
     workspaceId: string,
-    processedBy: string,
+    processedBy: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -385,7 +346,7 @@ export class ExpenseService {
       throw new UnauthorizedExpenseAccessError(
         expenseId,
         processedBy,
-        "reimburse (self-reimbursement)",
+        'reimburse (self-reimbursement)'
       );
     }
 
@@ -400,11 +361,11 @@ export class ExpenseService {
     expenseId: string,
     workspaceId: string,
     userId: string,
-    tagId: string,
+    tagId: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -412,19 +373,11 @@ export class ExpenseService {
     }
 
     if (expense.userId !== userId) {
-      throw new UnauthorizedExpenseAccessError(expenseId, userId, "update");
+      throw new UnauthorizedExpenseAccessError(expenseId, userId, 'update');
     }
 
     if (!expense.canBeEdited()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, "edit");
-    }
-
-    const tagExists = await this.tagRepository.exists(
-      TagId.fromString(tagId),
-      workspaceId,
-    );
-    if (!tagExists) {
-      throw new TagNotFoundError(tagId, workspaceId);
+      throw new InvalidExpenseStatusError(expenseId, expense.status, 'edit');
     }
 
     expense.addTag(TagId.fromString(tagId));
@@ -438,11 +391,11 @@ export class ExpenseService {
     expenseId: string,
     workspaceId: string,
     userId: string,
-    tagId: string,
+    tagId: string
   ): Promise<Expense> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!expense) {
@@ -450,11 +403,11 @@ export class ExpenseService {
     }
 
     if (expense.userId !== userId) {
-      throw new UnauthorizedExpenseAccessError(expenseId, userId, "update");
+      throw new UnauthorizedExpenseAccessError(expenseId, userId, 'update');
     }
 
     if (!expense.canBeEdited()) {
-      throw new InvalidExpenseStatusError(expenseId, expense.status, "edit");
+      throw new InvalidExpenseStatusError(expenseId, expense.status, 'edit');
     }
 
     expense.removeTag(TagId.fromString(tagId));
@@ -466,11 +419,11 @@ export class ExpenseService {
 
   async getTotalExpenseByWorkspace(
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<{ total: number; currency?: string }> {
     const total = await this.expenseRepository.getTotalByWorkspace(
       workspaceId,
-      currency,
+      currency
     );
     return { total, currency };
   }
@@ -478,19 +431,19 @@ export class ExpenseService {
   async getTotalExpenseByUser(
     userId: string,
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<{ total: number; currency?: string }> {
     const total = await this.expenseRepository.getTotalByUser(
       userId,
       workspaceId,
-      currency,
+      currency
     );
     return { total, currency };
   }
 
   async getExpenseCountByStatus(
     status: ExpenseStatus,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<number> {
     return await this.expenseRepository.getCountByStatus(status, workspaceId);
   }
@@ -498,7 +451,7 @@ export class ExpenseService {
   async getExpenseStatistics(
     workspaceId: string,
     userId?: string,
-    currency?: string,
+    currency?: string
   ): Promise<{
     totalAmount: number;
     currency: string;
@@ -507,7 +460,53 @@ export class ExpenseService {
     return await this.expenseRepository.getStatistics(
       workspaceId,
       userId,
-      currency,
+      currency
     );
+  }
+
+  async addAttachmentRecord(
+    expenseId: string,
+    workspaceId: string,
+    attachmentId: AttachmentId
+  ): Promise<void> {
+    const expense = await this.expenseRepository.findById(
+      ExpenseId.fromString(expenseId),
+      workspaceId
+    );
+    if (!expense) {
+      throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+    if (!expense.canBeEdited()) {
+      throw new InvalidExpenseStatusError(
+        expenseId,
+        expense.status,
+        'add attachments to'
+      );
+    }
+    expense.addAttachment(attachmentId);
+    await this.expenseRepository.update(expense);
+  }
+
+  async removeAttachmentRecord(
+    expenseId: string,
+    workspaceId: string,
+    attachmentId: AttachmentId
+  ): Promise<void> {
+    const expense = await this.expenseRepository.findById(
+      ExpenseId.fromString(expenseId),
+      workspaceId
+    );
+    if (!expense) {
+      throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+    if (!expense.canBeEdited()) {
+      throw new InvalidExpenseStatusError(
+        expenseId,
+        expense.status,
+        'delete attachments from'
+      );
+    }
+    expense.removeAttachment(attachmentId);
+    await this.expenseRepository.update(expense);
   }
 }

@@ -1,38 +1,36 @@
-import { ExpenseSplitRepository } from "../../domain/repositories/expense-split.repository";
-import { SplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
-import { ExpenseRepository } from "../../domain/repositories/expense.repository";
-import { ExpenseSplit } from "../../domain/entities/expense-split.entity";
-import { SplitSettlement } from "../../domain/entities/split-settlement.entity";
-import { ExpenseId } from "../../domain/value-objects/expense-id";
-import { SplitId } from "../../domain/value-objects/split-id";
-import { SettlementId } from "../../domain/value-objects/settlement-id";
-import { Money } from "../../domain/value-objects/money";
-import { SplitType } from "../../domain/enums/split-type";
-import { SettlementStatus } from "../../domain/enums/settlement-status";
+import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
+import { SplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
+import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
+import { ExpenseId } from '../../domain/value-objects/expense-id';
+import { SplitId } from '../../domain/value-objects/split-id';
+import { SettlementId } from '../../domain/value-objects/settlement-id';
+import { Money } from '../../domain/value-objects/money';
+import { SplitType } from '../../domain/enums/split-type';
+import { SettlementStatus } from '../../domain/enums/settlement-status';
 import {
   SplitNotFoundError,
   ExpenseAlreadySplitError,
   UnauthorizedSplitAccessError,
   SettlementNotFoundError,
-} from "../../domain/errors/split-expense.errors";
-import { ExpenseNotFoundError } from "../../domain/errors/expense.errors";
+} from '../../domain/errors/split-expense.errors';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { Decimal } from "@prisma/client/runtime/library";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export class ExpenseSplitService {
   constructor(
     private readonly splitRepository: ExpenseSplitRepository,
-    private readonly settlementRepository: SplitSettlementRepository,
-    private readonly expenseRepository: ExpenseRepository,
+    private readonly settlementRepository: SplitSettlementRepository
   ) {}
 
   async createSplit(params: {
     expenseId: string;
     workspaceId: string;
     userId: string;
+    totalAmount: Money;
     splitType: SplitType;
     participants: Array<{
       userId: string;
@@ -42,22 +40,9 @@ export class ExpenseSplitService {
   }): Promise<ExpenseSplit> {
     const expenseId = ExpenseId.fromString(params.expenseId);
 
-    const expense = await this.expenseRepository.findById(
-      expenseId,
-      params.workspaceId,
-    );
-
-    if (!expense) {
-      throw new ExpenseNotFoundError(params.expenseId, params.workspaceId);
-    }
-
-    if (expense.userId !== params.userId) {
-      throw new UnauthorizedSplitAccessError(params.expenseId, params.userId);
-    }
-
     const exists = await this.splitRepository.exists(
       expenseId,
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (exists) {
@@ -67,7 +52,7 @@ export class ExpenseSplitService {
     const participantsWithMoney = params.participants.map((p) => ({
       userId: p.userId,
       shareAmount: p.shareAmount
-        ? Money.create(p.shareAmount, expense.amount.getCurrency())
+        ? Money.create(p.shareAmount, params.totalAmount.getCurrency())
         : undefined,
       sharePercentage: p.sharePercentage
         ? new Decimal(p.sharePercentage)
@@ -78,7 +63,7 @@ export class ExpenseSplitService {
       expenseId,
       workspaceId: params.workspaceId,
       paidBy: params.userId,
-      totalAmount: expense.amount,
+      totalAmount: params.totalAmount,
       splitType: params.splitType,
       participants: participantsWithMoney,
     });
@@ -105,11 +90,11 @@ export class ExpenseSplitService {
   async getSplitById(
     splitId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<ExpenseSplit> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
-      workspaceId,
+      workspaceId
     );
 
     if (!split) {
@@ -126,11 +111,11 @@ export class ExpenseSplitService {
   async getSplitByExpenseId(
     expenseId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<ExpenseSplit | null> {
     const split = await this.splitRepository.findByExpenseId(
       ExpenseId.fromString(expenseId),
-      workspaceId,
+      workspaceId
     );
 
     if (!split) {
@@ -147,35 +132,31 @@ export class ExpenseSplitService {
   async listUserSplits(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplit>> {
-    return await this.splitRepository.findByUser(
-      userId,
-      workspaceId,
-      options,
-    );
+    return await this.splitRepository.findByUser(userId, workspaceId, options);
   }
 
   async listSplitsByPaidBy(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplit>> {
     return await this.splitRepository.findByPaidBy(
       userId,
       workspaceId,
-      options,
+      options
     );
   }
 
   async deleteSplit(
     splitId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<void> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
-      workspaceId,
+      workspaceId
     );
 
     if (!split) {
@@ -186,10 +167,7 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
-    await this.splitRepository.delete(
-      SplitId.fromString(splitId),
-      workspaceId,
-    );
+    await this.splitRepository.delete(SplitId.fromString(splitId), workspaceId);
   }
 
   async recordPayment(params: {
@@ -200,7 +178,7 @@ export class ExpenseSplitService {
   }): Promise<SplitSettlement> {
     const settlement = await this.settlementRepository.findById(
       SettlementId.fromString(params.settlementId),
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (!settlement) {
@@ -210,13 +188,13 @@ export class ExpenseSplitService {
     if (settlement.getFromUserId() !== params.userId) {
       throw new UnauthorizedSplitAccessError(
         params.settlementId,
-        params.userId,
+        params.userId
       );
     }
 
     const paymentAmount = Money.create(
       params.amount,
-      settlement.getTotalOwedAmount().getCurrency(),
+      settlement.getTotalOwedAmount().getCurrency()
     );
 
     settlement.recordPayment(paymentAmount);
@@ -225,7 +203,7 @@ export class ExpenseSplitService {
 
     const split = await this.splitRepository.findById(
       settlement.getSplitId(),
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (split) {
@@ -243,34 +221,34 @@ export class ExpenseSplitService {
     userId: string,
     workspaceId: string,
     status?: SettlementStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SplitSettlement>> {
     return await this.settlementRepository.findByUser(
       userId,
       workspaceId,
       status,
-      options,
+      options
     );
   }
 
   async getPendingSettlements(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<SplitSettlement>> {
     return await this.settlementRepository.findPendingForUser(
       userId,
-      workspaceId,
+      workspaceId
     );
   }
 
   async getSplitSettlements(
     splitId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<PaginatedResult<SplitSettlement>> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
-      workspaceId,
+      workspaceId
     );
 
     if (!split) {
@@ -283,7 +261,7 @@ export class ExpenseSplitService {
 
     return await this.settlementRepository.findBySplitId(
       SplitId.fromString(splitId),
-      workspaceId,
+      workspaceId
     );
   }
 }
