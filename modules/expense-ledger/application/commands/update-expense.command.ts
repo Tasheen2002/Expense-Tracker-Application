@@ -1,7 +1,14 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../apps/api/src/shared/application";
-import { PaymentMethod } from "../../domain/enums/payment-method";
-import { ExpenseService } from "../services/expense.service";
-import { Expense } from "../../domain/entities/expense.entity";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { PaymentMethod } from '../../domain/enums/payment-method';
+import { ExpenseService } from '../services/expense.service';
+import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { CategoryId } from '../../domain/value-objects/category-id';
+import { Expense } from '../../domain/entities/expense.entity';
+import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
 
 export interface UpdateExpenseCommand extends ICommand {
   readonly expenseId: string;
@@ -18,11 +25,30 @@ export interface UpdateExpenseCommand extends ICommand {
   readonly isReimbursable?: boolean;
 }
 
-export class UpdateExpenseHandler implements ICommandHandler<UpdateExpenseCommand, CommandResult<Expense>> {
-  constructor(private readonly expenseService: ExpenseService) {}
+export class UpdateExpenseHandler implements ICommandHandler<
+  UpdateExpenseCommand,
+  CommandResult<Expense>
+> {
+  constructor(
+    private readonly expenseService: ExpenseService,
+    private readonly categoryRepository: CategoryRepository
+  ) {}
 
   async handle(command: UpdateExpenseCommand): Promise<CommandResult<Expense>> {
     try {
+      if (command.categoryId) {
+        const categoryExists = await this.categoryRepository.exists(
+          CategoryId.fromString(command.categoryId),
+          command.workspaceId
+        );
+        if (!categoryExists) {
+          throw new CategoryNotFoundError(
+            command.categoryId,
+            command.workspaceId
+          );
+        }
+      }
+
       const expense = await this.expenseService.updateExpense(
         command.expenseId,
         command.workspaceId,
@@ -37,12 +63,12 @@ export class UpdateExpenseHandler implements ICommandHandler<UpdateExpenseComman
           merchant: command.merchant,
           paymentMethod: command.paymentMethod,
           isReimbursable: command.isReimbursable,
-        },
+        }
       );
       return CommandResult.success(expense);
     } catch (error) {
       return CommandResult.failure<Expense>(
-        error instanceof Error ? error.message : "Failed to update expense",
+        error instanceof Error ? error.message : 'Failed to update expense'
       );
     }
   }
