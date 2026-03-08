@@ -51,7 +51,6 @@ import { DeleteAttachmentHandler } from "../../../modules/expense-ledger/applica
 
 // Expense-Ledger Module - Query Handlers
 import { GetExpenseHandler } from "../../../modules/expense-ledger/application/queries/get-expense.query";
-import { ListExpensesHandler } from "../../../modules/expense-ledger/application/queries/list-expenses.query";
 import { FilterExpensesHandler } from "../../../modules/expense-ledger/application/queries/filter-expenses.query";
 import { GetExpenseStatisticsHandler } from "../../../modules/expense-ledger/application/queries/get-expense-statistics.query";
 import { GetCategoryHandler } from "../../../modules/expense-ledger/application/queries/get-category.query";
@@ -512,7 +511,6 @@ export class Container {
 
     // Query Handlers
     const getExpenseHandler = new GetExpenseHandler(expenseService);
-    const listExpensesHandler = new ListExpensesHandler(expenseService);
     const filterExpensesHandler = new FilterExpensesHandler(expenseService);
     const getExpenseStatisticsHandler = new GetExpenseStatisticsHandler(
       expenseService,
@@ -539,7 +537,6 @@ export class Container {
       rejectExpenseHandler,
       reimburseExpenseHandler,
       getExpenseHandler,
-      listExpensesHandler,
       filterExpensesHandler,
       getExpenseStatisticsHandler,
     );
