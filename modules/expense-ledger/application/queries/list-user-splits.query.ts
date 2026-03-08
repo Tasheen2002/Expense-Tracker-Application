@@ -1,25 +1,28 @@
+import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
 import { ExpenseSplitService } from "../services/expense-split.service";
 
-export class ListUserSplitsQuery {
-  constructor(
-    public readonly userId: string,
-    public readonly workspaceId: string,
-    public readonly limit?: number,
-    public readonly offset?: number,
-  ) {}
+export interface ListUserSplitsQuery extends IQuery {
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
-export class ListUserSplitsHandler {
+export class ListUserSplitsHandler implements IQueryHandler<ListUserSplitsQuery, QueryResult<any>> {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(query: ListUserSplitsQuery) {
-    return await this.splitService.listUserSplits(
-      query.userId,
-      query.workspaceId,
-      {
-        limit: query.limit,
-        offset: query.offset,
-      },
-    );
+  async handle(query: ListUserSplitsQuery): Promise<QueryResult<any>> {
+    try {
+      const result = await this.splitService.listUserSplits(
+        query.userId,
+        query.workspaceId,
+        { limit: query.limit, offset: query.offset },
+      );
+      return QueryResult.success(result);
+    } catch (error) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : "Failed to list user splits",
+      );
+    }
   }
 }

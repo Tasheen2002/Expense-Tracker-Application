@@ -1,47 +1,50 @@
+import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
 import { ExpenseService } from "../services/expense.service";
 import { ExpenseStatus } from "../../domain/enums/expense-status";
 import { PaymentMethod } from "../../domain/enums/payment-method";
 
-export class FilterExpensesQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly userId?: string,
-    public readonly categoryId?: string,
-    public readonly status?: ExpenseStatus,
-    public readonly paymentMethod?: PaymentMethod,
-    public readonly isReimbursable?: boolean,
-    public readonly startDate?: Date,
-    public readonly endDate?: Date,
-    public readonly minAmount?: number,
-    public readonly maxAmount?: number,
-    public readonly currency?: string,
-    public readonly searchText?: string,
-    public readonly limit?: number,
-    public readonly offset?: number,
-  ) {}
+export interface FilterExpensesQuery extends IQuery {
+  readonly workspaceId: string;
+  readonly userId?: string;
+  readonly categoryId?: string;
+  readonly status?: ExpenseStatus;
+  readonly paymentMethod?: PaymentMethod;
+  readonly isReimbursable?: boolean;
+  readonly startDate?: Date;
+  readonly endDate?: Date;
+  readonly minAmount?: number;
+  readonly maxAmount?: number;
+  readonly currency?: string;
+  readonly searchText?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
-export class FilterExpensesHandler {
+export class FilterExpensesHandler implements IQueryHandler<FilterExpensesQuery, QueryResult<any>> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(query: FilterExpensesQuery) {
-    return await this.expenseService.getExpensesWithFilters({
-      workspaceId: query.workspaceId,
-      userId: query.userId,
-      categoryId: query.categoryId,
-      status: query.status,
-      paymentMethod: query.paymentMethod,
-      isReimbursable: query.isReimbursable,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      minAmount: query.minAmount,
-      maxAmount: query.maxAmount,
-      currency: query.currency,
-      searchText: query.searchText,
-      pagination: {
-        limit: query.limit,
-        offset: query.offset,
-      },
-    });
+  async handle(query: FilterExpensesQuery): Promise<QueryResult<any>> {
+    try {
+      const result = await this.expenseService.getExpensesWithFilters({
+        workspaceId: query.workspaceId,
+        userId: query.userId,
+        categoryId: query.categoryId,
+        status: query.status,
+        paymentMethod: query.paymentMethod,
+        isReimbursable: query.isReimbursable,
+        startDate: query.startDate,
+        endDate: query.endDate,
+        minAmount: query.minAmount,
+        maxAmount: query.maxAmount,
+        currency: query.currency,
+        searchText: query.searchText,
+        pagination: { limit: query.limit, offset: query.offset },
+      });
+      return QueryResult.success(result);
+    } catch (error) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : "Failed to filter expenses",
+      );
+    }
   }
 }

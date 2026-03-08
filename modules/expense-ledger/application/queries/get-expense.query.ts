@@ -1,27 +1,32 @@
+import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
+import { ExpenseService } from "../services/expense.service";
+import { Expense } from "../../domain/entities/expense.entity";
 import { ExpenseNotFoundError } from "../../domain/errors/expense.errors";
 
-import { ExpenseService } from "../services/expense.service";
-
-export class GetExpenseQuery {
-  constructor(
-    public readonly expenseId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface GetExpenseQuery extends IQuery {
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
-export class GetExpenseHandler {
+export class GetExpenseHandler implements IQueryHandler<GetExpenseQuery, QueryResult<Expense>> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(query: GetExpenseQuery) {
-    const expense = await this.expenseService.getExpenseById(
-      query.expenseId,
-      query.workspaceId,
-    );
+  async handle(query: GetExpenseQuery): Promise<QueryResult<Expense>> {
+    try {
+      const expense = await this.expenseService.getExpenseById(
+        query.expenseId,
+        query.workspaceId,
+      );
 
-    if (!expense) {
-      throw new ExpenseNotFoundError(query.expenseId, query.workspaceId);
+      if (!expense) {
+        throw new ExpenseNotFoundError(query.expenseId, query.workspaceId);
+      }
+
+      return QueryResult.success(expense);
+    } catch (error) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : "Failed to get expense",
+      );
     }
-
-    return expense;
   }
 }

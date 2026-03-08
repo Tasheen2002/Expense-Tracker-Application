@@ -1,16 +1,23 @@
+import { IQuery, IQueryHandler, QueryResult } from "../../../../apps/api/src/shared/application";
 import { AttachmentService } from "../services/attachment.service";
 import { Attachment } from "../../domain/entities/attachment.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
-export interface ListAttachmentsDto {
-  expenseId: string;
-  workspaceId: string;
+export interface ListAttachmentsQuery extends IQuery {
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
-export class ListAttachmentsHandler {
+export class ListAttachmentsHandler implements IQueryHandler<ListAttachmentsQuery, QueryResult<Attachment[]>> {
   constructor(private readonly attachmentService: AttachmentService) {}
 
-  async handle(dto: ListAttachmentsDto): Promise<PaginatedResult<Attachment>> {
-    return await this.attachmentService.getAttachmentsByExpense(dto.expenseId);
+  async handle(query: ListAttachmentsQuery): Promise<QueryResult<Attachment[]>> {
+    try {
+      const result = await this.attachmentService.getAttachmentsByExpense(query.expenseId);
+      return QueryResult.success(result.items);
+    } catch (error) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : "Failed to list attachments",
+      );
+    }
   }
 }
