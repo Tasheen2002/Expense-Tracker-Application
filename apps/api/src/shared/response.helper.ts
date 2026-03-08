@@ -1,5 +1,7 @@
 import { FastifyReply } from "fastify";
 import { ZodError } from "zod";
+import { CommandResult } from "./application/command-result";
+import { QueryResult } from "./application/query-result";
 
 /**
  * Standard success response format
@@ -47,6 +49,90 @@ export class ResponseHelper {
     }
 
     return reply.status(statusCode).send(response);
+  }
+
+  /**
+   * Send a 200 OK response
+   */
+  static ok<T>(
+    reply: FastifyReply,
+    message: string,
+    data?: T,
+  ): FastifyReply {
+    return ResponseHelper.success(reply, 200, message, data);
+  }
+
+  /**
+   * Send a 201 Created response
+   */
+  static created<T>(
+    reply: FastifyReply,
+    message: string,
+    data?: T,
+  ): FastifyReply {
+    return ResponseHelper.success(reply, 201, message, data);
+  }
+
+  /**
+   * Send a 400 Bad Request response
+   */
+  static badRequest(
+    reply: FastifyReply,
+    message: string,
+  ): FastifyReply {
+    return reply.status(400).send({
+      success: false,
+      statusCode: 400,
+      error: "Bad Request",
+      message,
+    });
+  }
+
+  /**
+   * Handle a CommandResult - sends appropriate response based on success/failure
+   *
+   * @param reply - Fastify reply object
+   * @param result - CommandResult from a command handler
+   * @param successMessage - Message to send on success
+   * @param data - Optional data to send (overrides result.data)
+   * @param successStatusCode - HTTP status code on success (default 200)
+   */
+  static fromCommand<T>(
+    reply: FastifyReply,
+    result: CommandResult<T>,
+    successMessage: string,
+    data?: T,
+    successStatusCode: number = 200,
+  ): FastifyReply {
+    if (!result.success) {
+      return ResponseHelper.badRequest(reply, result.error ?? "Operation failed");
+    }
+    return ResponseHelper.success(
+      reply,
+      successStatusCode,
+      successMessage,
+      data ?? result.data,
+    );
+  }
+
+  /**
+   * Handle a QueryResult - sends appropriate response based on success/failure
+   *
+   * @param reply - Fastify reply object
+   * @param result - QueryResult from a query handler
+   * @param successMessage - Message to send on success
+   * @param data - Optional data to send (overrides result.data)
+   */
+  static fromQuery<T>(
+    reply: FastifyReply,
+    result: QueryResult<T>,
+    successMessage: string,
+    data?: T,
+  ): FastifyReply {
+    if (!result.success) {
+      return ResponseHelper.notFound(reply, result.error ?? "Resource not found");
+    }
+    return ResponseHelper.ok(reply, successMessage, data ?? result.data ?? undefined);
   }
 
   /**
