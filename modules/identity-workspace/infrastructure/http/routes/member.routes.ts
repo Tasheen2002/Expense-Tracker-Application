@@ -1,48 +1,54 @@
-import { FastifyInstance } from "fastify";
-import { MemberController } from "../controllers/member.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { MemberController } from '../controllers/member.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 
 const listMembersSchema = {
   schema: {
-    tags: ["Member"],
-    description: "List workspace members",
+    tags: ['Member'],
+    description: 'List workspace members',
     params: {
-      type: "object",
-      required: ["workspaceId"],
+      type: 'object',
+      required: ['workspaceId'],
       properties: {
-        workspaceId: { type: "string", format: "uuid" },
+        workspaceId: { type: 'string', format: 'uuid' },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
               items: {
-                type: "array",
+                type: 'array',
                 items: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    membershipId: { type: "string" },
-                    userId: { type: "string" },
-                    workspaceId: { type: "string" },
-                    role: { type: "string" },
-                    createdAt: { type: "string" },
-                    updatedAt: { type: "string" },
+                    membershipId: { type: 'string' },
+                    userId: { type: 'string' },
+                    workspaceId: { type: 'string' },
+                    role: { type: 'string' },
+                    createdAt: { type: 'string' },
+                    updatedAt: { type: 'string' },
                   },
                 },
               },
               pagination: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  total: { type: "number" },
-                  limit: { type: "number" },
-                  offset: { type: "number" },
-                  hasMore: { type: "boolean" },
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },
@@ -55,23 +61,23 @@ const listMembersSchema = {
 
 const removeMemberSchema = {
   schema: {
-    tags: ["Member"],
-    description: "Remove member from workspace",
+    tags: ['Member'],
+    description: 'Remove member from workspace',
     params: {
-      type: "object",
-      required: ["workspaceId", "userId"],
+      type: 'object',
+      required: ['workspaceId', 'userId'],
       properties: {
-        workspaceId: { type: "string", format: "uuid" },
-        userId: { type: "string", format: "uuid" },
+        workspaceId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string', format: 'uuid' },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
-          message: { type: "string" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
+          message: { type: 'string' },
         },
       },
     },
@@ -80,38 +86,38 @@ const removeMemberSchema = {
 
 const changeRoleSchema = {
   schema: {
-    tags: ["Member"],
-    description: "Change member role",
+    tags: ['Member'],
+    description: 'Change member role',
     params: {
-      type: "object",
-      required: ["workspaceId", "userId"],
+      type: 'object',
+      required: ['workspaceId', 'userId'],
       properties: {
-        workspaceId: { type: "string", format: "uuid" },
-        userId: { type: "string", format: "uuid" },
+        workspaceId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string', format: 'uuid' },
       },
     },
     body: {
-      type: "object",
-      required: ["role"],
+      type: 'object',
+      required: ['role'],
       properties: {
-        role: { type: "string", enum: ["owner", "admin", "member"] },
+        role: { type: 'string', enum: ['owner', 'admin', 'member'] },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
-          message: { type: "string" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
+          message: { type: 'string' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
-              membershipId: { type: "string" },
-              userId: { type: "string" },
-              workspaceId: { type: "string" },
-              role: { type: "string" },
-              updatedAt: { type: "string" },
+              membershipId: { type: 'string' },
+              userId: { type: 'string' },
+              workspaceId: { type: 'string' },
+              role: { type: 'string' },
+              updatedAt: { type: 'string' },
             },
           },
         },
@@ -122,35 +128,38 @@ const changeRoleSchema = {
 
 export async function registerMemberRoutes(
   fastify: FastifyInstance,
-  controller: MemberController,
+  controller: MemberController
 ) {
   // List workspace members
   fastify.get(
-    "/workspaces/:workspaceId/members",
+    '/workspaces/:workspaceId/members',
     {
       ...listMembersSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.listMembers(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.listMembers(request as AuthenticatedRequest, reply)
   );
 
   // Remove member from workspace
   fastify.delete(
-    "/workspaces/:workspaceId/members/:userId",
+    '/workspaces/:workspaceId/members/:userId',
     {
       ...removeMemberSchema,
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
     },
-    async (request, reply) => controller.removeMember(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.removeMember(request as AuthenticatedRequest, reply)
   );
 
   // Change member role
   fastify.patch(
-    "/workspaces/:workspaceId/members/:userId/role",
+    '/workspaces/:workspaceId/members/:userId/role',
     {
       ...changeRoleSchema,
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
     },
-    async (request, reply) => controller.changeRole(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.changeRole(request as AuthenticatedRequest, reply)
   );
 }
