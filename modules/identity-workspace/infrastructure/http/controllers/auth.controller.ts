@@ -1,8 +1,9 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { RegisterUserHandler } from "../../../application/commands/register-user.command";
-import { LoginUserHandler } from "../../../application/queries/login-user.query";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { RegisterUserHandler } from '../../../application/commands/register-user.command';
+import { LoginUserHandler } from '../../../application/queries/login-user.query';
+import { GetUserHandler } from '../../../application/queries/get-user.query';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 interface RegisterRequest {
   email: string;
@@ -19,31 +20,15 @@ export class AuthController {
   constructor(
     private readonly registerUserHandler: RegisterUserHandler,
     private readonly loginUserHandler: LoginUserHandler,
+    private readonly getUserHandler: GetUserHandler
   ) {}
 
   async register(
     request: FastifyRequest<{ Body: RegisterRequest }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { email, password, fullName } = request.body;
-
-      // Basic validation
-      if (!email || typeof email !== "string" || email.trim().length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Email is required and must be a non-empty string",
-        });
-      }
-
-      if (!password || typeof password !== "string" || password.length < 8) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Password is required and must be at least 8 characters",
-        });
-      }
 
       // Execute command
       const result = await this.registerUserHandler.handle({
@@ -53,26 +38,19 @@ export class AuthController {
       });
 
       if (!result.success) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: result.error,
-          errors: result.errors,
-        });
+        return ResponseHelper.badRequest(
+          reply,
+          result.error || 'Registration failed'
+        );
       }
 
       const user = result.data!;
 
-      return reply.code(201).send({
-        success: true,
-        data: {
-          userId: user.getId().getValue(),
-          email: user.getEmail().getValue(),
-          fullName: user.getFullName(),
-          emailVerified: user.getEmailVerified(),
-        },
-        message: "User registered successfully",
-      });
+      return ResponseHelper.created(
+        reply,
+        'User registered successfully',
+        user.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -80,37 +58,19 @@ export class AuthController {
 
   async login(
     request: FastifyRequest<{ Body: LoginRequest }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { email, password } = request.body;
-
-      // Basic validation
-      if (!email || typeof email !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Email is required",
-        });
-      }
-
-      if (!password || typeof password !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Password is required",
-        });
-      }
 
       // Execute query
       const result = await this.loginUserHandler.handle({ email, password });
 
       if (!result.success) {
-        return reply.code(401).send({
-          success: false,
-          error: "Unauthorized",
-          message: result.error || "Invalid credentials",
-        });
+        return ResponseHelper.unauthorized(
+          reply,
+          result.error || 'Invalid credentials'
+        );
       }
 
       const userData = result.data!;
@@ -121,13 +81,9 @@ export class AuthController {
         email: userData.email,
       });
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          user: userData,
-          token,
-        },
-        message: "Login successful",
+      return ResponseHelper.ok(reply, 'Login successful', {
+        user: userData,
+        token,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -139,14 +95,13 @@ export class AuthController {
       // User is attached by authenticate middleware
       const user = request.user;
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          userId: user.userId,
-          email: user.email,
-          workspaceId: user.workspaceId,
-        },
-      });
+      const result = await this.getUserHandler.handle({ userId: user.userId });
+
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, 'User not found');
+      }
+
+      return ResponseHelper.ok(reply, 'User profile retrieved', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

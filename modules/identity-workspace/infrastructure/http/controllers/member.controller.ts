@@ -1,19 +1,19 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { WorkspaceMembershipService } from "../../../application/services/workspace-membership.service";
-import { WorkspaceAuthHelper } from "../middleware/workspace-auth.helper";
-import { WorkspaceRole } from "../../../domain/entities/workspace-membership.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { WorkspaceMembershipService } from '../../../application/services/workspace-membership.service';
+import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
+import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class MemberController {
   constructor(
     private readonly membershipService: WorkspaceMembershipService,
-    private readonly authHelper: WorkspaceAuthHelper,
+    private readonly authHelper: WorkspaceAuthHelper
   ) {}
 
   async listMembers(
     request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     const { workspaceId } = request.params;
     const user = request.user;
@@ -22,7 +22,7 @@ export class MemberController {
     const isMember = await this.authHelper.verifyMembership(
       user.userId,
       workspaceId,
-      reply,
+      reply
     );
     if (!isMember) {
       return; // Response already sent by helper
@@ -35,14 +35,7 @@ export class MemberController {
       success: true,
       statusCode: 200,
       data: {
-        items: members.items.map((member) => ({
-          membershipId: member.getId().getValue(),
-          userId: member.getUserId().getValue(),
-          workspaceId: member.getWorkspaceId().getValue(),
-          role: member.getRole(),
-          createdAt: member.getCreatedAt(),
-          updatedAt: member.getUpdatedAt(),
-        })),
+        items: members.items.map((member) => member.toJSON()),
         pagination: {
           total: members.total,
           limit: members.limit,
@@ -57,7 +50,7 @@ export class MemberController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; userId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     const { workspaceId, userId } = request.params;
     const currentUser = request.user;
@@ -66,7 +59,7 @@ export class MemberController {
     const canManage = await this.authHelper.verifyCanManageMembers(
       currentUser.userId,
       workspaceId,
-      reply,
+      reply
     );
     if (!canManage) {
       return; // Response already sent by helper
@@ -77,8 +70,8 @@ export class MemberController {
       return reply.status(400).send({
         success: false,
         statusCode: 400,
-        error: "Bad Request",
-        message: "You cannot remove yourself from the workspace",
+        error: 'Bad Request',
+        message: 'You cannot remove yourself from the workspace',
       });
     }
 
@@ -86,13 +79,13 @@ export class MemberController {
       // FIX: Lookup membership first
       const membership = await this.membershipService.getUserMembership(
         userId,
-        workspaceId,
+        workspaceId
       );
       if (!membership) {
         return reply.status(404).send({
           success: false,
           statusCode: 404,
-          message: "Member not found in this workspace",
+          message: 'Member not found in this workspace',
         });
       }
 
@@ -101,7 +94,7 @@ export class MemberController {
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: "Member removed successfully",
+        message: 'Member removed successfully',
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -113,7 +106,7 @@ export class MemberController {
       Params: { workspaceId: string; userId: string };
       Body: { role: WorkspaceRole };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     const { workspaceId, userId } = request.params;
     const { role } = request.body;
@@ -123,7 +116,7 @@ export class MemberController {
     const canManage = await this.authHelper.verifyCanManageMembers(
       currentUser.userId,
       workspaceId,
-      reply,
+      reply
     );
     if (!canManage) {
       return; // Response already sent by helper
@@ -134,8 +127,8 @@ export class MemberController {
       return reply.status(400).send({
         success: false,
         statusCode: 400,
-        error: "Bad Request",
-        message: "You cannot change your own role",
+        error: 'Bad Request',
+        message: 'You cannot change your own role',
       });
     }
 
@@ -144,15 +137,10 @@ export class MemberController {
       const isOwner = await this.authHelper.verifyCanDelete(
         currentUser.userId,
         workspaceId,
-        reply,
+        reply
       );
       if (!isOwner) {
-        return reply.status(403).send({
-          success: false,
-          statusCode: 403,
-          error: "Forbidden",
-          message: "Only workspace owners can assign the owner role",
-        });
+        return; // Response already sent by helper
       }
     }
 
@@ -160,32 +148,26 @@ export class MemberController {
       // FIX: Lookup membership first
       const membership = await this.membershipService.getUserMembership(
         userId,
-        workspaceId,
+        workspaceId
       );
       if (!membership) {
         return reply.status(404).send({
           success: false,
           statusCode: 404,
-          message: "Member not found in this workspace",
+          message: 'Member not found in this workspace',
         });
       }
 
       const updatedMembership = await this.membershipService.changeMemberRole(
         membership.getId().getValue(),
-        role,
+        role
       );
 
       return reply.status(200).send({
         success: true,
         statusCode: 200,
-        message: "Member role updated successfully",
-        data: {
-          membershipId: updatedMembership.getId().getValue(),
-          userId: updatedMembership.getUserId().getValue(),
-          workspaceId: updatedMembership.getWorkspaceId().getValue(),
-          role: updatedMembership.getRole(),
-          updatedAt: updatedMembership.getUpdatedAt(),
-        },
+        message: 'Member role updated successfully',
+        data: updatedMembership.toJSON(),
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
