@@ -1,22 +1,22 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { Budget } from "../../domain/entities/budget.entity";
-import { BudgetId } from "../../domain/value-objects/budget-id";
-import { BudgetPeriod } from "../../domain/value-objects/budget-period";
-import { BudgetStatus } from "../../domain/enums/budget-status";
-import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Budget } from '../../domain/entities/budget.entity';
+import { BudgetId } from '../../domain/value-objects/budget-id';
+import { BudgetPeriod } from '../../domain/value-objects/budget-period';
+import { BudgetStatus } from '../../domain/enums/budget-status';
+import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   IBudgetRepository,
   BudgetFilters,
-} from "../../domain/repositories/budget.repository";
+} from '../../domain/repositories/budget.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 export class BudgetRepositoryImpl
   extends PrismaRepository<Budget>
@@ -81,21 +81,21 @@ export class BudgetRepositoryImpl
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Budget>> {
     const where: Prisma.BudgetWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budget,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByFilters(
     filters: BudgetFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Budget>> {
     const where: Prisma.BudgetWhereInput = {
       workspaceId: filters.workspaceId,
@@ -119,20 +119,26 @@ export class BudgetRepositoryImpl
         where.status = BudgetStatus.ACTIVE;
         where.startDate = { lte: now };
         where.endDate = { gte: now };
+      } else {
+        where.OR = [
+          { status: { not: BudgetStatus.ACTIVE } },
+          { endDate: { lt: now } },
+          { startDate: { gt: now } },
+        ];
       }
     }
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budget,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findActiveBudgets(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Budget>> {
     const now = new Date();
 
@@ -145,15 +151,15 @@ export class BudgetRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budget,
-      { where, orderBy: { startDate: "desc" } },
+      { where, orderBy: { startDate: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findExpiredBudgets(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Budget>> {
     const now = new Date();
 
@@ -165,9 +171,9 @@ export class BudgetRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budget,
-      { where, orderBy: { endDate: "asc" } },
+      { where, orderBy: { endDate: 'asc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
@@ -206,7 +212,7 @@ export class BudgetRepositoryImpl
     const period = BudgetPeriod.fromDates(
       row.startDate,
       row.endDate,
-      row.periodType as BudgetPeriodType,
+      row.periodType as BudgetPeriodType
     );
 
     return Budget.fromPersistence({
