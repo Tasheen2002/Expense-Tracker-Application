@@ -1,18 +1,18 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { BudgetAllocation } from "../../domain/entities/budget-allocation.entity";
-import { AllocationId } from "../../domain/value-objects/allocation-id";
-import { BudgetId } from "../../domain/value-objects/budget-id";
-import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
-import { IBudgetAllocationRepository } from "../../domain/repositories/budget-allocation.repository";
-import { BudgetAllocationExceededError } from "../../domain/errors/budget-allocation-exceeded.error";
-import { Decimal } from "@prisma/client/runtime/library";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
+import { AllocationId } from '../../domain/value-objects/allocation-id';
+import { BudgetId } from '../../domain/value-objects/budget-id';
+import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
+import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
+import { BudgetAllocationExceededError } from '../../domain/errors/budget.errors';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 export class BudgetAllocationRepositoryImpl
   extends PrismaRepository<BudgetAllocation>
@@ -48,7 +48,7 @@ export class BudgetAllocationRepositoryImpl
 
   async saveWithAlerts(
     allocation: BudgetAllocation,
-    alerts: BudgetAlert[],
+    alerts: BudgetAlert[]
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // 1. Save Allocation
@@ -98,7 +98,7 @@ export class BudgetAllocationRepositoryImpl
   async saveWithBudgetValidation(
     allocation: BudgetAllocation,
     budgetTotalAmount: Decimal,
-    excludeAllocationId?: string,
+    excludeAllocationId?: string
   ): Promise<void> {
     await this.prisma.$transaction(
       async (tx) => {
@@ -122,7 +122,7 @@ export class BudgetAllocationRepositoryImpl
           throw new BudgetAllocationExceededError(
             allocation.getBudgetId().getValue(),
             budgetTotalAmount.toNumber(),
-            newTotal.toNumber(),
+            newTotal.toNumber()
           );
         }
 
@@ -149,7 +149,7 @@ export class BudgetAllocationRepositoryImpl
       },
       {
         isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
+      }
     );
 
     await this.dispatchEvents(allocation);
@@ -167,7 +167,7 @@ export class BudgetAllocationRepositoryImpl
 
   async findByBudget(
     budgetId: BudgetId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAllocation>> {
     const where: Prisma.BudgetAllocationWhereInput = {
       budgetId: budgetId.getValue(),
@@ -175,15 +175,15 @@ export class BudgetAllocationRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAllocation,
-      { where, orderBy: { createdAt: "asc" } },
+      { where, orderBy: { createdAt: 'asc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByBudgetAndCategory(
     budgetId: BudgetId,
-    categoryId: string,
+    categoryId: string
   ): Promise<BudgetAllocation | null> {
     const row = await this.prisma.budgetAllocation.findFirst({
       where: {
@@ -219,7 +219,7 @@ export class BudgetAllocationRepositoryImpl
   }
 
   private toDomain(
-    row: Prisma.BudgetAllocationGetPayload<object>,
+    row: Prisma.BudgetAllocationGetPayload<object>
   ): BudgetAllocation {
     return BudgetAllocation.fromPersistence({
       id: AllocationId.fromString(row.id),
