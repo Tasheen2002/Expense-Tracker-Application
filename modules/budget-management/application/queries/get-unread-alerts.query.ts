@@ -1,22 +1,36 @@
-import { BudgetService } from '../services/budget.service'
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity'
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { BudgetService } from '../services/budget.service';
+import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetUnreadAlertsDto {
-  workspaceId: string
-  limit?: number
-  offset?: number
+export interface GetUnreadAlertsQuery extends IQuery {
+  workspaceId: string;
+  limit?: number;
+  offset?: number;
 }
 
-export class GetUnreadAlertsHandler {
+export class GetUnreadAlertsHandler implements IQueryHandler<
+  GetUnreadAlertsQuery,
+  QueryResult<PaginatedResult<BudgetAlert>>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: GetUnreadAlertsDto): Promise<PaginatedResult<BudgetAlert>> {
+  async handle(
+    query: GetUnreadAlertsQuery
+  ): Promise<QueryResult<PaginatedResult<BudgetAlert>>> {
     const options = {
-      limit: dto.limit,
-      offset: dto.offset,
-    }
+      limit: query.limit,
+      offset: query.offset,
+    };
 
-    return await this.budgetService.getUnreadAlerts(dto.workspaceId, options)
+    const result = await this.budgetService.getUnreadAlerts(
+      query.workspaceId,
+      options
+    );
+    return QueryResult.success(result);
   }
 }

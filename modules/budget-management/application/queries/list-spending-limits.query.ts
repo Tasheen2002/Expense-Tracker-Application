@@ -1,42 +1,62 @@
-import { SpendingLimitService } from '../services/spending-limit.service'
-import { SpendingLimit } from '../../domain/entities/spending-limit.entity'
-import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { SpendingLimitService } from '../services/spending-limit.service';
+import { SpendingLimit } from '../../domain/entities/spending-limit.entity';
+import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ListSpendingLimitsDto {
-  workspaceId: string
-  userId?: string
-  categoryId?: string
-  isActive?: boolean
-  periodType?: BudgetPeriodType
-  limit?: number
-  offset?: number
+export interface ListSpendingLimitsQuery extends IQuery {
+  workspaceId: string;
+  userId?: string;
+  categoryId?: string;
+  isActive?: boolean;
+  periodType?: BudgetPeriodType;
+  limit?: number;
+  offset?: number;
 }
 
-export class ListSpendingLimitsHandler {
+export class ListSpendingLimitsHandler implements IQueryHandler<
+  ListSpendingLimitsQuery,
+  QueryResult<PaginatedResult<SpendingLimit>>
+> {
   constructor(private readonly limitService: SpendingLimitService) {}
 
-  async handle(dto: ListSpendingLimitsDto): Promise<PaginatedResult<SpendingLimit>> {
+  async handle(
+    query: ListSpendingLimitsQuery
+  ): Promise<QueryResult<PaginatedResult<SpendingLimit>>> {
     const options = {
-      limit: dto.limit,
-      offset: dto.offset,
-    }
+      limit: query.limit,
+      offset: query.offset,
+    };
+
+    let result: PaginatedResult<SpendingLimit>;
 
     if (
-      dto.userId !== undefined ||
-      dto.categoryId !== undefined ||
-      dto.isActive !== undefined ||
-      dto.periodType
+      query.userId !== undefined ||
+      query.categoryId !== undefined ||
+      query.isActive !== undefined ||
+      query.periodType
     ) {
-      return await this.limitService.filterSpendingLimits({
-        workspaceId: dto.workspaceId,
-        userId: dto.userId,
-        categoryId: dto.categoryId,
-        isActive: dto.isActive,
-        periodType: dto.periodType,
-      }, options)
+      result = await this.limitService.filterSpendingLimits(
+        {
+          workspaceId: query.workspaceId,
+          userId: query.userId,
+          categoryId: query.categoryId,
+          isActive: query.isActive,
+          periodType: query.periodType,
+        },
+        options
+      );
+    } else {
+      result = await this.limitService.getSpendingLimitsByWorkspace(
+        query.workspaceId,
+        options
+      );
     }
 
-    return await this.limitService.getSpendingLimitsByWorkspace(dto.workspaceId, options)
+    return QueryResult.success(result);
   }
 }
