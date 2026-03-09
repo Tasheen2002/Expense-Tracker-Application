@@ -25,7 +25,7 @@ import {
   UnauthorizedBudgetAccessError,
 } from '../../domain/errors/budget.errors';
 
-import { BudgetAllocationExceededError } from '../../domain/errors/budget-allocation-exceeded.error';
+import { BudgetAllocationExceededError } from '../../domain/errors/budget.errors';
 
 export class BudgetService {
   constructor(
