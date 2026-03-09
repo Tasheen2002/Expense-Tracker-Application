@@ -6,6 +6,12 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody, validateQuery } from '../validation/validator';
+import {
+  createExpenseSchema,
+  updateExpenseSchema,
+  filterExpensesSchema,
+} from '../validation/expense.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -16,9 +22,8 @@ export async function expenseRoutes(
   fastify: FastifyInstance,
   controller: ExpenseController
 ) {
-  fastify.addHook('preHandler', (fastify as any).authenticate);
   // Apply write rate limiting to all POST/PUT/PATCH/DELETE routes
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -27,6 +32,7 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses',
     {
+      preValidation: [validateBody(createExpenseSchema)],
       schema: {
         tags: ['Expense'],
         description: 'Create a new expense',
@@ -115,6 +121,7 @@ export async function expenseRoutes(
   fastify.put(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
+      preValidation: [validateBody(updateExpenseSchema)],
       schema: {
         tags: ['Expense'],
         description: 'Update an expense',
@@ -350,6 +357,7 @@ export async function expenseRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/filter',
     {
+      preValidation: [validateQuery(filterExpensesSchema)],
       schema: {
         tags: ['Expense'],
         description: 'Filter expenses',

@@ -5,6 +5,11 @@ import {
   createRateLimiter,
   RateLimitPresets,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import {
+  createWorkspaceSchema as createWorkspaceZodSchema,
+  updateWorkspaceSchema as updateWorkspaceZodSchema,
+} from '../validation/workspace.schema';
 
 const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 
@@ -200,6 +205,7 @@ export async function registerWorkspaceRoutes(
     {
       ...createWorkspaceSchema,
       onRequest: [fastify.authenticate, writeRateLimiter],
+      preValidation: [validateBody(createWorkspaceZodSchema)],
     },
     async (request, reply) =>
       controller.createWorkspace(request as AuthenticatedRequest, reply)
@@ -233,6 +239,7 @@ export async function registerWorkspaceRoutes(
     {
       ...updateWorkspaceSchema,
       onRequest: [fastify.authenticate, writeRateLimiter],
+      preValidation: [validateBody(updateWorkspaceZodSchema)],
     },
     async (request, reply) =>
       controller.updateWorkspace(request as AuthenticatedRequest, reply)

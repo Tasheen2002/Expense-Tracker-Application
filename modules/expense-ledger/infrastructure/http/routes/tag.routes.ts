@@ -6,6 +6,8 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import { createTagSchema, updateTagSchema } from '../validation/tag.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -16,8 +18,7 @@ export async function tagRoutes(
   fastify: FastifyInstance,
   controller: TagController
 ) {
-  fastify.addHook('preHandler', (fastify as any).authenticate);
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -26,6 +27,7 @@ export async function tagRoutes(
   fastify.post(
     '/workspaces/:workspaceId/tags',
     {
+      preValidation: [validateBody(createTagSchema)],
       schema: {
         tags: ['Tag'],
         description: 'Create a new tag',
@@ -75,6 +77,7 @@ export async function tagRoutes(
   fastify.put(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      preValidation: [validateBody(updateTagSchema)],
       schema: {
         tags: ['Tag'],
         description: 'Update a tag',

@@ -6,6 +6,8 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import { createAttachmentSchema } from '../validation/attachment.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -16,7 +18,7 @@ export async function attachmentRoutes(
   fastify: FastifyInstance,
   controller: AttachmentController
 ) {
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -25,6 +27,7 @@ export async function attachmentRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
+      preValidation: [validateBody(createAttachmentSchema)],
       schema: {
         tags: ['Attachment'],
         description: 'Upload and link attachment to expense',

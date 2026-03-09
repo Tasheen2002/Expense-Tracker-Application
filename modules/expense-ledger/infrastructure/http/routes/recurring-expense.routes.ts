@@ -16,7 +16,7 @@ export async function recurringExpenseRoutes(
   fastify: FastifyInstance,
   controller: RecurringExpenseController
 ) {
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }

@@ -1,11 +1,21 @@
-import { FastifyInstance } from "fastify";
-import { BudgetController } from "../controllers/budget.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { BudgetController } from '../controllers/budget.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody, validateQuery } from '../validation/validator';
+import {
+  createBudgetSchema,
+  updateBudgetSchema,
+  listBudgetsSchema,
+} from '../validation/budget.schema';
+import {
+  addAllocationSchema,
+  updateAllocationSchema,
+} from '../validation/allocation.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -14,312 +24,329 @@ const writeRateLimiter = createRateLimiter({
 
 export async function budgetRoutes(
   fastify: FastifyInstance,
-  controller: BudgetController,
+  controller: BudgetController
 ) {
   // Apply write rate limiting to all mutation routes
-  fastify.addHook("preHandler", async (request, reply) => {
-    if (request.method !== "GET") {
+  fastify.addHook('onRequest', async (request, reply) => {
+    if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
   // Create budget
   fastify.post(
-    "/:workspaceId/budgets",
+    '/:workspaceId/budgets',
     {
+      preValidation: [validateBody(createBudgetSchema)],
       schema: {
-        tags: ["Budget"],
-        description: "Create a new budget",
+        tags: ['Budget'],
+        description: 'Create a new budget',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
           required: [
-            "name",
-            "totalAmount",
-            "currency",
-            "periodType",
-            "startDate",
+            'name',
+            'totalAmount',
+            'currency',
+            'periodType',
+            'startDate',
           ],
           properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string" },
-            totalAmount: { type: "number", minimum: 0.01 },
-            currency: { type: "string", minLength: 3, maxLength: 3 },
+            name: { type: 'string', minLength: 1, maxLength: 255 },
+            description: { type: 'string' },
+            totalAmount: { type: 'number', minimum: 0.01 },
+            currency: { type: 'string', minLength: 3, maxLength: 3 },
             periodType: {
-              type: "string",
-              enum: ["MONTHLY", "QUARTERLY", "YEARLY", "CUSTOM"],
+              type: 'string',
+              enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'],
             },
-            startDate: { type: "string", format: "date-time" },
-            endDate: { type: "string", format: "date-time" },
-            isRecurring: { type: "boolean" },
-            rolloverUnused: { type: "boolean" },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
+            isRecurring: { type: 'boolean' },
+            rolloverUnused: { type: 'boolean' },
           },
         },
       },
     },
-    (request, reply) => controller.createBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createBudget(request as AuthenticatedRequest, reply)
   );
 
   // List budgets
   fastify.get(
-    "/:workspaceId/budgets",
+    '/:workspaceId/budgets',
     {
+      preValidation: [validateQuery(listBudgetsSchema)],
       schema: {
-        tags: ["Budget"],
-        description: "List all budgets in workspace",
+        tags: ['Budget'],
+        description: 'List all budgets in workspace',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
             status: {
-              type: "string",
-              enum: ["DRAFT", "ACTIVE", "ARCHIVED", "EXCEEDED"],
+              type: 'string',
+              enum: ['DRAFT', 'ACTIVE', 'ARCHIVED', 'EXCEEDED'],
             },
-            isActive: { type: "string", enum: ["true", "false"] },
-            createdBy: { type: "string", format: "uuid" },
-            currency: { type: "string" },
-            limit: { type: "string" },
-            offset: { type: "string" },
+            isActive: { type: 'string', enum: ['true', 'false'] },
+            createdBy: { type: 'string', format: 'uuid' },
+            currency: { type: 'string' },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
           },
         },
       },
     },
-    (request, reply) => controller.listBudgets(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listBudgets(request as AuthenticatedRequest, reply)
   );
 
   // Get budget by ID
   fastify.get(
-    "/:workspaceId/budgets/:budgetId",
+    '/:workspaceId/budgets/:budgetId',
     {
       schema: {
-        tags: ["Budget"],
-        description: "Get budget by ID",
+        tags: ['Budget'],
+        description: 'Get budget by ID',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getBudget(request as AuthenticatedRequest, reply)
   );
 
   // Update budget
-  fastify.put(
-    "/:workspaceId/budgets/:budgetId",
+  fastify.patch(
+    '/:workspaceId/budgets/:budgetId',
     {
+      preValidation: [validateBody(updateBudgetSchema)],
       schema: {
-        tags: ["Budget"],
-        description: "Update budget",
+        tags: ['Budget'],
+        description: 'Update budget',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
           properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: ["string", "null"] },
-            totalAmount: { type: "number", minimum: 0.01 },
+            name: { type: 'string', minLength: 1, maxLength: 255 },
+            description: { type: ['string', 'null'] },
+            totalAmount: { type: 'number', minimum: 0.01 },
           },
         },
       },
     },
-    (request, reply) => controller.updateBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.updateBudget(request as AuthenticatedRequest, reply)
   );
 
   // Activate budget
   fastify.post(
-    "/:workspaceId/budgets/:budgetId/activate",
+    '/:workspaceId/budgets/:budgetId/activate',
     {
       schema: {
-        tags: ["Budget"],
-        description: "Activate budget",
+        tags: ['Budget'],
+        description: 'Activate budget',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.activateBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.activateBudget(request as AuthenticatedRequest, reply)
   );
 
   // Archive budget
   fastify.post(
-    "/:workspaceId/budgets/:budgetId/archive",
+    '/:workspaceId/budgets/:budgetId/archive',
     {
       schema: {
-        tags: ["Budget"],
-        description: "Archive budget",
+        tags: ['Budget'],
+        description: 'Archive budget',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.archiveBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.archiveBudget(request as AuthenticatedRequest, reply)
   );
 
   // Delete budget
   fastify.delete(
-    "/:workspaceId/budgets/:budgetId",
+    '/:workspaceId/budgets/:budgetId',
     {
       schema: {
-        tags: ["Budget"],
-        description: "Delete budget",
+        tags: ['Budget'],
+        description: 'Delete budget',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.deleteBudget(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteBudget(request as AuthenticatedRequest, reply)
   );
 
   // Add allocation
   fastify.post(
-    "/:workspaceId/budgets/:budgetId/allocations",
+    '/:workspaceId/budgets/:budgetId/allocations',
     {
+      preValidation: [validateBody(addAllocationSchema)],
       schema: {
-        tags: ["Budget Allocation"],
-        description: "Add allocation to budget",
+        tags: ['Budget Allocation'],
+        description: 'Add allocation to budget',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
-          required: ["allocatedAmount"],
+          type: 'object',
+          required: ['allocatedAmount'],
           properties: {
-            categoryId: { type: "string", format: "uuid" },
-            allocatedAmount: { type: "number", minimum: 0.01 },
-            description: { type: "string" },
+            categoryId: { type: 'string', format: 'uuid' },
+            allocatedAmount: { type: 'number', minimum: 0.01 },
+            description: { type: 'string' },
           },
         },
       },
     },
-    (request, reply) => controller.addAllocation(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.addAllocation(request as AuthenticatedRequest, reply)
   );
 
   // Get allocations
   fastify.get(
-    "/:workspaceId/budgets/:budgetId/allocations",
+    '/:workspaceId/budgets/:budgetId/allocations',
     {
       schema: {
-        tags: ["Budget Allocation"],
-        description: "Get budget allocations",
+        tags: ['Budget Allocation'],
+        description: 'Get budget allocations',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getAllocations(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getAllocations(request as AuthenticatedRequest, reply)
   );
 
   // Update allocation
-  fastify.put(
-    "/:workspaceId/budgets/:budgetId/allocations/:allocationId",
+  fastify.patch(
+    '/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
+      preValidation: [validateBody(updateAllocationSchema)],
       schema: {
-        tags: ["Budget Allocation"],
-        description: "Update allocation",
+        tags: ['Budget Allocation'],
+        description: 'Update allocation',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId", "allocationId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId', 'allocationId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
-            allocationId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
+            allocationId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
           properties: {
-            allocatedAmount: { type: "number", minimum: 0.01 },
-            description: { type: ["string", "null"] },
+            allocatedAmount: { type: 'number', minimum: 0.01 },
+            description: { type: ['string', 'null'] },
           },
         },
       },
     },
-    (request, reply) => controller.updateAllocation(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.updateAllocation(request as AuthenticatedRequest, reply)
   );
 
   // Delete allocation
   fastify.delete(
-    "/:workspaceId/budgets/:budgetId/allocations/:allocationId",
+    '/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
       schema: {
-        tags: ["Budget Allocation"],
-        description: "Delete allocation",
+        tags: ['Budget Allocation'],
+        description: 'Delete allocation',
         params: {
-          type: "object",
-          required: ["workspaceId", "budgetId", "allocationId"],
+          type: 'object',
+          required: ['workspaceId', 'budgetId', 'allocationId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            budgetId: { type: "string", format: "uuid" },
-            allocationId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            budgetId: { type: 'string', format: 'uuid' },
+            allocationId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.deleteAllocation(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteAllocation(request as AuthenticatedRequest, reply)
   );
 
   // Get unread alerts
   fastify.get(
-    "/:workspaceId/budgets/alerts/unread",
+    '/:workspaceId/budgets/alerts/unread',
     {
       schema: {
-        tags: ["Budget Alert"],
-        description: "Get unread budget alerts",
+        tags: ['Budget Alert'],
+        description: 'Get unread budget alerts',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
       },
     },
-    (request, reply) => controller.getUnreadAlerts(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getUnreadAlerts(request as AuthenticatedRequest, reply)
   );
 }

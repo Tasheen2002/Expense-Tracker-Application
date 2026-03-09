@@ -5,6 +5,8 @@ import {
   createRateLimiter,
   RateLimitPresets,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import { registerUserSchema, loginUserSchema } from '../validation/user.schema';
 
 const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 
@@ -17,6 +19,7 @@ export async function registerAuthRoutes(
     '/auth/register',
     {
       onRequest: [authRateLimiter],
+      preValidation: [validateBody(registerUserSchema)],
       schema: {
         description: 'Register a new user account',
         tags: ['Authentication'],
@@ -77,6 +80,7 @@ export async function registerAuthRoutes(
     '/auth/login',
     {
       onRequest: [authRateLimiter],
+      preValidation: [validateBody(loginUserSchema)],
       schema: {
         description: 'Login with email and password',
         tags: ['Authentication'],

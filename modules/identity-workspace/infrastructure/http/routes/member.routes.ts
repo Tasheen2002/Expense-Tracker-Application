@@ -5,6 +5,8 @@ import {
   createRateLimiter,
   RateLimitPresets,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import { updateMemberRoleSchema as updateMemberRoleZodSchema } from '../validation/workspace.schema';
 
 const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 
@@ -158,6 +160,7 @@ export async function registerMemberRoutes(
     {
       ...changeRoleSchema,
       onRequest: [fastify.authenticate, writeRateLimiter],
+      preValidation: [validateBody(updateMemberRoleZodSchema)],
     },
     async (request, reply) =>
       controller.changeRole(request as AuthenticatedRequest, reply)
