@@ -1,14 +1,31 @@
-import { SpendingLimitService } from '../services/spending-limit.service'
+import { BudgetService } from '../services/budget.service';
+import { SpendingLimitService } from '../services/spending-limit.service';
 
-export interface DeleteSpendingLimitDto {
-  limitId: string
-  workspaceId: string
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface DeleteSpendingLimitCommand extends ICommand {
+  limitId: string;
+  workspaceId: string;
+  userId: string;
 }
 
-export class DeleteSpendingLimitHandler {
+export class DeleteSpendingLimitHandler implements ICommandHandler<
+  DeleteSpendingLimitCommand,
+  CommandResult<void>
+> {
   constructor(private readonly limitService: SpendingLimitService) {}
 
-  async handle(dto: DeleteSpendingLimitDto): Promise<void> {
-    await this.limitService.deleteSpendingLimit(dto.limitId, dto.workspaceId)
+  async handle(
+    command: DeleteSpendingLimitCommand
+  ): Promise<CommandResult<void>> {
+    await this.limitService.deleteSpendingLimit(
+      command.limitId,
+      command.workspaceId
+    );
+    return CommandResult.success(undefined);
   }
 }
