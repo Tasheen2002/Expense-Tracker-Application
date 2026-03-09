@@ -1,40 +1,42 @@
-import { IWorkspaceMembershipRepository } from "../../domain/repositories/workspace-membership.repository";
+import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   WorkspaceMembership,
   WorkspaceRole,
   CreateWorkspaceMembershipData,
-} from "../../domain/entities/workspace-membership.entity";
-import { UserId } from "../../domain/value-objects/user-id.vo";
-import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
-import { MembershipId } from "../../domain/value-objects/membership-id.vo";
+} from '../../domain/entities/workspace-membership.entity';
+import { UserId } from '../../domain/value-objects/user-id.vo';
+import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
+import { MembershipId } from '../../domain/value-objects/membership-id.vo';
 import {
   MembershipNotFoundError,
   MembershipAlreadyExistsError,
   CannotRemoveOwnerError,
-} from "../../domain/errors/identity.errors";
+} from '../../domain/errors/identity.errors';
 
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { ICacheService } from "../../../../apps/api/src/shared/infrastructure/cache/cache.service";
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
 
 export class WorkspaceMembershipService {
   constructor(
     private readonly membershipRepository: IWorkspaceMembershipRepository,
-    private readonly cacheService: ICacheService,
+    private readonly cacheService: ICacheService
   ) {}
 
   async addMember(
-    data: CreateWorkspaceMembershipData,
+    data: CreateWorkspaceMembershipData
   ): Promise<WorkspaceMembership> {
     const userId = UserId.fromString(data.userId);
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
 
     // Invalidate cache
-    await this.cacheService.delete(`membership:${data.userId}:${data.workspaceId}`);
+    await this.cacheService.delete(
+      `membership:${data.userId}:${data.workspaceId}`
+    );
 
     // Check if membership already exists
     const existing = await this.membershipRepository.findByUserAndWorkspace(
       userId,
-      workspaceId,
+      workspaceId
     );
     if (existing) {
       throw new MembershipAlreadyExistsError(data.userId, data.workspaceId);
@@ -52,25 +54,25 @@ export class WorkspaceMembershipService {
 
   async getUserMembership(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<WorkspaceMembership | null> {
     const userIdVO = UserId.fromString(userId);
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
     return await this.membershipRepository.findByUserAndWorkspace(
       userIdVO,
-      workspaceIdVO,
+      workspaceIdVO
     );
   }
 
   async getUserMemberships(
-    userId: string,
+    userId: string
   ): Promise<PaginatedResult<WorkspaceMembership>> {
     const userIdVO = UserId.fromString(userId);
     return await this.membershipRepository.findByUserId(userIdVO);
   }
 
   async getWorkspaceMembers(
-    workspaceId: string,
+    workspaceId: string
   ): Promise<PaginatedResult<WorkspaceMembership>> {
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
     return await this.membershipRepository.findByWorkspaceId(workspaceIdVO);
@@ -78,7 +80,7 @@ export class WorkspaceMembershipService {
 
   async changeMemberRole(
     membershipId: string,
-    newRole: WorkspaceRole,
+    newRole: WorkspaceRole
   ): Promise<WorkspaceMembership> {
     const id = MembershipId.fromString(membershipId);
     const membership = await this.membershipRepository.findById(id);
@@ -89,11 +91,11 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`,
+      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
     );
 
     membership.changeRole(newRole);
-    await this.membershipRepository.save(membership);
+    await this.membershipRepository.update(membership);
     return membership;
   }
 
@@ -111,7 +113,7 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`,
+      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
     );
 
     await this.membershipRepository.delete(id);
@@ -127,14 +129,14 @@ export class WorkspaceMembershipService {
         const workspaceIdVO = WorkspaceId.fromString(workspaceId);
         return await this.membershipRepository.exists(userIdVO, workspaceIdVO);
       },
-      600, // 10 minutes TTL
+      600 // 10 minutes TTL
     );
   }
 
   async hasRole(
     userId: string,
     workspaceId: string,
-    requiredRole: WorkspaceRole,
+    requiredRole: WorkspaceRole
   ): Promise<boolean> {
     const membership = await this.getUserMembership(userId, workspaceId);
     if (!membership) {
@@ -159,7 +161,7 @@ export class WorkspaceMembershipService {
 
   async canEditWorkspace(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<boolean> {
     const membership = await this.getUserMembership(userId, workspaceId);
     return membership ? membership.canEditWorkspace() : false;
@@ -167,7 +169,7 @@ export class WorkspaceMembershipService {
 
   async canManageMembers(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<boolean> {
     const membership = await this.getUserMembership(userId, workspaceId);
     return membership ? membership.canManageMembers() : false;
@@ -175,7 +177,7 @@ export class WorkspaceMembershipService {
 
   async canDeleteWorkspace(
     userId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<boolean> {
     const membership = await this.getUserMembership(userId, workspaceId);
     return membership ? membership.canDeleteWorkspace() : false;

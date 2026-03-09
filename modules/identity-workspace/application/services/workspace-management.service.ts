@@ -1,36 +1,36 @@
-import { IWorkspaceRepository } from "../../domain/repositories/workspace.repository";
-import { IWorkspaceMembershipRepository } from "../../domain/repositories/workspace-membership.repository";
+import { IWorkspaceRepository } from '../../domain/repositories/workspace.repository';
+import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   Workspace,
   CreateWorkspaceData,
-} from "../../domain/entities/workspace.entity";
+} from '../../domain/entities/workspace.entity';
 import {
   WorkspaceMembership,
   WorkspaceRole,
-} from "../../domain/entities/workspace-membership.entity";
-import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
-import { UserId } from "../../domain/value-objects/user-id.vo";
+} from '../../domain/entities/workspace-membership.entity';
+import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
+import { UserId } from '../../domain/value-objects/user-id.vo';
 import {
   WorkspaceNotFoundError,
   WorkspaceAlreadyExistsError,
-} from "../../domain/errors/identity.errors";
+} from '../../domain/errors/identity.errors';
 
 export interface WorkspaceManagementServiceOptions {
   page?: number;
   limit?: number;
   isActive?: boolean;
-  sortBy?: "createdAt" | "name";
-  sortOrder?: "asc" | "desc";
+  sortBy?: 'createdAt' | 'name';
+  sortOrder?: 'asc' | 'desc';
 }
 
 export class WorkspaceManagementService {
   constructor(
     private readonly workspaceRepository: IWorkspaceRepository,
-    private readonly membershipRepository: IWorkspaceMembershipRepository,
+    private readonly membershipRepository: IWorkspaceMembershipRepository
   ) {}
 
   async createWorkspace(data: CreateWorkspaceData): Promise<Workspace> {
-    const slug = Workspace["generateSlug"](data.name);
+    const slug = Workspace.generateSlug(data.name);
 
     // Check if workspace with same slug already exists
     const existingWorkspace = await this.workspaceRepository.findBySlug(slug);
@@ -71,36 +71,51 @@ export class WorkspaceManagementService {
     return result.items;
   }
 
-  async getWorkspacesByMembership(userId: string): Promise<Workspace[]> {
+  async getWorkspacesByMembership(
+    userId: string,
+    options?: import('../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface').PaginationOptions
+  ): Promise<
+    import('../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface').PaginatedResult<Workspace>
+  > {
     const userIdVO = UserId.fromString(userId);
 
-    // Get all memberships for the user
-    const membershipsResult =
-      await this.membershipRepository.findByUserId(userIdVO);
+    // Get paginated memberships for the user
+    const membershipsResult = await this.membershipRepository.findByUserId(
+      userIdVO,
+      options
+    );
     const memberships = membershipsResult.items;
 
     // Get workspaces for each membership
     const workspacePromises = memberships.map((membership) =>
-      this.workspaceRepository.findById(membership.getWorkspaceId()),
+      this.workspaceRepository.findById(membership.getWorkspaceId())
     );
 
-    const workspaces = await Promise.all(workspacePromises);
+    const workspacesRaw = await Promise.all(workspacePromises);
 
     // Filter out null values (in case workspace was deleted)
-    return workspaces.filter(
-      (workspace): workspace is Workspace => workspace !== null,
+    const workspaces = workspacesRaw.filter(
+      (workspace): workspace is Workspace => workspace !== null
     );
+
+    return {
+      items: workspaces,
+      total: membershipsResult.total,
+      limit: membershipsResult.limit,
+      offset: membershipsResult.offset,
+      hasMore: membershipsResult.hasMore,
+    };
   }
 
   async getWorkspaces(
-    options: WorkspaceManagementServiceOptions = {},
+    options: WorkspaceManagementServiceOptions = {}
   ): Promise<Workspace[]> {
     const {
       page = 1,
       limit = 50,
       isActive,
-      sortBy = "createdAt",
-      sortOrder = "desc",
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = options;
 
     const repositoryOptions = {
@@ -117,7 +132,7 @@ export class WorkspaceManagementService {
 
   async updateWorkspace(
     id: string,
-    updateData: Partial<CreateWorkspaceData>,
+    updateData: Partial<CreateWorkspaceData>
   ): Promise<Workspace | null> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
@@ -128,7 +143,7 @@ export class WorkspaceManagementService {
 
     // Update name if provided
     if (updateData.name !== undefined) {
-      const newSlug = Workspace["generateSlug"](updateData.name);
+      const newSlug = Workspace.generateSlug(updateData.name);
       const existingWorkspace =
         await this.workspaceRepository.findBySlug(newSlug);
       if (existingWorkspace && !existingWorkspace.getId().equals(workspaceId)) {
