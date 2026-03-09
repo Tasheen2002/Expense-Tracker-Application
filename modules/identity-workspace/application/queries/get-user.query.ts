@@ -1,45 +1,50 @@
-import { UserManagementService } from '../services/user-management.service'
-import { CommandResult } from '../commands/register-user.command'
-import { IQuery, IQueryHandler } from './login-user.query'
+import { UserManagementService } from '../services/user-management.service';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
 export interface GetUserQuery extends IQuery {
-  userId?: string
-  email?: string
+  userId?: string;
+  email?: string;
 }
 
 export interface UserResult {
-  userId: string
-  email: string
-  fullName: string | null
-  isActive: boolean
-  emailVerified: boolean
-  createdAt: Date
-  updatedAt: Date
+  userId: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export class GetUserHandler implements IQueryHandler<GetUserQuery, CommandResult<UserResult>> {
+export class GetUserHandler implements IQueryHandler<
+  GetUserQuery,
+  QueryResult<UserResult>
+> {
   constructor(private readonly userManagementService: UserManagementService) {}
 
-  async handle(query: GetUserQuery): Promise<CommandResult<UserResult>> {
+  async handle(query: GetUserQuery): Promise<QueryResult<UserResult>> {
     try {
       // Validate that either userId or email is provided
       if (!query.userId && !query.email) {
-        return CommandResult.failure<UserResult>('Either userId or email is required', [
-          'userId',
-          'email',
-        ])
+        return QueryResult.failure<UserResult>(
+          'Either userId or email is required'
+        );
       }
 
       // Get user by ID or email
-      let user
+      let user;
       if (query.userId) {
-        user = await this.userManagementService.getUserById(query.userId)
+        user = await this.userManagementService.getUserById(query.userId);
       } else if (query.email) {
-        user = await this.userManagementService.getUserByEmail(query.email)
+        user = await this.userManagementService.getUserByEmail(query.email);
       }
 
       if (!user) {
-        return CommandResult.failure<UserResult>('User not found')
+        return QueryResult.failure<UserResult>('User not found');
       }
 
       const result: UserResult = {
@@ -50,17 +55,19 @@ export class GetUserHandler implements IQueryHandler<GetUserQuery, CommandResult
         emailVerified: user.getEmailVerified(),
         createdAt: user.getCreatedAt(),
         updatedAt: user.getUpdatedAt(),
-      }
+      };
 
-      return CommandResult.success<UserResult>(result)
+      return QueryResult.success<UserResult>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return CommandResult.failure<UserResult>('Failed to retrieve user', [error.message])
+        return QueryResult.failure<UserResult>(
+          'Failed to retrieve user: ' + error.message
+        );
       }
 
-      return CommandResult.failure<UserResult>(
+      return QueryResult.failure<UserResult>(
         'An unexpected error occurred while retrieving user'
-      )
+      );
     }
   }
 }
