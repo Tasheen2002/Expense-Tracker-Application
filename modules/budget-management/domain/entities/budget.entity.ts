@@ -1,7 +1,7 @@
 import { BudgetId } from '../value-objects/budget-id';
 import { BudgetPeriod } from '../value-objects/budget-period';
 import { BudgetStatus, isValidStatusTransition } from '../enums/budget-status';
-import { BudgetAllocationExceededError } from '../errors/budget-allocation-exceeded.error';
+import { BudgetAllocationExceededError } from '../errors/budget.errors';
 import {
   InvalidAmountError,
   InvalidCurrencyError,
