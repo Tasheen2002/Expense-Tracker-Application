@@ -4,10 +4,12 @@ import { PrismaClient } from '@prisma/client';
 import { getEventBus } from './shared/domain/events/event-bus';
 import { InMemoryCacheService } from './shared/infrastructure/cache/cache.service';
 import { NotificationEventHandler } from '../../../modules/notification-dispatch/application/handlers/notification.handler';
+import { InAppProvider } from '../../../modules/notification-dispatch/application/providers/inapp.provider';
 // Audit
 import { AuditLogRepositoryImpl } from '../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl';
 import { AuditService } from '../../../modules/audit-compliance/application/services/audit.service';
 import { AuditEventListener } from '../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener';
+import { AuditLogController } from '../../../modules/audit-compliance/infrastructure/http/controllers/audit-log.controller';
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl';
@@ -620,7 +622,10 @@ export class Container {
       eventBus
     );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
-    const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
+    const spendingLimitRepository = new SpendingLimitRepositoryImpl(
+      prisma,
+      eventBus
+    );
 
     this.services.set('budgetRepository', budgetRepository);
     this.services.set('budgetAllocationRepository', budgetAllocationRepository);
@@ -871,11 +876,13 @@ export class Container {
     );
 
     // Services - Notification
+    const inAppProvider = new InAppProvider(notificationRepository);
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
-      userRepository
+      userRepository,
+      inAppProvider
     );
     this.services.set('notificationService', notificationService);
 
@@ -896,8 +903,10 @@ export class Container {
     );
     const templateController = new TemplateController(templateService);
     const preferenceController = new PreferenceController(preferenceService);
+    const auditLogController = new AuditLogController(auditService);
 
     this.services.set('notificationController', notificationController);
+    this.services.set('auditLogController', auditLogController);
     this.services.set('templateController', templateController);
     this.services.set('preferenceController', preferenceController);
 
@@ -941,10 +950,6 @@ export class Container {
     eventBus.subscribe(
       'approval.workflow_started',
       notificationEventHandler.handleApprovalStarted
-    );
-    eventBus.subscribe(
-      'UserCreated',
-      notificationEventHandler.handleUserCreated
     );
 
     console.log('[Container] Notification Event Handlers registered');
@@ -1662,6 +1667,7 @@ export class Container {
    */
   getAuditComplianceServices() {
     return {
+      auditLogController: this.get<AuditLogController>('auditLogController'),
       auditService: this.get<AuditService>('auditService'),
       prisma: this.get<PrismaClient>('prisma'),
     };
