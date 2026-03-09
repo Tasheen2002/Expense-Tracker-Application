@@ -1,23 +1,23 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { CreateBudgetHandler } from "../../../application/commands/create-budget.command";
-import { UpdateBudgetHandler } from "../../../application/commands/update-budget.command";
-import { DeleteBudgetHandler } from "../../../application/commands/delete-budget.command";
-import { ActivateBudgetHandler } from "../../../application/commands/activate-budget.command";
-import { ArchiveBudgetHandler } from "../../../application/commands/archive-budget.command";
-import { AddAllocationHandler } from "../../../application/commands/add-allocation.command";
-import { UpdateAllocationHandler } from "../../../application/commands/update-allocation.command";
-import { DeleteAllocationHandler } from "../../../application/commands/delete-allocation.command";
-import { GetBudgetHandler } from "../../../application/queries/get-budget.query";
-import { ListBudgetsHandler } from "../../../application/queries/list-budgets.query";
-import { GetAllocationsHandler } from "../../../application/queries/get-allocations.query";
-import { GetUnreadAlertsHandler } from "../../../application/queries/get-unread-alerts.query";
-import { Budget } from "../../../domain/entities/budget.entity";
-import { BudgetAllocation } from "../../../domain/entities/budget-allocation.entity";
-import { BudgetAlert } from "../../../domain/entities/budget-alert.entity";
-import { BudgetPeriodType } from "../../../domain/enums/budget-period-type";
-import { BudgetStatus } from "../../../domain/enums/budget-status";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CreateBudgetHandler } from '../../../application/commands/create-budget.command';
+import { UpdateBudgetHandler } from '../../../application/commands/update-budget.command';
+import { DeleteBudgetHandler } from '../../../application/commands/delete-budget.command';
+import { ActivateBudgetHandler } from '../../../application/commands/activate-budget.command';
+import { ArchiveBudgetHandler } from '../../../application/commands/archive-budget.command';
+import { AddAllocationHandler } from '../../../application/commands/add-allocation.command';
+import { UpdateAllocationHandler } from '../../../application/commands/update-allocation.command';
+import { DeleteAllocationHandler } from '../../../application/commands/delete-allocation.command';
+import { GetBudgetHandler } from '../../../application/queries/get-budget.query';
+import { ListBudgetsHandler } from '../../../application/queries/list-budgets.query';
+import { GetAllocationsHandler } from '../../../application/queries/get-allocations.query';
+import { GetUnreadAlertsHandler } from '../../../application/queries/get-unread-alerts.query';
+import { Budget } from '../../../domain/entities/budget.entity';
+import { BudgetAllocation } from '../../../domain/entities/budget-allocation.entity';
+import { BudgetAlert } from '../../../domain/entities/budget-alert.entity';
+import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
+import { BudgetStatus } from '../../../domain/enums/budget-status';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class BudgetController {
   constructor(
@@ -32,7 +32,7 @@ export class BudgetController {
     private readonly getBudgetHandler: GetBudgetHandler,
     private readonly listBudgetsHandler: ListBudgetsHandler,
     private readonly getAllocationsHandler: GetAllocationsHandler,
-    private readonly getUnreadAlertsHandler: GetUnreadAlertsHandler,
+    private readonly getUnreadAlertsHandler: GetUnreadAlertsHandler
   ) {}
 
   async createBudget(
@@ -50,14 +50,14 @@ export class BudgetController {
         rolloverUnused?: boolean;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
 
-      const budget = await this.createBudgetHandler.handle({
+      const result = await this.createBudgetHandler.handle({
         workspaceId,
         name: request.body.name,
         description: request.body.description,
@@ -73,12 +73,13 @@ export class BudgetController {
         rolloverUnused: request.body.rolloverUnused,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Budget created successfully",
-        data: this.serializeBudget(budget),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget created successfully',
+        result.data?.toJSON(),
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -93,14 +94,14 @@ export class BudgetController {
         totalAmount?: number | string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
-      const budget = await this.updateBudgetHandler.handle({
+      const result = await this.updateBudgetHandler.handle({
         budgetId,
         workspaceId,
         userId,
@@ -109,12 +110,12 @@ export class BudgetController {
         totalAmount: request.body.totalAmount,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budget updated successfully",
-        data: this.serializeBudget(budget),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget updated successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -124,25 +125,25 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
-      const budget = await this.activateBudgetHandler.handle({
+      const result = await this.activateBudgetHandler.handle({
         budgetId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budget activated successfully",
-        data: this.serializeBudget(budget),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget activated successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -152,25 +153,25 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
-      const budget = await this.archiveBudgetHandler.handle({
+      const result = await this.archiveBudgetHandler.handle({
         budgetId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budget archived successfully",
-        data: this.serializeBudget(budget),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget archived successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -180,24 +181,24 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
-      await this.deleteBudgetHandler.handle({
+      const result = await this.deleteBudgetHandler.handle({
         budgetId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budget deleted successfully",
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -207,30 +208,22 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, budgetId } = request.params;
 
-      const budget = await this.getBudgetHandler.handle({
+      const result = await this.getBudgetHandler.handle({
         budgetId,
         workspaceId,
       });
 
-      if (!budget) {
-        return reply.status(404).send({
-          success: false,
-          statusCode: 404,
-          message: "Budget not found",
-        });
-      }
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budget retrieved successfully",
-        data: this.serializeBudget(budget),
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Budget retrieved successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -248,7 +241,7 @@ export class BudgetController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
@@ -259,27 +252,27 @@ export class BudgetController {
         workspaceId,
         status: status as BudgetStatus | undefined,
         isActive:
-          isActive === "true" ? true : isActive === "false" ? false : undefined,
+          isActive === 'true' ? true : isActive === 'false' ? false : undefined,
         createdBy,
         currency,
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Budgets retrieved successfully",
-        data: {
-          items: result.items.map((budget) => this.serializeBudget(budget)),
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Budgets retrieved successfully',
+        {
+          items: result.data?.items.map((budget) => budget.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 0,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
-      });
+        }
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -294,14 +287,14 @@ export class BudgetController {
         description?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, budgetId } = request.params;
 
-      const allocation = await this.addAllocationHandler.handle({
+      const result = await this.addAllocationHandler.handle({
         budgetId,
         workspaceId,
         userId,
@@ -310,12 +303,13 @@ export class BudgetController {
         description: request.body.description,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Allocation added successfully",
-        data: this.serializeAllocation(allocation),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Allocation added successfully',
+        result.data?.toJSON(),
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -329,14 +323,14 @@ export class BudgetController {
         description?: string | null;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, allocationId } = request.params;
 
-      const allocation = await this.updateAllocationHandler.handle({
+      const result = await this.updateAllocationHandler.handle({
         allocationId,
         workspaceId,
         userId,
@@ -344,12 +338,12 @@ export class BudgetController {
         description: request.body.description,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Allocation updated successfully",
-        data: this.serializeAllocation(allocation),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Allocation updated successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -359,24 +353,24 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string; allocationId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, allocationId } = request.params;
 
-      await this.deleteAllocationHandler.handle({
+      const result = await this.deleteAllocationHandler.handle({
         allocationId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Allocation deleted successfully",
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Allocation deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -386,29 +380,32 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; budgetId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { budgetId } = request.params;
 
-      const allocations = await this.getAllocationsHandler.handle({
+      const result = await this.getAllocationsHandler.handle({
         budgetId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Allocations retrieved successfully",
-        data: allocations.items.map((allocation: BudgetAllocation) =>
-          this.serializeAllocation(allocation),
-        ),
-        pagination: {
-          total: allocations.total,
-          limit: allocations.limit,
-          offset: allocations.offset,
-          hasMore: allocations.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Allocations retrieved successfully',
+        {
+          items:
+            result.data?.items.map((allocation: BudgetAllocation) =>
+              allocation.toJSON()
+            ) || [],
+          pagination: {
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 0,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
+          },
+        }
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -418,76 +415,33 @@ export class BudgetController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
 
-      const alerts = await this.getUnreadAlertsHandler.handle({
+      const result = await this.getUnreadAlertsHandler.handle({
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Alerts retrieved successfully",
-        data: alerts.items.map((alert: BudgetAlert) => ({
-          alertId: alert.getId().getValue(),
-          budgetId: alert.getBudgetId().getValue(),
-          allocationId: alert.getAllocationId()?.getValue() || null,
-          level: alert.getLevel(),
-          threshold: alert.getThreshold().toString(),
-          currentSpent: alert.getCurrentSpent().toString(),
-          allocatedAmount: alert.getAllocatedAmount().toString(),
-          message: alert.getMessage(),
-          isRead: alert.isRead(),
-          createdAt: alert.getCreatedAt().toISOString(),
-        })),
-        pagination: {
-          total: alerts.total,
-          limit: alerts.limit,
-          offset: alerts.offset,
-          hasMore: alerts.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Alerts retrieved successfully',
+        {
+          items:
+            result.data?.items.map((alert: BudgetAlert) => alert.toJSON()) ||
+            [],
+          pagination: {
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 0,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
+          },
+        }
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializeBudget(budget: Budget) {
-    const period = budget.getPeriod();
-    return {
-      budgetId: budget.getId().getValue(),
-      workspaceId: budget.getWorkspaceId(),
-      name: budget.getName(),
-      description: budget.getDescription(),
-      totalAmount: budget.getTotalAmount().toString(),
-      currency: budget.getCurrency(),
-      periodType: period.getPeriodType(),
-      startDate: period.getStartDate().toISOString(),
-      endDate: period.getEndDate().toISOString(),
-      status: budget.getStatus(),
-      createdBy: budget.getCreatedBy(),
-      isRecurring: budget.isRecurring(),
-      rolloverUnused: budget.shouldRolloverUnused(),
-      createdAt: budget.getCreatedAt().toISOString(),
-      updatedAt: budget.getUpdatedAt().toISOString(),
-    };
-  }
-
-  private serializeAllocation(allocation: BudgetAllocation) {
-    return {
-      allocationId: allocation.getId().getValue(),
-      budgetId: allocation.getBudgetId().getValue(),
-      categoryId: allocation.getCategoryId(),
-      allocatedAmount: allocation.getAllocatedAmount().toString(),
-      spentAmount: allocation.getSpentAmount().toString(),
-      remainingAmount: allocation.getRemainingAmount().toString(),
-      spentPercentage: allocation.getSpentPercentage(),
-      description: allocation.getDescription(),
-      createdAt: allocation.getCreatedAt().toISOString(),
-      updatedAt: allocation.getUpdatedAt().toISOString(),
-    };
   }
 }
