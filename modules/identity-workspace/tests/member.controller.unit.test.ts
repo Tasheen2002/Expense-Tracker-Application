@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MemberController } from "../infrastructure/http/controllers/member.controller";
-import { WorkspaceMembershipService } from "../application/services/workspace-membership.service";
-import { WorkspaceAuthHelper } from "../infrastructure/http/middleware/workspace-auth.helper";
-import { WorkspaceRole } from "../domain/entities/workspace-membership.entity";
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemberController } from '../infrastructure/http/controllers/member.controller';
+import { WorkspaceMembershipService } from '../application/services/workspace-membership.service';
+import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace-auth.helper';
+import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 // Mock dependencies
 const mockMembershipService = {
@@ -28,7 +28,7 @@ const mockReply = {
   send: vi.fn(),
 } as unknown as FastifyReply;
 
-describe("MemberController (Unit)", () => {
+describe('MemberController (Unit)', () => {
   let controller: MemberController;
 
   beforeEach(() => {
@@ -36,15 +36,15 @@ describe("MemberController (Unit)", () => {
     controller = new MemberController(mockMembershipService, mockAuthHelper);
   });
 
-  describe("removeMember", () => {
-    it("should successfully remove a member after name lookup", async () => {
+  describe('removeMember', () => {
+    it('should successfully remove a member after name lookup', async () => {
       const req = {
-        params: { workspaceId: "ws-1", userId: "user-2" },
+        params: { workspaceId: 'ws-1', userId: 'user-2' },
         user: {
-          id: "user-1",
-          userId: "user-1",
-          email: "test@example.com",
-          workspaceId: "ws-1",
+          id: 'user-1',
+          userId: 'user-1',
+          email: 'test@example.com',
+          workspaceId: 'ws-1',
         },
       } as unknown as AuthenticatedRequest<{
         Params: { workspaceId: string; userId: string };
@@ -54,9 +54,9 @@ describe("MemberController (Unit)", () => {
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
 
       // Mock Lookup
-      const mockMembership = { getId: () => ({ getValue: () => "mem-123" }) };
+      const mockMembership = { getId: () => ({ getValue: () => 'mem-123' }) };
       vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(
-        mockMembership as any,
+        mockMembership as any
       );
 
       // Execute
@@ -64,23 +64,23 @@ describe("MemberController (Unit)", () => {
 
       // Verify Logic
       expect(mockMembershipService.getUserMembership).toHaveBeenCalledWith(
-        "user-2",
-        "ws-1",
+        'user-2',
+        'ws-1'
       );
       expect(mockMembershipService.removeMember).toHaveBeenCalledWith(
-        "mem-123",
+        'mem-123'
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it("should fail if member not found", async () => {
+    it('should fail if member not found', async () => {
       const req = {
-        params: { workspaceId: "ws-1", userId: "user-unknown" },
+        params: { workspaceId: 'ws-1', userId: 'user-unknown' },
         user: {
-          id: "user-1",
-          userId: "user-1",
-          email: "test@example.com",
-          workspaceId: "ws-1",
+          id: 'user-1',
+          userId: 'user-1',
+          email: 'test@example.com',
+          workspaceId: 'ws-1',
         },
       } as unknown as AuthenticatedRequest<{
         Params: { workspaceId: string; userId: string };
@@ -88,7 +88,7 @@ describe("MemberController (Unit)", () => {
 
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
       vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(
-        null,
+        null
       );
 
       await controller.removeMember(req, mockReply);
