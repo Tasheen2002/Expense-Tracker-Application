@@ -1,12 +1,12 @@
-import { AllocationId } from "../value-objects/allocation-id";
-import { BudgetId } from "../value-objects/budget-id";
-import { Decimal } from "@prisma/client/runtime/library";
+import { AllocationId } from '../value-objects/allocation-id';
+import { BudgetId } from '../value-objects/budget-id';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidAmountError,
   NegativeAmountError,
-} from "../errors/budget.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+} from '../errors/budget.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // Domain Events
@@ -17,13 +17,13 @@ export class BudgetAllocationCreatedEvent extends DomainEvent {
     public readonly allocationId: string,
     public readonly budgetId: string,
     public readonly categoryId: string | null,
-    public readonly allocatedAmount: string,
+    public readonly allocatedAmount: string
   ) {
-    super(allocationId, "BudgetAllocation");
+    super(allocationId, 'BudgetAllocation');
   }
 
   get eventType(): string {
-    return "budget-allocation.created";
+    return 'budget-allocation.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -43,13 +43,13 @@ export class BudgetAllocationUpdatedEvent extends DomainEvent {
     public readonly changes: {
       allocatedAmount?: string;
       description?: string | null;
-    },
+    }
   ) {
-    super(allocationId, "BudgetAllocation");
+    super(allocationId, 'BudgetAllocation');
   }
 
   get eventType(): string {
-    return "budget-allocation.updated";
+    return 'budget-allocation.updated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -66,13 +66,13 @@ export class BudgetSpentIncrementedEvent extends DomainEvent {
     public readonly allocationId: string,
     public readonly budgetId: string,
     public readonly incrementAmount: string,
-    public readonly newSpentAmount: string,
+    public readonly newSpentAmount: string
   ) {
-    super(allocationId, "BudgetAllocation");
+    super(allocationId, 'BudgetAllocation');
   }
 
   get eventType(): string {
-    return "budget-allocation.spent-incremented";
+    return 'budget-allocation.spent-incremented';
   }
 
   getPayload(): Record<string, unknown> {
@@ -90,13 +90,13 @@ export class BudgetSpentDecrementedEvent extends DomainEvent {
     public readonly allocationId: string,
     public readonly budgetId: string,
     public readonly decrementAmount: string,
-    public readonly newSpentAmount: string,
+    public readonly newSpentAmount: string
   ) {
-    super(allocationId, "BudgetAllocation");
+    super(allocationId, 'BudgetAllocation');
   }
 
   get eventType(): string {
-    return "budget-allocation.spent-decremented";
+    return 'budget-allocation.spent-decremented';
   }
 
   getPayload(): Record<string, unknown> {
@@ -112,13 +112,13 @@ export class BudgetSpentDecrementedEvent extends DomainEvent {
 export class BudgetAllocationDeletedEvent extends DomainEvent {
   constructor(
     public readonly allocationId: string,
-    public readonly budgetId: string,
+    public readonly budgetId: string
   ) {
-    super(allocationId, "BudgetAllocation");
+    super(allocationId, 'BudgetAllocation');
   }
 
   get eventType(): string {
-    return "budget-allocation.deleted";
+    return 'budget-allocation.deleted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -147,6 +147,20 @@ export interface CreateBudgetAllocationData {
   description?: string;
 }
 
+export interface BudgetAllocationDTO {
+  id: string;
+  budgetId: string;
+  categoryId: string | null;
+  allocatedAmount: string;
+  spentAmount: string;
+  description: string | null;
+  remainingAmount: string;
+  spentPercentage: number;
+  isOverBudget: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class BudgetAllocation extends AggregateRoot {
   private constructor(private props: BudgetAllocationProps) {
     super();
@@ -155,20 +169,20 @@ export class BudgetAllocation extends AggregateRoot {
   static create(data: CreateBudgetAllocationData): BudgetAllocation {
     // Validate allocated amount
     const allocatedAmount =
-      typeof data.allocatedAmount === "number" ||
-      typeof data.allocatedAmount === "string"
+      typeof data.allocatedAmount === 'number' ||
+      typeof data.allocatedAmount === 'string'
         ? new Decimal(data.allocatedAmount)
         : data.allocatedAmount;
 
     if (allocatedAmount.isNegative() || allocatedAmount.isZero()) {
       throw new InvalidAmountError(
-        "Allocated amount must be greater than zero",
+        'Allocated amount must be greater than zero'
       );
     }
 
     if (allocatedAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Allocated amount cannot have more than 2 decimal places",
+        'Allocated amount cannot have more than 2 decimal places'
       );
     }
 
@@ -190,8 +204,8 @@ export class BudgetAllocation extends AggregateRoot {
         allocation.getId().getValue(),
         allocation.getBudgetId().getValue(),
         allocation.getCategoryId(),
-        allocatedAmount.toString(),
-      ),
+        allocatedAmount.toString()
+      )
     );
 
     return allocation;
@@ -237,19 +251,19 @@ export class BudgetAllocation extends AggregateRoot {
   // Business logic methods
   updateAllocatedAmount(amount: number | string | Decimal): void {
     const newAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (newAmount.isNegative() || newAmount.isZero()) {
       throw new InvalidAmountError(
-        "Allocated amount must be greater than zero",
+        'Allocated amount must be greater than zero'
       );
     }
 
     if (newAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Allocated amount cannot have more than 2 decimal places",
+        'Allocated amount cannot have more than 2 decimal places'
       );
     }
 
@@ -262,15 +276,15 @@ export class BudgetAllocation extends AggregateRoot {
         new BudgetAllocationUpdatedEvent(
           this.getId().getValue(),
           this.getBudgetId().getValue(),
-          { allocatedAmount: newAmount.toString() },
-        ),
+          { allocatedAmount: newAmount.toString() }
+        )
       );
     }
   }
 
   updateSpentAmount(amount: number | string | Decimal): void {
     const newAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
@@ -280,7 +294,7 @@ export class BudgetAllocation extends AggregateRoot {
 
     if (newAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Spent amount cannot have more than 2 decimal places",
+        'Spent amount cannot have more than 2 decimal places'
       );
     }
 
@@ -290,13 +304,13 @@ export class BudgetAllocation extends AggregateRoot {
 
   incrementSpent(amount: number | string | Decimal): void {
     const incrementAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (incrementAmount.isNegative() || incrementAmount.isZero()) {
       throw new InvalidAmountError(
-        "Increment amount must be greater than zero",
+        'Increment amount must be greater than zero'
       );
     }
 
@@ -309,20 +323,20 @@ export class BudgetAllocation extends AggregateRoot {
         this.getId().getValue(),
         this.getBudgetId().getValue(),
         incrementAmount.toString(),
-        newSpentAmount.toString(),
-      ),
+        newSpentAmount.toString()
+      )
     );
   }
 
   decrementSpent(amount: number | string | Decimal): void {
     const decrementAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (decrementAmount.isNegative() || decrementAmount.isZero()) {
       throw new InvalidAmountError(
-        "Decrement amount must be greater than zero",
+        'Decrement amount must be greater than zero'
       );
     }
 
@@ -339,8 +353,8 @@ export class BudgetAllocation extends AggregateRoot {
         this.getId().getValue(),
         this.getBudgetId().getValue(),
         decrementAmount.toString(),
-        newSpent.toString(),
-      ),
+        newSpent.toString()
+      )
     );
   }
 
@@ -355,8 +369,8 @@ export class BudgetAllocation extends AggregateRoot {
         new BudgetAllocationUpdatedEvent(
           this.getId().getValue(),
           this.getBudgetId().getValue(),
-          { description: newDescription },
-        ),
+          { description: newDescription }
+        )
       );
     }
   }
@@ -365,8 +379,8 @@ export class BudgetAllocation extends AggregateRoot {
     this.addDomainEvent(
       new BudgetAllocationDeletedEvent(
         this.getId().getValue(),
-        this.getBudgetId().getValue(),
-      ),
+        this.getBudgetId().getValue()
+      )
     );
   }
 
@@ -390,7 +404,7 @@ export class BudgetAllocation extends AggregateRoot {
 
   isFullySpent(): boolean {
     return this.props.spentAmount.greaterThanOrEqualTo(
-      this.props.allocatedAmount,
+      this.props.allocatedAmount
     );
   }
 
@@ -400,5 +414,21 @@ export class BudgetAllocation extends AggregateRoot {
 
   equals(other: BudgetAllocation): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toJSON(): BudgetAllocationDTO {
+    return {
+      id: this.getId().getValue(),
+      budgetId: this.getBudgetId().getValue(),
+      categoryId: this.getCategoryId(),
+      allocatedAmount: this.getAllocatedAmount().toString(),
+      spentAmount: this.getSpentAmount().toString(),
+      description: this.getDescription(),
+      remainingAmount: this.getRemainingAmount().toString(),
+      spentPercentage: this.getSpentPercentage(),
+      isOverBudget: this.isOverBudget(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
   }
 }

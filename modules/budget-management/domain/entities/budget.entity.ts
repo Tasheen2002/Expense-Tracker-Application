@@ -1,18 +1,18 @@
-import { BudgetId } from "../value-objects/budget-id";
-import { BudgetPeriod } from "../value-objects/budget-period";
-import { BudgetStatus, isValidStatusTransition } from "../enums/budget-status";
-import { BudgetAllocationExceededError } from "../errors/budget-allocation-exceeded.error";
+import { BudgetId } from '../value-objects/budget-id';
+import { BudgetPeriod } from '../value-objects/budget-period';
+import { BudgetStatus, isValidStatusTransition } from '../enums/budget-status';
+import { BudgetAllocationExceededError } from '../errors/budget-allocation-exceeded.error';
 import {
   InvalidAmountError,
   InvalidCurrencyError,
   InvalidBudgetStatusError,
   NegativeAmountError,
   InvalidBudgetDataError,
-} from "../errors/budget.errors";
-import { BudgetPeriodType } from "../enums/budget-period-type";
-import { Decimal } from "@prisma/client/runtime/library";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+} from '../errors/budget.errors';
+import { BudgetPeriodType } from '../enums/budget-period-type';
+import { Decimal } from '@prisma/client/runtime/library';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -28,13 +28,13 @@ export class BudgetThresholdExceededEvent extends DomainEvent {
     public readonly threshold: number,
     public readonly currentSpending: number,
     public readonly budgetLimit: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.threshold_exceeded";
+    return 'budget.threshold_exceeded';
   }
 
   getPayload(): Record<string, unknown> {
@@ -57,13 +57,13 @@ export class BudgetExhaustedEvent extends DomainEvent {
     public readonly budgetId: string,
     public readonly workspaceId: string,
     public readonly budgetLimit: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.exhausted";
+    return 'budget.exhausted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -86,13 +86,13 @@ export class BudgetSpendingRecordedEvent extends DomainEvent {
     public readonly expenseId: string,
     public readonly amount: number,
     public readonly currency: string,
-    public readonly newTotalSpending: number,
+    public readonly newTotalSpending: number
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.spending_recorded";
+    return 'budget.spending_recorded';
   }
 
   getPayload(): Record<string, unknown> {
@@ -117,13 +117,13 @@ export class BudgetCreatedEvent extends DomainEvent {
     public readonly name: string,
     public readonly limit: number,
     public readonly currency: string,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.created";
+    return 'budget.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -141,13 +141,13 @@ export class BudgetCreatedEvent extends DomainEvent {
 export class BudgetActivatedEvent extends DomainEvent {
   constructor(
     public readonly budgetId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.activated";
+    return 'budget.activated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -161,13 +161,13 @@ export class BudgetActivatedEvent extends DomainEvent {
 export class BudgetArchivedEvent extends DomainEvent {
   constructor(
     public readonly budgetId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.archived";
+    return 'budget.archived';
   }
 
   getPayload(): Record<string, unknown> {
@@ -186,13 +186,13 @@ export class BudgetUpdatedEvent extends DomainEvent {
       name?: string;
       totalAmount?: string;
       description?: string | null;
-    },
+    }
   ) {
-    super(budgetId, "Budget");
+    super(budgetId, 'Budget');
   }
 
   get eventType(): string {
-    return "budget.updated";
+    return 'budget.updated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -238,6 +238,26 @@ export interface CreateBudgetData {
   rolloverUnused?: boolean;
 }
 
+export interface BudgetDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  totalAmount: string;
+  currency: string;
+  period: {
+    startDate: string;
+    endDate: string;
+    type: string;
+  };
+  status: string;
+  createdBy: string;
+  isRecurring: boolean;
+  rolloverUnused: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class Budget extends AggregateRoot {
   private constructor(private props: BudgetProps) {
     super();
@@ -246,36 +266,36 @@ export class Budget extends AggregateRoot {
   static create(data: CreateBudgetData): Budget {
     // Validate name
     if (!data.name || data.name.trim().length === 0) {
-      throw new InvalidBudgetDataError("Budget name is required");
+      throw new InvalidBudgetDataError('Budget name is required');
     }
     if (data.name.length > 255) {
       throw new InvalidBudgetDataError(
-        "Budget name cannot exceed 255 characters",
+        'Budget name cannot exceed 255 characters'
       );
     }
 
     // Validate total amount
     const totalAmount =
-      typeof data.totalAmount === "number" ||
-      typeof data.totalAmount === "string"
+      typeof data.totalAmount === 'number' ||
+      typeof data.totalAmount === 'string'
         ? new Decimal(data.totalAmount)
         : data.totalAmount;
 
     // ...
     if (totalAmount.isNegative() || totalAmount.isZero()) {
-      throw new InvalidAmountError("Total amount must be greater than zero");
+      throw new InvalidAmountError('Total amount must be greater than zero');
     }
 
     if (totalAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Total amount cannot have more than 2 decimal places",
+        'Total amount cannot have more than 2 decimal places'
       );
     }
 
     // Validate currency
     if (!data.currency || data.currency.length !== 3) {
       throw new InvalidCurrencyError(
-        "Currency must be a valid 3-letter ISO code",
+        'Currency must be a valid 3-letter ISO code'
       );
     }
 
@@ -283,7 +303,7 @@ export class Budget extends AggregateRoot {
     const period = BudgetPeriod.create(
       data.startDate,
       data.periodType,
-      data.endDate,
+      data.endDate
     );
 
     return new Budget({
@@ -309,7 +329,7 @@ export class Budget extends AggregateRoot {
 
   updateName(newName: string): void {
     if (!newName || newName.trim().length === 0) {
-      throw new InvalidBudgetDataError("Budget name is required");
+      throw new InvalidBudgetDataError('Budget name is required');
     }
     const oldName = this.props.name;
     this.props.name = newName;
@@ -319,24 +339,24 @@ export class Budget extends AggregateRoot {
       this.addDomainEvent(
         new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
           name: newName,
-        }),
+        })
       );
     }
   }
 
   updateTotalAmount(amount: number | string | Decimal): void {
     const newAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (newAmount.isNegative() || newAmount.isZero()) {
-      throw new InvalidAmountError("Total amount must be greater than zero");
+      throw new InvalidAmountError('Total amount must be greater than zero');
     }
 
     if (newAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Total amount cannot have more than 2 decimal places",
+        'Total amount cannot have more than 2 decimal places'
       );
     }
     const oldAmount = this.props.totalAmount;
@@ -347,7 +367,7 @@ export class Budget extends AggregateRoot {
       this.addDomainEvent(
         new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
           totalAmount: newAmount.toString(),
-        }),
+        })
       );
     }
   }
@@ -362,7 +382,7 @@ export class Budget extends AggregateRoot {
       this.addDomainEvent(
         new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
           description: newDescription,
-        }),
+        })
       );
     }
   }
@@ -371,14 +391,14 @@ export class Budget extends AggregateRoot {
     if (!isValidStatusTransition(this.props.status, BudgetStatus.ACTIVE)) {
       throw new InvalidBudgetStatusError(
         this.props.status,
-        BudgetStatus.ACTIVE,
+        BudgetStatus.ACTIVE
       );
     }
     this.props.status = BudgetStatus.ACTIVE;
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetActivatedEvent(this.getId().getValue(), this.getWorkspaceId()),
+      new BudgetActivatedEvent(this.getId().getValue(), this.getWorkspaceId())
     );
   }
 
@@ -386,21 +406,25 @@ export class Budget extends AggregateRoot {
     if (this.props.status !== BudgetStatus.ACTIVE) {
       throw new InvalidBudgetStatusError(
         this.props.status,
-        BudgetStatus.EXCEEDED,
+        BudgetStatus.EXCEEDED
       );
     }
     this.props.status = BudgetStatus.EXCEEDED;
     this.props.updatedAt = new Date();
 
+    const limitNum = this.getTotalAmount().toNumber();
+    const thresholdPercentage =
+      limitNum > 0 ? (currentSpending / limitNum) * 100 : 100;
+
     this.addDomainEvent(
       new BudgetThresholdExceededEvent(
         this.getId().getValue(),
         this.getWorkspaceId(),
-        100,
+        thresholdPercentage,
         currentSpending,
-        this.getTotalAmount().toNumber(),
-        this.getCurrency(),
-      ),
+        limitNum,
+        this.getCurrency()
+      )
     );
   }
 
@@ -408,14 +432,14 @@ export class Budget extends AggregateRoot {
     if (!isValidStatusTransition(this.props.status, BudgetStatus.ARCHIVED)) {
       throw new InvalidBudgetStatusError(
         this.props.status,
-        BudgetStatus.ARCHIVED,
+        BudgetStatus.ARCHIVED
       );
     }
     this.props.status = BudgetStatus.ARCHIVED;
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetArchivedEvent(this.getId().getValue(), this.getWorkspaceId()),
+      new BudgetArchivedEvent(this.getId().getValue(), this.getWorkspaceId())
     );
   }
 
@@ -505,12 +529,34 @@ export class Budget extends AggregateRoot {
       throw new BudgetAllocationExceededError(
         this.props.id.getValue(),
         this.props.totalAmount.toNumber(),
-        projectedTotal.toNumber(),
+        projectedTotal.toNumber()
       );
     }
   }
 
   equals(other: Budget): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toJSON(): BudgetDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId(),
+      name: this.getName(),
+      description: this.getDescription(),
+      totalAmount: this.getTotalAmount().toString(),
+      currency: this.getCurrency(),
+      period: {
+        startDate: this.getPeriod().getStartDate().toISOString(),
+        endDate: this.getPeriod().getEndDate().toISOString(),
+        type: this.getPeriod().getPeriodType(),
+      },
+      status: this.getStatus(),
+      createdBy: this.getCreatedBy(),
+      isRecurring: this.isRecurring(),
+      rolloverUnused: this.shouldRolloverUnused(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
   }
 }
