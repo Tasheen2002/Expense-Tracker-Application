@@ -1,7 +1,7 @@
-import { FastifyReply } from "fastify";
-import { ZodError } from "zod";
-import { CommandResult } from "./application/command-result";
-import { QueryResult } from "./application/query-result";
+import { FastifyReply } from 'fastify';
+import { ZodError } from 'zod';
+import { CommandResult } from './application/command-result';
+import { QueryResult } from './application/query-result';
 
 /**
  * Standard success response format
@@ -36,7 +36,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     statusCode: number,
     message: string,
-    data?: T,
+    data?: T
   ): FastifyReply {
     const response: SuccessResponse<T> = {
       success: true,
@@ -54,11 +54,7 @@ export class ResponseHelper {
   /**
    * Send a 200 OK response
    */
-  static ok<T>(
-    reply: FastifyReply,
-    message: string,
-    data?: T,
-  ): FastifyReply {
+  static ok<T>(reply: FastifyReply, message: string, data?: T): FastifyReply {
     return ResponseHelper.success(reply, 200, message, data);
   }
 
@@ -68,7 +64,7 @@ export class ResponseHelper {
   static created<T>(
     reply: FastifyReply,
     message: string,
-    data?: T,
+    data?: T
   ): FastifyReply {
     return ResponseHelper.success(reply, 201, message, data);
   }
@@ -76,14 +72,11 @@ export class ResponseHelper {
   /**
    * Send a 400 Bad Request response
    */
-  static badRequest(
-    reply: FastifyReply,
-    message: string,
-  ): FastifyReply {
+  static badRequest(reply: FastifyReply, message: string): FastifyReply {
     return reply.status(400).send({
       success: false,
       statusCode: 400,
-      error: "Bad Request",
+      error: 'Bad Request',
       message,
     });
   }
@@ -101,17 +94,20 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: T,
-    successStatusCode: number = 200,
+    data?: any,
+    successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
-      return ResponseHelper.badRequest(reply, result.error ?? "Operation failed");
+      return ResponseHelper.badRequest(
+        reply,
+        result.error ?? 'Operation failed'
+      );
     }
     return ResponseHelper.success(
       reply,
       successStatusCode,
       successMessage,
-      data ?? result.data,
+      data !== undefined ? data : result.data
     );
   }
 
@@ -127,12 +123,16 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: T,
+    data?: any
   ): FastifyReply {
     if (!result.success) {
-      return ResponseHelper.notFound(reply, result.error ?? "Resource not found");
+      return ResponseHelper.notFound(
+        reply,
+        result.error ?? 'Resource not found'
+      );
     }
-    return ResponseHelper.ok(reply, successMessage, data ?? result.data ?? undefined);
+    const finalData = data !== undefined ? data : (result.data ?? undefined);
+    return ResponseHelper.ok(reply, successMessage, finalData);
   }
 
   /**
@@ -150,40 +150,40 @@ export class ResponseHelper {
       return reply.status(400).send({
         success: false,
         statusCode: 400,
-        message: "Validation failed",
+        message: 'Validation failed',
         error: error.format(),
       });
     }
 
     // Extract statusCode from domain errors
     const statusCode =
-      error && typeof error === "object" && "statusCode" in error
+      error && typeof error === 'object' && 'statusCode' in error
         ? (error as { statusCode: number }).statusCode
         : 500;
 
     // Extract error message
     const message =
-      error instanceof Error ? error.message : "Internal server error";
+      error instanceof Error ? error.message : 'Internal server error';
 
     // Extract error code/name for response
     const errorCode =
-      error && typeof error === "object" && "code" in error
+      error && typeof error === 'object' && 'code' in error
         ? (error as { code: string }).code
         : undefined;
 
     // Map status codes to error names
     const errorName =
       statusCode === 409
-        ? "Conflict"
+        ? 'Conflict'
         : statusCode === 404
-          ? "Not Found"
+          ? 'Not Found'
           : statusCode === 401
-            ? "Unauthorized"
+            ? 'Unauthorized'
             : statusCode === 403
-              ? "Forbidden"
+              ? 'Forbidden'
               : statusCode === 400
-                ? "Bad Request"
-                : "Internal Server Error";
+                ? 'Bad Request'
+                : 'Internal Server Error';
 
     return reply.status(statusCode).send({
       success: false,
@@ -202,7 +202,7 @@ export class ResponseHelper {
    */
   static unauthorized(
     reply: FastifyReply,
-    message: string = "User not authenticated",
+    message: string = 'User not authenticated'
   ): FastifyReply {
     return reply.status(401).send({
       success: false,
@@ -219,7 +219,7 @@ export class ResponseHelper {
    */
   static forbidden(
     reply: FastifyReply,
-    message: string = "Access forbidden",
+    message: string = 'Access forbidden'
   ): FastifyReply {
     return reply.status(403).send({
       success: false,
@@ -236,7 +236,7 @@ export class ResponseHelper {
    */
   static notFound(
     reply: FastifyReply,
-    message: string = "Resource not found",
+    message: string = 'Resource not found'
   ): FastifyReply {
     return reply.status(404).send({
       success: false,
