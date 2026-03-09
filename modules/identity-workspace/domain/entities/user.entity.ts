@@ -1,8 +1,8 @@
-import { UserId } from "../value-objects/user-id.vo";
-import { Email } from "../value-objects/email.vo";
-import { InvalidPasswordHashError } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { UserId } from '../value-objects/user-id.vo';
+import { Email } from '../value-objects/email.vo';
+import { InvalidPasswordHashError } from '../errors/identity.errors';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -12,13 +12,13 @@ export class UserCreatedEvent extends DomainEvent {
   constructor(
     public readonly userId: string,
     public readonly email: string,
-    public readonly fullName: string | null,
+    public readonly fullName: string | null
   ) {
-    super(userId, "User");
+    super(userId, 'User');
   }
 
   get eventType(): string {
-    return "UserCreated";
+    return 'UserCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -33,13 +33,13 @@ export class UserCreatedEvent extends DomainEvent {
 export class UserEmailVerifiedEvent extends DomainEvent {
   constructor(
     public readonly userId: string,
-    public readonly email: string,
+    public readonly email: string
   ) {
-    super(userId, "User");
+    super(userId, 'User');
   }
 
   get eventType(): string {
-    return "UserEmailVerified";
+    return 'UserEmailVerified';
   }
 
   getPayload(): Record<string, unknown> {
@@ -52,11 +52,11 @@ export class UserEmailVerifiedEvent extends DomainEvent {
 
 export class UserDeactivatedEvent extends DomainEvent {
   constructor(public readonly userId: string) {
-    super(userId, "User");
+    super(userId, 'User');
   }
 
   get eventType(): string {
-    return "UserDeactivated";
+    return 'UserDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -66,11 +66,11 @@ export class UserDeactivatedEvent extends DomainEvent {
 
 export class UserPasswordChangedEvent extends DomainEvent {
   constructor(public readonly userId: string) {
-    super(userId, "User");
+    super(userId, 'User');
   }
 
   get eventType(): string {
-    return "UserPasswordChanged";
+    return 'UserPasswordChanged';
   }
 
   getPayload(): Record<string, unknown> {
@@ -91,7 +91,7 @@ export class User extends AggregateRoot {
     private isActive: boolean,
     private emailVerified: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -109,15 +109,15 @@ export class User extends AggregateRoot {
       true, // Active by default
       false, // Email not verified by default
       now,
-      now,
+      now
     );
 
     user.addDomainEvent(
       new UserCreatedEvent(
         userId.getValue(),
         email.getValue(),
-        data.fullName || null,
-      ),
+        data.fullName || null
+      )
     );
 
     return user;
@@ -132,7 +132,7 @@ export class User extends AggregateRoot {
       data.isActive,
       data.emailVerified,
       data.createdAt,
-      data.updatedAt,
+      data.updatedAt
     );
   }
 
@@ -145,7 +145,7 @@ export class User extends AggregateRoot {
       row.is_active,
       row.email_verified,
       row.created_at,
-      row.updated_at,
+      row.updated_at
     );
   }
 
@@ -207,7 +207,7 @@ export class User extends AggregateRoot {
     this.emailVerified = true;
     this.updatedAt = new Date();
     this.addDomainEvent(
-      new UserEmailVerifiedEvent(this.id.getValue(), this.email.getValue()),
+      new UserEmailVerifiedEvent(this.id.getValue(), this.email.getValue())
     );
   }
 
@@ -252,6 +252,18 @@ export class User extends AggregateRoot {
   equals(other: User): boolean {
     return this.id.equals(other.id);
   }
+
+  toJSON(): UserDTO {
+    return {
+      id: this.id.getValue(),
+      email: this.email.getValue(),
+      fullName: this.fullName,
+      isActive: this.isActive,
+      emailVerified: this.emailVerified,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+    };
+  }
 }
 
 // Supporting types and interfaces
@@ -281,4 +293,14 @@ export interface UserRow {
   email_verified: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface UserDTO {
+  id: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
