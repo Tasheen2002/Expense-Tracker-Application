@@ -1,19 +1,29 @@
-import { BudgetService } from "../services/budget.service";
+import { BudgetService } from '../services/budget.service';
 
-export interface DeleteAllocationDto {
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface DeleteAllocationCommand extends ICommand {
   allocationId: string;
   workspaceId: string;
   userId: string;
 }
 
-export class DeleteAllocationHandler {
+export class DeleteAllocationHandler implements ICommandHandler<
+  DeleteAllocationCommand,
+  CommandResult<void>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: DeleteAllocationDto): Promise<void> {
+  async handle(command: DeleteAllocationCommand): Promise<CommandResult<void>> {
     await this.budgetService.deleteAllocation(
-      dto.allocationId,
-      dto.workspaceId,
-      dto.userId,
+      command.allocationId,
+      command.workspaceId,
+      command.userId
     );
+    return CommandResult.success(undefined);
   }
 }
