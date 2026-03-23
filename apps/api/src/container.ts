@@ -4,12 +4,19 @@ import { PrismaClient } from '@prisma/client';
 import { getEventBus } from './shared/domain/events/event-bus';
 import { InMemoryCacheService } from './shared/infrastructure/cache/cache.service';
 import { NotificationEventHandler } from '../../../modules/notification-dispatch/application/handlers/notification.handler';
-import { InAppProvider } from '../../../modules/notification-dispatch/application/providers/inapp.provider';
-// Audit
+
 import { AuditLogRepositoryImpl } from '../../../modules/audit-compliance/infrastructure/persistence/audit-log.repository.impl';
 import { AuditService } from '../../../modules/audit-compliance/application/services/audit.service';
 import { AuditEventListener } from '../../../modules/audit-compliance/infrastructure/listeners/audit-event.listener';
 import { AuditLogController } from '../../../modules/audit-compliance/infrastructure/http/controllers/audit-log.controller';
+
+// Audit Command & Query Handlers
+import { CreateAuditLogHandler } from '../../../modules/audit-compliance/application/commands/create-audit-log.command';
+import { PurgeAuditLogsHandler } from '../../../modules/audit-compliance/application/commands/purge-audit-logs.command';
+import { GetAuditLogHandler } from '../../../modules/audit-compliance/application/queries/get-audit-log.query';
+import { ListAuditLogsHandler } from '../../../modules/audit-compliance/application/queries/list-audit-logs.query';
+import { GetEntityAuditHistoryHandler } from '../../../modules/audit-compliance/application/queries/get-entity-audit-history.query';
+import { GetAuditSummaryHandler } from '../../../modules/audit-compliance/application/queries/get-audit-summary.query';
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl';
@@ -20,6 +27,28 @@ import { UserManagementService } from '../../../modules/identity-workspace/appli
 import { WorkspaceManagementService } from '../../../modules/identity-workspace/application/services/workspace-management.service';
 import { WorkspaceMembershipService } from '../../../modules/identity-workspace/application/services/workspace-membership.service';
 import { WorkspaceInvitationService } from '../../../modules/identity-workspace/application/services/workspace-invitation.service';
+import { RegisterUserHandler } from '../../../modules/identity-workspace/application/commands/register-user.command';
+import { LoginUserHandler } from '../../../modules/identity-workspace/application/queries/login-user.query';
+import { GetUserHandler } from '../../../modules/identity-workspace/application/queries/get-user.query';
+import { CreateWorkspaceHandler } from '../../../modules/identity-workspace/application/commands/create-workspace.command';
+import { UpdateWorkspaceHandler } from '../../../modules/identity-workspace/application/commands/update-workspace.command';
+import { DeleteWorkspaceHandler } from '../../../modules/identity-workspace/application/commands/delete-workspace.command';
+import { GetWorkspaceByIdHandler } from '../../../modules/identity-workspace/application/queries/get-workspace-by-id.query';
+import { GetUserWorkspacesHandler } from '../../../modules/identity-workspace/application/queries/get-user-workspaces.query';
+import { CreateInvitationHandler } from '../../../modules/identity-workspace/application/commands/create-invitation.command';
+import { AcceptInvitationHandler } from '../../../modules/identity-workspace/application/commands/accept-invitation.command';
+import { CancelInvitationHandler } from '../../../modules/identity-workspace/application/commands/cancel-invitation.command';
+import { GetInvitationByTokenHandler } from '../../../modules/identity-workspace/application/queries/get-invitation-by-token.query';
+import { GetWorkspaceInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-workspace-invitations.query';
+import { GetPendingInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-pending-invitations.query';
+import { WorkspaceAuthHelper } from '../../../modules/identity-workspace/infrastructure/http/middleware/workspace-auth.helper';
+import { AuthController } from '../../../modules/identity-workspace/infrastructure/http/controllers/auth.controller';
+import { WorkspaceController } from '../../../modules/identity-workspace/infrastructure/http/controllers/workspace.controller';
+import { InvitationController } from '../../../modules/identity-workspace/infrastructure/http/controllers/invitation.controller';
+import { MemberController } from '../../../modules/identity-workspace/infrastructure/http/controllers/member.controller';
+import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 
 import { ExpenseRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl';
 import { CategoryRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl';
@@ -54,8 +83,10 @@ import { CreateSplitHandler } from '../../../modules/expense-ledger/application/
 import { DeleteSplitHandler } from '../../../modules/expense-ledger/application/commands/delete-split.command';
 import { RecordPaymentHandler } from '../../../modules/expense-ledger/application/commands/record-payment.command';
 import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
+import { GetSplitByExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-split-by-expense.query';
 import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
 import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
+import { GetSplitSettlementsHandler } from '../../../modules/expense-ledger/application/queries/get-split-settlements.query';
 
 // Expense-Ledger Module - Query Handlers
 import { GetExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-expense.query';
@@ -77,6 +108,11 @@ import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastr
 // Recurring Expense
 import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
 import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
+import { CreateRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-recurring-expense.command';
+import { PauseRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/pause-recurring-expense.command';
+import { ResumeRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/resume-recurring-expense.command';
+import { StopRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/stop-recurring-expense.command';
+import { ProcessRecurringExpensesHandler } from '../../../modules/expense-ledger/application/commands/process-recurring-expenses.command';
 import { RecurringExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller';
 
 // Budget Management Module - Repositories
@@ -161,6 +197,25 @@ import { PrismaExpenseWorkflowRepository } from '../../../modules/approval-workf
 import { ApprovalChainService } from '../../../modules/approval-workflow/application/services/approval-chain.service';
 import { WorkflowService } from '../../../modules/approval-workflow/application/services/workflow.service';
 
+// Approval Workflow Module - Command Handlers
+import { CreateApprovalChainHandler } from '../../../modules/approval-workflow/application/commands/create-approval-chain.command';
+import { UpdateApprovalChainHandler } from '../../../modules/approval-workflow/application/commands/update-approval-chain.command';
+import { DeleteApprovalChainHandler } from '../../../modules/approval-workflow/application/commands/delete-approval-chain.command';
+import { ActivateApprovalChainHandler } from '../../../modules/approval-workflow/application/commands/activate-approval-chain.command';
+import { DeactivateApprovalChainHandler } from '../../../modules/approval-workflow/application/commands/deactivate-approval-chain.command';
+import { InitiateWorkflowHandler } from '../../../modules/approval-workflow/application/commands/initiate-workflow.command';
+import { ApproveStepHandler } from '../../../modules/approval-workflow/application/commands/approve-step.command';
+import { RejectStepHandler } from '../../../modules/approval-workflow/application/commands/reject-step.command';
+import { DelegateStepHandler } from '../../../modules/approval-workflow/application/commands/delegate-step.command';
+import { CancelWorkflowHandler } from '../../../modules/approval-workflow/application/commands/cancel-workflow.command';
+
+// Approval Workflow Module - Query Handlers
+import { GetApprovalChainHandler } from '../../../modules/approval-workflow/application/queries/get-approval-chain.query';
+import { ListApprovalChainsHandler } from '../../../modules/approval-workflow/application/queries/list-approval-chains.query';
+import { GetWorkflowHandler } from '../../../modules/approval-workflow/application/queries/get-workflow.query';
+import { ListPendingApprovalsHandler } from '../../../modules/approval-workflow/application/queries/list-pending-approvals.query';
+import { ListUserWorkflowsHandler } from '../../../modules/approval-workflow/application/queries/list-user-workflows.query';
+
 // Approval Workflow Module - Controllers
 import { ApprovalChainController } from '../../../modules/approval-workflow/infrastructure/http/controllers/approval-chain.controller';
 import { WorkflowController } from '../../../modules/approval-workflow/infrastructure/http/controllers/workflow.controller';
@@ -174,6 +229,30 @@ import { NotificationPreferenceRepositoryImpl } from '../../../modules/notificat
 import { NotificationService } from '../../../modules/notification-dispatch/application/services/notification.service';
 import { TemplateService } from '../../../modules/notification-dispatch/application/services/template.service';
 import { PreferenceService } from '../../../modules/notification-dispatch/application/services/preference.service';
+
+// Notification Dispatch Module - Command Handlers
+import { SendNotificationHandler } from '../../../modules/notification-dispatch/application/commands/send-notification.command';
+import { MarkAsReadHandler as NotificationMarkAsReadHandler } from '../../../modules/notification-dispatch/application/commands/mark-as-read.command';
+import { MarkAllAsReadHandler as NotificationMarkAllAsReadHandler } from '../../../modules/notification-dispatch/application/commands/mark-all-as-read.command';
+import { UpdatePreferencesHandler as NotificationUpdatePreferencesHandler } from '../../../modules/notification-dispatch/application/commands/update-preferences.command';
+import { UpdateTypePreferenceHandler } from '../../../modules/notification-dispatch/application/commands/update-type-preference.command';
+import { CreateTemplateHandler } from '../../../modules/notification-dispatch/application/commands/create-template.command';
+import { UpdateTemplateHandler as NotificationUpdateTemplateHandler } from '../../../modules/notification-dispatch/application/commands/update-template.command';
+import { ActivateTemplateHandler } from '../../../modules/notification-dispatch/application/commands/activate-template.command';
+import { DeactivateTemplateHandler } from '../../../modules/notification-dispatch/application/commands/deactivate-template.command';
+
+// Notification Dispatch Module - Query Handlers
+import { ListNotificationsHandler } from '../../../modules/notification-dispatch/application/queries/list-notifications.query';
+import { GetUnreadCountHandler } from '../../../modules/notification-dispatch/application/queries/get-unread-count.query';
+import { GetUnreadNotificationsHandler } from '../../../modules/notification-dispatch/application/queries/get-unread-notifications.query';
+import { GetPreferencesHandler as NotificationGetPreferencesHandler } from '../../../modules/notification-dispatch/application/queries/get-preferences.query';
+
+import { CheckChannelEnabledHandler } from '../../../modules/notification-dispatch/application/queries/check-channel-enabled.query';
+import { GetTemplateByIdHandler } from '../../../modules/notification-dispatch/application/queries/get-template-by-id.query';
+import { GetActiveTemplateHandler as NotificationGetActiveTemplateHandler } from '../../../modules/notification-dispatch/application/queries/get-active-template.query';
+
+// Notification Dispatch Module - Infrastructure Adapters
+import { PrismaRecipientLookupAdapter } from '../../../modules/notification-dispatch/infrastructure/adapters/recipient-lookup.adapter';
 
 // Notification Dispatch Module - Controllers
 import { NotificationController } from '../../../modules/notification-dispatch/infrastructure/http/controllers/notification.controller';
@@ -282,6 +361,12 @@ import { ActivateBudgetPlanHandler } from '../../../modules/budget-planning/appl
 import { CreateForecastHandler } from '../../../modules/budget-planning/application/commands/create-forecast.command';
 import { AddForecastItemHandler } from '../../../modules/budget-planning/application/commands/add-forecast-item.command';
 import { CreateScenarioHandler } from '../../../modules/budget-planning/application/commands/create-scenario.command';
+import { DeleteBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/delete-budget-plan.command';
+import {
+  DeleteForecastHandler,
+  DeleteForecastItemHandler,
+} from '../../../modules/budget-planning/application/commands/delete-forecast.command';
+import { DeleteScenarioHandler } from '../../../modules/budget-planning/application/commands/delete-scenario.command';
 
 // Budget Planning Module - Query Handlers
 import { GetBudgetPlanHandler } from '../../../modules/budget-planning/application/queries/get-budget-plan.query';
@@ -289,6 +374,8 @@ import { ListBudgetPlansHandler } from '../../../modules/budget-planning/applica
 import { GetForecastHandler } from '../../../modules/budget-planning/application/queries/get-forecast.query';
 import { ListForecastsHandler } from '../../../modules/budget-planning/application/queries/list-forecasts.query';
 import { GetForecastItemsHandler } from '../../../modules/budget-planning/application/queries/get-forecast-items.query';
+import { GetScenarioHandler } from '../../../modules/budget-planning/application/queries/get-scenario.query';
+import { ListScenariosHandler } from '../../../modules/budget-planning/application/queries/list-scenarios.query';
 
 // Budget Planning Module - Controllers
 import { BudgetPlanController } from '../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller';
@@ -301,10 +388,31 @@ import { PrismaViolationRepository } from '../../../modules/policy-controls/infr
 import { PrismaExemptionRepository } from '../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl';
 
 // Policy Controls Module - Services
-import { PolicyService } from '../../../modules/policy-controls/application/services/policy.service';
-import { ViolationService } from '../../../modules/policy-controls/application/services/violation.service';
-import { ExemptionService } from '../../../modules/policy-controls/application/services/exemption.service';
 import { PolicyEvaluationService } from '../../../modules/policy-controls/application/services/policy-evaluation.service';
+
+// Policy Controls Module - Command Handlers
+import { CreatePolicyHandler } from '../../../modules/policy-controls/application/commands/create-policy.command';
+import { UpdatePolicyHandler } from '../../../modules/policy-controls/application/commands/update-policy.command';
+import { ActivatePolicyHandler } from '../../../modules/policy-controls/application/commands/activate-policy.command';
+import { DeactivatePolicyHandler } from '../../../modules/policy-controls/application/commands/deactivate-policy.command';
+import { DeletePolicyHandler } from '../../../modules/policy-controls/application/commands/delete-policy.command';
+import { AcknowledgeViolationHandler } from '../../../modules/policy-controls/application/commands/acknowledge-violation.command';
+import { ResolveViolationHandler } from '../../../modules/policy-controls/application/commands/resolve-violation.command';
+import { ExemptViolationHandler } from '../../../modules/policy-controls/application/commands/exempt-violation.command';
+import { OverrideViolationHandler } from '../../../modules/policy-controls/application/commands/override-violation.command';
+import { RequestExemptionHandler } from '../../../modules/policy-controls/application/commands/request-exemption.command';
+import { ApproveExemptionHandler } from '../../../modules/policy-controls/application/commands/approve-exemption.command';
+import { RejectExemptionHandler } from '../../../modules/policy-controls/application/commands/reject-exemption.command';
+
+// Policy Controls Module - Query Handlers
+import { GetPolicyHandler } from '../../../modules/policy-controls/application/queries/get-policy.query';
+import { ListPoliciesHandler } from '../../../modules/policy-controls/application/queries/list-policies.query';
+import { GetViolationHandler } from '../../../modules/policy-controls/application/queries/get-violation.query';
+import { ListViolationsHandler } from '../../../modules/policy-controls/application/queries/list-violations.query';
+import { GetViolationStatsHandler } from '../../../modules/policy-controls/application/queries/get-violation-stats.query';
+import { GetExemptionHandler } from '../../../modules/policy-controls/application/queries/get-exemption.query';
+import { ListExemptionsHandler } from '../../../modules/policy-controls/application/queries/list-exemptions.query';
+import { CheckActiveExemptionHandler } from '../../../modules/policy-controls/application/queries/check-active-exemption.query';
 
 // Policy Controls Module - Controllers
 import { PolicyController } from '../../../modules/policy-controls/infrastructure/http/controllers/policy.controller';
@@ -317,15 +425,14 @@ import { PrismaSyncSessionRepository } from '../../../modules/bank-feed-sync/inf
 import { PrismaBankTransactionRepository } from '../../../modules/bank-feed-sync/infrastructure/persistence/bank-transaction.repository.impl';
 
 // Bank Feed Sync Module - Services
-import { BankConnectionService } from '../../../modules/bank-feed-sync/application/services/bank-connection.service';
 import { TransactionSyncService } from '../../../modules/bank-feed-sync/application/services/transaction-sync.service';
-import { BankTransactionService } from '../../../modules/bank-feed-sync/application/services/bank-transaction.service';
 
 // Bank Feed Sync Module - Command Handlers
 import {
   ConnectBankHandler,
   DisconnectBankHandler,
   UpdateConnectionTokenHandler,
+  DeleteConnectionHandler,
   SyncTransactionsHandler,
   ProcessTransactionHandler,
 } from '../../../modules/bank-feed-sync/application/commands';
@@ -333,8 +440,13 @@ import {
 // Bank Feed Sync Module - Query Handlers
 import {
   GetBankConnectionsHandler,
+  GetBankConnectionHandler,
   GetSyncHistoryHandler,
+  GetSyncSessionHandler,
+  GetActiveSyncsHandler,
   GetPendingTransactionsHandler,
+  GetBankTransactionHandler,
+  GetTransactionsByConnectionHandler,
 } from '../../../modules/bank-feed-sync/application/queries';
 
 // Bank Feed Sync Module - Controllers
@@ -351,10 +463,15 @@ import { OutboxEventService } from '../../../modules/event-outbox/application/se
 
 // Event Outbox Module - Command Handlers
 import { StoreOutboxEventHandler } from '../../../modules/event-outbox/application/commands/store-outbox-event.command';
+import { ProcessOutboxEventHandler } from '../../../modules/event-outbox/application/commands/process-outbox-event.command';
+import { RetryOutboxEventHandler } from '../../../modules/event-outbox/application/commands/retry-outbox-event.command';
+import { RetryAllFailedEventsHandler } from '../../../modules/event-outbox/application/commands/retry-all-failed-events.command';
+import { CleanupProcessedEventsHandler } from '../../../modules/event-outbox/application/commands/cleanup-processed-events.command';
 
 // Event Outbox Module - Query Handlers
-import { ProcessPendingEventsHandler } from '../../../modules/event-outbox/application/queries/process-pending-events.query';
+import { GetPendingEventsHandler } from '../../../modules/event-outbox/application/queries/get-pending-events.query';
 import { GetFailedEventsHandler } from '../../../modules/event-outbox/application/queries/get-failed-events.query';
+import { GetDeadLetterCountHandler } from '../../../modules/event-outbox/application/queries/get-dead-letter-count.query';
 
 // Event Outbox Module - Controllers
 import { OutboxEventController } from '../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller';
@@ -431,6 +548,45 @@ export class Container {
     this.services.set('workspaceMembershipService', workspaceMembershipService);
     this.services.set('workspaceInvitationService', workspaceInvitationService);
 
+    // Controllers
+    const workspaceAuthHelper = new WorkspaceAuthHelper(
+      workspaceMembershipService
+    );
+
+    const authController = new AuthController(
+      new RegisterUserHandler(userManagementService),
+      new LoginUserHandler(userManagementService),
+      new GetUserHandler(userManagementService)
+    );
+    const workspaceController = new WorkspaceController(
+      new CreateWorkspaceHandler(workspaceManagementService),
+      new UpdateWorkspaceHandler(workspaceManagementService),
+      new DeleteWorkspaceHandler(workspaceManagementService),
+      new GetWorkspaceByIdHandler(workspaceManagementService),
+      new GetUserWorkspacesHandler(workspaceManagementService),
+      workspaceAuthHelper
+    );
+    const invitationController = new InvitationController(
+      new CreateInvitationHandler(workspaceInvitationService),
+      new AcceptInvitationHandler(workspaceInvitationService),
+      new CancelInvitationHandler(workspaceInvitationService),
+      new GetInvitationByTokenHandler(workspaceInvitationService),
+      new GetWorkspaceInvitationsHandler(workspaceInvitationService),
+      new GetPendingInvitationsHandler(workspaceInvitationService),
+      workspaceAuthHelper
+    );
+    const memberController = new MemberController(
+      new ListWorkspaceMembersHandler(workspaceMembershipService),
+      new RemoveMemberHandler(workspaceMembershipService),
+      new ChangeMemberRoleHandler(workspaceMembershipService),
+      workspaceAuthHelper
+    );
+
+    this.services.set('authController', authController);
+    this.services.set('workspaceController', workspaceController);
+    this.services.set('invitationController', invitationController);
+    this.services.set('memberController', memberController);
+
     // ============================================
     // Expense-Ledger Module
     // ============================================
@@ -462,7 +618,7 @@ export class Container {
     this.services.set('splitSettlementRepository', splitSettlementRepository);
 
     // Services
-    const expenseService = new ExpenseService(expenseRepository);
+    const expenseService = new ExpenseService(expenseRepository, tagRepository);
     const categoryService = new CategoryService(
       categoryRepository,
       cacheService
@@ -539,6 +695,22 @@ export class Container {
       attachmentService
     );
 
+    const createRecurringExpenseHandler = new CreateRecurringExpenseHandler(
+      recurringExpenseService
+    );
+    const pauseRecurringExpenseHandler = new PauseRecurringExpenseHandler(
+      recurringExpenseService
+    );
+    const resumeRecurringExpenseHandler = new ResumeRecurringExpenseHandler(
+      recurringExpenseService
+    );
+    const stopRecurringExpenseHandler = new StopRecurringExpenseHandler(
+      recurringExpenseService
+    );
+    const processRecurringExpensesHandler = new ProcessRecurringExpensesHandler(
+      recurringExpenseService
+    );
+
     // Controllers
     const expenseController = new ExpenseController(
       createExpenseHandler,
@@ -577,7 +749,18 @@ export class Container {
     );
 
     const recurringExpenseController = new RecurringExpenseController(
-      recurringExpenseService
+      createRecurringExpenseHandler,
+      pauseRecurringExpenseHandler,
+      resumeRecurringExpenseHandler,
+      stopRecurringExpenseHandler,
+      processRecurringExpensesHandler
+    );
+
+    const getSplitByExpenseHandler = new GetSplitByExpenseHandler(
+      expenseSplitService
+    );
+    const getSplitSettlementsHandler = new GetSplitSettlementsHandler(
+      expenseSplitService
     );
 
     const createSplitHandler = new CreateSplitHandler(
@@ -599,9 +782,10 @@ export class Container {
       deleteSplitHandler,
       recordPaymentHandler,
       getSplitHandler,
+      getSplitByExpenseHandler,
       listUserSplitsHandler,
       listUserSettlementsHandler,
-      expenseSplitService
+      getSplitSettlementsHandler
     );
 
     this.services.set('expenseController', expenseController);
@@ -621,7 +805,10 @@ export class Container {
       prisma,
       eventBus
     );
-    const budgetAlertRepository = new BudgetAlertRepositoryImpl(prisma);
+    const budgetAlertRepository = new BudgetAlertRepositoryImpl(
+      prisma,
+      eventBus
+    );
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(
       prisma,
       eventBus
@@ -705,9 +892,12 @@ export class Container {
 
     // Repositories
     const receiptRepository = new ReceiptRepositoryImpl(prisma, eventBus);
-    const receiptMetadataRepository = new ReceiptMetadataRepositoryImpl(prisma);
+    const receiptMetadataRepository = new ReceiptMetadataRepositoryImpl(
+      prisma,
+      eventBus
+    );
     const receiptTagDefinitionRepository =
-      new ReceiptTagDefinitionRepositoryImpl(prisma);
+      new ReceiptTagDefinitionRepositoryImpl(prisma, eventBus);
     const receiptTagRepository = new ReceiptTagRepositoryImpl(prisma);
 
     this.services.set('receiptRepository', receiptRepository);
@@ -818,9 +1008,13 @@ export class Container {
     // ============================================
 
     // Repositories
-    const approvalChainRepository = new PrismaApprovalChainRepository(prisma);
+    const approvalChainRepository = new PrismaApprovalChainRepository(
+      prisma,
+      eventBus
+    );
     const expenseWorkflowRepository = new PrismaExpenseWorkflowRepository(
-      prisma
+      prisma,
+      eventBus
     );
 
     this.services.set('approvalChainRepository', approvalChainRepository);
@@ -838,11 +1032,69 @@ export class Container {
     this.services.set('approvalChainService', approvalChainService);
     this.services.set('workflowService', workflowService);
 
-    // Controllers
-    const approvalChainController = new ApprovalChainController(
+    // Command Handlers - Approval Chain
+    const createApprovalChainHandler = new CreateApprovalChainHandler(
       approvalChainService
     );
-    const workflowController = new WorkflowController(workflowService);
+    const updateApprovalChainHandler = new UpdateApprovalChainHandler(
+      approvalChainService
+    );
+    const deleteApprovalChainHandler = new DeleteApprovalChainHandler(
+      approvalChainService
+    );
+    const activateApprovalChainHandler = new ActivateApprovalChainHandler(
+      approvalChainService
+    );
+    const deactivateApprovalChainHandler = new DeactivateApprovalChainHandler(
+      approvalChainService
+    );
+
+    // Query Handlers - Approval Chain
+    const getApprovalChainHandler = new GetApprovalChainHandler(
+      approvalChainService
+    );
+    const listApprovalChainsHandler = new ListApprovalChainsHandler(
+      approvalChainService
+    );
+
+    // Command Handlers - Workflow
+    const initiateWorkflowHandler = new InitiateWorkflowHandler(
+      workflowService
+    );
+    const approveStepHandler = new ApproveStepHandler(workflowService);
+    const rejectStepHandler = new RejectStepHandler(workflowService);
+    const delegateStepHandler = new DelegateStepHandler(workflowService);
+    const cancelWorkflowHandler = new CancelWorkflowHandler(workflowService);
+
+    // Query Handlers - Workflow
+    const getWorkflowHandler = new GetWorkflowHandler(workflowService);
+    const listPendingApprovalsHandler = new ListPendingApprovalsHandler(
+      workflowService
+    );
+    const listUserWorkflowsHandler = new ListUserWorkflowsHandler(
+      workflowService
+    );
+
+    // Controllers
+    const approvalChainController = new ApprovalChainController(
+      createApprovalChainHandler,
+      updateApprovalChainHandler,
+      deleteApprovalChainHandler,
+      getApprovalChainHandler,
+      listApprovalChainsHandler,
+      activateApprovalChainHandler,
+      deactivateApprovalChainHandler
+    );
+    const workflowController = new WorkflowController(
+      initiateWorkflowHandler,
+      approveStepHandler,
+      rejectStepHandler,
+      delegateStepHandler,
+      cancelWorkflowHandler,
+      getWorkflowHandler,
+      listPendingApprovalsHandler,
+      listUserWorkflowsHandler
+    );
 
     this.services.set('approvalChainController', approvalChainController);
     this.services.set('workflowController', workflowController);
@@ -876,13 +1128,12 @@ export class Container {
     );
 
     // Services - Notification
-    const inAppProvider = new InAppProvider(notificationRepository);
+    const recipientLookup = new PrismaRecipientLookupAdapter(userRepository);
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,
       notificationPreferenceRepository,
-      userRepository,
-      inAppProvider
+      recipientLookup
     );
     this.services.set('notificationService', notificationService);
 
@@ -897,13 +1148,46 @@ export class Container {
     this.services.set('templateService', templateService);
     this.services.set('preferenceService', preferenceService);
 
+    // Command & Query Handlers - Audit
+    const createAuditLogHandler = new CreateAuditLogHandler(auditService);
+    const purgeAuditLogsHandler = new PurgeAuditLogsHandler(auditService);
+    const getAuditLogHandler = new GetAuditLogHandler(auditService);
+    const listAuditLogsHandler = new ListAuditLogsHandler(auditService);
+    const getEntityAuditHistoryHandler = new GetEntityAuditHistoryHandler(
+      auditService
+    );
+    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditService);
+
     // Controllers
     const notificationController = new NotificationController(
-      notificationService
+      new ListNotificationsHandler(notificationService),
+      new GetUnreadCountHandler(notificationService),
+      new GetUnreadNotificationsHandler(notificationService),
+      new NotificationMarkAsReadHandler(notificationService),
+      new NotificationMarkAllAsReadHandler(notificationService)
     );
-    const templateController = new TemplateController(templateService);
-    const preferenceController = new PreferenceController(preferenceService);
-    const auditLogController = new AuditLogController(auditService);
+    const templateController = new TemplateController(
+      new CreateTemplateHandler(templateService),
+      new GetTemplateByIdHandler(templateService),
+      new NotificationGetActiveTemplateHandler(templateService),
+      new NotificationUpdateTemplateHandler(templateService),
+      new ActivateTemplateHandler(templateService),
+      new DeactivateTemplateHandler(templateService)
+    );
+    const preferenceController = new PreferenceController(
+      new NotificationGetPreferencesHandler(preferenceService),
+      new NotificationUpdatePreferencesHandler(preferenceService),
+      new UpdateTypePreferenceHandler(preferenceService),
+      new CheckChannelEnabledHandler(preferenceService)
+    );
+    const auditLogController = new AuditLogController(
+      createAuditLogHandler,
+      purgeAuditLogsHandler,
+      getAuditLogHandler,
+      listAuditLogsHandler,
+      getEntityAuditHistoryHandler,
+      getAuditSummaryHandler
+    );
 
     this.services.set('notificationController', notificationController);
     this.services.set('auditLogController', auditLogController);
@@ -924,7 +1208,7 @@ export class Container {
     );
 
     // 2. Audit Subscriptions (Global listener)
-    const auditListener = new AuditEventListener(auditService);
+    const auditListener = new AuditEventListener(createAuditLogHandler);
 
     // Subscribe to all known critical events
     // Ideally we'd valid wildcard support, but manual for now
@@ -951,6 +1235,25 @@ export class Container {
       'approval.workflow_started',
       notificationEventHandler.handleApprovalStarted
     );
+    eventBus.subscribe(
+      'approval.workflow_completed',
+      notificationEventHandler.handleWorkflowCompleted
+    );
+    eventBus.subscribe(
+      'approval.workflow_rejected',
+      notificationEventHandler.handleWorkflowRejected
+    );
+    eventBus.subscribe(
+      'approval.workflow_cancelled',
+      notificationEventHandler.handleWorkflowCancelled
+    );
+
+    // Audit subscriptions for approval workflow events
+    eventBus.subscribe('approval-chain.deleted', auditListener);
+    eventBus.subscribe('approval.workflow_started', auditListener);
+    eventBus.subscribe('approval.workflow_completed', auditListener);
+    eventBus.subscribe('approval.workflow_rejected', auditListener);
+    eventBus.subscribe('approval.workflow_cancelled', auditListener);
 
     console.log('[Container] Notification Event Handlers registered');
 
@@ -1156,9 +1459,17 @@ export class Container {
     const activateBudgetPlanHandler = new ActivateBudgetPlanHandler(
       budgetPlanService
     );
+    const deleteBudgetPlanHandler = new DeleteBudgetPlanHandler(
+      budgetPlanService
+    );
     const createForecastHandler = new CreateForecastHandler(forecastService);
     const addForecastItemHandler = new AddForecastItemHandler(forecastService);
+    const deleteForecastHandler = new DeleteForecastHandler(forecastService);
+    const deleteForecastItemHandler = new DeleteForecastItemHandler(
+      forecastService
+    );
     const createScenarioHandler = new CreateScenarioHandler(scenarioService);
+    const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
     // Query Handlers
     const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
@@ -1170,29 +1481,34 @@ export class Container {
     const getForecastItemsHandler = new GetForecastItemsHandler(
       forecastService
     );
+    const getScenarioHandler = new GetScenarioHandler(scenarioService);
+    const listScenariosHandler = new ListScenariosHandler(scenarioService);
 
     // Controllers
     const budgetPlanController = new BudgetPlanController(
       createBudgetPlanHandler,
       updateBudgetPlanHandler,
       activateBudgetPlanHandler,
+      deleteBudgetPlanHandler,
       getBudgetPlanHandler,
-      listBudgetPlansHandler,
-      budgetPlanService
+      listBudgetPlansHandler
     );
 
     const forecastController = new ForecastController(
       createForecastHandler,
       addForecastItemHandler,
+      deleteForecastHandler,
+      deleteForecastItemHandler,
       getForecastHandler,
       listForecastsHandler,
-      getForecastItemsHandler,
-      forecastService
+      getForecastItemsHandler
     );
 
     const scenarioController = new ScenarioController(
       createScenarioHandler,
-      scenarioService
+      deleteScenarioHandler,
+      getScenarioHandler,
+      listScenariosHandler
     );
 
     this.services.set('budgetPlanController', budgetPlanController);
@@ -1208,7 +1524,10 @@ export class Container {
       prisma,
       eventBus
     );
-    const ruleExecutionRepository = new PrismaRuleExecutionRepository(prisma);
+    const ruleExecutionRepository = new PrismaRuleExecutionRepository(
+      prisma,
+      eventBus
+    );
     const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
       prisma,
       eventBus
@@ -1335,18 +1654,15 @@ export class Container {
     // ============================================
 
     // Repositories
-    const policyRepository = new PrismaPolicyRepository(prisma);
-    const violationRepository = new PrismaViolationRepository(prisma);
-    const exemptionRepository = new PrismaExemptionRepository(prisma);
+    const policyRepository = new PrismaPolicyRepository(prisma, eventBus);
+    const violationRepository = new PrismaViolationRepository(prisma, eventBus);
+    const exemptionRepository = new PrismaExemptionRepository(prisma, eventBus);
 
     this.services.set('policyRepository', policyRepository);
     this.services.set('violationRepository', violationRepository);
     this.services.set('exemptionRepository', exemptionRepository);
 
     // Services
-    const policyService = new PolicyService(policyRepository);
-    const violationService = new ViolationService(violationRepository);
-    const exemptionService = new ExemptionService(exemptionRepository);
     const policyEvaluationService = new PolicyEvaluationService(
       policyRepository,
       violationRepository,
@@ -1354,15 +1670,35 @@ export class Container {
       cacheService
     );
 
-    this.services.set('policyService', policyService);
-    this.services.set('violationService', violationService);
-    this.services.set('exemptionService', exemptionService);
     this.services.set('policyEvaluationService', policyEvaluationService);
 
     // Controllers
-    const policyController = new PolicyController(policyService);
-    const violationController = new ViolationController(violationService);
-    const exemptionController = new ExemptionController(exemptionService);
+    const policyController = new PolicyController(
+      new CreatePolicyHandler(policyRepository),
+      new UpdatePolicyHandler(policyRepository),
+      new ActivatePolicyHandler(policyRepository),
+      new DeactivatePolicyHandler(policyRepository),
+      new DeletePolicyHandler(policyRepository),
+      new GetPolicyHandler(policyRepository),
+      new ListPoliciesHandler(policyRepository)
+    );
+    const violationController = new ViolationController(
+      new GetViolationHandler(violationRepository),
+      new ListViolationsHandler(violationRepository),
+      new GetViolationStatsHandler(violationRepository),
+      new AcknowledgeViolationHandler(violationRepository),
+      new ResolveViolationHandler(violationRepository),
+      new ExemptViolationHandler(violationRepository),
+      new OverrideViolationHandler(violationRepository)
+    );
+    const exemptionController = new ExemptionController(
+      new RequestExemptionHandler(exemptionRepository, policyRepository),
+      new ApproveExemptionHandler(exemptionRepository),
+      new RejectExemptionHandler(exemptionRepository),
+      new GetExemptionHandler(exemptionRepository),
+      new ListExemptionsHandler(exemptionRepository),
+      new CheckActiveExemptionHandler(exemptionRepository)
+    );
 
     this.services.set('policyController', policyController);
     this.services.set('violationController', violationController);
@@ -1373,10 +1709,17 @@ export class Container {
     // ============================================
 
     // Repositories
-    const bankConnectionRepository = new PrismaBankConnectionRepository(prisma);
-    const syncSessionRepository = new PrismaSyncSessionRepository(prisma);
+    const bankConnectionRepository = new PrismaBankConnectionRepository(
+      prisma,
+      eventBus
+    );
+    const syncSessionRepository = new PrismaSyncSessionRepository(
+      prisma,
+      eventBus
+    );
     const bankTransactionRepository = new PrismaBankTransactionRepository(
-      prisma
+      prisma,
+      eventBus
     );
 
     this.services.set('bankConnectionRepository', bankConnectionRepository);
@@ -1396,66 +1739,78 @@ export class Container {
     };
 
     // Services
-    const bankConnectionService = new BankConnectionService(
-      bankConnectionRepository
-    );
     const transactionSyncService = new TransactionSyncService(
       bankConnectionRepository,
       syncSessionRepository,
       bankTransactionRepository,
       stubBankAPIClient
     );
-    const bankTransactionService = new BankTransactionService(
-      bankTransactionRepository
-    );
 
-    this.services.set('bankConnectionService', bankConnectionService);
     this.services.set('transactionSyncService', transactionSyncService);
-    this.services.set('bankTransactionService', bankTransactionService);
 
     // Command Handlers
-    const connectBankHandler = new ConnectBankHandler(bankConnectionService);
+    const connectBankHandler = new ConnectBankHandler(bankConnectionRepository);
     const disconnectBankHandler = new DisconnectBankHandler(
-      bankConnectionService
+      bankConnectionRepository
     );
     const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(
-      bankConnectionService
+      bankConnectionRepository
+    );
+    const deleteConnectionHandler = new DeleteConnectionHandler(
+      bankConnectionRepository
     );
     const syncTransactionsHandler = new SyncTransactionsHandler(
       transactionSyncService
     );
     const processTransactionHandler = new ProcessTransactionHandler(
-      bankTransactionService
+      bankTransactionRepository
     );
 
     // Query Handlers
     const getBankConnectionsHandler = new GetBankConnectionsHandler(
-      bankConnectionService
+      bankConnectionRepository
+    );
+    const getBankConnectionHandler = new GetBankConnectionHandler(
+      bankConnectionRepository
     );
     const getSyncHistoryHandler = new GetSyncHistoryHandler(
-      transactionSyncService
+      syncSessionRepository
+    );
+    const getSyncSessionHandler = new GetSyncSessionHandler(
+      syncSessionRepository
+    );
+    const getActiveSyncsHandler = new GetActiveSyncsHandler(
+      syncSessionRepository
     );
     const getPendingTransactionsHandler = new GetPendingTransactionsHandler(
-      bankTransactionService
+      bankTransactionRepository
     );
+    const getBankTransactionHandler = new GetBankTransactionHandler(
+      bankTransactionRepository
+    );
+    const getTransactionsByConnectionHandler =
+      new GetTransactionsByConnectionHandler(bankTransactionRepository);
 
     // Controllers
     const bankConnectionController = new BankConnectionController(
       connectBankHandler,
       disconnectBankHandler,
       updateConnectionTokenHandler,
+      deleteConnectionHandler,
       getBankConnectionsHandler,
-      bankConnectionService
+      getBankConnectionHandler
     );
     const transactionSyncController = new TransactionSyncController(
       syncTransactionsHandler,
       getSyncHistoryHandler,
-      transactionSyncService
+      getSyncSessionHandler,
+      getActiveSyncsHandler
     );
     const bankTransactionController = new BankTransactionController(
       processTransactionHandler,
       getPendingTransactionsHandler,
-      bankTransactionService
+      getBankTransactionHandler,
+      getTransactionsByConnectionHandler
     );
 
     this.services.set('bankConnectionController', bankConnectionController);
@@ -1482,20 +1837,41 @@ export class Container {
     const storeOutboxEventHandler = new StoreOutboxEventHandler(
       outboxEventRepository
     );
+    const processOutboxEventHandler = new ProcessOutboxEventHandler(
+      outboxEventRepository,
+      outboxEventService
+    );
+    const retryOutboxEventHandler = new RetryOutboxEventHandler(
+      outboxEventService
+    );
+    const retryAllFailedEventsHandler = new RetryAllFailedEventsHandler(
+      outboxEventService
+    );
+    const cleanupProcessedEventsHandler = new CleanupProcessedEventsHandler(
+      outboxEventService
+    );
 
     // Query Handlers
-    const processPendingEventsHandler = new ProcessPendingEventsHandler(
+    const getPendingEventsHandler = new GetPendingEventsHandler(
       outboxEventRepository
     );
     const getFailedEventsHandler = new GetFailedEventsHandler(
       outboxEventRepository
     );
+    const getDeadLetterCountHandler = new GetDeadLetterCountHandler(
+      outboxEventService
+    );
 
     // Controllers
     const outboxEventController = new OutboxEventController(
       storeOutboxEventHandler,
-      processPendingEventsHandler,
-      getFailedEventsHandler
+      processOutboxEventHandler,
+      retryOutboxEventHandler,
+      retryAllFailedEventsHandler,
+      cleanupProcessedEventsHandler,
+      getPendingEventsHandler,
+      getFailedEventsHandler,
+      getDeadLetterCountHandler
     );
     this.services.set('outboxEventController', outboxEventController);
 
@@ -1526,19 +1902,12 @@ export class Container {
    */
   getIdentityWorkspaceServices() {
     return {
-      userManagementService: this.get<UserManagementService>(
-        'userManagementService'
+      authController: this.get<AuthController>('authController'),
+      workspaceController: this.get<WorkspaceController>('workspaceController'),
+      invitationController: this.get<InvitationController>(
+        'invitationController'
       ),
-      workspaceManagementService: this.get<WorkspaceManagementService>(
-        'workspaceManagementService'
-      ),
-      workspaceMembershipService: this.get<WorkspaceMembershipService>(
-        'workspaceMembershipService'
-      ),
-      workspaceInvitationService: this.get<WorkspaceInvitationService>(
-        'workspaceInvitationService'
-      ),
-      prisma: this.get<PrismaClient>('prisma'),
+      memberController: this.get<MemberController>('memberController'),
     };
   }
 
@@ -1668,7 +2037,6 @@ export class Container {
   getAuditComplianceServices() {
     return {
       auditLogController: this.get<AuditLogController>('auditLogController'),
-      auditService: this.get<AuditService>('auditService'),
       prisma: this.get<PrismaClient>('prisma'),
     };
   }
@@ -1681,9 +2049,6 @@ export class Container {
       policyController: this.get<PolicyController>('policyController'),
       violationController: this.get<ViolationController>('violationController'),
       exemptionController: this.get<ExemptionController>('exemptionController'),
-      policyService: this.get<PolicyService>('policyService'),
-      violationService: this.get<ViolationService>('violationService'),
-      exemptionService: this.get<ExemptionService>('exemptionService'),
       policyEvaluationService: this.get<PolicyEvaluationService>(
         'policyEvaluationService'
       ),
