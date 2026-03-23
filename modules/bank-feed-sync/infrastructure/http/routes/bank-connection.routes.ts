@@ -23,8 +23,7 @@ export async function bankConnectionRoutes(
     }
   });
   // Create bank connection
-  fastify.post(
-    "/:workspaceId/bank-feed-sync/connections",
+  fastify.post("/workspaces/:workspaceId/bank-feed-sync/connections",
     {
       schema: {
         params: {
@@ -63,8 +62,7 @@ export async function bankConnectionRoutes(
   );
 
   // Get all connections
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/connections",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/connections",
     {
       schema: {
         params: {
@@ -80,8 +78,7 @@ export async function bankConnectionRoutes(
   );
 
   // Get specific connection
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId",
     {
       schema: {
         params: {
@@ -98,8 +95,7 @@ export async function bankConnectionRoutes(
   );
 
   // Update connection token
-  fastify.put(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/token",
+  fastify.put("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/token",
     {
       schema: {
         params: {
@@ -124,8 +120,7 @@ export async function bankConnectionRoutes(
   );
 
   // Disconnect bank
-  fastify.put(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/disconnect",
+  fastify.put("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/disconnect",
     {
       schema: {
         params: {
@@ -142,8 +137,7 @@ export async function bankConnectionRoutes(
   );
 
   // Delete connection
-  fastify.delete(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId",
+  fastify.delete("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId",
     {
       schema: {
         params: {

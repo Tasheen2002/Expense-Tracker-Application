@@ -22,8 +22,7 @@ export async function transactionSyncRoutes(
     }
   });
   // Trigger sync for a connection
-  fastify.post(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync",
+  fastify.post("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync",
     {
       schema: {
         params: {
@@ -47,8 +46,7 @@ export async function transactionSyncRoutes(
   );
 
   // Get sync history for a connection
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history",
     {
       schema: {
         params: {
@@ -72,8 +70,7 @@ export async function transactionSyncRoutes(
   );
 
   // Get specific sync session
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/sync/:sessionId",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/sync/:sessionId",
     {
       schema: {
         params: {
@@ -90,8 +87,7 @@ export async function transactionSyncRoutes(
   );
 
   // Get all active syncs
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/sync/active",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/sync/active",
     {
       schema: {
         params: {

@@ -22,8 +22,7 @@ export async function bankTransactionRoutes(
     }
   });
   // Get pending transactions
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/transactions/pending",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/transactions/pending",
     {
       schema: {
         params: {
@@ -48,8 +47,7 @@ export async function bankTransactionRoutes(
   );
 
   // Get specific transaction
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/transactions/:transactionId",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/transactions/:transactionId",
     {
       schema: {
         params: {
@@ -66,8 +64,7 @@ export async function bankTransactionRoutes(
   );
 
   // Process transaction (import/match/ignore)
-  fastify.put(
-    "/:workspaceId/bank-feed-sync/transactions/:transactionId/process",
+  fastify.put("/workspaces/:workspaceId/bank-feed-sync/transactions/:transactionId/process",
     {
       schema: {
         params: {
@@ -92,8 +89,7 @@ export async function bankTransactionRoutes(
   );
 
   // Get transactions by connection
-  fastify.get(
-    "/:workspaceId/bank-feed-sync/transactions/connection/:connectionId",
+  fastify.get("/workspaces/:workspaceId/bank-feed-sync/transactions/connection/:connectionId",
     {
       schema: {
         params: {
