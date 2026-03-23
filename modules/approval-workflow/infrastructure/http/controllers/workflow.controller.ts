@@ -1,12 +1,26 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { WorkflowService } from "../../../application/services/workflow.service";
-import { ExpenseWorkflow } from "../../../domain/entities/expense-workflow.entity";
-import { ApprovalStep } from "../../../domain/entities/approval-step.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { InitiateWorkflowHandler } from '../../../application/commands/initiate-workflow.command';
+import { ApproveStepHandler } from '../../../application/commands/approve-step.command';
+import { RejectStepHandler } from '../../../application/commands/reject-step.command';
+import { DelegateStepHandler } from '../../../application/commands/delegate-step.command';
+import { CancelWorkflowHandler } from '../../../application/commands/cancel-workflow.command';
+import { GetWorkflowHandler } from '../../../application/queries/get-workflow.query';
+import { ListPendingApprovalsHandler } from '../../../application/queries/list-pending-approvals.query';
+import { ListUserWorkflowsHandler } from '../../../application/queries/list-user-workflows.query';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class WorkflowController {
-  constructor(private readonly workflowService: WorkflowService) {}
+  constructor(
+    private readonly initiateWorkflowHandler: InitiateWorkflowHandler,
+    private readonly approveStepHandler: ApproveStepHandler,
+    private readonly rejectStepHandler: RejectStepHandler,
+    private readonly delegateStepHandler: DelegateStepHandler,
+    private readonly cancelWorkflowHandler: CancelWorkflowHandler,
+    private readonly getWorkflowHandler: GetWorkflowHandler,
+    private readonly listPendingApprovalsHandler: ListPendingApprovalsHandler,
+    private readonly listUserWorkflowsHandler: ListUserWorkflowsHandler
+  ) {}
 
   async initiateWorkflow(
     request: AuthenticatedRequest<{
@@ -18,25 +32,25 @@ export class WorkflowController {
         hasReceipt: boolean;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId } = request.params;
 
-      const workflow = await this.workflowService.initiateWorkflow({
+      const result = await this.initiateWorkflowHandler.handle({
         ...request.body,
-        userId, // Use authenticated user instead of body param
+        userId,
         workspaceId,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Workflow initiated successfully",
-        data: this.serializeWorkflow(workflow),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Workflow initiated successfully',
+        result.data ? { workflowId: result.data.workflowId } : undefined,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -46,22 +60,22 @@ export class WorkflowController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const workflow = await this.workflowService.getWorkflow(
+      const result = await this.getWorkflowHandler.handle({
         expenseId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Workflow retrieved successfully",
-        data: this.serializeWorkflow(workflow),
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Workflow retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -74,26 +88,25 @@ export class WorkflowController {
         comments?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
-      // SECURITY FIX: Use authenticated user as approver instead of trusting body
+      // SECURITY: Use authenticated user as approver instead of trusting body
       const approverId = request.user.userId;
+      const { workspaceId, expenseId } = request.params;
 
-      const { expenseId } = request.params;
-
-      const workflow = await this.workflowService.approveStep({
+      const result = await this.approveStepHandler.handle({
         expenseId,
-        approverId, // Use authenticated user, not body param
+        workspaceId,
+        approverId,
         comments: request.body.comments,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Step approved successfully",
-        data: this.serializeWorkflow(workflow),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Step approved successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -106,26 +119,25 @@ export class WorkflowController {
         comments: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
-      // SECURITY FIX: Use authenticated user as approver instead of trusting body
+      // SECURITY: Use authenticated user as approver instead of trusting body
       const approverId = request.user.userId;
+      const { workspaceId, expenseId } = request.params;
 
-      const { expenseId } = request.params;
-
-      const workflow = await this.workflowService.rejectStep({
+      const result = await this.rejectStepHandler.handle({
         expenseId,
-        approverId, // Use authenticated user, not body param
+        workspaceId,
+        approverId,
         comments: request.body.comments,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Step rejected successfully",
-        data: this.serializeWorkflow(workflow),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Step rejected successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -138,26 +150,25 @@ export class WorkflowController {
         toUserId: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
-      // SECURITY FIX: Use authenticated user as the delegating user
+      // SECURITY: Use authenticated user as the delegating user
       const fromUserId = request.user.userId;
+      const { workspaceId, expenseId } = request.params;
 
-      const { expenseId } = request.params;
-
-      const workflow = await this.workflowService.delegateStep({
+      const result = await this.delegateStepHandler.handle({
         expenseId,
-        fromUserId, // Use authenticated user
+        workspaceId,
+        fromUserId,
         toUserId: request.body.toUserId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Step delegated successfully",
-        data: this.serializeWorkflow(workflow),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Step delegated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -167,24 +178,23 @@ export class WorkflowController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
+      const cancelledBy = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
-      const workflow = await this.workflowService.cancelWorkflow(
+      const result = await this.cancelWorkflowHandler.handle({
         expenseId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Workflow cancelled successfully",
-        data: this.serializeWorkflow(workflow),
+        cancelledBy,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Workflow cancelled successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -195,38 +205,37 @@ export class WorkflowController {
       Params: { workspaceId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
-      // SECURITY FIX: Use authenticated user ID instead of query param
+      // SECURITY: Use authenticated user ID instead of query param
       const approverId = request.user.userId;
-
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
 
-      const result = await this.workflowService.listPendingApprovals(
+      const result = await this.listPendingApprovalsHandler.handle({
         approverId,
         workspaceId,
-        {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
-        },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Pending approvals retrieved successfully",
-        data: {
-          items: result.items.map((w) => this.serializeWorkflow(w)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
+        limit: limit ? parseInt(limit, 10) : 50,
+        offset: offset ? parseInt(offset, 10) : 0,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Pending approvals retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((w) => w.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -240,70 +249,38 @@ export class WorkflowController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
 
-      const result = await this.workflowService.listUserWorkflows(
+      const result = await this.listUserWorkflowsHandler.handle({
         userId,
         workspaceId,
-        {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
-        },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "User workflows retrieved successfully",
-        data: {
-          items: result.items.map((w) => this.serializeWorkflow(w)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
+        limit: limit ? parseInt(limit, 10) : 50,
+        offset: offset ? parseInt(offset, 10) : 0,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'User workflows retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((w) => w.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializeWorkflow(workflow: ExpenseWorkflow) {
-    return {
-      workflowId: workflow.getId().getValue(),
-      expenseId: workflow.getExpenseId().getValue(),
-      workspaceId: workflow.getWorkspaceId().getValue(),
-      userId: workflow.getUserId().getValue(),
-      chainId: workflow.getChainId()?.getValue(),
-      status: workflow.getStatus(),
-      currentStepNumber: workflow.getCurrentStepNumber(),
-      steps: workflow.getSteps().map((step) => this.serializeStep(step)),
-      createdAt: workflow.getCreatedAt().toISOString(),
-      updatedAt: workflow.getUpdatedAt().toISOString(),
-      completedAt: workflow.getCompletedAt()?.toISOString(),
-    };
-  }
-
-  private serializeStep(step: ApprovalStep) {
-    return {
-      stepId: step.getId().getValue(),
-      workflowId: step.getWorkflowId().getValue(),
-      stepNumber: step.getStepNumber(),
-      approverId: step.getApproverId().getValue(),
-      delegatedTo: step.getDelegatedTo()?.getValue(),
-      status: step.getStatus(),
-      comments: step.getComments(),
-      processedAt: step.getProcessedAt()?.toISOString(),
-      createdAt: step.getCreatedAt().toISOString(),
-      updatedAt: step.getUpdatedAt().toISOString(),
-    };
   }
 }

@@ -1,65 +1,87 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ApprovalChainService } from "../../../application/services/approval-chain.service";
-import { ApprovalChain } from "../../../domain/entities/approval-chain.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CreateApprovalChainHandler } from '../../../application/commands/create-approval-chain.command';
+import { UpdateApprovalChainHandler } from '../../../application/commands/update-approval-chain.command';
+import { DeleteApprovalChainHandler } from '../../../application/commands/delete-approval-chain.command';
+import { ActivateApprovalChainHandler } from '../../../application/commands/activate-approval-chain.command';
+import { DeactivateApprovalChainHandler } from '../../../application/commands/deactivate-approval-chain.command';
+import { GetApprovalChainHandler } from '../../../application/queries/get-approval-chain.query';
+import { ListApprovalChainsHandler } from '../../../application/queries/list-approval-chains.query';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class ApprovalChainController {
-  constructor(private readonly approvalChainService: ApprovalChainService) {}
+  constructor(
+    private readonly createChainHandler: CreateApprovalChainHandler,
+    private readonly updateChainHandler: UpdateApprovalChainHandler,
+    private readonly deleteChainHandler: DeleteApprovalChainHandler,
+    private readonly getChainHandler: GetApprovalChainHandler,
+    private readonly listChainsHandler: ListApprovalChainsHandler,
+    private readonly activateChainHandler: ActivateApprovalChainHandler,
+    private readonly deactivateChainHandler: DeactivateApprovalChainHandler
+  ) {}
 
-  async createChain(request: AuthenticatedRequest, reply: FastifyReply) {
+  async createChain(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
+        name: string;
+        description?: string;
+        minAmount?: number;
+        maxAmount?: number;
+        categoryIds?: string[];
+        requiresReceipt: boolean;
+        approverSequence: string[];
+      };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
+      const { workspaceId } = request.params;
 
-      const chain = await this.approvalChainService.createChain({
+      const result = await this.createChainHandler.handle({
         workspaceId,
-        ...(request.body as {
-          name: string;
-          description?: string;
-          minAmount?: number;
-          maxAmount?: number;
-          categoryIds?: string[];
-          requiresReceipt: boolean;
-          approverSequence: string[];
-        }),
+        ...request.body,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Approval chain created successfully",
-        data: this.serializeChain(chain),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Approval chain created successfully',
+        result.data ? { chainId: result.data.chainId } : undefined,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async updateChain(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId, chainId } = request.params as {
-        workspaceId: string;
-        chainId: string;
+  async updateChain(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; chainId: string };
+      Body: {
+        name?: string;
+        description?: string;
+        minAmount?: number;
+        maxAmount?: number;
+        approverSequence?: string[];
       };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, chainId } = request.params;
 
-      const chain = await this.approvalChainService.updateChain({
+      const result = await this.updateChainHandler.handle({
         chainId,
         workspaceId,
-        ...(request.body as {
-          name?: string;
-          description?: string;
-          minAmount?: number;
-          maxAmount?: number;
-          approverSequence?: string[];
-        }),
+        ...request.body,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chain updated successfully",
-        data: this.serializeChain(chain),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Approval chain updated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -72,17 +94,17 @@ export class ApprovalChainController {
         chainId: string;
       };
 
-      const chain = await this.approvalChainService.getChain(
+      const result = await this.getChainHandler.handle({
         chainId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chain retrieved successfully",
-        data: this.serializeChain(chain),
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Approval chain retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -96,31 +118,30 @@ export class ApprovalChainController {
         limit?: string;
         offset?: string;
       };
-      const activeOnlyBool = activeOnly === "true";
 
-      const result = await this.approvalChainService.listChains(
+      const result = await this.listChainsHandler.handle({
         workspaceId,
-        activeOnlyBool,
-        {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
-        },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chains retrieved successfully",
-        data: {
-          items: result.items.map((chain) => this.serializeChain(chain)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
+        activeOnly: activeOnly === 'true',
+        limit: limit ? parseInt(limit, 10) : 50,
+        offset: offset ? parseInt(offset, 10) : 0,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Approval chains retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((chain) => chain.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -130,22 +151,20 @@ export class ApprovalChainController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, chainId } = request.params;
-
-      const chain = await this.approvalChainService.activateChain(
+      const result = await this.activateChainHandler.handle({
         chainId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chain activated successfully",
-        data: this.serializeChain(chain),
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Approval chain activated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -155,22 +174,20 @@ export class ApprovalChainController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, chainId } = request.params;
-
-      const chain = await this.approvalChainService.deactivateChain(
+      const result = await this.deactivateChainHandler.handle({
         chainId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chain deactivated successfully",
-        data: this.serializeChain(chain),
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Approval chain deactivated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -180,37 +197,22 @@ export class ApprovalChainController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; chainId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, chainId } = request.params;
-
-      await this.approvalChainService.deleteChain(chainId, workspaceId);
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Approval chain deleted successfully",
+      const result = await this.deleteChainHandler.handle({
+        chainId,
+        workspaceId,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Approval chain deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializeChain(chain: ApprovalChain) {
-    return {
-      chainId: chain.getId().getValue(),
-      workspaceId: chain.getWorkspaceId().getValue(),
-      name: chain.getName(),
-      description: chain.getDescription(),
-      minAmount: chain.getMinAmount(),
-      maxAmount: chain.getMaxAmount(),
-      categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()),
-      requiresReceipt: chain.requiresReceipt(),
-      approverSequence: chain.getApproverSequence().map((id) => id.getValue()),
-      isActive: chain.isActive(),
-      createdAt: chain.getCreatedAt().toISOString(),
-      updatedAt: chain.getUpdatedAt().toISOString(),
-    };
   }
 }
