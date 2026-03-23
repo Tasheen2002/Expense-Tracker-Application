@@ -24,6 +24,16 @@ export interface ErrorResponse {
 }
 
 export class ResponseHelper {
+  private static getErrorName(statusCode: number): string {
+    if (statusCode === 409) return 'Conflict';
+    if (statusCode === 404) return 'Not Found';
+    if (statusCode === 401) return 'Unauthorized';
+    if (statusCode === 403) return 'Forbidden';
+    if (statusCode === 410) return 'Gone';
+    if (statusCode === 400) return 'Bad Request';
+    return 'Internal Server Error';
+  }
+
   /**
    * Send a success response
    *
@@ -98,10 +108,13 @@ export class ResponseHelper {
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
-      return ResponseHelper.badRequest(
-        reply,
-        result.error ?? 'Operation failed'
-      );
+      const statusCode = result.statusCode ?? 400;
+      return reply.status(statusCode).send({
+        success: false,
+        statusCode,
+        error: ResponseHelper.getErrorName(statusCode),
+        message: result.error ?? 'Operation failed',
+      });
     }
     return ResponseHelper.success(
       reply,
@@ -126,10 +139,13 @@ export class ResponseHelper {
     data?: any
   ): FastifyReply {
     if (!result.success) {
-      return ResponseHelper.notFound(
-        reply,
-        result.error ?? 'Resource not found'
-      );
+      const statusCode = result.statusCode ?? 404;
+      return reply.status(statusCode).send({
+        success: false,
+        statusCode,
+        error: ResponseHelper.getErrorName(statusCode),
+        message: result.error ?? 'Resource not found',
+      });
     }
     const finalData = data !== undefined ? data : (result.data ?? undefined);
     return ResponseHelper.ok(reply, successMessage, finalData);
@@ -171,19 +187,7 @@ export class ResponseHelper {
         ? (error as { code: string }).code
         : undefined;
 
-    // Map status codes to error names
-    const errorName =
-      statusCode === 409
-        ? 'Conflict'
-        : statusCode === 404
-          ? 'Not Found'
-          : statusCode === 401
-            ? 'Unauthorized'
-            : statusCode === 403
-              ? 'Forbidden'
-              : statusCode === 400
-                ? 'Bad Request'
-                : 'Internal Server Error';
+    const errorName = ResponseHelper.getErrorName(statusCode);
 
     return reply.status(statusCode).send({
       success: false,
@@ -207,6 +211,7 @@ export class ResponseHelper {
     return reply.status(401).send({
       success: false,
       statusCode: 401,
+      error: 'Unauthorized',
       message,
     });
   }
@@ -224,6 +229,24 @@ export class ResponseHelper {
     return reply.status(403).send({
       success: false,
       statusCode: 403,
+      message,
+    });
+  }
+
+  /**
+   * Send a gone (410) response
+   *
+   * @param reply - Fastify reply object
+   * @param message - Optional custom message
+   */
+  static gone(
+    reply: FastifyReply,
+    message: string = 'Resource is no longer available'
+  ): FastifyReply {
+    return reply.status(410).send({
+      success: false,
+      statusCode: 410,
+      error: 'Gone',
       message,
     });
   }
