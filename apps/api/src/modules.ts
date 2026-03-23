@@ -51,18 +51,22 @@ export default fp(
     // Receipt Vault Module
     // ============================================
     const receiptVaultServices = container.getReceiptVaultServices();
-    await registerReceiptVaultRoutes(fastify, receiptVaultServices);
+    await registerReceiptVaultRoutes(
+      fastify,
+      receiptVaultServices,
+      receiptVaultServices.prisma
+    );
     fastify.log.info('✓ Receipt Vault module registered');
 
     // ============================================
     // Approval Workflow Module
     // ============================================
     const approvalWorkflowServices = container.getApprovalWorkflowServices();
-    await registerApprovalWorkflowRoutes(fastify, approvalWorkflowServices);
-    fastify.log.info('✓ Approval Workflow module registered');
-
-    // ============================================
-    // Notification Dispatch Module
+    await registerApprovalWorkflowRoutes(
+      fastify,
+      approvalWorkflowServices,
+      approvalWorkflowServices.prisma
+    );
     // ============================================
     const notificationDispatchServices =
       container.getNotificationDispatchServices();
@@ -122,11 +126,11 @@ export default fp(
     // Policy Controls Module
     // ============================================
     const policyControlsServices = container.getPolicyControlsServices();
-    await registerPolicyControlsRoutes(fastify, policyControlsServices);
-    fastify.log.info('✓ Policy Controls module registered');
-
-    // ============================================
-    // Bank Feed Sync Module
+    await registerPolicyControlsRoutes(
+      fastify,
+      policyControlsServices,
+      policyControlsServices.prisma
+    );
     // ============================================
     const bankFeedSyncServices = container.getBankFeedSyncServices();
     await registerBankFeedSyncRoutes(
