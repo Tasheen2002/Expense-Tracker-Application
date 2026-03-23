@@ -77,7 +77,7 @@ export class BudgetController {
         reply,
         result,
         'Budget created successfully',
-        result.data?.toJSON(),
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -113,8 +113,7 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget updated successfully',
-        result.data?.toJSON()
+        'Budget updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -141,8 +140,7 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget activated successfully',
-        result.data?.toJSON()
+        'Budget activated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -169,8 +167,7 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget archived successfully',
-        result.data?.toJSON()
+        'Budget archived successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -307,7 +304,7 @@ export class BudgetController {
         reply,
         result,
         'Allocation added successfully',
-        result.data?.toJSON(),
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -341,8 +338,7 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Allocation updated successfully',
-        result.data?.toJSON()
+        'Allocation updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -383,10 +379,11 @@ export class BudgetController {
     reply: FastifyReply
   ) {
     try {
-      const { budgetId } = request.params;
+      const { workspaceId, budgetId } = request.params;
 
       const result = await this.getAllocationsHandler.handle({
         budgetId,
+        workspaceId,
       });
 
       return ResponseHelper.fromQuery(

@@ -45,7 +45,7 @@ export class SpendingLimitController {
         reply,
         result,
         'Spending limit created successfully',
-        result.data?.toJSON(),
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -74,8 +74,7 @@ export class SpendingLimitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Spending limit updated successfully',
-        result.data?.toJSON()
+        'Spending limit updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
