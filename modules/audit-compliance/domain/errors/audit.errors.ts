@@ -16,7 +16,7 @@ export class InvalidAuditResourceError extends DomainError {
 
 export class AuditLogNotFoundError extends DomainError {
   constructor(auditLogId: string) {
-    super(`Audit log with ID '${auditLogId}' was not found.`);
+    super(`Audit log with ID '${auditLogId}' was not found.`, 404);
   }
 }
 
@@ -24,6 +24,7 @@ export class UnauthorizedAuditAccessError extends DomainError {
   constructor(userId: string, workspaceId: string) {
     super(
       `User '${userId}' is not authorized to access audit logs in workspace '${workspaceId}'.`,
+      403,
     );
   }
 }
@@ -54,6 +55,7 @@ export class AuditLogImmutableError extends DomainError {
   constructor(auditLogId: string) {
     super(
       `Audit log '${auditLogId}' cannot be modified. Audit logs are immutable.`,
+      409,
     );
   }
 }
