@@ -1,17 +1,17 @@
-import { WorkflowStatus } from "../enums/workflow-status";
-import { ApprovalStatus } from "../enums/approval-status";
-import { ApprovalStep } from "./approval-step.entity";
+import { WorkflowStatus } from '../enums/workflow-status';
+import { ApprovalStatus } from '../enums/approval-status';
+import { ApprovalStep, ApprovalStepDTO } from './approval-step.entity';
 import {
   InvalidApprovalTransitionError,
   WorkflowStepNotFoundError,
-} from "../errors/approval-workflow.errors";
-import { WorkflowId } from "../value-objects/workflow-id";
-import { ApprovalChainId } from "../value-objects/approval-chain-id";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+} from '../errors/approval-workflow.errors';
+import { WorkflowId } from '../value-objects/workflow-id';
+import { ApprovalChainId } from '../value-objects/approval-chain-id';
+import { ExpenseId } from '../value-objects';
+import { WorkspaceId } from '../value-objects';
+import { UserId } from '../value-objects';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -27,12 +27,13 @@ export class ApprovalWorkflowStartedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly requesterId: string,
     public readonly totalSteps: number,
+    public readonly firstApproverId: string
   ) {
-    super(workflowId, "ApprovalWorkflow");
+    super(workflowId, 'ApprovalWorkflow');
   }
 
   get eventType(): string {
-    return "approval.workflow_started";
+    return 'approval.workflow_started';
   }
 
   getPayload(): Record<string, unknown> {
@@ -42,6 +43,7 @@ export class ApprovalWorkflowStartedEvent extends DomainEvent {
       workspaceId: this.workspaceId,
       requesterId: this.requesterId,
       totalSteps: this.totalSteps,
+      firstApproverId: this.firstApproverId,
     };
   }
 }
@@ -55,14 +57,14 @@ export class ApprovalStepCompletedEvent extends DomainEvent {
     public readonly stepId: string,
     public readonly approverId: string,
     public readonly stepNumber: number,
-    public readonly decision: "approved" | "rejected",
-    public readonly comment?: string,
+    public readonly decision: 'approved' | 'rejected',
+    public readonly comment?: string
   ) {
-    super(workflowId, "ApprovalWorkflow");
+    super(workflowId, 'ApprovalWorkflow');
   }
 
   get eventType(): string {
-    return "approval.step_completed";
+    return 'approval.step_completed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -86,12 +88,13 @@ export class ApprovalWorkflowCompletedEvent extends DomainEvent {
     public readonly expenseId: string,
     public readonly workspaceId: string,
     public readonly finalApproverId: string,
+    public readonly requesterId: string
   ) {
-    super(workflowId, "ApprovalWorkflow");
+    super(workflowId, 'ApprovalWorkflow');
   }
 
   get eventType(): string {
-    return "approval.workflow_completed";
+    return 'approval.workflow_completed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -100,6 +103,7 @@ export class ApprovalWorkflowCompletedEvent extends DomainEvent {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
       finalApproverId: this.finalApproverId,
+      requesterId: this.requesterId,
     };
   }
 }
@@ -113,13 +117,14 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
     public readonly expenseId: string,
     public readonly workspaceId: string,
     public readonly rejectedBy: string,
-    public readonly reason?: string,
+    public readonly requesterId: string,
+    public readonly reason?: string
   ) {
-    super(workflowId, "ApprovalWorkflow");
+    super(workflowId, 'ApprovalWorkflow');
   }
 
   get eventType(): string {
-    return "approval.workflow_rejected";
+    return 'approval.workflow_rejected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -128,6 +133,7 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
       expenseId: this.expenseId,
       workspaceId: this.workspaceId,
       rejectedBy: this.rejectedBy,
+      requesterId: this.requesterId,
       reason: this.reason,
     };
   }
@@ -142,13 +148,13 @@ export class ApprovalWorkflowCancelledEvent extends DomainEvent {
     public readonly expenseId: string,
     public readonly workspaceId: string,
     public readonly cancelledBy: string,
-    public readonly reason?: string,
+    public readonly reason?: string
   ) {
-    super(workflowId, "ApprovalWorkflow");
+    super(workflowId, 'ApprovalWorkflow');
   }
 
   get eventType(): string {
-    return "approval.workflow_cancelled";
+    return 'approval.workflow_cancelled';
   }
 
   getPayload(): Record<string, unknown> {
@@ -174,6 +180,7 @@ export interface ExpenseWorkflowProps {
   chainId: ApprovalChainId;
   status: WorkflowStatus;
   currentStepNumber: number;
+  version: number;
   steps: ApprovalStep[];
   createdAt: Date;
   updatedAt: Date;
@@ -182,10 +189,12 @@ export interface ExpenseWorkflowProps {
 
 export class ExpenseWorkflow extends AggregateRoot {
   private props: ExpenseWorkflowProps;
+  private _isNewRecord: boolean;
 
-  private constructor(props: ExpenseWorkflowProps) {
+  private constructor(props: ExpenseWorkflowProps, isNewRecord: boolean) {
     super();
     this.props = props;
+    this._isNewRecord = isNewRecord;
   }
 
   static create(params: {
@@ -208,7 +217,7 @@ export class ExpenseWorkflow extends AggregateRoot {
         workflowId: workflowId.getValue(),
         stepNumber: index + 1,
         approverId,
-      }),
+      })
     );
 
     const workflow = new ExpenseWorkflow({
@@ -219,10 +228,11 @@ export class ExpenseWorkflow extends AggregateRoot {
       chainId,
       status: WorkflowStatus.PENDING,
       currentStepNumber: 1,
+      version: 1,
       steps,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    }, true);
 
     workflow.addDomainEvent(
       new ApprovalWorkflowStartedEvent(
@@ -231,14 +241,15 @@ export class ExpenseWorkflow extends AggregateRoot {
         workspaceId.getValue(),
         userId.getValue(),
         steps.length,
-      ),
+        steps[0].getApproverId().getValue()
+      )
     );
 
     return workflow;
   }
 
   static reconstitute(props: ExpenseWorkflowProps): ExpenseWorkflow {
-    return new ExpenseWorkflow(props);
+    return new ExpenseWorkflow(props, false);
   }
 
   getId(): WorkflowId {
@@ -285,9 +296,21 @@ export class ExpenseWorkflow extends AggregateRoot {
     return this.props.completedAt;
   }
 
+  getVersion(): number {
+    return this.props.version;
+  }
+
+  isNewRecord(): boolean {
+    return this._isNewRecord;
+  }
+
+  markAsPersisted(): void {
+    this._isNewRecord = false;
+  }
+
   getCurrentStep(): ApprovalStep | undefined {
     return this.props.steps.find(
-      (step) => step.getStepNumber() === this.props.currentStepNumber,
+      (step) => step.getStepNumber() === this.props.currentStepNumber
     );
   }
 
@@ -310,7 +333,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     if (this.props.status !== WorkflowStatus.PENDING) {
       throw new InvalidApprovalTransitionError(
         this.props.status,
-        WorkflowStatus.IN_PROGRESS,
+        WorkflowStatus.IN_PROGRESS
       );
     }
 
@@ -325,7 +348,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     }
 
     if (!step.isProcessed() || step.getStatus() !== ApprovalStatus.APPROVED) {
-      throw new InvalidApprovalTransitionError("pending", "approved");
+      throw new InvalidApprovalTransitionError('pending', 'approved');
     }
 
     this.addDomainEvent(
@@ -334,9 +357,9 @@ export class ExpenseWorkflow extends AggregateRoot {
         step.getId().getValue(),
         step.getApproverId().getValue(),
         stepNumber,
-        "approved",
-        step.getComments(),
-      ),
+        'approved',
+        step.getComments()
+      )
     );
 
     if (stepNumber === this.props.steps.length) {
@@ -349,7 +372,8 @@ export class ExpenseWorkflow extends AggregateRoot {
           this.props.expenseId.getValue(),
           this.props.workspaceId.getValue(),
           step.getApproverId().getValue(),
-        ),
+          this.props.userId.getValue()
+        )
       );
     } else {
       this.props.currentStepNumber = stepNumber + 1;
@@ -367,8 +391,8 @@ export class ExpenseWorkflow extends AggregateRoot {
     const currentStep = this.getCurrentStep();
     const rejectedBy = currentStep
       ? currentStep.getApproverId().getValue()
-      : "System";
-    const reason = currentStep ? currentStep.getComments() : "Unknown";
+      : 'System';
+    const reason = currentStep ? currentStep.getComments() : 'Unknown';
 
     this.addDomainEvent(
       new ApprovalWorkflowRejectedEvent(
@@ -376,16 +400,17 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.props.expenseId.getValue(),
         this.props.workspaceId.getValue(),
         rejectedBy,
-        reason,
-      ),
+        this.props.userId.getValue(),
+        reason
+      )
     );
   }
 
-  cancel(): void {
+  cancel(cancelledBy: string): void {
     if (this.isCompleted()) {
       throw new InvalidApprovalTransitionError(
         this.props.status,
-        WorkflowStatus.CANCELLED,
+        WorkflowStatus.CANCELLED
       );
     }
 
@@ -398,9 +423,9 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.props.workflowId.getValue(),
         this.props.expenseId.getValue(),
         this.props.workspaceId.getValue(),
-        this.props.userId.getValue(),
-        "Cancelled by user",
-      ),
+        cancelledBy,
+        'Cancelled by user'
+      )
     );
   }
 
@@ -413,11 +438,11 @@ export class ExpenseWorkflow extends AggregateRoot {
           new ApprovalStepCompletedEvent(
             this.props.workflowId.getValue(),
             step.getId().getValue(),
-            "System",
+            'System',
             step.getStepNumber(),
-            "approved",
-            "Auto-approved",
-          ),
+            'approved',
+            'Auto-approved'
+          )
         );
       }
     });
@@ -432,8 +457,39 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.props.workflowId.getValue(),
         this.props.expenseId.getValue(),
         this.props.workspaceId.getValue(),
-        "System",
-      ),
+        'System',
+        this.props.userId.getValue()
+      )
     );
   }
+
+  toJSON(): ExpenseWorkflowDTO {
+    return {
+      workflowId: this.getId().getValue(),
+      expenseId: this.getExpenseId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      userId: this.getUserId().getValue(),
+      chainId: this.getChainId()?.getValue(),
+      status: this.getStatus(),
+      currentStepNumber: this.getCurrentStepNumber(),
+      steps: this.getSteps().map((s) => s.toJSON()),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+      completedAt: this.getCompletedAt()?.toISOString(),
+    };
+  }
+}
+
+export interface ExpenseWorkflowDTO {
+  workflowId: string;
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
+  chainId?: string;
+  status: WorkflowStatus;
+  currentStepNumber: number;
+  steps: ApprovalStepDTO[];
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
 }
