@@ -1,23 +1,23 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 import {
-  AuditLogRepository,
+  IAuditLogRepository,
   AuditLogFilter,
-} from "../../domain/repositories/audit-log.repository";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
-import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
+} from '../../domain/repositories/audit-log.repository';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { AuditAction } from "../../domain/value-objects/audit-action.vo";
-import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { AuditAction } from '../../domain/value-objects/audit-action.vo';
+import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 export class AuditLogRepositoryImpl
   extends PrismaRepository<AuditLog>
-  implements AuditLogRepository
+  implements IAuditLogRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -39,6 +39,8 @@ export class AuditLogRepositoryImpl
         createdAt: auditLog.createdAt,
       },
     });
+
+    await this.dispatchEvents(auditLog);
   }
 
   async findById(id: AuditLogId): Promise<AuditLog | null> {
@@ -52,20 +54,20 @@ export class AuditLogRepositoryImpl
   async findByWorkspace(
     workspaceId: string,
     limit: number = 50,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<PaginatedResult<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      { limit, offset },
+      { limit, offset }
     );
   }
 
   async findByFilter(
-    filter: AuditLogFilter,
+    filter: AuditLogFilter
   ): Promise<PaginatedResult<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = {
       workspaceId: filter.workspaceId,
@@ -95,9 +97,9 @@ export class AuditLogRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      { limit: filter.limit, offset: filter.offset },
+      { limit: filter.limit, offset: filter.offset }
     );
   }
 
@@ -105,7 +107,7 @@ export class AuditLogRepositoryImpl
     workspaceId: string,
     entityType: string,
     entityId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<AuditLog>> {
     const where: Prisma.AuditLogWhereInput = {
       workspaceId,
@@ -115,9 +117,9 @@ export class AuditLogRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
@@ -136,10 +138,10 @@ export class AuditLogRepositoryImpl
   async getActionSummary(
     workspaceId: string,
     startDate: Date,
-    endDate: Date,
+    endDate: Date
   ): Promise<{ action: string; count: number }[]> {
     const result = await this.prisma.auditLog.groupBy({
-      by: ["action"],
+      by: ['action'],
       where: {
         workspaceId,
         createdAt: {
@@ -152,7 +154,7 @@ export class AuditLogRepositoryImpl
       },
       orderBy: {
         _count: {
-          action: "desc",
+          action: 'desc',
         },
       },
     });
@@ -179,21 +181,20 @@ export class AuditLogRepositoryImpl
         createdAt: auditLog.createdAt,
       })),
     });
+
+    await Promise.all(auditLogs.map((log) => this.dispatchEvents(log)));
   }
 
   async deleteOlderThan(workspaceId: string, olderThan: Date): Promise<number> {
-    const result = await this.prisma.$transaction(async (tx) => {
-      const deleted = await tx.auditLog.deleteMany({
-        where: {
-          workspaceId,
-          createdAt: {
-            lt: olderThan,
-          },
+    const deleted = await this.prisma.auditLog.deleteMany({
+      where: {
+        workspaceId,
+        createdAt: {
+          lt: olderThan,
         },
-      });
-      return deleted.count;
+      },
     });
-    return result;
+    return deleted.count;
   }
 
   private toDomain(data: Prisma.AuditLogGetPayload<object>): AuditLog {
