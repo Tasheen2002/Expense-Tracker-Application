@@ -1,32 +1,30 @@
 import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { SyncSession } from '../../domain/entities/sync-session.entity';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
+import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 import { IQuery, IQueryHandler, QueryResult } from '../../../../apps/api/src/shared/application';
-export interface GetSyncHistoryQuery extends IQuery {
+export interface GetActiveSyncsQuery extends IQuery {
   workspaceId: string;
-  connectionId: string;
   options?: PaginationOptions;
 }
 
-export class GetSyncHistoryHandler implements IQueryHandler<GetSyncHistoryQuery, QueryResult<PaginatedResult<SyncSession>>> {
+export class GetActiveSyncsHandler implements IQueryHandler<GetActiveSyncsQuery, QueryResult<PaginatedResult<SyncSession>>> {
   constructor(private readonly sessionRepository: ISyncSessionRepository) {}
 
   async handle(
-    query: GetSyncHistoryQuery
+    query: GetActiveSyncsQuery
   ): Promise<QueryResult<PaginatedResult<SyncSession>>> {
     try {
       
           const workspaceId = WorkspaceId.fromString(query.workspaceId);
-          const connectionId = BankConnectionId.fromString(query.connectionId);
       
-          const result = await this.sessionRepository.findByConnection(
+          const result = await this.sessionRepository.findByStatus(
             workspaceId,
-            connectionId,
+            SyncStatus.IN_PROGRESS,
             query.options
           );
       
