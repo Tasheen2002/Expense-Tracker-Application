@@ -22,15 +22,21 @@ export class GetUnreadAlertsHandler implements IQueryHandler<
   async handle(
     query: GetUnreadAlertsQuery
   ): Promise<QueryResult<PaginatedResult<BudgetAlert>>> {
-    const options = {
-      limit: query.limit,
-      offset: query.offset,
-    };
-
-    const result = await this.budgetService.getUnreadAlerts(
-      query.workspaceId,
-      options
-    );
-    return QueryResult.success(result);
+    try {
+      
+          const options = {
+            limit: query.limit,
+            offset: query.offset,
+          };
+      
+          const result = await this.budgetService.getUnreadAlerts(
+            query.workspaceId,
+            options
+          );
+          return QueryResult.success(result);
+        
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

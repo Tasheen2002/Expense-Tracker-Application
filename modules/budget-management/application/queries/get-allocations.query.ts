@@ -9,6 +9,7 @@ import {
 
 export interface GetAllocationsQuery extends IQuery {
   budgetId: string;
+  workspaceId: string;
   limit?: number;
   offset?: number;
 }
@@ -22,15 +23,22 @@ export class GetAllocationsHandler implements IQueryHandler<
   async handle(
     query: GetAllocationsQuery
   ): Promise<QueryResult<PaginatedResult<BudgetAllocation>>> {
-    const options = {
-      limit: query.limit,
-      offset: query.offset,
-    };
-
-    const result = await this.budgetService.getAllocationsByBudget(
-      query.budgetId,
-      options
-    );
-    return QueryResult.success(result);
+    try {
+      
+          const options = {
+            limit: query.limit,
+            offset: query.offset,
+          };
+      
+          const result = await this.budgetService.getAllocationsByBudget(
+            query.budgetId,
+            query.workspaceId,
+            options
+          );
+          return QueryResult.success(result);
+        
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

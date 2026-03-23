@@ -27,37 +27,43 @@ export class ListBudgetsHandler implements IQueryHandler<
   async handle(
     query: ListBudgetsQuery
   ): Promise<QueryResult<PaginatedResult<Budget>>> {
-    const limit = query.limit || 50;
-    const offset = query.offset || 0;
-
-    let result: PaginatedResult<Budget>;
-
-    if (
-      query.status ||
-      query.isActive !== undefined ||
-      query.createdBy ||
-      query.currency
-    ) {
-      result = await this.budgetService.filterBudgets(
-        {
-          workspaceId: query.workspaceId,
-          status: query.status,
-          isActive: query.isActive,
-          createdBy: query.createdBy,
-          currency: query.currency,
-        },
-        { limit, offset }
-      );
-    } else {
-      result = await this.budgetService.getBudgetsByWorkspace(
-        query.workspaceId,
-        {
-          limit,
-          offset,
-        }
-      );
+    try {
+      
+          const limit = query.limit || 50;
+          const offset = query.offset || 0;
+      
+          let result: PaginatedResult<Budget>;
+      
+          if (
+            query.status ||
+            query.isActive !== undefined ||
+            query.createdBy ||
+            query.currency
+          ) {
+            result = await this.budgetService.filterBudgets(
+              {
+                workspaceId: query.workspaceId,
+                status: query.status,
+                isActive: query.isActive,
+                createdBy: query.createdBy,
+                currency: query.currency,
+              },
+              { limit, offset }
+            );
+          } else {
+            result = await this.budgetService.getBudgetsByWorkspace(
+              query.workspaceId,
+              {
+                limit,
+                offset,
+              }
+            );
+          }
+      
+          return QueryResult.success(result);
+        
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
-
-    return QueryResult.success(result);
   }
 }

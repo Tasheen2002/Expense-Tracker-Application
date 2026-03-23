@@ -27,36 +27,42 @@ export class ListSpendingLimitsHandler implements IQueryHandler<
   async handle(
     query: ListSpendingLimitsQuery
   ): Promise<QueryResult<PaginatedResult<SpendingLimit>>> {
-    const options = {
-      limit: query.limit,
-      offset: query.offset,
-    };
-
-    let result: PaginatedResult<SpendingLimit>;
-
-    if (
-      query.userId !== undefined ||
-      query.categoryId !== undefined ||
-      query.isActive !== undefined ||
-      query.periodType
-    ) {
-      result = await this.limitService.filterSpendingLimits(
-        {
-          workspaceId: query.workspaceId,
-          userId: query.userId,
-          categoryId: query.categoryId,
-          isActive: query.isActive,
-          periodType: query.periodType,
-        },
-        options
-      );
-    } else {
-      result = await this.limitService.getSpendingLimitsByWorkspace(
-        query.workspaceId,
-        options
-      );
+    try {
+      
+          const options = {
+            limit: query.limit,
+            offset: query.offset,
+          };
+      
+          let result: PaginatedResult<SpendingLimit>;
+      
+          if (
+            query.userId !== undefined ||
+            query.categoryId !== undefined ||
+            query.isActive !== undefined ||
+            query.periodType
+          ) {
+            result = await this.limitService.filterSpendingLimits(
+              {
+                workspaceId: query.workspaceId,
+                userId: query.userId,
+                categoryId: query.categoryId,
+                isActive: query.isActive,
+                periodType: query.periodType,
+              },
+              options
+            );
+          } else {
+            result = await this.limitService.getSpendingLimitsByWorkspace(
+              query.workspaceId,
+              options
+            );
+          }
+      
+          return QueryResult.success(result);
+        
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
-
-    return QueryResult.success(result);
   }
 }
