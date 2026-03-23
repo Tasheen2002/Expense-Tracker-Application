@@ -1,11 +1,26 @@
 import { FastifyInstance } from "fastify";
 import { BankTransactionController } from "../controllers/bank-transaction.controller";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  endpointKeyGenerator,
+} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: endpointKeyGenerator,
+});
 
 export async function bankTransactionRoutes(
   fastify: FastifyInstance,
   controller: BankTransactionController,
 ) {
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Get pending transactions
   fastify.get(
     "/:workspaceId/bank-feed-sync/transactions/pending",
