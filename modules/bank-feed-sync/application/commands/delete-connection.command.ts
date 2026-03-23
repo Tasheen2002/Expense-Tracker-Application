@@ -3,17 +3,17 @@ import { BankConnectionId } from '../../domain/value-objects/bank-connection-id'
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import { BankConnectionNotFoundError } from '../../domain/errors';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../apps/api/src/shared/application';
-export interface DisconnectBankCommand extends ICommand {
+export interface DeleteConnectionCommand extends ICommand {
   workspaceId: string;
   connectionId: string;
 }
 
-export class DisconnectBankHandler implements ICommandHandler<DisconnectBankCommand, CommandResult<void>> {
+export class DeleteConnectionHandler implements ICommandHandler<DeleteConnectionCommand, CommandResult<void>> {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository
   ) {}
 
-  async handle(command: DisconnectBankCommand): Promise<CommandResult<void>> {
+  async handle(command: DeleteConnectionCommand): Promise<CommandResult<void>> {
     try {
       
           const workspaceId = WorkspaceId.fromString(command.workspaceId);
@@ -28,8 +28,7 @@ export class DisconnectBankHandler implements ICommandHandler<DisconnectBankComm
             throw new BankConnectionNotFoundError(command.connectionId);
           }
       
-          connection.disconnect();
-          await this.connectionRepository.save(connection);
+          await this.connectionRepository.delete(connectionId, workspaceId);
       
           return CommandResult.success();
         
