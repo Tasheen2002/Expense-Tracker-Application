@@ -7,6 +7,7 @@ import {
 } from '../errors/budget.errors';
 import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { BudgetAlert } from './budget-alert.entity';
 
 // ============================================================================
 // Domain Events
@@ -148,7 +149,7 @@ export interface CreateBudgetAllocationData {
 }
 
 export interface BudgetAllocationDTO {
-  id: string;
+  allocationId: string;
   budgetId: string;
   categoryId: string | null;
   allocatedAmount: string;
@@ -416,9 +417,29 @@ export class BudgetAllocation extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
+  collectTriggeredAlerts(): BudgetAlert[] {
+    const percentage = this.getSpentPercentage();
+    if (percentage < 50) return [];
+
+    try {
+      const alert = BudgetAlert.create({
+        budgetId: this.getBudgetId().getValue(),
+        allocationId: this.getId().getValue(),
+        currentSpent: this.getSpentAmount(),
+        allocatedAmount: this.getAllocatedAmount(),
+      });
+      return [alert];
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // InvalidAlertThresholdError can be safely ignored; any other error re-throws
+      if (!msg.includes('threshold')) throw error;
+      return [];
+    }
+  }
+
   toJSON(): BudgetAllocationDTO {
     return {
-      id: this.getId().getValue(),
+      allocationId: this.getId().getValue(),
       budgetId: this.getBudgetId().getValue(),
       categoryId: this.getCategoryId(),
       allocatedAmount: this.getAllocatedAmount().toString(),

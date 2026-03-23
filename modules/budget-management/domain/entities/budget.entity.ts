@@ -239,7 +239,7 @@ export interface CreateBudgetData {
 }
 
 export interface BudgetDTO {
-  id: string;
+  budgetId: string;
   workspaceId: string;
   name: string;
   description: string | null;
@@ -540,7 +540,7 @@ export class Budget extends AggregateRoot {
 
   toJSON(): BudgetDTO {
     return {
-      id: this.getId().getValue(),
+      budgetId: this.getId().getValue(),
       workspaceId: this.getWorkspaceId(),
       name: this.getName(),
       description: this.getDescription(),

@@ -146,7 +146,7 @@ export interface CreateSpendingLimitData {
 }
 
 export interface SpendingLimitDTO {
-  id: string;
+  limitId: string;
   workspaceId: string;
   userId: string | null;
   categoryId: string | null;
@@ -380,7 +380,7 @@ export class SpendingLimit extends AggregateRoot {
 
   toJSON(): SpendingLimitDTO {
     return {
-      id: this.getId().getValue(),
+      limitId: this.getId().getValue(),
       workspaceId: this.getWorkspaceId(),
       userId: this.getUserId(),
       categoryId: this.getCategoryId(),
