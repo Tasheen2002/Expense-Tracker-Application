@@ -7,15 +7,13 @@ import { WorkflowController } from '../controllers/workflow.controller';
 import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
 import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
-interface ApprovalWorkflowServices {
-  approvalChainController: ApprovalChainController;
-  workflowController: WorkflowController;
-  prisma: PrismaClient;
-}
-
 export async function registerApprovalWorkflowRoutes(
   fastify: FastifyInstance,
-  services: ApprovalWorkflowServices
+  controllers: {
+    approvalChainController: ApprovalChainController;
+    workflowController: WorkflowController;
+  },
+  prisma: PrismaClient
 ) {
   await fastify.register(
     async (instance) => {
@@ -29,15 +27,15 @@ export async function registerApprovalWorkflowRoutes(
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,
-          services.prisma
+          prisma
         );
       });
 
       // Register approval chain routes
-      await approvalChainRoutes(instance, services.approvalChainController);
+      await approvalChainRoutes(instance, controllers.approvalChainController);
 
       // Register workflow routes
-      await workflowRoutes(instance, services.workflowController);
+      await workflowRoutes(instance, controllers.workflowController);
     },
     { prefix: '/api/v1' }
   );
