@@ -1,31 +1,45 @@
-import { AuditService } from "../services/audit.service";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { AuditService } from '../services/audit.service';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
-export class GetEntityAuditHistoryQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly entityType: string,
-    public readonly entityId: string,
-    public readonly limit?: number,
-    public readonly offset?: number,
-  ) {}
+export interface GetEntityAuditHistoryQuery extends IQuery {
+  workspaceId: string;
+  entityType: string;
+  entityId: string;
+  limit?: number;
+  offset?: number;
 }
 
-export class GetEntityAuditHistoryHandler {
+export class GetEntityAuditHistoryHandler implements IQueryHandler<
+  GetEntityAuditHistoryQuery,
+  QueryResult<PaginatedResult<AuditLog>>
+> {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(query: GetEntityAuditHistoryQuery): Promise<PaginatedResult<AuditLog>> {
-    const options = {
-      limit: query.limit,
-      offset: query.offset,
-    };
+  async handle(
+    input: GetEntityAuditHistoryQuery
+  ): Promise<QueryResult<PaginatedResult<AuditLog>>> {
+    try {
+      const options = {
+        limit: input.limit,
+        offset: input.offset,
+      };
 
-    return await this.auditService.getEntityAuditHistory(
-      query.workspaceId,
-      query.entityType,
-      query.entityId,
-      options,
-    );
+      const result = await this.auditService.getEntityAuditHistory(
+        input.workspaceId,
+        input.entityType,
+        input.entityId,
+        options
+      );
+
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

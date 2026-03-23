@@ -1,21 +1,34 @@
-import { AuditService, AuditSummary } from "../services/audit.service";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { AuditService, AuditSummary } from '../services/audit.service';
 
-export class GetAuditSummaryQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly startDate: Date,
-    public readonly endDate: Date,
-  ) {}
+export interface GetAuditSummaryQuery extends IQuery {
+  workspaceId: string;
+  startDate: Date;
+  endDate: Date;
 }
 
-export class GetAuditSummaryHandler {
+export class GetAuditSummaryHandler implements IQueryHandler<
+  GetAuditSummaryQuery,
+  QueryResult<AuditSummary>
+> {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(query: GetAuditSummaryQuery): Promise<AuditSummary> {
-    return await this.auditService.getAuditSummary(
-      query.workspaceId,
-      query.startDate,
-      query.endDate,
-    );
+  async handle(
+    input: GetAuditSummaryQuery
+  ): Promise<QueryResult<AuditSummary>> {
+    try {
+      const summary = await this.auditService.getAuditSummary(
+        input.workspaceId,
+        input.startDate,
+        input.endDate
+      );
+      return QueryResult.success(summary);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

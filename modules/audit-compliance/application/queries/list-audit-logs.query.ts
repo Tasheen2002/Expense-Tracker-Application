@@ -1,34 +1,38 @@
-import { AuditService } from "../services/audit.service";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { AuditService, ListAuditLogsFilters } from '../services/audit.service';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
 
-export interface ListAuditLogsFilters {
-  userId?: string;
-  action?: string;
-  entityType?: string;
-  entityId?: string;
-  startDate?: Date;
-  endDate?: Date;
+export interface ListAuditLogsQuery extends IQuery {
+  workspaceId: string;
+  filters?: ListAuditLogsFilters;
+  limit?: number;
+  offset?: number;
 }
 
-export class ListAuditLogsQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly filters?: ListAuditLogsFilters,
-    public readonly limit: number = 50,
-    public readonly offset: number = 0,
-  ) {}
-}
-
-export class ListAuditLogsHandler {
+export class ListAuditLogsHandler implements IQueryHandler<
+  ListAuditLogsQuery,
+  QueryResult<PaginatedResult<AuditLog>>
+> {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(query: ListAuditLogsQuery): Promise<PaginatedResult<AuditLog>> {
-    return await this.auditService.listAuditLogs(
-      query.workspaceId,
-      query.filters,
-      query.limit,
-      query.offset,
-    );
+  async handle(
+    input: ListAuditLogsQuery
+  ): Promise<QueryResult<PaginatedResult<AuditLog>>> {
+    try {
+      const result = await this.auditService.listAuditLogs(
+        input.workspaceId,
+        input.filters,
+        input.limit,
+        input.offset
+      );
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }
