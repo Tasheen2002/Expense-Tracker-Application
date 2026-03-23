@@ -1,46 +1,31 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
+import { WorkflowService } from '../services/workflow.service';
 import {
-  WorkflowNotFoundError,
-  UnauthorizedApproverError,
-  CurrentStepNotFoundError,
-} from "../../domain/errors/approval-workflow.errors";
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ApproveStepInput {
+export interface ApproveStepInput extends ICommand {
   expenseId: string;
+  workspaceId: string;
   approverId: string;
   comments?: string;
 }
 
-export class ApproveStepHandler {
-  constructor(private readonly workflowRepository: ExpenseWorkflowRepository) {}
+export class ApproveStepHandler implements ICommandHandler<
+  ApproveStepInput,
+  CommandResult<void>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: ApproveStepInput): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
-      input.expenseId,
-    );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(input.expenseId);
+  async handle(input: ApproveStepInput): Promise<CommandResult<void>> {
+    try {
+      await this.workflowService.approveStep(input);
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
     }
-
-    const currentStep = workflow.getCurrentStep();
-    if (!currentStep) {
-      throw new CurrentStepNotFoundError(input.expenseId);
-    }
-
-    if (currentStep.getCurrentApproverId().getValue() !== input.approverId) {
-      throw new UnauthorizedApproverError(
-        input.approverId,
-        currentStep.getId().getValue(),
-      );
-    }
-
-    currentStep.approve(input.comments);
-    workflow.processStepApproval(currentStep.getStepNumber());
-
-    await this.workflowRepository.save(workflow);
-
-    return workflow;
   }
 }
+
+export type ApproveStepCommand = ApproveStepInput;

@@ -5,20 +5,22 @@ import {
   CommandResult,
 } from '../../../../apps/api/src/shared/application';
 
-export interface DeleteApprovalChainInput extends ICommand {
+export interface ActivateApprovalChainInput extends ICommand {
   chainId: string;
   workspaceId: string;
 }
 
-export class DeleteApprovalChainHandler implements ICommandHandler<
-  DeleteApprovalChainInput,
+export class ActivateApprovalChainHandler implements ICommandHandler<
+  ActivateApprovalChainInput,
   CommandResult<void>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: DeleteApprovalChainInput): Promise<CommandResult<void>> {
+  async handle(
+    input: ActivateApprovalChainInput
+  ): Promise<CommandResult<void>> {
     try {
-      await this.approvalChainService.deleteChain(
+      await this.approvalChainService.activateChain(
         input.chainId,
         input.workspaceId
       );
@@ -29,4 +31,4 @@ export class DeleteApprovalChainHandler implements ICommandHandler<
   }
 }
 
-export type DeleteApprovalChainCommand = DeleteApprovalChainInput;
+export type ActivateApprovalChainCommand = ActivateApprovalChainInput;

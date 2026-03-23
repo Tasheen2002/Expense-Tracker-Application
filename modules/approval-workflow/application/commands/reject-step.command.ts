@@ -1,46 +1,31 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
+import { WorkflowService } from '../services/workflow.service';
 import {
-  WorkflowNotFoundError,
-  UnauthorizedApproverError,
-  CurrentStepNotFoundError,
-} from "../../domain/errors/approval-workflow.errors";
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface RejectStepInput {
+export interface RejectStepInput extends ICommand {
   expenseId: string;
+  workspaceId: string;
   approverId: string;
   comments: string;
 }
 
-export class RejectStepHandler {
-  constructor(private readonly workflowRepository: ExpenseWorkflowRepository) {}
+export class RejectStepHandler implements ICommandHandler<
+  RejectStepInput,
+  CommandResult<void>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: RejectStepInput): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
-      input.expenseId,
-    );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(input.expenseId);
+  async handle(input: RejectStepInput): Promise<CommandResult<void>> {
+    try {
+      await this.workflowService.rejectStep(input);
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
     }
-
-    const currentStep = workflow.getCurrentStep();
-    if (!currentStep) {
-      throw new CurrentStepNotFoundError(input.expenseId);
-    }
-
-    if (currentStep.getCurrentApproverId().getValue() !== input.approverId) {
-      throw new UnauthorizedApproverError(
-        input.approverId,
-        currentStep.getId().getValue(),
-      );
-    }
-
-    currentStep.reject(input.comments);
-    workflow.processStepRejection();
-
-    await this.workflowRepository.save(workflow);
-
-    return workflow;
   }
 }
+
+export type RejectStepCommand = RejectStepInput;
