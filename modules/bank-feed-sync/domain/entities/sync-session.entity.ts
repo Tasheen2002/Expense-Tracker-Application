@@ -1,8 +1,9 @@
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { BankConnectionId } from "../value-objects/bank-connection-id";
-import { SyncSessionId } from "../value-objects/sync-session-id";
-import { SyncStatus } from "../enums/sync-status.enum";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { WorkspaceId } from '../../../identity-workspace';
+import { BankConnectionId } from '../value-objects/bank-connection-id';
+import { SyncSessionId } from '../value-objects/sync-session-id';
+import { SyncStatus } from '../enums/sync-status.enum';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -12,13 +13,13 @@ export class SyncSessionStartedEvent extends DomainEvent {
   constructor(
     public readonly sessionId: string,
     public readonly workspaceId: string,
-    public readonly connectionId: string,
+    public readonly connectionId: string
   ) {
-    super(sessionId, "SyncSession");
+    super(sessionId, 'SyncSession');
   }
 
   get eventType(): string {
-    return "SyncSessionStarted";
+    return 'SyncSessionStarted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -37,13 +38,13 @@ export class SyncSessionCompletedEvent extends DomainEvent {
     public readonly connectionId: string,
     public readonly transactionsFetched: number,
     public readonly transactionsImported: number,
-    public readonly transactionsDuplicate: number,
+    public readonly transactionsDuplicate: number
   ) {
-    super(sessionId, "SyncSession");
+    super(sessionId, 'SyncSession');
   }
 
   get eventType(): string {
-    return "SyncSessionCompleted";
+    return 'SyncSessionCompleted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -63,13 +64,13 @@ export class SyncSessionFailedEvent extends DomainEvent {
     public readonly sessionId: string,
     public readonly workspaceId: string,
     public readonly connectionId: string,
-    public readonly errorMessage: string,
+    public readonly errorMessage: string
   ) {
-    super(sessionId, "SyncSession");
+    super(sessionId, 'SyncSession');
   }
 
   get eventType(): string {
-    return "SyncSessionFailed";
+    return 'SyncSessionFailed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -98,13 +99,15 @@ export interface SyncSessionProps {
   updatedAt: Date;
 }
 
-export class SyncSession {
-  private constructor(private readonly props: SyncSessionProps) {}
+export class SyncSession extends AggregateRoot {
+  private constructor(private readonly props: SyncSessionProps) {
+    super();
+  }
 
   static create(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-    metadata?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): SyncSession {
     return new SyncSession({
       id: SyncSessionId.create(),
@@ -235,12 +238,20 @@ export class SyncSession {
   start(): void {
     this.props.status = SyncStatus.IN_PROGRESS;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SyncSessionStartedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getConnectionId().getValue()
+      )
+    );
   }
 
   complete(
     transactionsFetched: number,
     transactionsImported: number,
-    transactionsDuplicate: number,
+    transactionsDuplicate: number
   ): void {
     this.props.status = SyncStatus.COMPLETED;
     this.props.completedAt = new Date();
@@ -248,6 +259,17 @@ export class SyncSession {
     this.props.transactionsImported = transactionsImported;
     this.props.transactionsDuplicate = transactionsDuplicate;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SyncSessionCompletedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getConnectionId().getValue(),
+        transactionsFetched,
+        transactionsImported,
+        transactionsDuplicate
+      )
+    );
   }
 
   fail(errorMessage: string): void {
@@ -255,13 +277,22 @@ export class SyncSession {
     this.props.completedAt = new Date();
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SyncSessionFailedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        this.getConnectionId().getValue(),
+        errorMessage
+      )
+    );
   }
 
   partialComplete(
     transactionsFetched: number,
     transactionsImported: number,
     transactionsDuplicate: number,
-    errorMessage: string,
+    errorMessage: string
   ): void {
     this.props.status = SyncStatus.PARTIAL;
     this.props.completedAt = new Date();
@@ -272,7 +303,41 @@ export class SyncSession {
     this.props.updatedAt = new Date();
   }
 
+  toJSON(): SyncSessionDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      connectionId: this.getConnectionId().getValue(),
+      status: this.status,
+      startedAt: this.startedAt,
+      completedAt: this.completedAt,
+      transactionsFetched: this.transactionsFetched,
+      transactionsImported: this.transactionsImported,
+      transactionsDuplicate: this.transactionsDuplicate,
+      errorMessage: this.errorMessage,
+      metadata: this.metadata,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
+
   toPersistence(): SyncSessionProps {
     return { ...this.props };
   }
+}
+
+export interface SyncSessionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  status: SyncStatus;
+  startedAt: Date;
+  completedAt?: Date;
+  transactionsFetched: number;
+  transactionsImported: number;
+  transactionsDuplicate: number;
+  errorMessage?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
 }
