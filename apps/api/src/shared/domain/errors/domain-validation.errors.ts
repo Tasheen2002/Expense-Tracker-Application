@@ -8,7 +8,7 @@ export class DomainValidationError extends Error {
 
   constructor(message: string, code: string, field?: string) {
     super(message);
-    this.name = "DomainValidationError";
+
     this.code = code;
     this.field = field;
     Object.setPrototypeOf(this, DomainValidationError.prototype);
@@ -21,7 +21,7 @@ export class DomainValidationError extends Error {
 export class EmptyFieldError extends DomainValidationError {
   constructor(fieldName: string) {
     super(`${fieldName} cannot be empty`, "EMPTY_FIELD", fieldName);
-    this.name = "EmptyFieldError";
+
     Object.setPrototypeOf(this, EmptyFieldError.prototype);
   }
 }
@@ -36,7 +36,7 @@ export class MaxLengthExceededError extends DomainValidationError {
       "MAX_LENGTH_EXCEEDED",
       fieldName,
     );
-    this.name = "MaxLengthExceededError";
+
     Object.setPrototypeOf(this, MaxLengthExceededError.prototype);
   }
 }
@@ -53,7 +53,7 @@ export class InvalidFormatError extends DomainValidationError {
       "INVALID_FORMAT",
       fieldName,
     );
-    this.name = "InvalidFormatError";
+
     Object.setPrototypeOf(this, InvalidFormatError.prototype);
   }
 }
@@ -64,7 +64,7 @@ export class InvalidFormatError extends DomainValidationError {
 export class ValueOutOfRangeError extends DomainValidationError {
   constructor(fieldName: string, message: string) {
     super(message, "VALUE_OUT_OF_RANGE", fieldName);
-    this.name = "ValueOutOfRangeError";
+
     Object.setPrototypeOf(this, ValueOutOfRangeError.prototype);
   }
 }
@@ -82,7 +82,7 @@ export class InvalidStateTransitionError extends DomainValidationError {
       `Cannot ${attemptedAction} ${entityType} in ${currentState} state`,
       "INVALID_STATE_TRANSITION",
     );
-    this.name = "InvalidStateTransitionError";
+
     Object.setPrototypeOf(this, InvalidStateTransitionError.prototype);
   }
 }
@@ -96,7 +96,7 @@ export class CurrencyMismatchError extends DomainValidationError {
       `Cannot ${operation} money with different currencies`,
       "CURRENCY_MISMATCH",
     );
-    this.name = "CurrencyMismatchError";
+
     Object.setPrototypeOf(this, CurrencyMismatchError.prototype);
   }
 }
@@ -107,7 +107,8 @@ export class CurrencyMismatchError extends DomainValidationError {
 export class InvalidIdFormatError extends DomainValidationError {
   constructor(idType: string, value: string) {
     super(`Invalid ${idType} format: ${value}`, "INVALID_ID_FORMAT");
-    this.name = "InvalidIdFormatError";
+
     Object.setPrototypeOf(this, InvalidIdFormatError.prototype);
   }
 }
+
