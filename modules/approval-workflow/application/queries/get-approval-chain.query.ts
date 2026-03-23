@@ -1,26 +1,35 @@
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
-import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id'
-import { ApprovalChainNotFoundError } from '../../domain/errors/approval-workflow.errors'
+import { ApprovalChainService } from '../services/approval-chain.service';
+import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetApprovalChainInput {
-  chainId: string
-  workspaceId: string
+export interface GetApprovalChainInput extends IQuery {
+  chainId: string;
+  workspaceId: string;
 }
 
-export class GetApprovalChainHandler {
-  constructor(
-    private readonly approvalChainRepository: ApprovalChainRepository
-  ) {}
+export class GetApprovalChainHandler implements IQueryHandler<
+  GetApprovalChainInput,
+  QueryResult<ApprovalChain>
+> {
+  constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: GetApprovalChainInput): Promise<ApprovalChain> {
-    const chainId = ApprovalChainId.fromString(input.chainId)
-    const chain = await this.approvalChainRepository.findById(chainId)
-
-    if (!chain || chain.getWorkspaceId().getValue() !== input.workspaceId) {
-      throw new ApprovalChainNotFoundError(input.chainId)
+  async handle(
+    input: GetApprovalChainInput
+  ): Promise<QueryResult<ApprovalChain>> {
+    try {
+      const chain = await this.approvalChainService.getChain(
+        input.chainId,
+        input.workspaceId
+      );
+      return QueryResult.success(chain);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
-
-    return chain
   }
 }
+
+export type GetApprovalChainQuery = GetApprovalChainInput;
