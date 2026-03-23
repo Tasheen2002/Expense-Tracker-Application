@@ -1,28 +1,26 @@
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
-import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
-import { SyncSession } from "../../domain/entities/sync-session.entity";
-import { BankTransaction } from "../../domain/entities/bank-transaction.entity";
-import { ISyncSessionRepository } from "../../domain/repositories/sync-session.repository";
-import { IBankTransactionRepository } from "../../domain/repositories/bank-transaction.repository";
-import { IBankConnectionRepository } from "../../domain/repositories/bank-connection.repository";
-import { SyncStatus } from "../../domain/enums/sync-status.enum";
+import { WorkspaceId } from '../../../identity-workspace';
+import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { SyncSession } from '../../domain/entities/sync-session.entity';
+import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
+import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
+import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
+import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import {
   BankConnectionNotFoundError,
   SyncAlreadyInProgressError,
   SyncTooFrequentError,
-  SyncSessionNotFoundError,
-} from "../../domain/errors";
-import { SyncTransactionsCommand } from "../commands";
-import { GetSyncHistoryQuery } from "../queries";
+} from '../../domain/errors';
 import {
   MIN_SYNC_INTERVAL_MINUTES,
   DEFAULT_LOOKBACK_DAYS,
-} from "../../domain/constants/bank-feed-sync.constants";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../domain/constants/bank-feed-sync.constants';
+
+export interface SyncTransactionsInput {
+  workspaceId: string;
+  connectionId: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
 
 export interface BankAPITransaction {
   externalId: string;
@@ -40,7 +38,7 @@ export interface IBankAPIClient {
   fetchTransactions(
     accessToken: string,
     fromDate: Date,
-    toDate: Date,
+    toDate: Date
   ): Promise<BankAPITransaction[]>;
 }
 
@@ -49,39 +47,39 @@ export class TransactionSyncService {
     private readonly connectionRepository: IBankConnectionRepository,
     private readonly sessionRepository: ISyncSessionRepository,
     private readonly transactionRepository: IBankTransactionRepository,
-    private readonly bankAPIClient: IBankAPIClient,
+    private readonly bankAPIClient: IBankAPIClient
   ) {}
 
   async syncTransactions(
-    command: SyncTransactionsCommand,
+    input: SyncTransactionsInput
   ): Promise<SyncSession> {
-    const workspaceId = WorkspaceId.fromString(command.workspaceId);
-    const connectionId = BankConnectionId.fromString(command.connectionId);
+    const workspaceId = WorkspaceId.fromString(input.workspaceId);
+    const connectionId = BankConnectionId.fromString(input.connectionId);
 
     // Validate connection exists and is active
     const connection = await this.connectionRepository.findById(
       connectionId,
-      workspaceId,
+      workspaceId
     );
 
     if (!connection) {
-      throw new BankConnectionNotFoundError(command.connectionId);
+      throw new BankConnectionNotFoundError(input.connectionId);
     }
 
     // Check for active sync
     const activeSync = await this.sessionRepository.findActiveByConnection(
       workspaceId,
-      connectionId,
+      connectionId
     );
 
     if (activeSync) {
-      throw new SyncAlreadyInProgressError(command.connectionId);
+      throw new SyncAlreadyInProgressError(input.connectionId);
     }
 
     // Check sync frequency
     const latestSync = await this.sessionRepository.findLatestByConnection(
       workspaceId,
-      connectionId,
+      connectionId
     );
 
     if (latestSync) {
@@ -89,7 +87,7 @@ export class TransactionSyncService {
         (Date.now() - latestSync.startedAt.getTime()) / 1000 / 60;
       if (minutesSinceLastSync < MIN_SYNC_INTERVAL_MINUTES) {
         const minutesUntilNext = Math.ceil(
-          MIN_SYNC_INTERVAL_MINUTES - minutesSinceLastSync,
+          MIN_SYNC_INTERVAL_MINUTES - minutesSinceLastSync
         );
         throw new SyncTooFrequentError(minutesUntilNext);
       }
@@ -97,8 +95,8 @@ export class TransactionSyncService {
 
     // Create sync session
     const session = SyncSession.create(workspaceId, connectionId, {
-      fromDate: command.fromDate,
-      toDate: command.toDate,
+      fromDate: input.fromDate,
+      toDate: input.toDate,
     });
 
     await this.sessionRepository.save(session);
@@ -109,16 +107,16 @@ export class TransactionSyncService {
 
     try {
       // Calculate date range
-      const toDate = command.toDate || new Date();
+      const toDate = input.toDate || new Date();
       const fromDate =
-        command.fromDate ||
+        input.fromDate ||
         new Date(Date.now() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
 
       // Fetch transactions from bank API
       const apiTransactions = await this.bankAPIClient.fetchTransactions(
         connection.getAccessTokenForSync(),
         fromDate,
-        toDate,
+        toDate
       );
 
       let imported = 0;
@@ -128,7 +126,7 @@ export class TransactionSyncService {
       const existingExternalIds =
         await this.transactionRepository.findByExternalIds(
           workspaceId,
-          apiTransactions.map((t) => t.externalId),
+          apiTransactions.map((t) => t.externalId)
         );
 
       // Process each transaction
@@ -152,7 +150,7 @@ export class TransactionSyncService {
           apiTxn.merchantName,
           apiTxn.categoryName,
           apiTxn.postedDate,
-          apiTxn.metadata,
+          apiTxn.metadata
         );
 
         transactions.push(transaction);
@@ -173,10 +171,10 @@ export class TransactionSyncService {
       await this.connectionRepository.save(connection);
 
       return session;
-    } catch (error) {
+    } catch (error: unknown) {
       // Mark session as failed
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+        error instanceof Error ? error.message : 'Unknown error';
       session.fail(errorMessage);
       await this.sessionRepository.save(session);
 
@@ -188,45 +186,4 @@ export class TransactionSyncService {
     }
   }
 
-  // Updated to include PaginationOptions (not yet in Query interface, but will be)
-  async getSyncHistory(
-    query: GetSyncHistoryQuery & { options?: PaginationOptions },
-  ): Promise<PaginatedResult<SyncSession>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const connectionId = BankConnectionId.fromString(query.connectionId);
-
-    return this.sessionRepository.findByConnection(
-      workspaceId,
-      connectionId,
-      query.options,
-    );
-  }
-
-  async getSyncSession(
-    workspaceId: string,
-    sessionId: string,
-  ): Promise<SyncSession> {
-    const wsId = WorkspaceId.fromString(workspaceId);
-    const sessId = SyncSessionId.fromString(sessionId);
-
-    const session = await this.sessionRepository.findById(sessId, wsId);
-
-    if (!session) {
-      throw new SyncSessionNotFoundError(sessionId);
-    }
-
-    return session;
-  }
-
-  async getActiveSyncs(
-    workspaceId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<SyncSession>> {
-    const wsId = WorkspaceId.fromString(workspaceId);
-    return this.sessionRepository.findByStatus(
-      wsId,
-      SyncStatus.IN_PROGRESS,
-      options,
-    );
-  }
 }
