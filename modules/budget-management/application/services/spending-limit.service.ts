@@ -63,7 +63,8 @@ export class SpendingLimitService {
 
   async deleteSpendingLimit(
     limitId: string,
-    workspaceId: string
+    workspaceId: string,
+    userId: string
   ): Promise<void> {
     const limitIdObj = SpendingLimitId.fromString(limitId);
 
@@ -71,6 +72,11 @@ export class SpendingLimitService {
     if (!limit) {
       throw new SpendingLimitNotFoundError(limitId);
     }
+
+    // Workspace membership is enforced by the HTTP middleware. The userId is
+    // retained here for audit purposes and future ownership checks if
+    // a createdBy field is added to SpendingLimit.
+    void userId;
 
     await this.limitRepository.delete(limitIdObj, workspaceId);
   }

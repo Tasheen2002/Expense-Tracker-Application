@@ -341,10 +341,26 @@ export class BudgetService {
 
     allocation.updateSpentAmount(spentAmount);
 
-    // Check if we need to create alerts
-    const alerts = await this.checkAndCreateAlerts(allocation);
+    // Alert creation is a domain decision: the entity knows its own thresholds
+    const alerts = allocation.collectTriggeredAlerts();
 
     await this.allocationRepository.saveWithAlerts(allocation, alerts);
+
+    // If spending has reached or exceeded the allocated amount, mark the parent
+    // budget as EXCEEDED so its status accurately reflects its state.
+    if (allocation.isOverBudget()) {
+      const budget = await this.budgetRepository.findByIdInternal(
+        allocation.getBudgetId()
+      );
+      if (budget && budget.isActive()) {
+        try {
+          budget.markAsExceeded(allocation.getSpentAmount().toNumber());
+          await this.budgetRepository.save(budget);
+        } catch {
+          // Status transition may already be EXCEEDED; ignore duplicate transitions
+        }
+      }
+    }
 
     return allocation;
   }
@@ -378,8 +394,17 @@ export class BudgetService {
 
   async getAllocationsByBudget(
     budgetId: string,
+    workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAllocation>> {
+    // Verify the budget belongs to the workspace before returning its allocations
+    const budget = await this.budgetRepository.findById(
+      BudgetId.fromString(budgetId),
+      workspaceId
+    );
+    if (!budget) {
+      throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
     return await this.allocationRepository.findByBudget(
       BudgetId.fromString(budgetId),
       options
@@ -387,42 +412,6 @@ export class BudgetService {
   }
 
   // Alert management
-  private async checkAndCreateAlerts(
-    allocation: BudgetAllocation
-  ): Promise<BudgetAlert[]> {
-    const alerts: BudgetAlert[] = [];
-    const percentage = allocation.getSpentPercentage();
-
-    // Only create alerts if threshold is met (50%, 75%, 90%, 100%+)
-    if (percentage >= 50) {
-      try {
-        const alert = BudgetAlert.create({
-          budgetId: allocation.getBudgetId().getValue(),
-          allocationId: allocation.getId().getValue(),
-          currentSpent: allocation.getSpentAmount(),
-          allocatedAmount: allocation.getAllocatedAmount(),
-        });
-
-        alerts.push(alert);
-      } catch (error) {
-        // Log the error instead of silently swallowing it
-        // Duplicate alerts (constraint violations) are expected and can be ignored
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (
-          !errorMessage.includes('duplicate') &&
-          !errorMessage.includes('unique')
-        ) {
-          console.error(
-            `[BudgetService] Failed to create alert for allocation ${allocation.getId().getValue()}: ${errorMessage}`
-          );
-          throw error;
-        }
-      }
-    }
-    return alerts;
-  }
-
   async getUnreadAlerts(
     workspaceId: string,
     options?: PaginationOptions
