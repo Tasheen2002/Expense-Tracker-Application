@@ -1,23 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { BudgetPlanController } from "../../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller";
-import { ExpenseController } from "../../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller";
-import { UnauthorizedBudgetAccessError } from "../../../../modules/budget-management/domain/errors/budget.errors";
-import { BudgetPlanService } from "../../../../modules/budget-planning/application/services/budget-plan.service";
-import { createMockRequest, createMockReply } from "../mocks/fastify.mock";
+import { BudgetPlanController } from '../../../../modules/budget-planning/infrastructure/http/controllers/budget-plan.controller';
+import { ExpenseController } from '../../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller';
+import { UnauthorizedBudgetAccessError } from '../../../../modules/budget-management/domain/errors/budget.errors';
+import { createMockRequest, createMockReply } from '../mocks/fastify.mock';
 
 // Mock dependencies
 const mockCreateHandler = { handle: vi.fn() } as any;
 const mockUpdateHandler = { handle: vi.fn() } as any;
 const mockActivateHandler = { handle: vi.fn() } as any;
+const mockDeleteHandler = { handle: vi.fn() } as any;
 const mockGetHandler = { handle: vi.fn() } as any;
 const mockListHandler = { handle: vi.fn() } as any;
-const mockBudgetPlanService = {
-  getPlan: vi.fn(),
-  deletePlan: vi.fn(),
-} as unknown as BudgetPlanService;
 
-describe("Authorization Security Tests", () => {
+describe('Authorization Security Tests', () => {
   let controller: BudgetPlanController;
 
   beforeEach(() => {
@@ -25,44 +21,31 @@ describe("Authorization Security Tests", () => {
       mockCreateHandler,
       mockUpdateHandler,
       mockActivateHandler,
+      mockDeleteHandler,
       mockGetHandler,
-      mockListHandler,
-      mockBudgetPlanService,
+      mockListHandler
     );
     vi.clearAllMocks();
   });
 
-  describe("BudgetPlanController", () => {
-    it("should allow request with valid userId", async () => {
+  describe('BudgetPlanController', () => {
+    it('should allow request with valid userId', async () => {
       const req = createMockRequest({
         body: {
-          workspaceId: "123e4567-e89b-12d3-a456-426614174000",
-          name: "Test Budget",
-          startDate: "2024-01-01T00:00:00Z",
-          endDate: "2024-12-31T23:59:59Z",
-          createdBy: "123e4567-e89b-12d3-a456-426614174000",
-          description: "Test",
+          workspaceId: '123e4567-e89b-12d3-a456-426614174000',
+          name: 'Test Budget',
+          startDate: '2024-01-01T00:00:00Z',
+          endDate: '2024-12-31T23:59:59Z',
+          createdBy: '123e4567-e89b-12d3-a456-426614174000',
+          description: 'Test',
         },
-        user: { userId: "123e4567-e89b-12d3-a456-426614174000" },
+        user: { userId: '123e4567-e89b-12d3-a456-426614174000' },
       });
       const reply = createMockReply();
 
       mockCreateHandler.handle.mockResolvedValue({
-        getId: () => ({ getValue: () => "plan-1" }),
-        getWorkspaceId: () => ({ getValue: () => "workspace-1" }),
-        getName: () => "Test Budget",
-        getDescription: () => "Test",
-        getPeriod: () => ({
-          getStartDate: () => new Date("2024-01-01"),
-          getEndDate: () => new Date("2024-12-31"),
-        }),
-        getStatus: () => "DRAFT",
-        getCurrency: () => "USD",
-        getTotalAllocated: () => ({ toNumber: () => 1000 }),
-        toPrimitives: () => ({ id: "plan-1" }),
-        getCreatedBy: () => ({ getValue: () => "user-1" }),
-        getCreatedAt: () => new Date(),
-        getUpdatedAt: () => new Date(),
+        success: true,
+        data: { budgetPlanId: 'plan-1' },
       });
 
       await controller.create(req as any, reply);
@@ -71,50 +54,46 @@ describe("Authorization Security Tests", () => {
       expect(mockCreateHandler.handle).toHaveBeenCalled();
     });
 
-    it("should reject unauthorized budget access", async () => {
+    it('should reject unauthorized budget access', async () => {
       const req = createMockRequest({
-        params: { id: "123e4567-e89b-12d3-a456-426614174000" },
-        user: { userId: "unauthorized-user" },
+        params: { id: '123e4567-e89b-12d3-a456-426614174000' },
+        user: { userId: 'unauthorized-user' },
       });
       const reply = createMockReply();
 
       (mockGetHandler.handle as any).mockRejectedValue(
-        new UnauthorizedBudgetAccessError("access"),
+        new UnauthorizedBudgetAccessError('access')
       );
-
-      // We need to implement/mock the error handling logic in the controller or assume it has a try/catch
-      // If the controller uses a global error filter, we might need to test this differently.
-      // But assuming controller method delegates and might not catch, except if standard error handling is applying.
       await controller.get(req as any, reply);
       expect(reply.statusCode).toBe(403);
     });
 
-    it("should reject unauthorized budget update", async () => {
+    it('should reject unauthorized budget update', async () => {
       const req = createMockRequest({
-        params: { id: "123e4567-e89b-12d3-a456-426614174000" },
-        body: { name: "Updated Budget" },
-        user: { userId: "unauthorized-user" },
+        params: { id: '123e4567-e89b-12d3-a456-426614174000' },
+        body: { name: 'Updated Budget' },
+        user: { userId: 'unauthorized-user' },
       });
       const reply = createMockReply();
 
       // Mock update handler to throw
       mockUpdateHandler.handle.mockRejectedValue(
-        new UnauthorizedBudgetAccessError("update"),
+        new UnauthorizedBudgetAccessError('update')
       );
 
       await controller.update(req as any, reply);
       expect(reply.statusCode).toBe(403);
     });
 
-    it("should reject unauthorized budget deletion", async () => {
+    it('should reject unauthorized budget deletion', async () => {
       const req = createMockRequest({
-        params: { id: "123e4567-e89b-12d3-a456-426614174000" },
-        user: { userId: "unauthorized-user" },
+        params: { id: '123e4567-e89b-12d3-a456-426614174000' },
+        user: { userId: 'unauthorized-user' },
       });
       const reply = createMockReply();
 
-      (mockBudgetPlanService.deletePlan as any).mockRejectedValue(
-        new UnauthorizedBudgetAccessError("delete"),
+      (mockDeleteHandler.handle as any).mockRejectedValue(
+        new UnauthorizedBudgetAccessError('delete')
       );
 
       await controller.delete(req as any, reply);
@@ -122,7 +101,7 @@ describe("Authorization Security Tests", () => {
     });
   });
 
-  describe("ExpenseController", () => {
+  describe('ExpenseController', () => {
     let expenseController: ExpenseController;
     const mockUpdateExpenseHandler = { handle: vi.fn() } as any;
     const mockGenericHandler = { handle: vi.fn() } as any;
@@ -138,20 +117,19 @@ describe("Authorization Security Tests", () => {
         mockGenericHandler,
         mockGenericHandler,
         mockGenericHandler,
-        mockGenericHandler,
-        mockGenericHandler,
+        mockGenericHandler
       );
     });
 
-    it("should reject unauthorized expense modification", async () => {
+    it('should reject unauthorized expense modification', async () => {
       const req = createMockRequest({
-        params: { workspaceId: "ws-1", expenseId: "ex-1" },
+        params: { workspaceId: 'ws-1', expenseId: 'ex-1' },
         body: { amount: 100 },
-        user: { userId: "unauthorized" },
+        user: { userId: 'unauthorized' },
       });
       const reply = createMockReply();
 
-      const error = new Error("Unauthorized access to expense");
+      const error = new Error('Unauthorized access to expense');
       (error as any).statusCode = 403; // Mocking statusCode on generic error or assuming ResponseHelper handles it.
       // Actually ResponseHelper might default to 500 for generic Error unless we use a DomainError.
       // I'll throw a domain error if possible or assume 500 if generic.
