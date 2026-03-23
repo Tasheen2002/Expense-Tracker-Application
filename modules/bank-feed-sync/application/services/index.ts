@@ -1,7 +1,6 @@
-export { BankConnectionService } from "./bank-connection.service";
 export {
   TransactionSyncService,
   IBankAPIClient,
   BankAPITransaction,
-} from "./transaction-sync.service";
-export { BankTransactionService } from "./bank-transaction.service";
+} from './transaction-sync.service';
+export type { SyncTransactionsInput } from './transaction-sync.service';
