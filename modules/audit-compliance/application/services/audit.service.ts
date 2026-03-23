@@ -1,16 +1,16 @@
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
-import { AuditAction } from "../../domain/value-objects/audit-action.vo";
-import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
-import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
+import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditAction } from '../../domain/value-objects/audit-action.vo';
+import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
+import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
-  AuditLogRepository,
+  IAuditLogRepository,
   AuditLogFilter,
-} from "../../domain/repositories/audit-log.repository";
+} from '../../domain/repositories/audit-log.repository';
+import { AuditRetentionViolationError } from '../../domain/errors/audit.errors';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -42,93 +42,78 @@ export interface ListAuditLogsFilters {
 export class AuditService {
   private consecutiveFailures = 0;
   private static readonly FAILURE_ALERT_THRESHOLD = 5;
+  private static readonly MINIMUM_RETENTION_DAYS = 30;
 
-  constructor(private readonly auditRepository: AuditLogRepository) {}
+  constructor(private readonly auditRepository: IAuditLogRepository) {}
 
-  async log(event: DomainEvent): Promise<void> {
+  /**
+   * Creates an audit log entry. Used by both the HTTP API (via CreateAuditLogHandler)
+   * and event-driven paths (via AuditEventListener → CreateAuditLogHandler).
+   * Tracks consecutive failures and alerts when the threshold is exceeded.
+   */
+  async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLog> {
     try {
-      const payload = event.getPayload();
-      const workspaceId = payload.workspaceId;
-
-      // Skip logging system-level events without a workspaceId
-      if (!workspaceId) {
-        console.debug(
-          `[AuditService] Skipping system-level event without workspaceId: ${event.eventType}`,
-        );
-        return;
-      }
-
-      const userId = payload.triggeredBy || payload.userId || null;
-
-      const action = AuditAction.create(event.eventType);
-      const resource = AuditResource.create(
-        event.aggregateId.split(":")[0] || "Unknown",
-        event.aggregateId,
-      );
+      const action = AuditAction.create(data.action);
+      const resource = AuditResource.create(data.entityType, data.entityId);
 
       const auditLog = AuditLog.create({
-        workspaceId: String(workspaceId),
-        userId: userId ? String(userId) : null,
+        workspaceId: data.workspaceId,
+        userId: data.userId,
         action: action,
         resource: resource,
-        details: payload,
-        metadata: {
-          timestamp: event.occurredAt,
-          eventId: event.eventId,
-        },
-        ipAddress: null,
-        userAgent: null,
+        details: data.details || null,
+        metadata: data.metadata || null,
+        ipAddress: data.ipAddress || null,
+        userAgent: data.userAgent || null,
       });
 
       await this.auditRepository.save(auditLog);
-
-      // Reset failure counter on success
-      if (this.consecutiveFailures > 0) {
-        console.info(
-          `[AuditService] Audit logging recovered after ${this.consecutiveFailures} consecutive failures`,
-        );
-        this.consecutiveFailures = 0;
-      }
-    } catch (error) {
+      this.consecutiveFailures = 0;
+      return auditLog;
+    } catch (error: unknown) {
       this.consecutiveFailures++;
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      console.warn(
-        `[AuditService] AUDIT_FAILURE: Failed to log event "${event.eventType}" ` +
-          `(failure #${this.consecutiveFailures}): ${errorMessage}`,
+      console.error(
+        `[AuditService] AUDIT_FAILURE: Failed to create audit log ` +
+          `(failure #${this.consecutiveFailures}): ${errorMessage}`
       );
 
-      // Escalate warning when consecutive failures exceed threshold
       if (this.consecutiveFailures >= AuditService.FAILURE_ALERT_THRESHOLD) {
-        // Throw error for critical failures - caller or monitoring system should handle
-        throw new Error(
-          `[AuditService] CRITICAL: ${this.consecutiveFailures} consecutive audit failures. Audit trail integrity compromised.`,
+        console.error(
+          `[AuditService] CRITICAL: ${this.consecutiveFailures} consecutive audit failures. ` +
+            `Audit trail may be incomplete. Immediate investigation required.`
         );
       }
+
+      throw error;
     }
   }
 
   /**
-   * Creates an audit log entry directly (for HTTP API usage).
+   * Purges audit logs older than the specified number of days.
+   * Enforces a minimum retention period to prevent accidental data loss.
+   * Returns the number of deleted records.
    */
-  async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLog> {
-    const action = AuditAction.create(data.action);
-    const resource = AuditResource.create(data.entityType, data.entityId);
+  async purgeOldLogs(
+    workspaceId: string,
+    olderThanDays: number
+  ): Promise<number> {
+    if (olderThanDays < AuditService.MINIMUM_RETENTION_DAYS) {
+      throw new AuditRetentionViolationError(
+        AuditService.MINIMUM_RETENTION_DAYS,
+        olderThanDays
+      );
+    }
 
-    const auditLog = AuditLog.create({
-      workspaceId: data.workspaceId,
-      userId: data.userId,
-      action: action,
-      resource: resource,
-      details: data.details || null,
-      metadata: data.metadata || null,
-      ipAddress: data.ipAddress || null,
-      userAgent: data.userAgent || null,
-    });
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
-    await this.auditRepository.save(auditLog);
-    return auditLog;
+    return await this.auditRepository.deleteOlderThan(
+      workspaceId,
+      cutoffDate
+    );
   }
 
   /**
@@ -136,7 +121,7 @@ export class AuditService {
    */
   async getAuditLogById(
     workspaceId: string,
-    auditLogId: string,
+    auditLogId: string
   ): Promise<AuditLog | null> {
     const id = AuditLogId.fromString(auditLogId);
     const auditLog = await this.auditRepository.findById(id);
@@ -156,7 +141,7 @@ export class AuditService {
     workspaceId: string,
     filters?: ListAuditLogsFilters,
     limit: number = 50,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<PaginatedResult<AuditLog>> {
     const filter: AuditLogFilter = {
       workspaceId,
@@ -175,13 +160,13 @@ export class AuditService {
     workspaceId: string,
     entityType: string,
     entityId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<AuditLog>> {
     return await this.auditRepository.findByEntityId(
       workspaceId,
       entityType,
       entityId,
-      options,
+      options
     );
   }
 
@@ -191,7 +176,7 @@ export class AuditService {
   async getAuditSummary(
     workspaceId: string,
     startDate: Date,
-    endDate: Date,
+    endDate: Date
   ): Promise<AuditSummary> {
     const [totalLogs, actionBreakdown] = await Promise.all([
       this.auditRepository.countByWorkspace(workspaceId),
