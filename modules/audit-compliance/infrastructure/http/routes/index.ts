@@ -18,7 +18,7 @@ export async function registerAuditComplianceRoutes(
       });
 
       // Add workspace authorization middleware
-      instance.addHook('onRequest', async (request, reply) => {
+      instance.addHook('preHandler', async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,
@@ -27,14 +27,9 @@ export async function registerAuditComplianceRoutes(
       });
 
       // Register audit log routes
-      await instance.register(
-        async (auditInstance) => {
-          await auditLogRoutes(auditInstance, controllers.auditLogController);
-        },
-        { prefix: '/audit-logs' }
-      );
+      await auditLogRoutes(instance, controllers.auditLogController);
     },
-    { prefix: '/api/v1/workspaces/:workspaceId' }
+    { prefix: '/api/v1' }
   );
 }
 
