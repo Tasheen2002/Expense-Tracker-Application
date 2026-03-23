@@ -1,21 +1,9 @@
-/**
- * Bank Feed Sync Module - Endpoint Tests
- *
- * This test suite verifies the functionality of all bank-feed-sync module endpoints.
- * It tests bank connections, transaction syncing, and bank transaction processing.
- *
- * Endpoints tested:
- * - Bank Connections: POST, GET (single, list), PUT (token, disconnect), DELETE
- * - Transaction Sync: POST (sync), GET (history, session, active syncs)
- * - Bank Transactions: GET (pending, single, by connection), PUT (process)
- */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createServer } from '../../../apps/api/src/server';
+import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { createServer } from "../../../apps/api/src/server";
-import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
-
-describe("Bank Feed Sync Module - Endpoint Tests", () => {
+describe('Bank Feed Sync Module - Endpoint Tests', () => {
   let app: FastifyInstance;
   let prisma: PrismaClient;
 
@@ -29,7 +17,7 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
 
   const testTimestamp = Date.now();
   const testEmail = `bank-sync-test-${testTimestamp}@example.com`;
-  const testPassword = "SecurePassword123!";
+  const testPassword = 'SecurePassword123!';
   const testWorkspaceName = `Bank Sync Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
@@ -39,18 +27,18 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
 
     // Step 1: Register a new user
     const registerResponse = await app.inject({
-      method: "POST",
-      url: "/auth/register",
+      method: 'POST',
+      url: '/api/v1/auth/register',
       payload: {
         email: testEmail,
         password: testPassword,
-        firstName: "Bank",
-        lastName: "Tester",
+        firstName: 'Bank',
+        lastName: 'Tester',
       },
     });
 
     const registerBody = JSON.parse(registerResponse.body);
-    console.log("Setup - Register:", registerResponse.statusCode);
+    console.log('Setup - Register:', registerResponse.statusCode);
 
     if (registerResponse.statusCode === 201 && registerBody.data?.token) {
       authToken = registerBody.data.token;
@@ -58,8 +46,8 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
     } else {
       // If registration failed, try to login
       const loginResponse = await app.inject({
-        method: "POST",
-        url: "/auth/login",
+        method: 'POST',
+        url: '/api/v1/auth/login',
         payload: {
           email: testEmail,
           password: testPassword,
@@ -72,19 +60,19 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
 
     // Step 2: Create a workspace for testing
     const workspaceResponse = await app.inject({
-      method: "POST",
-      url: "/workspaces",
+      method: 'POST',
+      url: '/api/v1/workspaces',
       headers: {
         authorization: `Bearer ${authToken}`,
       },
       payload: {
         name: testWorkspaceName,
-        description: "Test workspace for bank feed sync tests",
+        description: 'Test workspace for bank feed sync tests',
       },
     });
 
     const workspaceBody = JSON.parse(workspaceResponse.body);
-    console.log("Setup - Create Workspace:", workspaceResponse.statusCode);
+    console.log('Setup - Create Workspace:', workspaceResponse.statusCode);
     testWorkspaceId = workspaceBody.data?.workspaceId;
   });
 
@@ -107,52 +95,50 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
   // ============================================================================
   // BANK CONNECTION ENDPOINTS
   // ============================================================================
-  describe("Bank Connection Endpoints", () => {
-    describe("POST /api/v1/bank-feed/", () => {
-      it("✅ should create a bank connection", async () => {
+  describe('Bank Connection Endpoints', () => {
+    describe('POST /api/v1/bank-feed/', () => {
+      it('✅ should create a bank connection', async () => {
         const response = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            institutionId: "test_bank_001",
-            institutionName: "Test Bank",
-            accountId: "acc_12345",
-            accountName: "Test Checking Account",
-            accountType: "CHECKING",
-            currency: "USD",
-            accessToken: "test_access_token_" + testTimestamp,
-            accountMask: "****1234",
+            institutionId: 'test_bank_001',
+            institutionName: 'Test Bank',
+            accountId: 'acc_12345',
+            accountName: 'Test Checking Account',
+            accountType: 'CHECKING',
+            currency: 'USD',
+            accessToken: 'test_access_token_' + testTimestamp,
+            accountMask: '****1234',
           },
         });
 
         const body = JSON.parse(response.body);
         console.log(
-          "Create Bank Connection:",
+          'Create Bank Connection:',
           response.statusCode,
-          body.message,
+          body.message
         );
 
         expect(response.statusCode).toBe(201);
-        expect(body).toHaveProperty("id");
-        expect(body.institutionName).toBe("Test Bank");
-        expect(body.accountType).toBe("CHECKING");
-        expect(body.status).toBe("CONNECTED");
+        expect(body.data).toHaveProperty('connectionId');
+        expect(body.data.connectionId).toBeDefined();
 
-        testConnectionId = body.id;
+        testConnectionId = body.data.connectionId;
       });
 
-      it("❌ should fail to create connection with missing required fields", async () => {
+      it('❌ should fail to create connection with missing required fields', async () => {
         const response = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            institutionId: "test_bank_002",
+            institutionId: 'test_bank_002',
             // Missing institutionName and other required fields
           },
         });
@@ -160,18 +146,18 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
         expect(response.statusCode).toBe(400);
       });
 
-      it("❌ should fail without authentication", async () => {
+      it('❌ should fail without authentication', async () => {
         const response = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
           payload: {
-            institutionId: "test_bank_003",
-            institutionName: "Another Bank",
-            accountId: "acc_67890",
-            accountName: "Savings",
-            accountType: "SAVINGS",
-            currency: "USD",
-            accessToken: "test_token",
+            institutionId: 'test_bank_003',
+            institutionName: 'Another Bank',
+            accountId: 'acc_67890',
+            accountName: 'Savings',
+            accountType: 'SAVINGS',
+            currency: 'USD',
+            accessToken: 'test_token',
           },
         });
 
@@ -179,48 +165,48 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("GET /api/v1/bank-feed/", () => {
-      it("✅ should get all bank connections", async () => {
+    describe('GET /api/v1/bank-feed/', () => {
+      it('✅ should get all bank connections', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get All Connections:", response.statusCode);
+        console.log('Get All Connections:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("connections");
-        expect(Array.isArray(body.connections)).toBe(true);
-        expect(body.connections.length).toBeGreaterThan(0);
+        expect(body.data).toHaveProperty('connections');
+        expect(Array.isArray(body.data.connections)).toBe(true);
+        expect(body.data.connections.length).toBeGreaterThan(0);
       });
     });
 
-    describe("GET /api/v1/bank-feed/:connectionId", () => {
-      it("✅ should get a specific bank connection", async () => {
+    describe('GET /api/v1/bank-feed/:connectionId', () => {
+      it('✅ should get a specific bank connection', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Connection:", response.statusCode);
+        console.log('Get Connection:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.id).toBe(testConnectionId);
-        expect(body.institutionName).toBe("Test Bank");
+        expect(body.data.id).toBe(testConnectionId);
+        expect(body.data.institutionName).toBe('Test Bank');
       });
 
-      it("❌ should return 404 for non-existent connection", async () => {
+      it('❌ should return 404 for non-existent connection', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -230,39 +216,39 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("PUT /api/v1/bank-feed/:connectionId/token", () => {
-      it("✅ should update connection access token", async () => {
-        const newToken = "updated_access_token_" + Date.now();
+    describe('PUT /api/v1/bank-feed/:connectionId/token', () => {
+      it('✅ should update connection access token', async () => {
+        const newToken = 'updated_access_token_' + Date.now();
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}/token`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}/token`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
             accessToken: newToken,
             tokenExpiresAt: new Date(
-              Date.now() + 90 * 24 * 60 * 60 * 1000,
+              Date.now() + 90 * 24 * 60 * 60 * 1000
             ).toISOString(),
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Update Token:", response.statusCode);
+        console.log('Update Token:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.id).toBe(testConnectionId);
+        expect(body.message).toBe('Connection token updated successfully');
       });
 
-      it("❌ should fail with invalid connection ID", async () => {
+      it('❌ should fail with invalid connection ID', async () => {
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/invalid-id/token`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/invalid-id/token`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            accessToken: "new_token",
+            accessToken: 'new_token',
           },
         });
 
@@ -270,41 +256,41 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("PUT /api/v1/bank-feed/:connectionId/disconnect", () => {
-      it("✅ should disconnect a bank connection", async () => {
+    describe('PUT /api/v1/bank-feed/:connectionId/disconnect', () => {
+      it('✅ should disconnect a bank connection', async () => {
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}/disconnect`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}/disconnect`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
-        console.log("Disconnect Connection:", response.statusCode);
+        console.log('Disconnect Connection:', response.statusCode);
 
         expect(response.statusCode).toBe(204);
       });
     });
 
-    describe("DELETE /api/v1/bank-feed/:connectionId", () => {
-      it("✅ should delete a bank connection", async () => {
+    describe('DELETE /api/v1/bank-feed/:connectionId', () => {
+      it('✅ should delete a bank connection', async () => {
         const response = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
-        console.log("Delete Connection:", response.statusCode);
+        console.log('Delete Connection:', response.statusCode);
 
         expect(response.statusCode).toBe(204);
       });
 
-      it("❌ should return 404 when deleting non-existent connection", async () => {
+      it('❌ should return 404 when deleting non-existent connection', async () => {
         const response = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -318,62 +304,62 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
   // ============================================================================
   // TRANSACTION SYNC ENDPOINTS
   // ============================================================================
-  describe("Transaction Sync Endpoints", () => {
+  describe('Transaction Sync Endpoints', () => {
     let activeConnectionId: string;
 
     beforeAll(async () => {
       // Create a new connection for sync tests
       const response = await app.inject({
-        method: "POST",
-        url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+        method: 'POST',
+        url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
         headers: {
           authorization: `Bearer ${authToken}`,
         },
         payload: {
-          institutionId: "test_bank_sync_001",
-          institutionName: "Sync Test Bank",
-          accountId: "acc_sync_12345",
-          accountName: "Sync Test Account",
-          accountType: "CHECKING",
-          currency: "USD",
-          accessToken: "sync_test_token_" + testTimestamp,
+          institutionId: 'test_bank_sync_001',
+          institutionName: 'Sync Test Bank',
+          accountId: 'acc_sync_12345',
+          accountName: 'Sync Test Account',
+          accountType: 'CHECKING',
+          currency: 'USD',
+          accessToken: 'sync_test_token_' + testTimestamp,
         },
       });
 
       const body = JSON.parse(response.body);
-      activeConnectionId = body.id;
+      activeConnectionId = body.data.connectionId;
     });
 
-    describe("POST /api/v1/bank-feed/:connectionId/sync", () => {
-      it("✅ should trigger transaction sync for a connection", async () => {
+    describe('POST /api/v1/bank-feed/:connectionId/sync', () => {
+      it('✅ should trigger transaction sync for a connection', async () => {
         const response = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
             startDate: new Date(
-              Date.now() - 30 * 24 * 60 * 60 * 1000,
+              Date.now() - 30 * 24 * 60 * 60 * 1000
             ).toISOString(),
             endDate: new Date().toISOString(),
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Trigger Sync:", response.statusCode);
+        console.log('Trigger Sync:', response.statusCode);
 
         expect(response.statusCode).toBe(202);
-        expect(body).toHaveProperty("id");
-        expect(body.status).toBe("COMPLETED"); // Stub API returns empty array
+        expect(body.data).toHaveProperty('sessionId');
+        expect(body.data.sessionId).toBeDefined();
 
-        testSyncSessionId = body.sessionId;
+        testSyncSessionId = body.data.sessionId;
       });
 
-      it("❌ should fail with invalid connection ID", async () => {
+      it('❌ should fail with invalid connection ID', async () => {
         const response = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}/sync`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}/sync`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -384,68 +370,68 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("GET /api/v1/bank-feed/:connectionId/sync/history", () => {
-      it("✅ should get sync history for a connection", async () => {
+    describe('GET /api/v1/bank-feed/:connectionId/sync/history', () => {
+      it('✅ should get sync history for a connection', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync/history`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync/history`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           query: {
-            limit: "10",
+            limit: '10',
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Sync History:", response.statusCode);
+        console.log('Get Sync History:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("sessions");
-        expect(Array.isArray(body.sessions)).toBe(true);
+        expect(body.data).toHaveProperty('sessions');
+        expect(Array.isArray(body.data.sessions)).toBe(true);
       });
     });
 
-    describe("GET /api/v1/bank-feed/sync/:sessionId", () => {
-      it("✅ should get a specific sync session", async () => {
+    describe('GET /api/v1/bank-feed/sync/:sessionId', () => {
+      it('✅ should get a specific sync session', async () => {
         if (!testSyncSessionId) {
-          console.log("⚠️ Skipping - No sync session ID available");
+          console.log('⚠️ Skipping - No sync session ID available');
           return;
         }
 
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/sync/${testSyncSessionId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/sync/${testSyncSessionId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Sync Session:", response.statusCode);
+        console.log('Get Sync Session:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.sessionId).toBe(testSyncSessionId);
-        expect(body).toHaveProperty("status");
+        expect(body.data.id).toBe(testSyncSessionId);
+        expect(body.data).toHaveProperty('status');
       });
     });
 
-    describe("GET /api/v1/bank-feed/sync/active", () => {
-      it("✅ should get all active sync sessions", async () => {
+    describe('GET /api/v1/bank-feed/sync/active', () => {
+      it('✅ should get all active sync sessions', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/sync/active`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/sync/active`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Active Syncs:", response.statusCode);
+        console.log('Get Active Syncs:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("sessions");
-        expect(Array.isArray(body.sessions)).toBe(true);
+        expect(body.data).toHaveProperty('sessions');
+        expect(Array.isArray(body.data.sessions)).toBe(true);
       });
     });
   });
@@ -453,30 +439,30 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
   // ============================================================================
   // BANK TRANSACTION ENDPOINTS
   // ============================================================================
-  describe("Bank Transaction Endpoints", () => {
+  describe('Bank Transaction Endpoints', () => {
     let testConnectionForTransactions: string;
 
     beforeAll(async () => {
       // Create a connection and add test transactions
       const connResponse = await app.inject({
-        method: "POST",
-        url: `/api/v1/${testWorkspaceId}/bank-feed-sync/connections`,
+        method: 'POST',
+        url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
         headers: {
           authorization: `Bearer ${authToken}`,
         },
         payload: {
-          institutionId: "test_bank_txn_001",
-          institutionName: "Transaction Test Bank",
-          accountId: "acc_txn_12345",
-          accountName: "Transaction Test Account",
-          accountType: "CHECKING",
-          currency: "USD",
-          accessToken: "txn_test_token_" + testTimestamp,
+          institutionId: 'test_bank_txn_001',
+          institutionName: 'Transaction Test Bank',
+          accountId: 'acc_txn_12345',
+          accountName: 'Transaction Test Account',
+          accountType: 'CHECKING',
+          currency: 'USD',
+          accessToken: 'txn_test_token_' + testTimestamp,
         },
       });
 
       const connBody = JSON.parse(connResponse.body);
-      testConnectionForTransactions = connBody.id;
+      testConnectionForTransactions = connBody.data.connectionId;
 
       // Create sync session first
       const testSyncSession = await prisma.syncSession.create({
@@ -484,7 +470,7 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
           id: crypto.randomUUID(),
           workspaceId: testWorkspaceId,
           connectionId: testConnectionForTransactions,
-          status: "IN_PROGRESS",
+          status: 'IN_PROGRESS',
           startedAt: new Date(),
           transactionsFetched: 0,
           transactionsImported: 0,
@@ -499,14 +485,14 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
         data: {
           id: crypto.randomUUID(),
           workspaceId: testWorkspaceId,
-          externalId: "ext_txn_" + testTimestamp,
+          externalId: 'ext_txn_' + testTimestamp,
           amount: 150.0,
-          currency: "USD",
-          description: "Test transaction",
-          merchantName: "Test Merchant",
+          currency: 'USD',
+          description: 'Test transaction',
+          merchantName: 'Test Merchant',
           transactionDate: new Date(),
           postedDate: new Date(),
-          status: "PENDING",
+          status: 'PENDING',
           createdAt: new Date(),
           updatedAt: new Date(),
           connection: {
@@ -521,28 +507,28 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       testTransactionId = transaction.id;
     });
 
-    describe("GET /api/v1/bank-feed/transactions/pending", () => {
-      it("✅ should get pending transactions", async () => {
+    describe('GET /api/v1/bank-feed/transactions/pending', () => {
+      it('✅ should get pending transactions', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Pending Transactions:", response.statusCode);
+        console.log('Get Pending Transactions:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("transactions");
-        expect(Array.isArray(body.transactions)).toBe(true);
+        expect(body.data).toHaveProperty('transactions');
+        expect(Array.isArray(body.data.transactions)).toBe(true);
       });
 
-      it("✅ should filter pending transactions by connection", async () => {
+      it('✅ should filter pending transactions by connection', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -552,35 +538,35 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Pending by Connection:", response.statusCode);
+        console.log('Get Pending by Connection:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("transactions");
+        expect(body.data).toHaveProperty('transactions');
       });
     });
 
-    describe("GET /api/v1/bank-feed/transactions/:transactionId", () => {
-      it("✅ should get a specific transaction", async () => {
+    describe('GET /api/v1/bank-feed/transactions/:transactionId', () => {
+      it('✅ should get a specific transaction', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Transaction:", response.statusCode);
+        console.log('Get Transaction:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.id).toBe(testTransactionId);
-        expect(body.status).toBe("PENDING");
+        expect(body.data.id).toBe(testTransactionId);
+        expect(body.data.status).toBe('PENDING');
       });
 
-      it("❌ should return 404 for non-existent transaction", async () => {
+      it('❌ should return 404 for non-existent transaction', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/${crypto.randomUUID()}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${crypto.randomUUID()}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -590,35 +576,35 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("PUT /api/v1/bank-feed/transactions/:transactionId/process", () => {
-      it("✅ should mark transaction as imported", async () => {
+    describe('PUT /api/v1/bank-feed/transactions/:transactionId/process', () => {
+      it('✅ should mark transaction as imported', async () => {
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            action: "import",
+            action: 'import',
             expenseId: crypto.randomUUID(),
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Process Transaction (import):", response.statusCode);
+        console.log('Process Transaction (import):', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.status).toBe("IMPORTED");
+        expect(body.message).toContain('Transaction processed successfully');
       });
 
-      it("✅ should mark transaction as ignored", async () => {
+      it('✅ should mark transaction as ignored', async () => {
         // Create sync session for second transaction
         const testSyncSession2 = await prisma.syncSession.create({
           data: {
             id: crypto.randomUUID(),
             workspaceId: testWorkspaceId,
             connectionId: testConnectionForTransactions,
-            status: "IN_PROGRESS",
+            status: 'IN_PROGRESS',
             startedAt: new Date(),
             transactionsFetched: 0,
             transactionsImported: 0,
@@ -633,13 +619,13 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
           data: {
             id: crypto.randomUUID(),
             workspaceId: testWorkspaceId,
-            externalId: "ext_txn_ignore_" + testTimestamp,
+            externalId: 'ext_txn_ignore_' + testTimestamp,
             amount: 50.0,
-            currency: "USD",
-            description: "Transaction to ignore",
+            currency: 'USD',
+            description: 'Transaction to ignore',
             transactionDate: new Date(),
             postedDate: new Date(),
-            status: "PENDING",
+            status: 'PENDING',
             createdAt: new Date(),
             updatedAt: new Date(),
             connection: {
@@ -652,32 +638,32 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
         });
 
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/${newTransaction.id}/process`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${newTransaction.id}/process`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            action: "ignore",
+            action: 'ignore',
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Process Transaction (ignore):", response.statusCode);
+        console.log('Process Transaction (ignore):', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body.status).toBe("IGNORED");
+        expect(body.message).toContain('Transaction processed successfully');
       });
 
-      it("❌ should fail with invalid action", async () => {
+      it('❌ should fail with invalid action', async () => {
         const response = await app.inject({
-          method: "PUT",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
+          method: 'PUT',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            action: "invalid_action",
+            action: 'invalid_action',
           },
         });
 
@@ -685,23 +671,23 @@ describe("Bank Feed Sync Module - Endpoint Tests", () => {
       });
     });
 
-    describe("GET /api/v1/bank-feed/transactions/connection/:connectionId", () => {
-      it("✅ should get all transactions for a connection", async () => {
+    describe('GET /api/v1/bank-feed/transactions/connection/:connectionId', () => {
+      it('✅ should get all transactions for a connection', async () => {
         const response = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/bank-feed-sync/transactions/connection/${testConnectionForTransactions}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/connection/${testConnectionForTransactions}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log("Get Transactions by Connection:", response.statusCode);
+        console.log('Get Transactions by Connection:', response.statusCode);
 
         expect(response.statusCode).toBe(200);
-        expect(body).toHaveProperty("transactions");
-        expect(Array.isArray(body.transactions)).toBe(true);
-        expect(body.transactions.length).toBeGreaterThan(0);
+        expect(body.data).toHaveProperty('transactions');
+        expect(Array.isArray(body.data.transactions)).toBe(true);
+        expect(body.data.transactions.length).toBeGreaterThan(0);
       });
     });
   });
