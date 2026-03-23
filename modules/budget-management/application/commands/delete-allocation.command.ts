@@ -19,11 +19,17 @@ export class DeleteAllocationHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: DeleteAllocationCommand): Promise<CommandResult<void>> {
-    await this.budgetService.deleteAllocation(
-      command.allocationId,
-      command.workspaceId,
-      command.userId
-    );
-    return CommandResult.success(undefined);
+    try {
+      
+          await this.budgetService.deleteAllocation(
+            command.allocationId,
+            command.workspaceId,
+            command.userId
+          );
+          return CommandResult.success(undefined);
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

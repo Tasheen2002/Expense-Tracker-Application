@@ -19,14 +19,20 @@ export interface CreateSpendingLimitCommand extends ICommand {
 
 export class CreateSpendingLimitHandler implements ICommandHandler<
   CreateSpendingLimitCommand,
-  CommandResult<SpendingLimit>
+  CommandResult<{ limitId: string }>
 > {
   constructor(private readonly limitService: SpendingLimitService) {}
 
   async handle(
     command: CreateSpendingLimitCommand
-  ): Promise<CommandResult<SpendingLimit>> {
-    const limit = await this.limitService.createSpendingLimit(command);
-    return CommandResult.success(limit);
+  ): Promise<CommandResult<{ limitId: string }>> {
+    try {
+      
+          const limit = await this.limitService.createSpendingLimit(command);
+          return CommandResult.success({ limitId: limit.getId().getValue() });
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

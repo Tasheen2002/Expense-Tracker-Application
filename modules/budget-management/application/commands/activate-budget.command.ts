@@ -1,5 +1,4 @@
 import { BudgetService } from '../services/budget.service';
-import { Budget } from '../../domain/entities/budget.entity';
 
 import {
   ICommand,
@@ -15,16 +14,22 @@ export interface ActivateBudgetCommand extends ICommand {
 
 export class ActivateBudgetHandler implements ICommandHandler<
   ActivateBudgetCommand,
-  CommandResult<Budget>
+  CommandResult<void>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(command: ActivateBudgetCommand): Promise<CommandResult<Budget>> {
-    const budget = await this.budgetService.activateBudget(
-      command.budgetId,
-      command.workspaceId,
-      command.userId
-    );
-    return CommandResult.success(budget);
+  async handle(command: ActivateBudgetCommand): Promise<CommandResult<void>> {
+    try {
+      
+          await this.budgetService.activateBudget(
+            command.budgetId,
+            command.workspaceId,
+            command.userId
+          );
+          return CommandResult.success();
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

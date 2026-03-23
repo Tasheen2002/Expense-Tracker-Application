@@ -18,21 +18,29 @@ export interface AddAllocationCommand extends ICommand {
 
 export class AddAllocationHandler implements ICommandHandler<
   AddAllocationCommand,
-  CommandResult<BudgetAllocation>
+  CommandResult<{ allocationId: string }>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(
     command: AddAllocationCommand
-  ): Promise<CommandResult<BudgetAllocation>> {
-    const allocation = await this.budgetService.addAllocation({
-      budgetId: command.budgetId,
-      workspaceId: command.workspaceId,
-      userId: command.userId,
-      categoryId: command.categoryId,
-      allocatedAmount: command.allocatedAmount,
-      description: command.description,
-    });
-    return CommandResult.success(allocation);
+  ): Promise<CommandResult<{ allocationId: string }>> {
+    try {
+      
+          const allocation = await this.budgetService.addAllocation({
+            budgetId: command.budgetId,
+            workspaceId: command.workspaceId,
+            userId: command.userId,
+            categoryId: command.categoryId,
+            allocatedAmount: command.allocatedAmount,
+            description: command.description,
+          });
+          return CommandResult.success({
+            allocationId: allocation.getId().getValue(),
+          });
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

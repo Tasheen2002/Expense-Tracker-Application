@@ -1,5 +1,4 @@
 import { BudgetService } from '../services/budget.service';
-import { Budget } from '../../domain/entities/budget.entity';
 
 import {
   ICommand,
@@ -18,21 +17,27 @@ export interface UpdateBudgetCommand extends ICommand {
 
 export class UpdateBudgetHandler implements ICommandHandler<
   UpdateBudgetCommand,
-  CommandResult<Budget>
+  CommandResult<void>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(command: UpdateBudgetCommand): Promise<CommandResult<Budget>> {
-    const budget = await this.budgetService.updateBudget(
-      command.budgetId,
-      command.workspaceId,
-      command.userId,
-      {
-        name: command.name,
-        description: command.description,
-        totalAmount: command.totalAmount,
-      }
-    );
-    return CommandResult.success(budget);
+  async handle(command: UpdateBudgetCommand): Promise<CommandResult<void>> {
+    try {
+      
+          await this.budgetService.updateBudget(
+            command.budgetId,
+            command.workspaceId,
+            command.userId,
+            {
+              name: command.name,
+              description: command.description,
+              totalAmount: command.totalAmount,
+            }
+          );
+          return CommandResult.success();
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

@@ -24,12 +24,20 @@ export interface CreateBudgetCommand extends ICommand {
 
 export class CreateBudgetHandler implements ICommandHandler<
   CreateBudgetCommand,
-  CommandResult<Budget>
+  CommandResult<{ budgetId: string }>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(command: CreateBudgetCommand): Promise<CommandResult<Budget>> {
-    const budget = await this.budgetService.createBudget(command);
-    return CommandResult.success(budget);
+  async handle(
+    command: CreateBudgetCommand
+  ): Promise<CommandResult<{ budgetId: string }>> {
+    try {
+      
+          const budget = await this.budgetService.createBudget(command);
+          return CommandResult.success({ budgetId: budget.getId().getValue() });
+        
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }
