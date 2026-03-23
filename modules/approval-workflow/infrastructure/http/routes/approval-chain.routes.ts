@@ -7,8 +7,7 @@ export async function approvalChainRoutes(
   controller: ApprovalChainController,
 ) {
   // Create approval chain
-  fastify.post(
-    "/:workspaceId/approval-chains",
+  fastify.post("/workspaces/:workspaceId/approval-chains",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -46,8 +45,7 @@ export async function approvalChainRoutes(
   );
 
   // List approval chains
-  fastify.get(
-    "/:workspaceId/approval-chains",
+  fastify.get("/workspaces/:workspaceId/approval-chains",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -73,8 +71,7 @@ export async function approvalChainRoutes(
   );
 
   // Get approval chain
-  fastify.get(
-    "/:workspaceId/approval-chains/:chainId",
+  fastify.get("/workspaces/:workspaceId/approval-chains/:chainId",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -93,8 +90,7 @@ export async function approvalChainRoutes(
   );
 
   // Update approval chain
-  fastify.patch(
-    "/:workspaceId/approval-chains/:chainId",
+  fastify.patch("/workspaces/:workspaceId/approval-chains/:chainId",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -127,8 +123,7 @@ export async function approvalChainRoutes(
   );
 
   // Activate approval chain
-  fastify.post(
-    "/:workspaceId/approval-chains/:chainId/activate",
+  fastify.post("/workspaces/:workspaceId/approval-chains/:chainId/activate",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -147,8 +142,7 @@ export async function approvalChainRoutes(
   );
 
   // Deactivate approval chain
-  fastify.post(
-    "/:workspaceId/approval-chains/:chainId/deactivate",
+  fastify.post("/workspaces/:workspaceId/approval-chains/:chainId/deactivate",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -167,8 +161,7 @@ export async function approvalChainRoutes(
   );
 
   // Delete approval chain
-  fastify.delete(
-    "/:workspaceId/approval-chains/:chainId",
+  fastify.delete("/workspaces/:workspaceId/approval-chains/:chainId",
     {
       schema: {
         tags: ["Approval Workflow"],

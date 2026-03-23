@@ -7,8 +7,7 @@ export async function workflowRoutes(
   controller: WorkflowController,
 ) {
   // Initiate workflow
-  fastify.post(
-    "/:workspaceId/workflows",
+  fastify.post("/workspaces/:workspaceId/workflows",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -36,8 +35,7 @@ export async function workflowRoutes(
   );
 
   // Get workflow
-  fastify.get(
-    "/:workspaceId/workflows/:expenseId",
+  fastify.get("/workspaces/:workspaceId/workflows/:expenseId",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -56,8 +54,7 @@ export async function workflowRoutes(
   );
 
   // Approve step
-  fastify.post(
-    "/:workspaceId/workflows/:expenseId/approve",
+  fastify.post("/workspaces/:workspaceId/workflows/:expenseId/approve",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -82,8 +79,7 @@ export async function workflowRoutes(
   );
 
   // Reject step
-  fastify.post(
-    "/:workspaceId/workflows/:expenseId/reject",
+  fastify.post("/workspaces/:workspaceId/workflows/:expenseId/reject",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -109,8 +105,7 @@ export async function workflowRoutes(
   );
 
   // Delegate step
-  fastify.post(
-    "/:workspaceId/workflows/:expenseId/delegate",
+  fastify.post("/workspaces/:workspaceId/workflows/:expenseId/delegate",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -136,8 +131,7 @@ export async function workflowRoutes(
   );
 
   // Cancel workflow
-  fastify.post(
-    "/:workspaceId/workflows/:expenseId/cancel",
+  fastify.post("/workspaces/:workspaceId/workflows/:expenseId/cancel",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -156,8 +150,7 @@ export async function workflowRoutes(
   );
 
   // List pending approvals
-  fastify.get(
-    "/:workspaceId/workflows/pending-approvals",
+  fastify.get("/workspaces/:workspaceId/workflows/pending-approvals",
     {
       schema: {
         tags: ["Approval Workflow"],
@@ -182,8 +175,7 @@ export async function workflowRoutes(
   );
 
   // List user workflows
-  fastify.get(
-    "/:workspaceId/workflows/user-workflows",
+  fastify.get("/workspaces/:workspaceId/workflows/user-workflows",
     {
       schema: {
         tags: ["Approval Workflow"],
