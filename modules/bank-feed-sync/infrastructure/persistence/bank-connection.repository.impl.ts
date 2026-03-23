@@ -1,18 +1,24 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { BankConnection } from "../../domain/entities/bank-connection.entity";
-import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
-import { IBankConnectionRepository } from "../../domain/repositories/bank-connection.repository";
-import { ConnectionStatus } from "../../domain/enums/connection-status.enum";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { BankConnection } from '../../domain/entities/bank-connection.entity';
+import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
+import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaBankConnectionRepository implements IBankConnectionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaBankConnectionRepository
+  extends PrismaRepository<BankConnection>
+  implements IBankConnectionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(connection: BankConnection): Promise<void> {
     const data = {
@@ -40,11 +46,12 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
       create: data,
       update: data,
     });
+    await this.dispatchEvents(connection);
   }
 
   async findById(
     id: BankConnectionId,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<BankConnection | null> {
     const record = await this.prisma.bankConnection.findFirst({
       where: {
@@ -59,7 +66,7 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
   async findByInstitutionAndAccount(
     workspaceId: WorkspaceId,
     institutionId: string,
-    accountId: string,
+    accountId: string
   ): Promise<BankConnection | null> {
     const record = await this.prisma.bankConnection.findFirst({
       where: {
@@ -77,7 +84,7 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
 
   async findByWorkspace(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankConnection>> {
     const where: Prisma.BankConnectionWhereInput = {
       workspaceId: workspaceId.getValue(),
@@ -85,16 +92,16 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankConnection,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByUser(
     workspaceId: WorkspaceId,
     userId: UserId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankConnection>> {
     const where: Prisma.BankConnectionWhereInput = {
       workspaceId: workspaceId.getValue(),
@@ -103,9 +110,9 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankConnection,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
@@ -119,7 +126,7 @@ export class PrismaBankConnectionRepository implements IBankConnectionRepository
   }
 
   private toDomain(
-    record: Prisma.BankConnectionGetPayload<object>,
+    record: Prisma.BankConnectionGetPayload<object>
   ): BankConnection {
     return BankConnection.fromPersistence({
       id: BankConnectionId.fromString(record.id),
