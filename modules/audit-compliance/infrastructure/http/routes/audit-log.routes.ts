@@ -28,7 +28,7 @@ export async function auditLogRoutes(
 
   // GET /summary — must be before /:auditLogId to avoid route conflict
   fastify.get(
-    '/summary',
+    '/workspaces/:workspaceId/audit-logs/summary',
     {
       schema: {
         tags: ['Audit'],
@@ -77,7 +77,7 @@ export async function auditLogRoutes(
 
   // GET /entity-history — must be before /:auditLogId
   fastify.get(
-    '/entity-history',
+    '/workspaces/:workspaceId/audit-logs/entity-history',
     {
       schema: {
         tags: ['Audit'],
@@ -118,7 +118,7 @@ export async function auditLogRoutes(
 
   // GET /
   fastify.get(
-    '/',
+    '/workspaces/:workspaceId/audit-logs',
     {
       schema: {
         tags: ['Audit'],
@@ -156,7 +156,7 @@ export async function auditLogRoutes(
 
   // GET /:auditLogId
   fastify.get(
-    '/:auditLogId',
+    '/workspaces/:workspaceId/audit-logs/:auditLogId',
     {
       schema: {
         tags: ['Audit'],
@@ -196,7 +196,7 @@ export async function auditLogRoutes(
 
   // POST / — admin only
   fastify.post(
-    '/',
+    '/workspaces/:workspaceId/audit-logs',
     {
       preHandler: RolePermissions.ADMIN_LEVEL,
       schema: {
@@ -227,7 +227,7 @@ export async function auditLogRoutes(
 
   // DELETE / — admin only — purge old audit logs
   fastify.delete(
-    '/',
+    '/workspaces/:workspaceId/audit-logs',
     {
       preHandler: RolePermissions.ADMIN_LEVEL,
       schema: {
