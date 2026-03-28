@@ -1692,12 +1692,12 @@ export class Container {
       new OverrideViolationHandler(violationRepository)
     );
     const exemptionController = new ExemptionController(
-      new RequestExemptionHandler(exemptionRepository, policyRepository),
-      new ApproveExemptionHandler(exemptionRepository),
-      new RejectExemptionHandler(exemptionRepository),
       new GetExemptionHandler(exemptionRepository),
       new ListExemptionsHandler(exemptionRepository),
-      new CheckActiveExemptionHandler(exemptionRepository)
+      new CheckActiveExemptionHandler(exemptionRepository),
+      new RequestExemptionHandler(exemptionRepository, policyRepository),
+      new ApproveExemptionHandler(exemptionRepository),
+      new RejectExemptionHandler(exemptionRepository)
     );
 
     this.services.set('policyController', policyController);
