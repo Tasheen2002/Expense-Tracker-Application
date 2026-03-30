@@ -14,6 +14,31 @@ import {
   workspaceParamsSchema,
 } from '../validation/approval.schema';
 
+const chainResponseSchema = {
+  type: 'object',
+  properties: {
+    chainId: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    name: { type: 'string' },
+    description: { type: 'string', nullable: true },
+    minAmount: { type: 'number', nullable: true },
+    maxAmount: { type: 'number', nullable: true },
+    categoryIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+      nullable: true,
+    },
+    requiresReceipt: { type: 'boolean' },
+    approverSequence: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+    },
+    isActive: { type: 'boolean' },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
   controller: ApprovalChainController
@@ -22,10 +47,8 @@ export async function approvalChainRoutes(
   fastify.post(
     '/workspaces/:workspaceId/approval-chains',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createChainSchema),
-      ],
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateBody(createChainSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Create a new approval chain',
@@ -57,12 +80,7 @@ export async function approvalChainRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  chainId: { type: 'string', format: 'uuid' },
-                },
-              },
+              data: chainResponseSchema,
             },
           },
         },
@@ -76,10 +94,8 @@ export async function approvalChainRoutes(
   fastify.get(
     '/workspaces/:workspaceId/approval-chains',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(listChainsSchema),
-      ],
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateQuery(listChainsSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all approval chains in workspace',
@@ -94,30 +110,7 @@ export async function approvalChainRoutes(
                 properties: {
                   items: {
                     type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        chainId: { type: 'string', format: 'uuid' },
-                        workspaceId: { type: 'string', format: 'uuid' },
-                        name: { type: 'string' },
-                        description: { type: 'string', nullable: true },
-                        minAmount: { type: 'number', nullable: true },
-                        maxAmount: { type: 'number', nullable: true },
-                        categoryIds: {
-                          type: 'array',
-                          items: { type: 'string', format: 'uuid' },
-                          nullable: true,
-                        },
-                        requiresReceipt: { type: 'boolean' },
-                        approverSequence: {
-                          type: 'array',
-                          items: { type: 'string', format: 'uuid' },
-                        },
-                        isActive: { type: 'boolean' },
-                        createdAt: { type: 'string', format: 'date-time' },
-                        updatedAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
+                    items: chainResponseSchema,
                   },
                   pagination: {
                     type: 'object',
@@ -153,30 +146,7 @@ export async function approvalChainRoutes(
             type: 'object',
             properties: {
               success: { type: 'boolean' },
-              data: {
-                type: 'object',
-                properties: {
-                  chainId: { type: 'string', format: 'uuid' },
-                  workspaceId: { type: 'string', format: 'uuid' },
-                  name: { type: 'string' },
-                  description: { type: 'string', nullable: true },
-                  minAmount: { type: 'number', nullable: true },
-                  maxAmount: { type: 'number', nullable: true },
-                  categoryIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    nullable: true,
-                  },
-                  requiresReceipt: { type: 'boolean' },
-                  approverSequence: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                  },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
-                },
-              },
+              data: chainResponseSchema,
             },
           },
         },
@@ -190,10 +160,8 @@ export async function approvalChainRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
-      preValidation: [
-        validateParams(chainParamsSchema),
-        validateBody(updateChainSchema),
-      ],
+      preValidation: [validateParams(chainParamsSchema)],
+      preHandler: [validateBody(updateChainSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Update approval chain',
@@ -216,7 +184,12 @@ export async function approvalChainRoutes(
               nullable: true,
             },
             requiresReceipt: { type: 'boolean', nullable: true },
-            isActive: { type: 'boolean', nullable: true },
+            approverSequence: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              minItems: 1,
+              nullable: true,
+            },
           },
         },
         response: {
@@ -225,30 +198,7 @@ export async function approvalChainRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  chainId: { type: 'string', format: 'uuid' },
-                  workspaceId: { type: 'string', format: 'uuid' },
-                  name: { type: 'string' },
-                  description: { type: 'string', nullable: true },
-                  minAmount: { type: 'number', nullable: true },
-                  maxAmount: { type: 'number', nullable: true },
-                  categoryIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    nullable: true,
-                  },
-                  requiresReceipt: { type: 'boolean' },
-                  approverSequence: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                  },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
-                },
-              },
+              data: chainResponseSchema,
             },
           },
         },
@@ -273,30 +223,7 @@ export async function approvalChainRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  chainId: { type: 'string', format: 'uuid' },
-                  workspaceId: { type: 'string', format: 'uuid' },
-                  name: { type: 'string' },
-                  description: { type: 'string', nullable: true },
-                  minAmount: { type: 'number', nullable: true },
-                  maxAmount: { type: 'number', nullable: true },
-                  categoryIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    nullable: true,
-                  },
-                  requiresReceipt: { type: 'boolean' },
-                  approverSequence: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                  },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
-                },
-              },
+              data: chainResponseSchema,
             },
           },
         },
@@ -321,30 +248,7 @@ export async function approvalChainRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  chainId: { type: 'string', format: 'uuid' },
-                  workspaceId: { type: 'string', format: 'uuid' },
-                  name: { type: 'string' },
-                  description: { type: 'string', nullable: true },
-                  minAmount: { type: 'number', nullable: true },
-                  maxAmount: { type: 'number', nullable: true },
-                  categoryIds: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                    nullable: true,
-                  },
-                  requiresReceipt: { type: 'boolean' },
-                  approverSequence: {
-                    type: 'array',
-                    items: { type: 'string', format: 'uuid' },
-                  },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
-                },
-              },
+              data: chainResponseSchema,
             },
           },
         },
@@ -364,12 +268,9 @@ export async function approvalChainRoutes(
         description: 'Delete approval chain',
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
