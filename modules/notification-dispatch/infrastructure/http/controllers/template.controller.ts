@@ -1,13 +1,24 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { TemplateService } from "../../../application/services/template.service";
-import { NotificationTemplate } from "../../../domain/entities/notification-template.entity";
-import { NotificationType } from "../../../domain/enums/notification-type.enum";
-import { NotificationChannel } from "../../../domain/enums/notification-channel.enum";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { NotificationType } from '../../../domain/enums/notification-type.enum';
+import { NotificationChannel } from '../../../domain/enums/notification-channel.enum';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { CreateTemplateHandler } from '../../../application/commands/create-template.command';
+import { UpdateTemplateHandler } from '../../../application/commands/update-template.command';
+import { ActivateTemplateHandler } from '../../../application/commands/activate-template.command';
+import { DeactivateTemplateHandler } from '../../../application/commands/deactivate-template.command';
+import { GetTemplateByIdHandler } from '../../../application/queries/get-template-by-id.query';
+import { GetActiveTemplateHandler } from '../../../application/queries/get-active-template.query';
 
 export class TemplateController {
-  constructor(private readonly templateService: TemplateService) {}
+  constructor(
+    private readonly createTemplateHandler: CreateTemplateHandler,
+    private readonly getTemplateByIdHandler: GetTemplateByIdHandler,
+    private readonly getActiveTemplateHandler: GetActiveTemplateHandler,
+    private readonly updateTemplateHandler: UpdateTemplateHandler,
+    private readonly activateTemplateHandler: ActivateTemplateHandler,
+    private readonly deactivateTemplateHandler: DeactivateTemplateHandler
+  ) {}
 
   async createTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
@@ -27,7 +38,7 @@ export class TemplateController {
         bodyTemplate: string;
       };
 
-      const template = await this.templateService.createTemplate({
+      const result = await this.createTemplateHandler.handle({
         workspaceId,
         name,
         type: type as NotificationType,
@@ -35,12 +46,12 @@ export class TemplateController {
         subjectTemplate,
         bodyTemplate,
       });
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Template created successfully",
-        this.serializeTemplate(template),
+        result,
+        'Template created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -50,13 +61,13 @@ export class TemplateController {
   async getTemplateById(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { templateId } = request.params as { templateId: string };
-      const template = await this.templateService.getTemplateById(templateId);
 
-      return ResponseHelper.success(
+      const result = await this.getTemplateByIdHandler.handle({ templateId });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Template retrieved successfully",
-        this.serializeTemplate(template),
+        result,
+        'Template retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -71,24 +82,24 @@ export class TemplateController {
         channel: string;
       };
 
-      const template = await this.templateService.getActiveTemplate(
+      const result = await this.getActiveTemplateHandler.handle({
         workspaceId,
-        type as NotificationType,
-        channel as NotificationChannel,
-      );
+        type: type as NotificationType,
+        channel: channel as NotificationChannel,
+      });
 
-      if (!template) {
+      if (!result.data) {
         return ResponseHelper.notFound(
           reply,
-          "No active template found for this type and channel",
+          'No active template found for this type and channel'
         );
       }
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Active template retrieved successfully",
-        this.serializeTemplate(template),
+        result,
+        'Active template retrieved successfully',
+        result.data.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -103,16 +114,15 @@ export class TemplateController {
         bodyTemplate?: string;
       };
 
-      const template = await this.templateService.updateTemplate(templateId, {
+      const result = await this.updateTemplateHandler.handle({
+        templateId,
         subjectTemplate,
         bodyTemplate,
       });
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Template updated successfully",
-        this.serializeTemplate(template),
+        result,
+        'Template updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -122,15 +132,12 @@ export class TemplateController {
   async activateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { templateId } = request.params as { templateId: string };
-      const template = await this.templateService.activateTemplate(templateId);
 
-      return ResponseHelper.success(
+      const result = await this.activateTemplateHandler.handle({ templateId });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Template activated successfully",
-        {
-          isActive: template.isActiveTemplate(),
-        },
+        result,
+        'Template activated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -140,34 +147,17 @@ export class TemplateController {
   async deactivateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { templateId } = request.params as { templateId: string };
-      const template =
-        await this.templateService.deactivateTemplate(templateId);
 
-      return ResponseHelper.success(
+      const result = await this.deactivateTemplateHandler.handle({
+        templateId,
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Template deactivated successfully",
-        {
-          isActive: template.isActiveTemplate(),
-        },
+        result,
+        'Template deactivated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializeTemplate(template: NotificationTemplate) {
-    return {
-      id: template.getId().getValue(),
-      workspaceId: template.getWorkspaceId()?.getValue() || null,
-      name: template.getName(),
-      type: template.getType(),
-      channel: template.getChannel(),
-      subjectTemplate: template.getSubjectTemplate(),
-      bodyTemplate: template.getBodyTemplate(),
-      isActive: template.isActiveTemplate(),
-      createdAt: template.getCreatedAt().toISOString(),
-      updatedAt: template.getUpdatedAt().toISOString(),
-    };
   }
 }

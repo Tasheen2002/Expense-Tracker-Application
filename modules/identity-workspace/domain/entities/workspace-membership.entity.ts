@@ -23,7 +23,7 @@ export class MemberJoinedWorkspaceEvent extends DomainEvent {
     return "MemberJoinedWorkspace";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       membershipId: this.membershipId,
       userId: this.userId,
@@ -48,7 +48,7 @@ export class MemberRoleChangedEvent extends DomainEvent {
     return "MemberRoleChanged";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       membershipId: this.membershipId,
       userId: this.userId,

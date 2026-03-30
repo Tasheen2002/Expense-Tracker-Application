@@ -1,28 +1,29 @@
-import { CategorySuggestionService } from '../services/category-suggestion.service'
-import { SuggestionId } from '../../domain/value-objects/suggestion-id'
+import { CategorySuggestionService } from '../services/category-suggestion.service';
+import { SuggestionId } from '../../domain/value-objects/suggestion-id';
+import { CategorySuggestion } from '../../domain/entities/category-suggestion.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetSuggestionByIdQuery {
-  suggestionId: string
+export interface GetSuggestionByIdQuery extends IQuery {
+  suggestionId: string;
 }
 
-export class GetSuggestionByIdHandler {
+export class GetSuggestionByIdHandler implements IQueryHandler<
+  GetSuggestionByIdQuery,
+  QueryResult<CategorySuggestion>
+> {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async execute(query: GetSuggestionByIdQuery) {
+  async handle(
+    query: GetSuggestionByIdQuery
+  ): Promise<QueryResult<CategorySuggestion>> {
     const suggestion = await this.suggestionService.getSuggestionById(
       SuggestionId.fromString(query.suggestionId)
-    )
+    );
 
-    return {
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
-    }
+    return QueryResult.success(suggestion);
   }
 }

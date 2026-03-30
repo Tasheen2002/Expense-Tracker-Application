@@ -1,21 +1,29 @@
-import { ExpenseSplitService } from "../services/expense-split.service";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseSplitService } from '../services/expense-split.service';
+import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
 
-export class GetSplitQuery {
-  constructor(
-    public readonly splitId: string,
-    public readonly workspaceId: string,
-    public readonly userId: string,
-  ) {}
+export interface GetSplitQuery extends IQuery {
+  readonly splitId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
-export class GetSplitHandler {
+export class GetSplitHandler implements IQueryHandler<
+  GetSplitQuery,
+  QueryResult<ExpenseSplit>
+> {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(query: GetSplitQuery) {
-    return await this.splitService.getSplitById(
+  async handle(query: GetSplitQuery): Promise<QueryResult<ExpenseSplit>> {
+    const split = await this.splitService.getSplitById(
       query.splitId,
       query.workspaceId,
-      query.userId,
+      query.userId
     );
+    return QueryResult.success(split);
   }
 }

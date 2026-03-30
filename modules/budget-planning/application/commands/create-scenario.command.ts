@@ -1,26 +1,34 @@
-import { ScenarioService } from "../services/scenario.service";
-import { Scenario } from "../../domain/entities/scenario.entity";
+import { ScenarioService } from '../services/scenario.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class CreateScenarioCommand {
-  constructor(
-    public readonly planId: string,
-    public readonly name: string,
-    public readonly createdBy: string,
-    public readonly description?: string,
-    public readonly assumptions?: Record<string, any>,
-  ) {}
+export interface CreateScenarioCommand extends ICommand {
+  planId: string;
+  name: string;
+  createdBy: string;
+  description?: string;
+  assumptions?: Record<string, any>;
 }
 
-export class CreateScenarioHandler {
+export class CreateScenarioHandler implements ICommandHandler<
+  CreateScenarioCommand,
+  CommandResult<{ scenarioId: string }>
+> {
   constructor(private readonly scenarioService: ScenarioService) {}
 
-  async handle(command: CreateScenarioCommand): Promise<Scenario> {
-    return await this.scenarioService.createScenario({
+  async handle(
+    command: CreateScenarioCommand
+  ): Promise<CommandResult<{ scenarioId: string }>> {
+    const scenario = await this.scenarioService.createScenario({
       planId: command.planId,
       name: command.name,
       description: command.description,
       assumptions: command.assumptions,
       createdBy: command.createdBy,
     });
+    return CommandResult.success({ scenarioId: scenario.getId().getValue() });
   }
 }

@@ -1,26 +1,28 @@
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
-import { ExpensePolicy } from "../../domain/entities/expense-policy.entity";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { PolicyNotFoundError } from "../../domain/errors/policy-controls.errors";
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
+import { ExpensePolicy } from '../../domain/entities/expense-policy.entity';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import { PolicyNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface ActivatePolicyInput {
   policyId: string;
+  workspaceId: string;
 }
 
 export class ActivatePolicyHandler {
   constructor(private readonly policyRepository: PolicyRepository) {}
 
-  async handle(input: ActivatePolicyInput): Promise<ExpensePolicy> {
+  async handle(input: ActivatePolicyInput): Promise<CommandResult<void>> {
     const policy = await this.policyRepository.findById(
-      PolicyId.fromString(input.policyId),
+      PolicyId.fromString(input.policyId)
     );
-    if (!policy) {
+    if (!policy || policy.getWorkspaceId().getValue() !== input.workspaceId) {
       throw new PolicyNotFoundError(input.policyId);
     }
 
     policy.activate();
     await this.policyRepository.save(policy);
 
-    return policy;
+    return CommandResult.success();
   }
 }

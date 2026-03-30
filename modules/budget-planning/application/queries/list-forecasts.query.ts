@@ -1,18 +1,30 @@
-import { ForecastService } from "../services/forecast.service";
-import { Forecast } from "../../domain/entities/forecast.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { ForecastService } from '../services/forecast.service';
+import { Forecast } from '../../domain/entities/forecast.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class ListForecastsQuery {
-  constructor(
-    public readonly planId: string,
-    public readonly userId: string,
-  ) {}
+export interface ListForecastsQuery extends IQuery {
+  planId: string;
+  userId: string;
 }
 
-export class ListForecastsHandler {
+export class ListForecastsHandler implements IQueryHandler<
+  ListForecastsQuery,
+  QueryResult<PaginatedResult<Forecast>>
+> {
   constructor(private readonly forecastService: ForecastService) {}
 
-  async handle(query: ListForecastsQuery): Promise<PaginatedResult<Forecast>> {
-    return await this.forecastService.listForecasts(query.planId, query.userId);
+  async handle(
+    query: ListForecastsQuery
+  ): Promise<QueryResult<PaginatedResult<Forecast>>> {
+    const result = await this.forecastService.listForecasts(
+      query.planId,
+      query.userId
+    );
+    return QueryResult.success(result);
   }
 }

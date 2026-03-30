@@ -1,8 +1,8 @@
-import { ScenarioId } from "../value-objects/scenario-id";
-import { PlanId } from "../value-objects/plan-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { ScenarioId } from '../value-objects/scenario-id';
+import { PlanId } from '../value-objects/plan-id';
+import { UserId } from '../../../identity-workspace';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -13,13 +13,13 @@ export class ScenarioCreatedEvent extends DomainEvent {
     public readonly scenarioId: string,
     public readonly planId: string,
     public readonly name: string,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(scenarioId, "Scenario");
+    super(scenarioId, 'Scenario');
   }
 
   get eventType(): string {
-    return "ScenarioCreated";
+    return 'ScenarioCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -35,13 +35,13 @@ export class ScenarioCreatedEvent extends DomainEvent {
 export class ScenarioUpdatedEvent extends DomainEvent {
   constructor(
     public readonly scenarioId: string,
-    public readonly changes: Record<string, unknown>,
+    public readonly changes: Record<string, unknown>
   ) {
-    super(scenarioId, "Scenario");
+    super(scenarioId, 'Scenario');
   }
 
   get eventType(): string {
-    return "ScenarioUpdated";
+    return 'ScenarioUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -65,7 +65,7 @@ export class Scenario extends AggregateRoot {
     private assumptions: Record<string, any> | null,
     private readonly createdBy: UserId,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -85,7 +85,7 @@ export class Scenario extends AggregateRoot {
       params.assumptions || null,
       params.createdBy,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     scenario.addDomainEvent(
@@ -93,8 +93,8 @@ export class Scenario extends AggregateRoot {
         scenario.id.getValue(),
         params.planId.getValue(),
         params.name,
-        params.createdBy.getValue(),
-      ),
+        params.createdBy.getValue()
+      )
     );
 
     return scenario;
@@ -118,7 +118,7 @@ export class Scenario extends AggregateRoot {
       params.assumptions,
       UserId.fromString(params.createdBy),
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -176,8 +176,32 @@ export class Scenario extends AggregateRoot {
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new ScenarioUpdatedEvent(this.id.getValue(), changes),
+        new ScenarioUpdatedEvent(this.id.getValue(), changes)
       );
     }
   }
+
+  toJSON(): ScenarioDTO {
+    return {
+      id: this.getId().getValue(),
+      planId: this.getPlanId().getValue(),
+      name: this.getName(),
+      description: this.getDescription(),
+      assumptions: this.getAssumptions(),
+      createdBy: this.getCreatedBy().getValue(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ScenarioDTO {
+  id: string;
+  planId: string;
+  name: string;
+  description: string | null;
+  assumptions: Record<string, unknown> | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

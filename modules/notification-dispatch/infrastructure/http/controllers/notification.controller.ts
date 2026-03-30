@@ -1,177 +1,129 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { NotificationService } from "../../../application/services/notification.service";
-import { Notification } from "../../../domain/entities/notification.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ListNotificationsHandler } from '../../../application/queries/list-notifications.query';
+import { GetUnreadCountHandler } from '../../../application/queries/get-unread-count.query';
+import { MarkAsReadHandler } from '../../../application/commands/mark-as-read.command';
+import { MarkAllAsReadHandler } from '../../../application/commands/mark-all-as-read.command';
+import { GetUnreadNotificationsHandler } from '../../../application/queries/get-unread-notifications.query';
 
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly listNotificationsHandler: ListNotificationsHandler,
+    private readonly getUnreadCountHandler: GetUnreadCountHandler,
+    private readonly getUnreadNotificationsHandler: GetUnreadNotificationsHandler,
+    private readonly markAsReadHandler: MarkAsReadHandler,
+    private readonly markAllAsReadHandler: MarkAllAsReadHandler
+  ) {}
 
-  async getNotifications(
-    request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
+  async getNotifications(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as { limit?: string; offset?: string };
+      const { limit, offset } = request.query as {
+        limit?: number;
+        offset?: number;
+      };
       const userId = request.user.userId;
 
-      const result = await this.notificationService.getNotifications(
-        userId,
+      const listResult = await this.listNotificationsHandler.handle({
+        recipientId: userId,
         workspaceId,
-        {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
-        },
-      );
-
-      const unreadCount = await this.notificationService.getUnreadCount(
-        userId,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
+      const countResult = await this.getUnreadCountHandler.handle({
+        recipientId: userId,
         workspaceId,
-      );
+      });
 
-      return ResponseHelper.success(
+      const paginatedData = listResult.data;
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Notifications retrieved successfully",
+        listResult,
+        'Notifications retrieved successfully',
         {
-          notifications: result.items.map((n) => this.serializeNotification(n)),
-          unreadCount,
+          notifications: paginatedData?.items.map((n) => n.toJSON()) ?? [],
+          unreadCount: countResult.data ?? 0,
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: paginatedData?.total ?? 0,
+            limit: paginatedData?.limit ?? 0,
+            offset: paginatedData?.offset ?? 0,
+            hasMore: paginatedData?.hasMore ?? false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async markAsRead(
+  async getUnreadNotifications(
     request: AuthenticatedRequest,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
+    try {
+      const { workspaceId } = request.params as { workspaceId: string };
+      const userId = request.user.userId;
+
+      const result = await this.getUnreadNotificationsHandler.handle({
+        recipientId: userId,
+        workspaceId,
+      });
+      const paginatedData = result.data;
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Unread notifications retrieved successfully',
+        {
+          notifications: paginatedData?.items.map((n) => n.toJSON()) ?? [],
+          pagination: {
+            total: paginatedData?.total ?? 0,
+            limit: paginatedData?.limit ?? 0,
+            offset: paginatedData?.offset ?? 0,
+            hasMore: paginatedData?.hasMore ?? false,
+          },
+        }
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async markAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { notificationId } = request.params as { notificationId: string };
       const userId = request.user.userId;
 
-      const notification = await this.notificationService.markAsRead(
+      const result = await this.markAsReadHandler.handle({
         notificationId,
         userId,
-      );
-
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Notification marked as read",
-        this.serializeNotification(notification),
+        result,
+        'Notification marked as read'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async markAllAsRead(
-    request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
+  async markAllAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const { workspaceId } = request.params as { workspaceId: string };
       const userId = request.user.userId;
 
-      await this.notificationService.markAllAsRead(userId, workspaceId);
-
-      return ResponseHelper.success(
-        reply,
-        200,
-        "All notifications marked as read",
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getPreferences(
-    request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const userId = request.user.userId;
-
-      const preferences = await this.notificationService.getPreferences(
-        userId,
+      const result = await this.markAllAsReadHandler.handle({
+        recipientId: userId,
         workspaceId,
-      );
-
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Preferences retrieved successfully",
-        preferences
-          ? {
-              emailEnabled: preferences.isEmailEnabled(),
-              inAppEnabled: preferences.isInAppEnabled(),
-              pushEnabled: preferences.isPushEnabled(),
-            }
-          : {
-              emailEnabled: true,
-              inAppEnabled: true,
-              pushEnabled: false,
-            },
+        result,
+        'All notifications marked as read'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  async updatePreferences(
-    request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { email, inApp, push } = request.body as { email?: boolean; inApp?: boolean; push?: boolean };
-      const userId = request.user.userId;
-
-      const preferences = await this.notificationService.updatePreferences(
-        userId,
-        workspaceId,
-        { email, inApp, push },
-      );
-
-      return ResponseHelper.success(
-        reply,
-        200,
-        "Preferences updated successfully",
-        {
-          emailEnabled: preferences.isEmailEnabled(),
-          inAppEnabled: preferences.isInAppEnabled(),
-          pushEnabled: preferences.isPushEnabled(),
-        },
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  private serializeNotification(notification: Notification) {
-    return {
-      id: notification.getId().getValue(),
-      type: notification.getType(),
-      channel: notification.getChannel(),
-      priority: notification.getPriority(),
-      title: notification.getTitle(),
-      content: notification.getContent(),
-      data: notification.getData(),
-      status: notification.getStatus(),
-      isRead: notification.isRead(),
-      readAt: notification.getReadAt()?.toISOString() || null,
-      sentAt: notification.getSentAt()?.toISOString() || null,
-      createdAt: notification.getCreatedAt().toISOString(),
-    };
   }
 }

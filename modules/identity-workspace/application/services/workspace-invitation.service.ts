@@ -1,35 +1,42 @@
-import { IWorkspaceInvitationRepository } from "../../domain/repositories/workspace-invitation.repository";
-import { IWorkspaceMembershipRepository } from "../../domain/repositories/workspace-membership.repository";
-import { IUserRepository } from "../../domain/repositories/user.repository";
+import { IWorkspaceInvitationRepository } from '../../domain/repositories/workspace-invitation.repository';
+import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
+import { IUserRepository } from '../../domain/repositories/user.repository';
 import {
   WorkspaceInvitation,
   CreateWorkspaceInvitationData,
-} from "../../domain/entities/workspace-invitation.entity";
+} from '../../domain/entities/workspace-invitation.entity';
 import {
   WorkspaceMembership,
   WorkspaceRole,
-} from "../../domain/entities/workspace-membership.entity";
-import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
-import { InvitationId } from "../../domain/value-objects/invitation-id.vo";
-import { UserId } from "../../domain/value-objects/user-id.vo";
-import { Email } from "../../domain/value-objects/email.vo";
+} from '../../domain/entities/workspace-membership.entity';
+import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
+import { InvitationId } from '../../domain/value-objects/invitation-id.vo';
+import { UserId } from '../../domain/value-objects/user-id.vo';
+import { Email } from '../../domain/value-objects/email.vo';
 import {
   MembershipAlreadyExistsError,
   InvitationNotFoundError,
   InvitationExpiredError,
   InvitationAlreadyAcceptedError,
   UserNotFoundError,
-} from "../../domain/errors/identity.errors";
+  DuplicateInvitationError,
+  InvitationEmailMismatchError,
+} from '../../domain/errors/identity.errors';
+
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export class WorkspaceInvitationService {
   constructor(
     private readonly invitationRepository: IWorkspaceInvitationRepository,
     private readonly membershipRepository: IWorkspaceMembershipRepository,
-    private readonly userRepository: IUserRepository,
+    private readonly userRepository: IUserRepository
   ) {}
 
   async createInvitation(
-    data: CreateWorkspaceInvitationData,
+    data: CreateWorkspaceInvitationData
   ): Promise<WorkspaceInvitation> {
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
     const email = Email.fromString(data.email);
@@ -39,12 +46,12 @@ export class WorkspaceInvitationService {
     if (existingUser) {
       const membership = await this.membershipRepository.findByUserAndWorkspace(
         existingUser.getId(),
-        workspaceId,
+        workspaceId
       );
       if (membership) {
         throw new MembershipAlreadyExistsError(
           existingUser.getId().getValue(),
-          data.workspaceId,
+          data.workspaceId
         );
       }
     }
@@ -53,10 +60,10 @@ export class WorkspaceInvitationService {
     const pendingInvitation =
       await this.invitationRepository.findPendingByWorkspaceAndEmail(
         workspaceId,
-        data.email,
+        data.email
       );
     if (pendingInvitation) {
-      throw new MembershipAlreadyExistsError(data.email, data.workspaceId);
+      throw new DuplicateInvitationError(data.email, data.workspaceId);
     }
 
     // Create invitation with default 7-day expiry
@@ -75,13 +82,13 @@ export class WorkspaceInvitationService {
   }
 
   async getInvitationByToken(
-    token: string,
+    token: string
   ): Promise<WorkspaceInvitation | null> {
     return await this.invitationRepository.findByToken(token);
   }
 
   async getWorkspaceInvitations(
-    workspaceId: string,
+    workspaceId: string
   ): Promise<WorkspaceInvitation[]> {
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
     const result =
@@ -91,9 +98,13 @@ export class WorkspaceInvitationService {
 
   async getPendingInvitations(
     workspaceId: string,
-  ): Promise<WorkspaceInvitation[]> {
-    const invitations = await this.getWorkspaceInvitations(workspaceId);
-    return invitations.filter((inv) => inv.isPending());
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<WorkspaceInvitation>> {
+    const workspaceIdVO = WorkspaceId.fromString(workspaceId);
+    return await this.invitationRepository.findPendingByWorkspaceId(
+      workspaceIdVO,
+      options
+    );
   }
 
   async getUserInvitations(email: string): Promise<WorkspaceInvitation[]> {
@@ -103,7 +114,7 @@ export class WorkspaceInvitationService {
 
   async acceptInvitation(
     token: string,
-    userId: string,
+    userId: string
   ): Promise<WorkspaceMembership> {
     const invitation = await this.invitationRepository.findByToken(token);
 
@@ -129,22 +140,19 @@ export class WorkspaceInvitationService {
       user.getEmail().getValue().toLowerCase() !==
       invitation.getEmail().toLowerCase()
     ) {
-      throw new MembershipAlreadyExistsError(
-        userId,
-        invitation.getWorkspaceId().getValue(),
-      );
+      throw new InvitationEmailMismatchError();
     }
 
     // Check if already a member
     const existingMembership =
       await this.membershipRepository.findByUserAndWorkspace(
         user.getId(),
-        invitation.getWorkspaceId(),
+        invitation.getWorkspaceId()
       );
     if (existingMembership) {
       throw new MembershipAlreadyExistsError(
         userId,
-        invitation.getWorkspaceId().getValue(),
+        invitation.getWorkspaceId().getValue()
       );
     }
 
@@ -161,7 +169,7 @@ export class WorkspaceInvitationService {
     // Execute atomic transaction
     await this.invitationRepository.acceptInvitationTransaction(
       invitation,
-      membership,
+      membership
     );
 
     return membership;

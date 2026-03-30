@@ -1,6 +1,5 @@
 import { FastifyInstance } from "fastify";
 import { BudgetPlanController } from "../controllers/budget-plan.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 
 export async function budgetPlanningRoutes(
   fastify: FastifyInstance,
@@ -36,7 +35,7 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.create(request as any, reply),
   );
 
   // List budget plans
@@ -66,7 +65,7 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.list(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.list(request as any, reply),
   );
 
   // Get single budget plan
@@ -86,7 +85,7 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.get(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.get(request as any, reply),
   );
 
   // Update budget plan
@@ -113,7 +112,7 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.update(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.update(request as any, reply),
   );
 
   // Delete budget plan
@@ -133,7 +132,7 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.delete(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.delete(request as any, reply),
   );
 
   // Activate budget plan
@@ -153,6 +152,6 @@ export async function budgetPlanningRoutes(
         },
       },
     },
-    (request, reply) => controller.activate(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.activate(request as any, reply),
   );
 }

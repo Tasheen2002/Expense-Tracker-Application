@@ -18,8 +18,13 @@ export async function registerCategorizationRulesRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add workspace authorization middleware to all routes
+      // First authenticate the request
       instance.addHook("onRequest", async (request, reply) => {
+        await fastify.authenticate(request);
+      });
+
+      // Add workspace authorization middleware to all routes
+      instance.addHook("preHandler", async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,

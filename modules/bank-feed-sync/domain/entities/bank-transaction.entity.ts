@@ -1,10 +1,10 @@
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { BankConnectionId } from "../value-objects/bank-connection-id";
-import { BankTransactionId } from "../value-objects/bank-transaction-id";
-import { SyncSessionId } from "../value-objects/sync-session-id";
-import { TransactionStatus } from "../enums/transaction-status.enum";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { WorkspaceId } from '../../../identity-workspace';
+import { BankConnectionId } from '../value-objects/bank-connection-id';
+import { BankTransactionId } from '../value-objects/bank-transaction-id';
+import { SyncSessionId } from '../value-objects/sync-session-id';
+import { TransactionStatus } from '../enums/transaction-status.enum';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -17,13 +17,13 @@ export class BankTransactionSyncedEvent extends DomainEvent {
     public readonly connectionId: string,
     public readonly externalId: string,
     public readonly amount: number,
-    public readonly currency: string,
+    public readonly currency: string
   ) {
-    super(transactionId, "BankTransaction");
+    super(transactionId, 'BankTransaction');
   }
 
   get eventType(): string {
-    return "BankTransactionSynced";
+    return 'BankTransactionSynced';
   }
 
   getPayload(): Record<string, unknown> {
@@ -42,13 +42,13 @@ export class BankTransactionMatchedEvent extends DomainEvent {
   constructor(
     public readonly transactionId: string,
     public readonly workspaceId: string,
-    public readonly expenseId: string,
+    public readonly expenseId: string
   ) {
-    super(transactionId, "BankTransaction");
+    super(transactionId, 'BankTransaction');
   }
 
   get eventType(): string {
-    return "BankTransactionMatched";
+    return 'BankTransactionMatched';
   }
 
   getPayload(): Record<string, unknown> {
@@ -64,13 +64,13 @@ export class BankTransactionImportedEvent extends DomainEvent {
   constructor(
     public readonly transactionId: string,
     public readonly workspaceId: string,
-    public readonly expenseId: string,
+    public readonly expenseId: string
   ) {
-    super(transactionId, "BankTransaction");
+    super(transactionId, 'BankTransaction');
   }
 
   get eventType(): string {
-    return "BankTransactionImported";
+    return 'BankTransactionImported';
   }
 
   getPayload(): Record<string, unknown> {
@@ -85,13 +85,13 @@ export class BankTransactionImportedEvent extends DomainEvent {
 export class BankTransactionIgnoredEvent extends DomainEvent {
   constructor(
     public readonly transactionId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(transactionId, "BankTransaction");
+    super(transactionId, 'BankTransaction');
   }
 
   get eventType(): string {
-    return "BankTransactionIgnored";
+    return 'BankTransactionIgnored';
   }
 
   getPayload(): Record<string, unknown> {
@@ -139,7 +139,7 @@ export class BankTransaction extends AggregateRoot {
     merchantName?: string,
     categoryName?: string,
     postedDate?: Date,
-    metadata?: Record<string, unknown>,
+    metadata?: Record<string, unknown>
   ): BankTransaction {
     const transaction = new BankTransaction({
       id: BankTransactionId.create(),
@@ -167,8 +167,8 @@ export class BankTransaction extends AggregateRoot {
         transaction.getConnectionId().getValue(),
         externalId,
         amount,
-        currency,
-      ),
+        currency
+      )
     );
 
     return transaction;
@@ -326,8 +326,8 @@ export class BankTransaction extends AggregateRoot {
       new BankTransactionMatchedEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        expenseId,
-      ),
+        expenseId
+      )
     );
   }
 
@@ -340,8 +340,8 @@ export class BankTransaction extends AggregateRoot {
       new BankTransactionImportedEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        expenseId,
-      ),
+        expenseId
+      )
     );
   }
 
@@ -352,8 +352,8 @@ export class BankTransaction extends AggregateRoot {
     this.addDomainEvent(
       new BankTransactionIgnoredEvent(
         this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-      ),
+        this.getWorkspaceId().getValue()
+      )
     );
   }
 
@@ -362,7 +362,49 @@ export class BankTransaction extends AggregateRoot {
     this.props.updatedAt = new Date();
   }
 
+  toJSON(): BankTransactionDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      connectionId: this.getConnectionId().getValue(),
+      sessionId: this.getSessionId().getValue(),
+      externalId: this.externalId,
+      amount: this.amount,
+      currency: this.currency,
+      description: this.description,
+      merchantName: this.merchantName,
+      categoryName: this.categoryName,
+      transactionDate: this.transactionDate,
+      postedDate: this.postedDate,
+      status: this.status,
+      expenseId: this.expenseId,
+      metadata: this.metadata,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
+
   toPersistence(): BankTransactionProps {
     return { ...this.props };
   }
+}
+
+export interface BankTransactionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  sessionId: string;
+  externalId: string;
+  amount: number;
+  currency: string;
+  description: string;
+  merchantName?: string;
+  categoryName?: string;
+  transactionDate: Date;
+  postedDate?: Date;
+  status: TransactionStatus;
+  expenseId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
 }

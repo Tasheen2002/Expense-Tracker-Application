@@ -1,35 +1,30 @@
-import { CategoryRuleService } from "../services/category-rule.service";
-import { RuleId } from "../../domain/value-objects/rule-id";
+import { CategoryRuleService } from '../services/category-rule.service';
+import { RuleId } from '../../domain/value-objects/rule-id';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ActivateCategoryRuleCommand {
+export interface ActivateCategoryRuleCommand extends ICommand {
   ruleId: string;
   userId: string;
 }
 
-export class ActivateCategoryRuleHandler {
+export class ActivateCategoryRuleHandler implements ICommandHandler<
+  ActivateCategoryRuleCommand,
+  CommandResult<void>
+> {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
-  async execute(command: ActivateCategoryRuleCommand) {
-    const rule = await this.ruleService.activateRule(
+  async handle(
+    command: ActivateCategoryRuleCommand
+  ): Promise<CommandResult<void>> {
+    await this.ruleService.activateRule(
       RuleId.fromString(command.ruleId),
-      command.userId,
+      command.userId
     );
 
-    return {
-      id: rule.getId().getValue(),
-      workspaceId: rule.getWorkspaceId().getValue(),
-      name: rule.getName(),
-      description: rule.getDescription(),
-      priority: rule.getPriority(),
-      isActive: rule.getIsActive(),
-      condition: {
-        type: rule.getCondition().getType(),
-        value: rule.getCondition().getValue(),
-      },
-      targetCategoryId: rule.getTargetCategoryId().getValue(),
-      createdBy: rule.getCreatedBy().getValue(),
-      createdAt: rule.getCreatedAt(),
-      updatedAt: rule.getUpdatedAt(),
-    };
+    return CommandResult.success();
   }
 }

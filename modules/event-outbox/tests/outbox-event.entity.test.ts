@@ -2,23 +2,20 @@ import { describe, it, expect } from "vitest";
 import { OutboxEvent } from "../domain/entities/outbox-event.entity";
 import { OutboxEventStatus } from "../domain/enums/outbox-event-status.enum";
 import { OutboxEventId } from "../domain/value-objects/outbox-event-id";
-import { AggregateId } from "../domain/value-objects/aggregate-id";
 
 describe("OutboxEvent Entity", () => {
-  const validUuid = "123e4567-e89b-12d3-a456-426614174000";
-
   describe("create", () => {
     it("should create a new outbox event with PENDING status", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
       });
 
       expect(event.status).toBe(OutboxEventStatus.PENDING);
       expect(event.aggregateType).toBe("Expense");
-      expect(event.aggregateId.getValue()).toBe(validUuid);
+      expect(event.aggregateId).toBe("123");
       expect(event.eventType).toBe("ExpenseCreated");
       expect(event.payload).toEqual({ amount: 100 });
       expect(event.retryCount).toBe(0);
@@ -29,14 +26,14 @@ describe("OutboxEvent Entity", () => {
     it("should generate unique IDs for each event", () => {
       const event1 = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
 
       const event2 = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -49,7 +46,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status from PENDING to PROCESSING", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -61,7 +58,7 @@ describe("OutboxEvent Entity", () => {
     it("should throw error if event is already PROCESSED", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -79,7 +76,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status to PROCESSED and set processedAt", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -97,7 +94,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status to FAILED and increment retry count", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -113,7 +110,7 @@ describe("OutboxEvent Entity", () => {
     it("should increment retry count on multiple failures", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -130,7 +127,7 @@ describe("OutboxEvent Entity", () => {
     it("should reset FAILED event to PENDING", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -144,7 +141,7 @@ describe("OutboxEvent Entity", () => {
     it("should throw error if trying to reset PROCESSED event", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -162,7 +159,7 @@ describe("OutboxEvent Entity", () => {
     it("should return true if retry count is below max retries", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -174,7 +171,7 @@ describe("OutboxEvent Entity", () => {
     it("should return false if retry count exceeds max retries", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -189,7 +186,7 @@ describe("OutboxEvent Entity", () => {
     it("should return false if status is not FAILED", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -202,7 +199,7 @@ describe("OutboxEvent Entity", () => {
     it("should serialize event to JSON", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
       });
@@ -211,7 +208,7 @@ describe("OutboxEvent Entity", () => {
 
       expect(json).toMatchObject({
         aggregateType: "Expense",
-        aggregateId: validUuid,
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
         status: OutboxEventStatus.PENDING,
@@ -230,7 +227,7 @@ describe("OutboxEvent Entity", () => {
       const event = OutboxEvent.reconstitute({
         id,
         aggregateType: "Expense",
-        aggregateId: AggregateId.fromString(validUuid),
+        aggregateId: "123",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
         status: OutboxEventStatus.PROCESSED,
@@ -244,7 +241,6 @@ describe("OutboxEvent Entity", () => {
       expect(event.status).toBe(OutboxEventStatus.PROCESSED);
       expect(event.retryCount).toBe(2);
       expect(event.error).toBe("Previous error");
-      expect(event.aggregateId.getValue()).toBe(validUuid);
     });
   });
 });

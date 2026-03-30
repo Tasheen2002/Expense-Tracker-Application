@@ -1,24 +1,38 @@
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { CategoryService } from "../services/category.service";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { CategoryService } from '../services/category.service';
+import { Category } from '../../domain/entities/category.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
-export class ListCategoriesQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly activeOnly: boolean = false,
-  ) {}
+export interface ListCategoriesQuery extends IQuery {
+  readonly workspaceId: string;
+  readonly activeOnly?: boolean;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
-export class ListCategoriesHandler {
+export class ListCategoriesHandler implements IQueryHandler<
+  ListCategoriesQuery,
+  QueryResult<PaginatedResult<Category>>
+> {
   constructor(private readonly categoryService: CategoryService) {}
 
-  async handle(query: ListCategoriesQuery): Promise<PaginatedResult<any>> {
-    if (query.activeOnly) {
-      return await this.categoryService.getActiveCategoriesByWorkspace(
-        query.workspaceId,
-      );
-    }
-    return await this.categoryService.getCategoriesByWorkspace(
-      query.workspaceId,
-    );
+  async handle(
+    query: ListCategoriesQuery
+  ): Promise<QueryResult<PaginatedResult<Category>>> {
+    const pagination = { limit: query.limit, offset: query.offset };
+    const result = query.activeOnly
+      ? await this.categoryService.getActiveCategoriesByWorkspace(
+          query.workspaceId,
+          pagination
+        )
+      : await this.categoryService.getCategoriesByWorkspace(
+          query.workspaceId,
+          pagination
+        );
+    return QueryResult.success(result);
   }
 }

@@ -1,29 +1,47 @@
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { ApprovalChainService } from '../services/approval-chain.service';
+import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ListApprovalChainsInput {
-  workspaceId: string
-  activeOnly?: boolean
-  limit?: number
-  offset?: number
+export interface ListApprovalChainsInput extends IQuery {
+  workspaceId: string;
+  activeOnly?: boolean;
+  limit?: number;
+  offset?: number;
 }
 
-export class ListApprovalChainsHandler {
-  constructor(
-    private readonly approvalChainRepository: ApprovalChainRepository
-  ) {}
+export class ListApprovalChainsHandler implements IQueryHandler<
+  ListApprovalChainsInput,
+  QueryResult<PaginatedResult<ApprovalChain>>
+> {
+  constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: ListApprovalChainsInput): Promise<PaginatedResult<ApprovalChain>> {
-    const options = {
-      limit: input.limit,
-      offset: input.offset,
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    if (input.activeOnly) {
-      return await this.approvalChainRepository.findActiveByWorkspace(input.workspaceId, options)
+  async handle(
+    input: ListApprovalChainsInput
+  ): Promise<QueryResult<PaginatedResult<ApprovalChain>>> {
+    try {
+      const result = await this.approvalChainService.listChains(
+        input.workspaceId,
+        input.activeOnly,
+        { limit: input.limit, offset: input.offset }
+      );
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : 'Query failed',
+        this.getStatusCode(error)
+      );
     }
-
-    return await this.approvalChainRepository.findByWorkspace(input.workspaceId, options)
   }
 }

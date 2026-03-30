@@ -1,10 +1,8 @@
 import { PolicyExemption } from "../entities/policy-exemption.entity";
 import { ExemptionId } from "../value-objects/exemption-id";
 import { ExemptionStatus } from "../enums/exemption-status.enum";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export interface ExemptionFilters {
   status?: ExemptionStatus;
@@ -32,15 +30,7 @@ export interface ExemptionRepository {
     userId: string,
     policyId: string,
   ): Promise<PolicyExemption | null>;
-  findActiveForUserPolicies(
-    workspaceId: string,
-    userId: string,
-    policyIds: string[],
-  ): Promise<Map<string, PolicyExemption>>;
-  findPendingByWorkspace(
-    workspaceId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<PolicyExemption>>;
+  findPendingByWorkspace(workspaceId: string): Promise<PolicyExemption[]>;
   countByWorkspace(
     workspaceId: string,
     filters?: ExemptionFilters,

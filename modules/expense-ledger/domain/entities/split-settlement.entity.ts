@@ -1,9 +1,9 @@
-import { SettlementId } from "../value-objects/settlement-id";
-import { SplitId } from "../value-objects/split-id";
-import { Money } from "../value-objects/money";
-import { SettlementStatus } from "../enums/settlement-status";
-import { InvalidSettlementAmountError } from "../errors/split-expense.errors";
-import { Decimal } from "@prisma/client/runtime/library";
+import { SettlementId } from '../value-objects/settlement-id';
+import { SplitId } from '../value-objects/split-id';
+import { Money } from '../value-objects/money';
+import { SettlementStatus } from '../enums/settlement-status';
+import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export interface SplitSettlementProps {
   id: SettlementId;
@@ -86,31 +86,29 @@ export class SplitSettlement {
 
   getRemainingAmount(): Money {
     const remaining = new Decimal(this.props.totalOwedAmount.getAmount()).minus(
-      this.props.paidAmount.getAmount(),
+      this.props.paidAmount.getAmount()
     );
 
     return Money.create(
       remaining.toNumber(),
-      this.props.totalOwedAmount.getCurrency(),
+      this.props.totalOwedAmount.getCurrency()
     );
   }
 
   recordPayment(amount: Money): void {
     const newPaidAmount = new Decimal(this.props.paidAmount.getAmount()).plus(
-      amount.getAmount(),
+      amount.getAmount()
     );
 
-    if (
-      newPaidAmount.greaterThan(this.props.totalOwedAmount.getAmount())
-    ) {
+    if (newPaidAmount.greaterThan(this.props.totalOwedAmount.getAmount())) {
       throw new InvalidSettlementAmountError(
-        `Payment amount ${newPaidAmount} exceeds owed amount ${this.props.totalOwedAmount.getAmount()}`,
+        `Payment amount ${newPaidAmount} exceeds owed amount ${this.props.totalOwedAmount.getAmount()}`
       );
     }
 
     this.props.paidAmount = Money.create(
       newPaidAmount.toNumber(),
-      this.props.totalOwedAmount.getCurrency(),
+      this.props.totalOwedAmount.getCurrency()
     );
 
     if (newPaidAmount.equals(this.props.totalOwedAmount.getAmount())) {
@@ -126,4 +124,36 @@ export class SplitSettlement {
   isSettled(): boolean {
     return this.props.status === SettlementStatus.SETTLED;
   }
+
+  toJSON(): SplitSettlementDTO {
+    return {
+      id: this.getId().getValue(),
+      splitId: this.getSplitId().getValue(),
+      fromUserId: this.getFromUserId(),
+      toUserId: this.getToUserId(),
+      totalOwedAmount: this.getTotalOwedAmount().getAmount().toString(),
+      paidAmount: this.getPaidAmount().getAmount().toString(),
+      remainingAmount: this.getRemainingAmount().getAmount().toString(),
+      currency: this.getTotalOwedAmount().getCurrency(),
+      status: this.getStatus(),
+      settledAt: this.getSettledAt()?.toISOString(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface SplitSettlementDTO {
+  id: string;
+  splitId: string;
+  fromUserId: string;
+  toUserId: string;
+  totalOwedAmount: string;
+  paidAmount: string;
+  remainingAmount: string;
+  currency: string;
+  status: string;
+  settledAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }

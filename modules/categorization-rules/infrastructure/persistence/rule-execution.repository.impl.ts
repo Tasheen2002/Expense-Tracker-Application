@@ -1,23 +1,30 @@
 import {
   PrismaClient,
   RuleExecution as PrismaRuleExecution,
-} from "@prisma/client";
-import { RuleExecutionRepository } from "../../domain/repositories/rule-execution.repository";
-import { RuleExecution } from "../../domain/entities/rule-execution.entity";
-import { RuleExecutionId } from "../../domain/value-objects/rule-execution-id";
-import { RuleId } from "../../domain/value-objects/rule-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
+} from '@prisma/client';
+import { RuleExecutionRepository } from '../../domain/repositories/rule-execution.repository';
+import { RuleExecution } from '../../domain/entities/rule-execution.entity';
+import { RuleExecutionId } from '../../domain/value-objects/rule-execution-id';
+import { RuleId } from '../../domain/value-objects/rule-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { CategorySuggestion } from '../../domain/entities/category-suggestion.entity';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaRuleExecutionRepository
+  extends PrismaRepository<RuleExecution>
+  implements RuleExecutionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(execution: RuleExecution): Promise<void> {
     const data = {
@@ -34,11 +41,13 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
       create: data,
       update: data,
     });
+
+    await this.dispatchEvents(execution);
   }
 
   async saveWithSuggestion(
     execution: RuleExecution,
-    suggestion: CategorySuggestion,
+    suggestion: CategorySuggestion
   ): Promise<void> {
     const executionData = {
       id: execution.getId().getValue(),
@@ -89,23 +98,23 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
 
   async findByRuleId(
     ruleId: RuleId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<RuleExecution>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.ruleExecution,
       {
         where: { ruleId: ruleId.getValue() },
-        orderBy: { executedAt: "desc" },
+        orderBy: { executedAt: 'desc' },
       },
       (execution) => this.toDomain(execution),
-      options,
+      options
     );
   }
 
   async findByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<RuleExecution>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.ruleExecution,
@@ -114,25 +123,25 @@ export class PrismaRuleExecutionRepository implements RuleExecutionRepository {
           expenseId: expenseId.getValue(),
           workspaceId: workspaceId.getValue(),
         },
-        orderBy: { executedAt: "desc" },
+        orderBy: { executedAt: 'desc' },
       },
       (raw) => this.toDomain(raw),
-      options,
+      options
     );
   }
 
   async findByWorkspaceId(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<RuleExecution>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.ruleExecution,
       {
         where: { workspaceId: workspaceId.getValue() },
-        orderBy: { executedAt: "desc" },
+        orderBy: { executedAt: 'desc' },
       },
       (execution) => this.toDomain(execution),
-      options,
+      options
     );
   }
 

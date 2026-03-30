@@ -1,9 +1,8 @@
-import { ProjectId } from "../value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { Decimal } from "@prisma/client/runtime/library";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { ProjectId } from '../value-objects/project-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { Decimal } from '@prisma/client/runtime/library';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -15,13 +14,13 @@ export class ProjectCreatedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly name: string,
     public readonly code: string,
-    public readonly startDate: Date,
+    public readonly startDate: Date
   ) {
-    super(projectId, "Project");
+    super(projectId, 'Project');
   }
 
   get eventType(): string {
-    return "ProjectCreated";
+    return 'ProjectCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -38,13 +37,13 @@ export class ProjectCreatedEvent extends DomainEvent {
 export class ProjectUpdatedEvent extends DomainEvent {
   constructor(
     public readonly projectId: string,
-    public readonly changes: Record<string, unknown>,
+    public readonly changes: Record<string, unknown>
   ) {
-    super(projectId, "Project");
+    super(projectId, 'Project');
   }
 
   get eventType(): string {
-    return "ProjectUpdated";
+    return 'ProjectUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -57,11 +56,11 @@ export class ProjectUpdatedEvent extends DomainEvent {
 
 export class ProjectActivatedEvent extends DomainEvent {
   constructor(public readonly projectId: string) {
-    super(projectId, "Project");
+    super(projectId, 'Project');
   }
 
   get eventType(): string {
-    return "ProjectActivated";
+    return 'ProjectActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -71,11 +70,11 @@ export class ProjectActivatedEvent extends DomainEvent {
 
 export class ProjectDeactivatedEvent extends DomainEvent {
   constructor(public readonly projectId: string) {
-    super(projectId, "Project");
+    super(projectId, 'Project');
   }
 
   get eventType(): string {
-    return "ProjectDeactivated";
+    return 'ProjectDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -100,7 +99,7 @@ export class Project extends AggregateRoot {
     private isActive: boolean,
     private budget: Decimal | null,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -127,7 +126,7 @@ export class Project extends AggregateRoot {
       true,
       params.budget || null,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     project.addDomainEvent(
@@ -136,8 +135,8 @@ export class Project extends AggregateRoot {
         params.workspaceId.getValue(),
         params.name,
         params.code,
-        params.startDate,
-      ),
+        params.startDate
+      )
     );
 
     return project;
@@ -169,7 +168,7 @@ export class Project extends AggregateRoot {
       params.isActive,
       params.budget,
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -279,4 +278,36 @@ export class Project extends AggregateRoot {
     this.updatedAt = new Date();
     this.addDomainEvent(new ProjectActivatedEvent(this.id.getValue()));
   }
+
+  toJSON(): ProjectDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      code: this.getCode(),
+      description: this.getDescription(),
+      startDate: this.getStartDate().toISOString(),
+      endDate: this.getEndDate()?.toISOString() ?? null,
+      managerId: this.getManagerId()?.getValue() ?? null,
+      budget: this.getBudget()?.toNumber() ?? null,
+      isActive: this.getIsActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ProjectDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  startDate: string;
+  endDate: string | null;
+  managerId: string | null;
+  budget: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

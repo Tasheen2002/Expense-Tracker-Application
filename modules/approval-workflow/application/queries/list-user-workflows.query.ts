@@ -1,27 +1,47 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { WorkflowService } from '../services/workflow.service';
+import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ListUserWorkflowsInput {
+export interface ListUserWorkflowsInput extends IQuery {
   userId: string;
   workspaceId: string;
   limit?: number;
   offset?: number;
 }
 
-export class ListUserWorkflowsHandler {
-  constructor(private readonly workflowRepository: ExpenseWorkflowRepository) {}
+export class ListUserWorkflowsHandler implements IQueryHandler<
+  ListUserWorkflowsInput,
+  QueryResult<PaginatedResult<ExpenseWorkflow>>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
+
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
 
   async handle(
-    input: ListUserWorkflowsInput,
-  ): Promise<PaginatedResult<ExpenseWorkflow>> {
-    return await this.workflowRepository.findByUser(
-      input.userId,
-      input.workspaceId,
-      {
-        limit: input.limit,
-        offset: input.offset,
-      },
-    );
+    input: ListUserWorkflowsInput
+  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflow>>> {
+    try {
+      const result = await this.workflowService.listUserWorkflows(
+        input.userId,
+        input.workspaceId,
+        { limit: input.limit, offset: input.offset }
+      );
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : 'Query failed',
+        this.getStatusCode(error)
+      );
+    }
   }
 }

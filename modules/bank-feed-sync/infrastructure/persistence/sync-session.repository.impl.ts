@@ -1,18 +1,25 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { SyncSession } from "../../domain/entities/sync-session.entity";
-import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
-import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
-import { ISyncSessionRepository } from "../../domain/repositories/sync-session.repository";
-import { SyncStatus } from "../../domain/enums/sync-status.enum";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { WorkspaceId } from '../../../identity-workspace';
+import { SyncSession } from '../../domain/entities/sync-session.entity';
+import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
+import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
+import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaSyncSessionRepository implements ISyncSessionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaSyncSessionRepository
+  extends PrismaRepository<SyncSession>
+  implements ISyncSessionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(session: SyncSession): Promise<void> {
     const data = {
@@ -36,11 +43,12 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
       create: data,
       update: data,
     });
+    await this.dispatchEvents(session);
   }
 
   async findById(
     id: SyncSessionId,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<SyncSession | null> {
     const record = await this.prisma.syncSession.findFirst({
       where: {
@@ -55,7 +63,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
   async findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SyncSession>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.syncSession,
@@ -65,17 +73,17 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
           connectionId: connectionId.getValue(),
         },
         orderBy: {
-          startedAt: "desc",
+          startedAt: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 
   async findActiveByConnection(
     workspaceId: WorkspaceId,
-    connectionId: BankConnectionId,
+    connectionId: BankConnectionId
   ): Promise<SyncSession | null> {
     const record = await this.prisma.syncSession.findFirst({
       where: {
@@ -86,7 +94,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
         },
       },
       orderBy: {
-        startedAt: "desc",
+        startedAt: 'desc',
       },
     });
 
@@ -95,7 +103,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
 
   async findLatestByConnection(
     workspaceId: WorkspaceId,
-    connectionId: BankConnectionId,
+    connectionId: BankConnectionId
   ): Promise<SyncSession | null> {
     const record = await this.prisma.syncSession.findFirst({
       where: {
@@ -103,7 +111,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
         connectionId: connectionId.getValue(),
       },
       orderBy: {
-        startedAt: "desc",
+        startedAt: 'desc',
       },
     });
 
@@ -113,7 +121,7 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
   async findByStatus(
     workspaceId: WorkspaceId,
     status: SyncStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SyncSession>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.syncSession,
@@ -123,11 +131,11 @@ export class PrismaSyncSessionRepository implements ISyncSessionRepository {
           status,
         },
         orderBy: {
-          startedAt: "desc",
+          startedAt: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 

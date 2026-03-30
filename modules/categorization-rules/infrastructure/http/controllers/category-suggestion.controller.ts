@@ -1,43 +1,25 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { CreateSuggestionBody } from "../validation/category-suggestion.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+
+interface CreateSuggestionBody {
+  expenseId: string;
+  suggestedCategoryId: string;
+  confidence: number;
+  reason?: string;
+}
 
 // Command Handlers
-import {
-  CreateSuggestionCommand,
-  CreateSuggestionHandler,
-} from "../../../application/commands/create-suggestion.command";
-import {
-  AcceptSuggestionCommand,
-  AcceptSuggestionHandler,
-} from "../../../application/commands/accept-suggestion.command";
-import {
-  RejectSuggestionCommand,
-  RejectSuggestionHandler,
-} from "../../../application/commands/reject-suggestion.command";
-import {
-  DeleteSuggestionCommand,
-  DeleteSuggestionHandler,
-} from "../../../application/commands/delete-suggestion.command";
+import { CreateSuggestionHandler } from '../../../application/commands/create-suggestion.command';
+import { AcceptSuggestionHandler } from '../../../application/commands/accept-suggestion.command';
+import { RejectSuggestionHandler } from '../../../application/commands/reject-suggestion.command';
+import { DeleteSuggestionHandler } from '../../../application/commands/delete-suggestion.command';
 
 // Query Handlers
-import {
-  GetSuggestionByIdQuery,
-  GetSuggestionByIdHandler,
-} from "../../../application/queries/get-suggestion-by-id.query";
-import {
-  GetSuggestionsByExpenseQuery,
-  GetSuggestionsByExpenseHandler,
-} from "../../../application/queries/get-suggestions-by-expense.query";
-import {
-  GetPendingSuggestionsByWorkspaceQuery,
-  GetPendingSuggestionsByWorkspaceHandler,
-} from "../../../application/queries/get-pending-suggestions-by-workspace.query";
-import {
-  GetSuggestionsByWorkspaceQuery,
-  GetSuggestionsByWorkspaceHandler,
-} from "../../../application/queries/get-suggestions-by-workspace.query";
+import { GetSuggestionByIdHandler } from '../../../application/queries/get-suggestion-by-id.query';
+import { GetSuggestionsByExpenseHandler } from '../../../application/queries/get-suggestions-by-expense.query';
+import { GetPendingSuggestionsByWorkspaceHandler } from '../../../application/queries/get-pending-suggestions-by-workspace.query';
+import { GetSuggestionsByWorkspaceHandler } from '../../../application/queries/get-suggestions-by-workspace.query';
 
 export class CategorySuggestionController {
   constructor(
@@ -48,7 +30,7 @@ export class CategorySuggestionController {
     private readonly getSuggestionByIdHandler: GetSuggestionByIdHandler,
     private readonly getSuggestionsByExpenseHandler: GetSuggestionsByExpenseHandler,
     private readonly getPendingSuggestionsByWorkspaceHandler: GetPendingSuggestionsByWorkspaceHandler,
-    private readonly getSuggestionsByWorkspaceHandler: GetSuggestionsByWorkspaceHandler,
+    private readonly getSuggestionsByWorkspaceHandler: GetSuggestionsByWorkspaceHandler
   ) {}
 
   async createSuggestion(
@@ -56,27 +38,26 @@ export class CategorySuggestionController {
       Params: { workspaceId: string };
       Body: CreateSuggestionBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { workspaceId } = request.params;
 
-      const command: CreateSuggestionCommand = {
+      const result = await this.createSuggestionHandler.handle({
         workspaceId,
         expenseId: request.body.expenseId,
         suggestedCategoryId: request.body.suggestedCategoryId,
         confidence: request.body.confidence,
         reason: request.body.reason,
-      };
+      });
 
-      const suggestion = await this.createSuggestionHandler.execute(command);
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Category suggestion created successfully",
-        suggestion,
+        result,
+        'Category suggestion created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -87,20 +68,20 @@ export class CategorySuggestionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { suggestionId } = request.params;
 
-      const command: AcceptSuggestionCommand = { suggestionId };
-      const suggestion = await this.acceptSuggestionHandler.execute(command);
+      const result = await this.acceptSuggestionHandler.handle({
+        suggestionId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category suggestion accepted successfully",
-        suggestion,
+        result,
+        'Category suggestion accepted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -111,20 +92,20 @@ export class CategorySuggestionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { suggestionId } = request.params;
 
-      const command: RejectSuggestionCommand = { suggestionId };
-      const suggestion = await this.rejectSuggestionHandler.execute(command);
+      const result = await this.rejectSuggestionHandler.handle({
+        suggestionId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category suggestion rejected successfully",
-        suggestion,
+        result,
+        'Category suggestion rejected successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -135,19 +116,20 @@ export class CategorySuggestionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { suggestionId } = request.params;
 
-      const command: DeleteSuggestionCommand = { suggestionId };
-      await this.deleteSuggestionHandler.execute(command);
+      const result = await this.deleteSuggestionHandler.handle({
+        suggestionId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category suggestion deleted successfully",
+        result,
+        'Category suggestion deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -158,20 +140,21 @@ export class CategorySuggestionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; suggestionId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { suggestionId } = request.params;
 
-      const query: GetSuggestionByIdQuery = { suggestionId };
-      const suggestion = await this.getSuggestionByIdHandler.execute(query);
+      const result = await this.getSuggestionByIdHandler.handle({
+        suggestionId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Category suggestion retrieved successfully",
-        suggestion,
+        result,
+        'Category suggestion retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -182,21 +165,22 @@ export class CategorySuggestionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
-      const query: GetSuggestionsByExpenseQuery = { workspaceId, expenseId };
-      const suggestions =
-        await this.getSuggestionsByExpenseHandler.execute(query);
+      const result = await this.getSuggestionsByExpenseHandler.handle({
+        workspaceId,
+        expenseId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Category suggestions retrieved successfully",
-        suggestions,
+        result,
+        'Category suggestions retrieved successfully',
+        result.data?.map((suggestion) => suggestion.toJSON())
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -208,7 +192,7 @@ export class CategorySuggestionController {
       Params: { workspaceId: string };
       Querystring: { pendingOnly?: string; limit?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
@@ -216,28 +200,46 @@ export class CategorySuggestionController {
       const { pendingOnly, limit: limitStr } = request.query;
       const limit = limitStr ? parseInt(limitStr) : undefined;
 
-      if (pendingOnly === "true") {
-        const query: GetPendingSuggestionsByWorkspaceQuery = {
-          workspaceId,
-          limit,
-        };
-        const suggestions =
-          await this.getPendingSuggestionsByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
+      if (pendingOnly === 'true') {
+        const result =
+          await this.getPendingSuggestionsByWorkspaceHandler.handle({
+            workspaceId,
+            limit,
+          });
+        return ResponseHelper.fromQuery(
           reply,
-          200,
-          "Pending category suggestions retrieved successfully",
-          suggestions,
+          result,
+          'Pending category suggestions retrieved successfully',
+          {
+            items:
+              result.data?.items.map((suggestion) => suggestion.toJSON()) || [],
+            pagination: {
+              total: result.data?.total || 0,
+              limit: result.data?.limit || 10,
+              offset: result.data?.offset || 0,
+              hasMore: result.data?.hasMore || false,
+            },
+          }
         );
       } else {
-        const query: GetSuggestionsByWorkspaceQuery = { workspaceId, limit };
-        const suggestions =
-          await this.getSuggestionsByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
+        const result = await this.getSuggestionsByWorkspaceHandler.handle({
+          workspaceId,
+          limit,
+        });
+        return ResponseHelper.fromQuery(
           reply,
-          200,
-          "Category suggestions retrieved successfully",
-          suggestions,
+          result,
+          'Category suggestions retrieved successfully',
+          {
+            items:
+              result.data?.items.map((suggestion) => suggestion.toJSON()) || [],
+            pagination: {
+              total: result.data?.total || 0,
+              limit: result.data?.limit || 10,
+              offset: result.data?.offset || 0,
+              hasMore: result.data?.hasMore || false,
+            },
+          }
         );
       }
     } catch (error) {

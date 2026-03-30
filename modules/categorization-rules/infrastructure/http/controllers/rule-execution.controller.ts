@@ -1,29 +1,27 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { EvaluateRulesBody } from "../validation/rule-execution.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
-// Command Handlers
-import {
-  EvaluateRulesCommand,
-  EvaluateRulesHandler,
-} from "../../../application/commands/evaluate-rules.command";
+interface EvaluateRulesBody {
+  expenseId: string;
+  expenseData: {
+    merchant?: string;
+    description?: string;
+    amount: number;
+    paymentMethod?: string;
+  };
+}
 
-// Query Handlers
-import {
-  GetExecutionsByExpenseQuery,
-  GetExecutionsByExpenseHandler,
-} from "../../../application/queries/get-executions-by-expense.query";
-import {
-  GetExecutionsByWorkspaceQuery,
-  GetExecutionsByWorkspaceHandler,
-} from "../../../application/queries/get-executions-by-workspace.query";
+import { EvaluateRulesHandler } from '../../../application/commands/evaluate-rules.command';
+
+import { GetExecutionsByExpenseHandler } from '../../../application/queries/get-executions-by-expense.query';
+import { GetExecutionsByWorkspaceHandler } from '../../../application/queries/get-executions-by-workspace.query';
 
 export class RuleExecutionController {
   constructor(
     private readonly evaluateRulesHandler: EvaluateRulesHandler,
     private readonly getExecutionsByExpenseHandler: GetExecutionsByExpenseHandler,
-    private readonly getExecutionsByWorkspaceHandler: GetExecutionsByWorkspaceHandler,
+    private readonly getExecutionsByWorkspaceHandler: GetExecutionsByWorkspaceHandler
   ) {}
 
   async evaluateRules(
@@ -31,25 +29,23 @@ export class RuleExecutionController {
       Params: { workspaceId: string };
       Body: EvaluateRulesBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { workspaceId } = request.params;
 
-      const command: EvaluateRulesCommand = {
+      const result = await this.evaluateRulesHandler.handle({
         workspaceId,
         expenseId: request.body.expenseId,
         expenseData: request.body.expenseData,
-      };
+      });
 
-      const result = await this.evaluateRulesHandler.execute(command);
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Rules evaluated successfully",
         result,
+        'Rules evaluated successfully',
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -60,21 +56,22 @@ export class RuleExecutionController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
-      const query: GetExecutionsByExpenseQuery = { workspaceId, expenseId };
-      const executions =
-        await this.getExecutionsByExpenseHandler.execute(query);
+      const result = await this.getExecutionsByExpenseHandler.handle({
+        workspaceId,
+        expenseId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Executions retrieved successfully",
-        executions,
+        result,
+        'Executions retrieved successfully',
+        result.data?.map((execution) => execution.toJSON())
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -86,7 +83,7 @@ export class RuleExecutionController {
       Params: { workspaceId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
@@ -98,26 +95,26 @@ export class RuleExecutionController {
         ? parseInt(request.query.offset)
         : undefined;
 
-      const query: GetExecutionsByWorkspaceQuery = {
+      const result = await this.getExecutionsByWorkspaceHandler.handle({
         workspaceId,
         limit,
         offset,
-      };
-      const result = await this.getExecutionsByWorkspaceHandler.execute(query);
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Executions retrieved successfully",
+        result,
+        'Executions retrieved successfully',
         {
-          items: result.items,
+          items:
+            result.data?.items.map((execution) => execution.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 10,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

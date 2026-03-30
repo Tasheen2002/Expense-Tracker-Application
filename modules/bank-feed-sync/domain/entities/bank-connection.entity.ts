@@ -1,9 +1,8 @@
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { BankConnectionId } from "../value-objects/bank-connection-id";
-import { ConnectionStatus } from "../enums/connection-status.enum";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { BankConnectionId } from '../value-objects/bank-connection-id';
+import { ConnectionStatus } from '../enums/connection-status.enum';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -16,13 +15,13 @@ export class BankConnectionCreatedEvent extends DomainEvent {
     public readonly userId: string,
     public readonly institutionId: string,
     public readonly institutionName: string,
-    public readonly accountName: string,
+    public readonly accountName: string
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionCreated";
+    return 'BankConnectionCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -40,13 +39,13 @@ export class BankConnectionCreatedEvent extends DomainEvent {
 export class BankConnectionActivatedEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionActivated";
+    return 'BankConnectionActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -61,13 +60,13 @@ export class BankConnectionDisconnectedEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
     public readonly workspaceId: string,
-    public readonly reason?: string,
+    public readonly reason?: string
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionDisconnected";
+    return 'BankConnectionDisconnected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -82,13 +81,13 @@ export class BankConnectionDisconnectedEvent extends DomainEvent {
 export class BankConnectionExpiredEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionExpired";
+    return 'BankConnectionExpired';
   }
 
   getPayload(): Record<string, unknown> {
@@ -103,13 +102,13 @@ export class BankConnectionSyncedEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
     public readonly workspaceId: string,
-    public readonly syncedAt: Date,
+    public readonly syncedAt: Date
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionSynced";
+    return 'BankConnectionSynced';
   }
 
   getPayload(): Record<string, unknown> {
@@ -125,13 +124,13 @@ export class BankConnectionErrorEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
     public readonly workspaceId: string,
-    public readonly errorMessage: string,
+    public readonly errorMessage: string
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionError";
+    return 'BankConnectionError';
   }
 
   getPayload(): Record<string, unknown> {
@@ -147,13 +146,13 @@ export class BankConnectionTokenUpdatedEvent extends DomainEvent {
   constructor(
     public readonly connectionId: string,
     public readonly workspaceId: string,
-    public readonly expiresAt?: Date,
+    public readonly expiresAt?: Date
   ) {
-    super(connectionId, "BankConnection");
+    super(connectionId, 'BankConnection');
   }
 
   get eventType(): string {
-    return "BankConnectionTokenUpdated";
+    return 'BankConnectionTokenUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -201,7 +200,7 @@ export class BankConnection extends AggregateRoot {
     currency: string,
     accessToken: string,
     accountMask?: string,
-    tokenExpiresAt?: Date,
+    tokenExpiresAt?: Date
   ): BankConnection {
     const connection = new BankConnection({
       id: BankConnectionId.create(),
@@ -228,8 +227,8 @@ export class BankConnection extends AggregateRoot {
         connection.getUserId().getValue(),
         institutionId,
         institutionName,
-        accountName,
-      ),
+        accountName
+      )
     );
 
     return connection;
@@ -351,8 +350,8 @@ export class BankConnection extends AggregateRoot {
    */
   getAccessTokenMasked(): string {
     const token = this.props.accessToken;
-    if (token.length <= 8) return "****";
-    return token.substring(0, 4) + "****" + token.substring(token.length - 4);
+    if (token.length <= 8) return '****';
+    return token.substring(0, 4) + '****' + token.substring(token.length - 4);
   }
 
   /**
@@ -396,8 +395,8 @@ export class BankConnection extends AggregateRoot {
     this.addDomainEvent(
       new BankConnectionActivatedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-      ),
+        this.getWorkspaceId().getValue()
+      )
     );
   }
 
@@ -408,8 +407,8 @@ export class BankConnection extends AggregateRoot {
     this.addDomainEvent(
       new BankConnectionExpiredEvent(
         this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-      ),
+        this.getWorkspaceId().getValue()
+      )
     );
   }
 
@@ -422,8 +421,8 @@ export class BankConnection extends AggregateRoot {
       new BankConnectionErrorEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        errorMessage,
-      ),
+        errorMessage
+      )
     );
   }
 
@@ -434,8 +433,8 @@ export class BankConnection extends AggregateRoot {
     this.addDomainEvent(
       new BankConnectionDisconnectedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-      ),
+        this.getWorkspaceId().getValue()
+      )
     );
   }
 
@@ -448,8 +447,8 @@ export class BankConnection extends AggregateRoot {
       new BankConnectionSyncedEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        syncedAt,
-      ),
+        syncedAt
+      )
     );
   }
 
@@ -464,8 +463,8 @@ export class BankConnection extends AggregateRoot {
       new BankConnectionTokenUpdatedEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        expiresAt,
-      ),
+        expiresAt
+      )
     );
   }
 
@@ -480,7 +479,47 @@ export class BankConnection extends AggregateRoot {
     );
   }
 
+  toJSON(): BankConnectionDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      userId: this.getUserId().getValue(),
+      institutionId: this.institutionId,
+      institutionName: this.institutionName,
+      accountId: this.accountId,
+      accountName: this.accountName,
+      accountType: this.accountType,
+      accountMask: this.accountMask,
+      currency: this.currency,
+      status: this.status,
+      lastSyncAt: this.lastSyncAt,
+      tokenExpiresAt: this.tokenExpiresAt,
+      errorMessage: this.errorMessage,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    };
+  }
+
   toPersistence(): BankConnectionProps {
     return { ...this.props };
   }
+}
+
+export interface BankConnectionDTO {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  institutionId: string;
+  institutionName: string;
+  accountId: string;
+  accountName: string;
+  accountType: string;
+  accountMask?: string;
+  currency: string;
+  status: ConnectionStatus;
+  lastSyncAt?: Date;
+  tokenExpiresAt?: Date;
+  errorMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

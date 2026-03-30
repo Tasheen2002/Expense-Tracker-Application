@@ -29,6 +29,7 @@
     "@fastify/swagger-ui": "^3.0.0",
     "@prisma/client": "^5.9.1",
     "bcryptjs": "^3.0.3",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.4.1",
     "fastify": "^4.26.1",
     "fastify-plugin": "^4.5.1",

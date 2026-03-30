@@ -1,21 +1,28 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   ExemptionRepository,
   ExemptionFilters,
-} from "../../domain/repositories/exemption.repository";
-import { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
-import { ExemptionId } from "../../domain/value-objects/exemption-id";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExemptionStatus } from "../../domain/enums/exemption-status.enum";
+} from '../../domain/repositories/exemption.repository';
+import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { ExemptionId } from '../../domain/value-objects/exemption-id';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaExemptionRepository implements ExemptionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaExemptionRepository
+  extends PrismaRepository<PolicyExemption>
+  implements ExemptionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(exemption: PolicyExemption): Promise<void> {
     await this.prisma.policyExemption.upsert({
@@ -49,6 +56,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
         reason: exemption.getReason(),
       },
     });
+    await this.dispatchEvents(exemption);
   }
 
   async findById(id: ExemptionId): Promise<PolicyExemption | null> {
@@ -62,7 +70,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
   async findByWorkspace(
     workspaceId: string,
     filters?: ExemptionFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>> {
     const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
 
@@ -80,33 +88,33 @@ export class PrismaExemptionRepository implements ExemptionRepository {
       this.prisma.policyExemption,
       {
         where,
-        orderBy: { requestedAt: "desc" },
+        orderBy: { requestedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findByUser(
     workspaceId: string,
     userId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.policyExemption,
       {
         where: { workspaceId, userId },
-        orderBy: { requestedAt: "desc" },
+        orderBy: { requestedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findActiveForUser(
     workspaceId: string,
     userId: string,
-    policyId: string,
+    policyId: string
   ): Promise<PolicyExemption | null> {
     const now = new Date();
     const row = await this.prisma.policyExemption.findFirst({
@@ -118,7 +126,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
         validFrom: { lte: now },
         validUntil: { gte: now },
       },
-      orderBy: { validUntil: "desc" },
+      orderBy: { validUntil: 'desc' },
     });
 
     return row ? this.toDomain(row) : null;
@@ -127,7 +135,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
   async findActiveForUserPolicies(
     workspaceId: string,
     userId: string,
-    policyIds: string[],
+    policyIds: string[]
   ): Promise<Map<string, PolicyExemption>> {
     if (policyIds.length === 0) return new Map();
 
@@ -152,7 +160,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
 
   async findPendingByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.policyExemption,
@@ -161,16 +169,16 @@ export class PrismaExemptionRepository implements ExemptionRepository {
           workspaceId,
           status: ExemptionStatus.PENDING,
         },
-        orderBy: { requestedAt: "desc" },
+        orderBy: { requestedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async countByWorkspace(
     workspaceId: string,
-    filters?: ExemptionFilters,
+    filters?: ExemptionFilters
   ): Promise<number> {
     const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
 
@@ -191,7 +199,7 @@ export class PrismaExemptionRepository implements ExemptionRepository {
   }
 
   private toDomain(
-    row: Prisma.PolicyExemptionGetPayload<object>,
+    row: Prisma.PolicyExemptionGetPayload<object>
   ): PolicyExemption {
     return PolicyExemption.reconstitute({
       exemptionId: ExemptionId.fromString(row.id),

@@ -1,29 +1,32 @@
-import {
-  PrismaClient,
-  Prisma,
-} from "@prisma/client";
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   toDbWorkflowStatus,
   fromDbWorkflowStatus,
   toDbApprovalStatus,
   fromDbApprovalStatus,
-} from "./enum-mappers";
+} from './enum-mappers';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
-import { ApprovalStep } from "../../domain/entities/approval-step.entity";
-import { ApprovalStepId } from "../../domain/value-objects/approval-step-id";
-import { WorkflowId } from "../../domain/value-objects/workflow-id";
-import { ApprovalChainId } from "../../domain/value-objects/approval-chain-id";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { IExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository';
+import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import { ApprovalStep } from '../../domain/entities/approval-step.entity';
+import { ApprovalStepId } from '../../domain/value-objects/approval-step-id';
+import { WorkflowId } from '../../domain/value-objects/workflow-id';
+import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaExpenseWorkflowRepository
+  extends PrismaRepository<ExpenseWorkflow>
+  implements IExpenseWorkflowRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(workflow: ExpenseWorkflow): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -75,12 +78,13 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
         });
       }
     });
+    await this.dispatchEvents(workflow);
   }
 
   async findByExpenseId(expenseId: string): Promise<ExpenseWorkflow | null> {
     const row = await this.prisma.expenseWorkflow.findUnique({
       where: { expenseId },
-      include: { steps: { orderBy: { stepNumber: "asc" } } },
+      include: { steps: { orderBy: { stepNumber: 'asc' } } },
     });
 
     return row ? this.toDomain(row) : null;
@@ -88,7 +92,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -96,8 +100,8 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
     const [rows, total] = await Promise.all([
       this.prisma.expenseWorkflow.findMany({
         where: { workspaceId },
-        include: { steps: { orderBy: { stepNumber: "asc" } } },
-        orderBy: { createdAt: "desc" },
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -116,16 +120,16 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
   async findPendingByApprover(
     approverId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
     const where: Prisma.ExpenseWorkflowWhereInput = {
       workspaceId,
-      status: { in: ["PENDING", "IN_PROGRESS"] },
+      status: { in: ['PENDING', 'IN_PROGRESS'] },
       steps: {
         some: {
           OR: [
-            { approverId, status: "PENDING" },
-            { delegatedTo: approverId, status: "DELEGATED" },
+            { approverId, status: 'PENDING' },
+            { delegatedTo: approverId, status: 'DELEGATED' },
           ],
         },
       },
@@ -137,8 +141,8 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
     const [rows, total] = await Promise.all([
       this.prisma.expenseWorkflow.findMany({
         where,
-        include: { steps: { orderBy: { stepNumber: "asc" } } },
-        orderBy: { createdAt: "desc" },
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -157,7 +161,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
   async findByUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -168,8 +172,8 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
           userId,
           workspaceId,
         },
-        include: { steps: { orderBy: { stepNumber: "asc" } } },
-        orderBy: { createdAt: "desc" },
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -186,7 +190,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
   }
 
   private toDomain(
-    row: Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>,
+    row: Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>
   ): ExpenseWorkflow {
     const steps = row.steps.map((stepRow) =>
       ApprovalStep.reconstitute({
@@ -202,7 +206,7 @@ export class PrismaExpenseWorkflowRepository implements ExpenseWorkflowRepositor
         processedAt: stepRow.processedAt ?? undefined,
         createdAt: stepRow.createdAt,
         updatedAt: stepRow.updatedAt,
-      }),
+      })
     );
 
     return ExpenseWorkflow.reconstitute({

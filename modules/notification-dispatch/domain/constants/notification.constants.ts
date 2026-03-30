@@ -56,14 +56,8 @@ export const PRIORITY_WEIGHTS = {
 // ============================================
 // Channel Configuration
 // ============================================
-export const DEFAULT_CHANNELS = ["EMAIL", "IN_APP"] as const;
-export const ALL_CHANNELS = [
-  "EMAIL",
-  "IN_APP",
-  "PUSH",
-  "SMS",
-  "WEBHOOK",
-] as const;
+export const DEFAULT_CHANNELS = ['EMAIL', 'IN_APP'] as const;
+export const ALL_CHANNELS = ['EMAIL', 'IN_APP', 'PUSH'] as const;
 
 // ============================================
 // Retry Configuration

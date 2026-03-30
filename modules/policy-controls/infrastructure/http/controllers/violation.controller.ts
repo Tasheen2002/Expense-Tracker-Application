@@ -1,33 +1,46 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { ViolationService } from "../../../application/services/violation.service";
-import { PolicyViolation } from "../../../domain/entities/policy-violation.entity";
-import { ViolationStatus } from "../../../domain/enums/violation-status.enum";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { GetViolationHandler } from '../../../application/queries/get-violation.query';
+import { ListViolationsHandler } from '../../../application/queries/list-violations.query';
+import { GetViolationStatsHandler } from '../../../application/queries/get-violation-stats.query';
+import { AcknowledgeViolationHandler } from '../../../application/commands/acknowledge-violation.command';
+import { ResolveViolationHandler } from '../../../application/commands/resolve-violation.command';
+import { ExemptViolationHandler } from '../../../application/commands/exempt-violation.command';
+import { OverrideViolationHandler } from '../../../application/commands/override-violation.command';
+import { ViolationStatus } from '../../../domain/enums/violation-status.enum';
 
 export class ViolationController {
-  constructor(private readonly violationService: ViolationService) {}
+  constructor(
+    private readonly getViolationHandler: GetViolationHandler,
+    private readonly listViolationsHandler: ListViolationsHandler,
+    private readonly getViolationStatsHandler: GetViolationStatsHandler,
+    private readonly acknowledgeViolationHandler: AcknowledgeViolationHandler,
+    private readonly resolveViolationHandler: ResolveViolationHandler,
+    private readonly exemptViolationHandler: ExemptViolationHandler,
+    private readonly overrideViolationHandler: OverrideViolationHandler
+  ) {}
 
   async getViolation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, violationId } = request.params;
 
-      const violation = await this.violationService.getViolation(
+      const result = await this.getViolationHandler.handle({
         violationId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation retrieved successfully",
-        data: this.serializeViolation(violation),
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Violation retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -45,41 +58,43 @@ export class ViolationController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { status, userId, expenseId, policyId, limit, offset } =
         request.query;
 
-      const result = await this.violationService.listViolations(
+      const result = await this.listViolationsHandler.handle({
         workspaceId,
-        {
-          status,
-          userId,
-          expenseId,
-          policyId,
-        },
-        {
+        status,
+        userId,
+        expenseId,
+        policyId,
+        pagination: {
           limit: limit ? parseInt(limit, 10) : 50,
           offset: offset ? parseInt(offset, 10) : 0,
         },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violations retrieved successfully",
-        data: {
-          items: result.items.map((v) => this.serializeViolation(v)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
       });
+
+      const data = result.data
+        ? {
+            items: result.data.items.map((v) => v.toJSON()),
+            pagination: {
+              total: result.data.total,
+              limit: result.data.limit,
+              offset: result.data.offset,
+              hasMore: result.data.hasMore,
+            },
+          }
+        : undefined;
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Violations retrieved successfully',
+        data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -88,30 +103,35 @@ export class ViolationController {
   async getViolationStats(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { status?: ViolationStatus };
+      Querystring: { startDate?: string; endDate?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
-      const { status } = request.query;
+      const { startDate, endDate } = request.query;
 
-      const count = await this.violationService.countViolations(
+      const result = await this.getViolationStatsHandler.handle({
         workspaceId,
-        status ? { status } : undefined,
-      );
-
-      const pendingCount = await this.violationService.countViolations(
-        workspaceId,
-        { status: ViolationStatus.PENDING },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation stats retrieved successfully",
-        data: { total: count, pending: pendingCount },
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
       });
+
+      const data = result.data
+        ? {
+            total: result.data.total,
+            pending: result.data.pendingCount,
+            byStatus: result.data.byStatus,
+            bySeverity: result.data.bySeverity,
+          }
+        : undefined;
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Violation stats retrieved successfully',
+        data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -121,33 +141,23 @@ export class ViolationController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.userId;
+      const userId = request.user!.userId;
 
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const violation = await this.violationService.acknowledgeViolation(
+      const result = await this.acknowledgeViolationHandler.handle({
         violationId,
         workspaceId,
-        userId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation acknowledged successfully",
-        data: this.serializeViolation(violation),
+        acknowledgedBy: userId,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation acknowledged successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -158,34 +168,24 @@ export class ViolationController {
       Params: { workspaceId: string; violationId: string };
       Body: { resolutionNote?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.userId;
+      const userId = request.user!.userId;
 
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const violation = await this.violationService.resolveViolation(
+      const result = await this.resolveViolationHandler.handle({
         violationId,
         workspaceId,
-        userId,
-        request.body.resolutionNote,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation resolved successfully",
-        data: this.serializeViolation(violation),
+        resolvedBy: userId,
+        resolutionNote: request.body.resolutionNote,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation resolved successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -196,34 +196,23 @@ export class ViolationController {
       Params: { workspaceId: string; violationId: string };
       Body: { notes?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.userId;
+      const userId = request.user!.userId;
 
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const violation = await this.violationService.exemptViolation(
+      const result = await this.exemptViolationHandler.handle({
         violationId,
         workspaceId,
-        userId,
-        request.body.notes,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation exempted successfully",
-        data: this.serializeViolation(violation),
+        exemptedBy: userId,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation exempted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -234,58 +223,26 @@ export class ViolationController {
       Params: { workspaceId: string; violationId: string };
       Body: { overrideReason: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user?.userId;
+      const userId = request.user!.userId;
 
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const violation = await this.violationService.overrideViolation(
+      const result = await this.overrideViolationHandler.handle({
         violationId,
         workspaceId,
-        userId,
-        request.body.overrideReason,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Violation overridden successfully",
-        data: this.serializeViolation(violation),
+        overriddenBy: userId,
+        overrideReason: request.body.overrideReason,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation overridden successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializeViolation(violation: PolicyViolation) {
-    return {
-      id: violation.getId().getValue(),
-      workspaceId: violation.getWorkspaceId().getValue(),
-      policyId: violation.getPolicyId().getValue(),
-      expenseId: violation.getExpenseId(),
-      userId: violation.getUserId(),
-      status: violation.getStatus(),
-      severity: violation.getSeverity(),
-      violationDetails: violation.getViolationDetails(),
-      expenseAmount: violation.getExpenseAmount(),
-      currency: violation.getCurrency(),
-      acknowledgedAt: violation.getAcknowledgedAt()?.toISOString(),
-      acknowledgedBy: violation.getAcknowledgedBy(),
-      resolvedAt: violation.getResolvedAt()?.toISOString(),
-      resolvedBy: violation.getResolvedBy(),
-      resolutionNotes: violation.getResolutionNotes(),
-      createdAt: violation.getCreatedAt().toISOString(),
-      updatedAt: violation.getUpdatedAt().toISOString(),
-    };
   }
 }

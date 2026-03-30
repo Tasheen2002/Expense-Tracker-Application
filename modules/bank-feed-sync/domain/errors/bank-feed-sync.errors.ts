@@ -1,15 +1,8 @@
-/**
- * Base error class for Bank Feed Sync domain
- */
-export class BankFeedSyncDomainError extends Error {
-  constructor(
-    message: string,
-    public readonly statusCode: number = 500,
-    public readonly code?: string,
-  ) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
+
+export class BankFeedSyncDomainError extends DomainError {
+  constructor(message: string, statusCode: number = 500, code?: string) {
+    super(message, code || 'BANK_FEED_SYNC_ERROR', statusCode);
   }
 }
 
@@ -22,7 +15,7 @@ export class BankConnectionNotFoundError extends BankFeedSyncDomainError {
     super(
       `Bank connection with ID ${connectionId} not found`,
       404,
-      "BANK_CONNECTION_NOT_FOUND",
+      'BANK_CONNECTION_NOT_FOUND'
     );
   }
 }
@@ -32,7 +25,7 @@ export class BankConnectionAlreadyExistsError extends BankFeedSyncDomainError {
     super(
       `Bank connection already exists for institution ${institutionId} and account ${accountId}`,
       409,
-      "BANK_CONNECTION_ALREADY_EXISTS",
+      'BANK_CONNECTION_ALREADY_EXISTS'
     );
   }
 }
@@ -42,14 +35,14 @@ export class BankConnectionExpiredError extends BankFeedSyncDomainError {
     super(
       `Bank connection ${connectionId} has expired. Please re-authorize.`,
       401,
-      "BANK_CONNECTION_EXPIRED",
+      'BANK_CONNECTION_EXPIRED'
     );
   }
 }
 
 export class InvalidBankTokenError extends BankFeedSyncDomainError {
-  constructor(message: string = "Invalid or expired bank access token") {
-    super(message, 401, "INVALID_BANK_TOKEN");
+  constructor(message: string = 'Invalid or expired bank access token') {
+    super(message, 401, 'INVALID_BANK_TOKEN');
   }
 }
 
@@ -62,7 +55,7 @@ export class SyncSessionNotFoundError extends BankFeedSyncDomainError {
     super(
       `Sync session with ID ${sessionId} not found`,
       404,
-      "SYNC_SESSION_NOT_FOUND",
+      'SYNC_SESSION_NOT_FOUND'
     );
   }
 }
@@ -72,7 +65,7 @@ export class SyncAlreadyInProgressError extends BankFeedSyncDomainError {
     super(
       `Sync already in progress for connection ${connectionId}`,
       409,
-      "SYNC_ALREADY_IN_PROGRESS",
+      'SYNC_ALREADY_IN_PROGRESS'
     );
   }
 }
@@ -82,7 +75,7 @@ export class SyncTooFrequentError extends BankFeedSyncDomainError {
     super(
       `Sync too frequent. Please wait ${minutesUntilNext} minutes before next sync.`,
       429,
-      "SYNC_TOO_FREQUENT",
+      'SYNC_TOO_FREQUENT'
     );
   }
 }
@@ -96,7 +89,7 @@ export class BankTransactionNotFoundError extends BankFeedSyncDomainError {
     super(
       `Bank transaction with ID ${transactionId} not found`,
       404,
-      "BANK_TRANSACTION_NOT_FOUND",
+      'BANK_TRANSACTION_NOT_FOUND'
     );
   }
 }
@@ -106,7 +99,7 @@ export class DuplicateTransactionError extends BankFeedSyncDomainError {
     super(
       `Transaction with external ID ${externalId} already exists`,
       409,
-      "DUPLICATE_TRANSACTION",
+      'DUPLICATE_TRANSACTION'
     );
   }
 }
@@ -118,9 +111,9 @@ export class DuplicateTransactionError extends BankFeedSyncDomainError {
 export class BankAPIError extends BankFeedSyncDomainError {
   constructor(
     message: string,
-    public readonly provider: string,
+    public readonly provider: string
   ) {
-    super(`Bank API Error (${provider}): ${message}`, 502, "BANK_API_ERROR");
+    super(`Bank API Error (${provider}): ${message}`, 502, 'BANK_API_ERROR');
   }
 }
 
@@ -128,8 +121,8 @@ export class BankAPIRateLimitError extends BankFeedSyncDomainError {
   constructor(retryAfterSeconds?: number) {
     const message = retryAfterSeconds
       ? `Bank API rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`
-      : "Bank API rate limit exceeded.";
-    super(message, 429, "BANK_API_RATE_LIMIT");
+      : 'Bank API rate limit exceeded.';
+    super(message, 429, 'BANK_API_RATE_LIMIT');
   }
 }
 
@@ -138,7 +131,7 @@ export class BankAuthorizationRequiredError extends BankFeedSyncDomainError {
     super(
       `Bank authorization required. Please visit: ${authUrl}`,
       403,
-      "BANK_AUTHORIZATION_REQUIRED",
+      'BANK_AUTHORIZATION_REQUIRED'
     );
   }
 }
@@ -152,7 +145,7 @@ export class MissingExpenseIdError extends BankFeedSyncDomainError {
     super(
       `expenseId is required for ${action} action`,
       400,
-      "MISSING_EXPENSE_ID",
+      'MISSING_EXPENSE_ID'
     );
   }
 }
@@ -162,7 +155,7 @@ export class InvalidTransactionActionError extends BankFeedSyncDomainError {
     super(
       `Invalid transaction action: ${action}`,
       400,
-      "INVALID_TRANSACTION_ACTION",
+      'INVALID_TRANSACTION_ACTION'
     );
   }
 }

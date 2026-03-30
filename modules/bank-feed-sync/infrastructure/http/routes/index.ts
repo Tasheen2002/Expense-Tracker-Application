@@ -1,13 +1,13 @@
-import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
-import { bankConnectionRoutes } from "./bank-connection.routes";
-import { transactionSyncRoutes } from "./transaction-sync.routes";
-import { bankTransactionRoutes } from "./bank-transaction.routes";
-import { BankConnectionController } from "../controllers/bank-connection.controller";
-import { TransactionSyncController } from "../controllers/transaction-sync.controller";
-import { BankTransactionController } from "../controllers/bank-transaction.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
+import { bankConnectionRoutes } from './bank-connection.routes';
+import { transactionSyncRoutes } from './transaction-sync.routes';
+import { bankTransactionRoutes } from './bank-transaction.routes';
+import { BankConnectionController } from '../controllers/bank-connection.controller';
+import { TransactionSyncController } from '../controllers/transaction-sync.controller';
+import { BankTransactionController } from '../controllers/bank-transaction.controller';
+import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 export async function registerBankFeedSyncRoutes(
   fastify: FastifyInstance,
@@ -16,47 +16,42 @@ export async function registerBankFeedSyncRoutes(
     transactionSyncController: TransactionSyncController;
     bankTransactionController: BankTransactionController;
   },
-  prisma: PrismaClient,
+  prisma: PrismaClient
 ) {
   await fastify.register(
     async (instance) => {
       // First authenticate the request
-      instance.addHook("onRequest", async (request, reply) => {
+      instance.addHook('onRequest', async (request, reply) => {
         await fastify.authenticate(request);
       });
 
       // Then authorize workspace access
-      instance.addHook("preHandler", async (request, reply) => {
+      instance.addHook('preHandler', async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,
-          prisma,
+          prisma
         );
       });
 
       // Register bank connection routes
       await bankConnectionRoutes(
         instance,
-        controllers.bankConnectionController,
+        controllers.bankConnectionController
       );
 
       // Register transaction sync routes
       await transactionSyncRoutes(
         instance,
-        controllers.transactionSyncController,
+        controllers.transactionSyncController
       );
 
       // Register bank transaction routes
       await bankTransactionRoutes(
         instance,
-        controllers.bankTransactionController,
+        controllers.bankTransactionController
       );
     },
-    { prefix: "/api/v1" },
+    { prefix: '/api/v1' }
   );
 }
-
-// Re-export individual route functions for testing
-export { bankConnectionRoutes } from "./bank-connection.routes";
-export { transactionSyncRoutes } from "./transaction-sync.routes";
-export { bankTransactionRoutes } from "./bank-transaction.routes";

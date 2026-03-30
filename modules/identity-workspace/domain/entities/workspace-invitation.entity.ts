@@ -27,7 +27,7 @@ export class InvitationCreatedEvent extends DomainEvent {
     return "InvitationCreated";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -50,7 +50,7 @@ export class InvitationAcceptedEvent extends DomainEvent {
     return "InvitationAccepted";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,

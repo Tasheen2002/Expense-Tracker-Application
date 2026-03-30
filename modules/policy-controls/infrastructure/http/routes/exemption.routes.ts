@@ -1,84 +1,153 @@
-import { FastifyInstance } from "fastify";
-import { ExemptionController } from "../controllers/exemption.controller";
+import { FastifyInstance } from 'fastify';
+import { ExemptionController } from '../controllers/exemption.controller';
+import { ExemptionStatus } from '../../../domain/enums/exemption-status.enum';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  requestExemptionSchema,
+  approveExemptionSchema,
+  rejectExemptionSchema,
+  exemptionParamsSchema,
+  exemptionQuerySchema,
+} from '../validation/exemption.schema';
+import { workspaceParamsSchema } from '../validation/policy.schema';
 
 export async function exemptionRoutes(
   fastify: FastifyInstance,
-  controller: ExemptionController,
+  controller: ExemptionController
 ) {
+  // Add authentication hook to all routes in this plugin
+  fastify.addHook('onRequest', fastify.authenticate);
+
+  const exemptionSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string' },
+      workspaceId: { type: 'string' },
+      policyId: { type: 'string' },
+      userId: { type: 'string' },
+      status: { type: 'string', enum: Object.values(ExemptionStatus) },
+      reason: { type: 'string' },
+      requestedBy: { type: 'string' },
+      approvedBy: { type: 'string', nullable: true },
+      approvedAt: { type: 'string', format: 'date-time', nullable: true },
+      rejectedBy: { type: 'string', nullable: true },
+      rejectedAt: { type: 'string', format: 'date-time', nullable: true },
+      rejectionReason: { type: 'string', nullable: true },
+      startDate: { type: 'string', format: 'date-time' },
+      endDate: { type: 'string', format: 'date-time' },
+      isActive: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const exemptionResponseSchema = {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean' },
+      message: { type: 'string' },
+      data: exemptionSchema,
+    },
+  };
+
   // Request exemption
   fastify.post(
-    "/:workspaceId/exemptions",
+    '/workspaces/:workspaceId/exemptions',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateBody(requestExemptionSchema)],
       schema: {
-        tags: ["Policy Controls"],
-        description: "Request a policy exemption",
+        tags: ['Policy Controls'],
+        description: 'Request a policy exemption',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
           },
         },
         body: {
-          type: "object",
-          required: ["policyId", "userId", "reason", "startDate", "endDate"],
+          type: 'object',
+          required: ['policyId', 'userId', 'reason', 'startDate', 'endDate'],
           properties: {
-            policyId: { type: "string", format: "uuid" },
-            userId: { type: "string", format: "uuid" },
-            reason: { type: "string", minLength: 10, maxLength: 1000 },
-            startDate: { type: "string", format: "date-time" },
-            endDate: { type: "string", format: "date-time" },
-            scope: {
-              type: "object",
-              properties: {
-                categoryIds: {
-                  type: "array",
-                  items: { type: "string", format: "uuid" },
-                },
-                maxAmount: { type: "number", minimum: 0 },
-              },
-            },
+            policyId: { type: 'string' },
+            userId: { type: 'string' },
+            reason: { type: 'string', minLength: 10, maxLength: 1000 },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time' },
           },
+        },
+        response: {
+          201: exemptionResponseSchema,
         },
       },
     },
     (request, reply) =>
       controller.requestExemption(
         request as Parameters<typeof controller.requestExemption>[0],
-        reply,
-      ),
+        reply
+      )
   );
 
   // List exemptions
   fastify.get(
-    "/:workspaceId/exemptions",
+    '/workspaces/:workspaceId/exemptions',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(exemptionQuerySchema),
+      ],
       schema: {
-        tags: ["Policy Controls"],
-        description: "List policy exemptions in workspace",
+        tags: ['Policy Controls'],
+        description: 'List policy exemptions for a workspace',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
           },
         },
         querystring: {
-          type: "object",
+          type: 'object',
           properties: {
             status: {
-              type: "string",
-              enum: ["PENDING", "APPROVED", "REJECTED", "EXPIRED"],
+              type: 'string',
+              enum: Object.values(ExemptionStatus),
             },
-            userId: { type: "string", format: "uuid" },
-            policyId: { type: "string", format: "uuid" },
-            limit: {
-              type: "string",
-              description: "Number of exemptions to return",
-            },
-            offset: {
-              type: "string",
-              description: "Number of exemptions to skip",
+            userId: { type: 'string' },
+            policyId: { type: 'string' },
+            limit: { type: 'string' },
+            offset: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: {
+                    type: 'array',
+                    items: exemptionSchema,
+                  },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer' },
+                      limit: { type: 'integer' },
+                      offset: { type: 'integer' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -87,30 +156,48 @@ export async function exemptionRoutes(
     (request, reply) =>
       controller.listExemptions(
         request as Parameters<typeof controller.listExemptions>[0],
-        reply,
-      ),
+        reply
+      )
   );
 
   // Check active exemption
   fastify.get(
-    "/:workspaceId/exemptions/active",
+    '/workspaces/:workspaceId/exemptions/active',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(exemptionQuerySchema),
+      ],
       schema: {
-        tags: ["Policy Controls"],
-        description: "Check if user has active exemption for a policy",
+        tags: ['Policy Controls'],
+        description: 'Check if user has active exemption for a policy',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
           },
         },
         querystring: {
-          type: "object",
-          required: ["userId", "policyId"],
+          type: 'object',
+          required: ['userId', 'policyId'],
           properties: {
-            userId: { type: "string", format: "uuid" },
-            policyId: { type: "string", format: "uuid" },
+            userId: { type: 'string' },
+            policyId: { type: 'string' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                nullable: true,
+                properties: exemptionSchema.properties,
+              },
+            },
           },
         },
       },
@@ -118,92 +205,106 @@ export async function exemptionRoutes(
     (request, reply) =>
       controller.checkActiveExemption(
         request as Parameters<typeof controller.checkActiveExemption>[0],
-        reply,
-      ),
+        reply
+      )
   );
 
   // Get exemption
   fastify.get(
-    "/:workspaceId/exemptions/:exemptionId",
+    '/workspaces/:workspaceId/exemptions/:exemptionId',
     {
+      preValidation: [validateParams(exemptionParamsSchema)],
       schema: {
-        tags: ["Policy Controls"],
-        description: "Get policy exemption by ID",
+        tags: ['Policy Controls'],
+        description: 'Get policy exemption by ID',
         params: {
-          type: "object",
-          required: ["workspaceId", "exemptionId"],
+          type: 'object',
+          required: ['workspaceId', 'exemptionId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            exemptionId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
+            exemptionId: { type: 'string' },
           },
+        },
+        response: {
+          200: exemptionResponseSchema,
         },
       },
     },
     (request, reply) =>
       controller.getExemption(
         request as Parameters<typeof controller.getExemption>[0],
-        reply,
-      ),
+        reply
+      )
   );
 
   // Approve exemption
   fastify.post(
-    "/:workspaceId/exemptions/:exemptionId/approve",
+    '/workspaces/:workspaceId/exemptions/:exemptionId/approve',
     {
+      preValidation: [validateParams(exemptionParamsSchema)],
+      preHandler: [validateBody(approveExemptionSchema)],
       schema: {
-        tags: ["Policy Controls"],
-        description: "Approve a policy exemption request",
+        tags: ['Policy Controls'],
+        description: 'Approve a policy exemption request',
         params: {
-          type: "object",
-          required: ["workspaceId", "exemptionId"],
+          type: 'object',
+          required: ['workspaceId', 'exemptionId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            exemptionId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
+            exemptionId: { type: 'string' },
           },
         },
         body: {
-          type: "object",
+          type: 'object',
           properties: {
-            approvalNote: { type: "string", maxLength: 500 },
+            approvalNote: { type: 'string', maxLength: 500 },
           },
+        },
+        response: {
+          200: exemptionResponseSchema,
         },
       },
     },
     (request, reply) =>
       controller.approveExemption(
         request as Parameters<typeof controller.approveExemption>[0],
-        reply,
-      ),
+        reply
+      )
   );
 
   // Reject exemption
   fastify.post(
-    "/:workspaceId/exemptions/:exemptionId/reject",
+    '/workspaces/:workspaceId/exemptions/:exemptionId/reject',
     {
+      preValidation: [validateParams(exemptionParamsSchema)],
+      preHandler: [validateBody(rejectExemptionSchema)],
       schema: {
-        tags: ["Policy Controls"],
-        description: "Reject a policy exemption request",
+        tags: ['Policy Controls'],
+        description: 'Reject a policy exemption request',
         params: {
-          type: "object",
-          required: ["workspaceId", "exemptionId"],
+          type: 'object',
+          required: ['workspaceId', 'exemptionId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            exemptionId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string' },
+            exemptionId: { type: 'string' },
           },
         },
         body: {
-          type: "object",
-          required: ["rejectionReason"],
+          type: 'object',
+          required: ['rejectionReason'],
           properties: {
-            rejectionReason: { type: "string", minLength: 10, maxLength: 1000 },
+            rejectionReason: { type: 'string', minLength: 10, maxLength: 1000 },
           },
+        },
+        response: {
+          200: exemptionResponseSchema,
         },
       },
     },
-    async (request, reply) =>
+    (request, reply) =>
       controller.rejectExemption(
         request as Parameters<typeof controller.rejectExemption>[0],
-        reply,
-      ),
+        reply
+      )
   );
 }

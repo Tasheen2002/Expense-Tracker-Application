@@ -1,22 +1,29 @@
-import { BudgetPlanService } from "../services/budget-plan.service";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
+import { BudgetPlanService } from '../services/budget-plan.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class CreateBudgetPlanCommand {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly name: string,
-    public readonly startDate: Date,
-    public readonly endDate: Date,
-    public readonly createdBy: string,
-    public readonly description?: string,
-  ) {}
+export interface CreateBudgetPlanCommand extends ICommand {
+  workspaceId: string;
+  name: string;
+  startDate: Date;
+  endDate: Date;
+  createdBy: string;
+  description?: string;
 }
 
-export class CreateBudgetPlanHandler {
+export class CreateBudgetPlanHandler implements ICommandHandler<
+  CreateBudgetPlanCommand,
+  CommandResult<{ budgetPlanId: string }>
+> {
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
-  async handle(command: CreateBudgetPlanCommand): Promise<BudgetPlan> {
-    return await this.budgetPlanService.createPlan({
+  async handle(
+    command: CreateBudgetPlanCommand
+  ): Promise<CommandResult<{ budgetPlanId: string }>> {
+    const plan = await this.budgetPlanService.createPlan({
       workspaceId: command.workspaceId,
       name: command.name,
       description: command.description,
@@ -24,5 +31,6 @@ export class CreateBudgetPlanHandler {
       endDate: command.endDate,
       createdBy: command.createdBy,
     });
+    return CommandResult.success({ budgetPlanId: plan.getId().getValue() });
   }
 }

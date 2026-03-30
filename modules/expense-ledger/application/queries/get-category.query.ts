@@ -1,27 +1,33 @@
-import { CategoryNotFoundError } from "../../domain/errors/expense.errors";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { CategoryService } from '../services/category.service';
+import { Category } from '../../domain/entities/category.entity';
+import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
 
-import { CategoryService } from "../services/category.service";
-
-export class GetCategoryQuery {
-  constructor(
-    public readonly categoryId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface GetCategoryQuery extends IQuery {
+  readonly categoryId: string;
+  readonly workspaceId: string;
 }
 
-export class GetCategoryHandler {
+export class GetCategoryHandler implements IQueryHandler<
+  GetCategoryQuery,
+  QueryResult<Category>
+> {
   constructor(private readonly categoryService: CategoryService) {}
 
-  async handle(query: GetCategoryQuery) {
+  async handle(query: GetCategoryQuery): Promise<QueryResult<Category>> {
     const category = await this.categoryService.getCategoryById(
       query.categoryId,
-      query.workspaceId,
+      query.workspaceId
     );
 
     if (!category) {
       throw new CategoryNotFoundError(query.categoryId, query.workspaceId);
     }
 
-    return category;
+    return QueryResult.success(category);
   }
 }

@@ -1,22 +1,39 @@
-import { ReceiptService } from '../services/receipt.service'
-
-export interface GetReceiptStatsDto {
-  workspaceId: string
-}
+﻿import { ReceiptService } from '../services/receipt.service';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
 export interface ReceiptStats {
-  total: number
-  pending: number
-  processing: number
-  processed: number
-  failed: number
-  verified: number
+  total: number;
+  pending: number;
+  processing: number;
+  processed: number;
+  failed: number;
+  verified: number;
 }
 
-export class GetReceiptStatsHandler {
+export interface GetReceiptStatsQuery extends IQuery {
+  workspaceId: string;
+}
+
+export class GetReceiptStatsHandler implements IQueryHandler<
+  GetReceiptStatsQuery,
+  QueryResult<ReceiptStats>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: GetReceiptStatsDto): Promise<ReceiptStats> {
-    return await this.receiptService.getReceiptStats(dto.workspaceId)
+  async handle(
+    query: GetReceiptStatsQuery
+  ): Promise<QueryResult<ReceiptStats>> {
+    try {
+      const stats = await this.receiptService.getReceiptStats(
+        query.workspaceId
+      );
+      return QueryResult.success(stats);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

@@ -1,13 +1,14 @@
-import { AlertId } from "../value-objects/alert-id";
-import { BudgetId } from "../value-objects/budget-id";
-import { AllocationId } from "../value-objects/allocation-id";
-import { AlertLevel, getAlertLevel } from "../enums/alert-level";
-import { Decimal } from "@prisma/client/runtime/library";
+import { AlertId } from '../value-objects/alert-id';
+import { BudgetId } from '../value-objects/budget-id';
+import { AllocationId } from '../value-objects/allocation-id';
+import { AlertLevel, getAlertLevel } from '../enums/alert-level';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidAmountError,
   InvalidAlertThresholdError,
   AlertAlreadyNotifiedError,
-} from "../errors/budget.errors";
+} from '../errors/budget.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 export interface BudgetAlertProps {
   id: AlertId;
@@ -31,24 +32,40 @@ export interface CreateBudgetAlertData {
   customMessage?: string;
 }
 
-export class BudgetAlert {
-  private constructor(private props: BudgetAlertProps) {}
+export interface BudgetAlertDTO {
+  id: string;
+  budgetId: string;
+  allocationId: string | null;
+  level: string;
+  threshold: string;
+  currentSpent: string;
+  allocatedAmount: string;
+  message: string;
+  isRead: boolean;
+  notifiedAt: string | null;
+  createdAt: string;
+}
+
+export class BudgetAlert extends AggregateRoot {
+  private constructor(private props: BudgetAlertProps) {
+    super();
+  }
 
   static create(data: CreateBudgetAlertData): BudgetAlert {
     const currentSpent =
-      typeof data.currentSpent === "number" ||
-      typeof data.currentSpent === "string"
+      typeof data.currentSpent === 'number' ||
+      typeof data.currentSpent === 'string'
         ? new Decimal(data.currentSpent)
         : data.currentSpent;
 
     const allocatedAmount =
-      typeof data.allocatedAmount === "number" ||
-      typeof data.allocatedAmount === "string"
+      typeof data.allocatedAmount === 'number' ||
+      typeof data.allocatedAmount === 'string'
         ? new Decimal(data.allocatedAmount)
         : data.allocatedAmount;
 
     if (allocatedAmount.isZero()) {
-      throw new InvalidAmountError("Allocated amount cannot be zero");
+      throw new InvalidAmountError('Allocated amount cannot be zero');
     }
 
     const spentPercentage = currentSpent
@@ -59,7 +76,7 @@ export class BudgetAlert {
     // Only create alert if threshold is met
     if (spentPercentage < 50) {
       throw new InvalidAlertThresholdError(
-        "Alert threshold not met (minimum 50%)",
+        'Alert threshold not met (minimum 50%)'
       );
     }
 
@@ -72,7 +89,7 @@ export class BudgetAlert {
         level,
         currentSpent,
         allocatedAmount,
-        spentPercentage,
+        spentPercentage
       );
 
     return new BudgetAlert({
@@ -100,7 +117,7 @@ export class BudgetAlert {
     level: AlertLevel,
     currentSpent: Decimal,
     allocatedAmount: Decimal,
-    percentage: number,
+    percentage: number
   ): string {
     const remaining = allocatedAmount.sub(currentSpent);
     const formattedSpent = currentSpent.toFixed(2);
@@ -189,5 +206,25 @@ export class BudgetAlert {
 
   equals(other: BudgetAlert): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toJSON(): BudgetAlertDTO {
+    return {
+      id: this.getId().getValue(),
+      budgetId: this.getBudgetId().getValue(),
+      allocationId: this.getAllocationId()
+        ? this.getAllocationId()!.getValue()
+        : null,
+      level: this.getLevel(),
+      threshold: this.getThreshold().toString(),
+      currentSpent: this.getCurrentSpent().toString(),
+      allocatedAmount: this.getAllocatedAmount().toString(),
+      message: this.getMessage(),
+      isRead: this.isRead(),
+      notifiedAt: this.getNotifiedAt()
+        ? this.getNotifiedAt()!.toISOString()
+        : null,
+      createdAt: this.getCreatedAt().toISOString(),
+    };
   }
 }

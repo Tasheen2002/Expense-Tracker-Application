@@ -1,20 +1,20 @@
-import { ReceiptId } from "../value-objects/receipt-id";
-import { FileInfo } from "../value-objects/file-info";
-import { StorageLocation } from "../value-objects/storage-location";
-import { ReceiptStatus, canTransitionTo } from "../enums/receipt-status";
-import { ReceiptType } from "../enums/receipt-type";
-import { Decimal } from "@prisma/client/runtime/library";
+import { ReceiptId } from '../value-objects/receipt-id';
+import { FileInfo } from '../value-objects/file-info';
+import { StorageLocation } from '../value-objects/storage-location';
+import { ReceiptStatus, canTransitionTo } from '../enums/receipt-status';
+import { ReceiptType } from '../enums/receipt-type';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   ReceiptValidationError,
   InvalidReceiptOperationError,
   InvalidStatusTransitionError,
-} from "../errors/receipt.errors";
+} from '../errors/receipt.errors';
 import {
   MIN_OCR_CONFIDENCE,
   MAX_OCR_CONFIDENCE,
-} from "../constants/receipt.constants";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+} from '../constants/receipt.constants';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -25,13 +25,13 @@ export class ReceiptUploadedEvent extends DomainEvent {
     public readonly receiptId: string,
     public readonly workspaceId: string,
     public readonly userId: string,
-    public readonly fileName: string,
+    public readonly fileName: string
   ) {
-    super(receiptId, "Receipt");
+    super(receiptId, 'Receipt');
   }
 
   get eventType(): string {
-    return "ReceiptUploaded";
+    return 'ReceiptUploaded';
   }
 
   getPayload(): Record<string, unknown> {
@@ -48,13 +48,13 @@ export class ReceiptProcessedEvent extends DomainEvent {
   constructor(
     public readonly receiptId: string,
     public readonly ocrText: string | undefined,
-    public readonly ocrConfidence: number | undefined,
+    public readonly ocrConfidence: number | undefined
   ) {
-    super(receiptId, "Receipt");
+    super(receiptId, 'Receipt');
   }
 
   get eventType(): string {
-    return "ReceiptProcessed";
+    return 'ReceiptProcessed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -69,13 +69,13 @@ export class ReceiptProcessedEvent extends DomainEvent {
 export class ReceiptLinkedToExpenseEvent extends DomainEvent {
   constructor(
     public readonly receiptId: string,
-    public readonly expenseId: string,
+    public readonly expenseId: string
   ) {
-    super(receiptId, "Receipt");
+    super(receiptId, 'Receipt');
   }
 
   get eventType(): string {
-    return "ReceiptLinkedToExpense";
+    return 'ReceiptLinkedToExpense';
   }
 
   getPayload(): Record<string, unknown> {
@@ -88,11 +88,11 @@ export class ReceiptLinkedToExpenseEvent extends DomainEvent {
 
 export class ReceiptDeletedEvent extends DomainEvent {
   constructor(public readonly receiptId: string) {
-    super(receiptId, "Receipt");
+    super(receiptId, 'Receipt');
   }
 
   get eventType(): string {
-    return "ReceiptDeleted";
+    return 'ReceiptDeleted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -166,8 +166,8 @@ export class Receipt extends AggregateRoot {
         receiptId.getValue(),
         data.workspaceId,
         data.userId,
-        data.originalName,
-      ),
+        data.originalName
+      )
     );
 
     return receipt;
@@ -246,15 +246,15 @@ export class Receipt extends AggregateRoot {
   linkToExpense(expenseId: string): void {
     if (!expenseId || expenseId.trim().length === 0) {
       throw new ReceiptValidationError(
-        "expenseId",
-        "Expense ID cannot be empty",
+        'expenseId',
+        'Expense ID cannot be empty'
       );
     }
 
     if (this.isDeleted()) {
       throw new InvalidReceiptOperationError(
-        "link to expense",
-        "Receipt has been deleted",
+        'link to expense',
+        'Receipt has been deleted'
       );
     }
 
@@ -266,7 +266,7 @@ export class Receipt extends AggregateRoot {
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new ReceiptLinkedToExpenseEvent(this.props.id.getValue(), expenseId),
+      new ReceiptLinkedToExpenseEvent(this.props.id.getValue(), expenseId)
     );
   }
 
@@ -294,8 +294,8 @@ export class Receipt extends AggregateRoot {
         ocrConfidence > MAX_OCR_CONFIDENCE
       ) {
         throw new ReceiptValidationError(
-          "ocrConfidence",
-          `OCR confidence must be between ${MIN_OCR_CONFIDENCE} and ${MAX_OCR_CONFIDENCE}`,
+          'ocrConfidence',
+          `OCR confidence must be between ${MIN_OCR_CONFIDENCE} and ${MAX_OCR_CONFIDENCE}`
         );
       }
     }
@@ -315,16 +315,16 @@ export class Receipt extends AggregateRoot {
       new ReceiptProcessedEvent(
         this.props.id.getValue(),
         ocrText,
-        ocrConfidence,
-      ),
+        ocrConfidence
+      )
     );
   }
 
   markAsFailed(reason: string): void {
     if (!reason || reason.trim().length === 0) {
       throw new ReceiptValidationError(
-        "failureReason",
-        "Failure reason cannot be empty",
+        'failureReason',
+        'Failure reason cannot be empty'
       );
     }
 
@@ -336,8 +336,8 @@ export class Receipt extends AggregateRoot {
   verify(): void {
     if (this.props.status !== ReceiptStatus.PROCESSED) {
       throw new InvalidReceiptOperationError(
-        "verify receipt",
-        "Only processed receipts can be verified",
+        'verify receipt',
+        'Only processed receipts can be verified'
       );
     }
 
@@ -357,8 +357,8 @@ export class Receipt extends AggregateRoot {
   setThumbnailPath(path: string): void {
     if (!path || path.trim().length === 0) {
       throw new ReceiptValidationError(
-        "thumbnailPath",
-        "Thumbnail path cannot be empty",
+        'thumbnailPath',
+        'Thumbnail path cannot be empty'
       );
     }
 
@@ -419,6 +419,38 @@ export class Receipt extends AggregateRoot {
       this.props.status === ReceiptStatus.FAILED ||
       this.props.status === ReceiptStatus.PROCESSED
     );
+  }
+
+  toJSON() {
+    const fileInfo = this.getFileInfo();
+    const storageLocation = this.getStorageLocation();
+    return {
+      receiptId: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId(),
+      expenseId: this.getExpenseId(),
+      userId: this.getUserId(),
+      fileName: fileInfo.getFileName(),
+      originalName: fileInfo.getOriginalName(),
+      filePath: fileInfo.getFilePath(),
+      fileSize: fileInfo.getFileSize(),
+      mimeType: fileInfo.getMimeType(),
+      fileHash: fileInfo.getFileHash(),
+      receiptType: this.getReceiptType(),
+      status: this.getStatus(),
+      storageProvider: storageLocation.getProvider(),
+      storageBucket: storageLocation.getBucket(),
+      storageKey: storageLocation.getKey(),
+      thumbnailPath: this.getThumbnailPath(),
+      ocrText: this.getOcrText(),
+      ocrConfidence: this.getOcrConfidence()?.toString(),
+      processedAt: this.getProcessedAt()?.toISOString(),
+      failureReason: this.getFailureReason(),
+      isLinked: this.isLinkedToExpense(),
+      isDeleted: this.isDeleted(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+      deletedAt: this.getDeletedAt()?.toISOString(),
+    };
   }
 
   private transitionTo(newStatus: ReceiptStatus): void {

@@ -1,19 +1,34 @@
-import { NotificationService } from "../services/notification.service";
+import { NotificationService } from '../services/notification.service';
+import { Notification } from '../../domain/entities/notification.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetUnreadNotificationsQuery {
-  constructor(
-    public readonly recipientId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface GetUnreadNotificationsQuery extends IQuery {
+  recipientId: string;
+  workspaceId: string;
 }
 
-export class GetUnreadNotificationsHandler {
+export class GetUnreadNotificationsHandler implements IQueryHandler<
+  GetUnreadNotificationsQuery,
+  QueryResult<PaginatedResult<Notification>>
+> {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(query: GetUnreadNotificationsQuery) {
-    return await this.notificationService.getUnreadNotifications(
-      query.recipientId,
-      query.workspaceId,
-    );
+  async handle(
+    input: GetUnreadNotificationsQuery
+  ): Promise<QueryResult<PaginatedResult<Notification>>> {
+    try {
+      const result = await this.notificationService.getUnreadNotifications(
+        input.recipientId,
+        input.workspaceId
+      );
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

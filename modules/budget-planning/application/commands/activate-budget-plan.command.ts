@@ -1,20 +1,25 @@
-import { BudgetPlanService } from "../services/budget-plan.service";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
+import { BudgetPlanService } from '../services/budget-plan.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class ActivateBudgetPlanCommand {
-  constructor(
-    public readonly id: string,
-    public readonly userId: string,
-  ) {}
+export interface ActivateBudgetPlanCommand extends ICommand {
+  id: string;
+  userId: string;
 }
 
-export class ActivateBudgetPlanHandler {
+export class ActivateBudgetPlanHandler implements ICommandHandler<
+  ActivateBudgetPlanCommand,
+  CommandResult<void>
+> {
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
-  async handle(command: ActivateBudgetPlanCommand): Promise<BudgetPlan> {
-    return await this.budgetPlanService.activatePlan(
-      command.id,
-      command.userId,
-    );
+  async handle(
+    command: ActivateBudgetPlanCommand
+  ): Promise<CommandResult<void>> {
+    await this.budgetPlanService.activatePlan(command.id, command.userId);
+    return CommandResult.success();
   }
 }

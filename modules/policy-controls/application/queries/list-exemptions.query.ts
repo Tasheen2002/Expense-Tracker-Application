@@ -1,13 +1,14 @@
 import {
   ExemptionRepository,
   ExemptionFilters,
-} from "../../domain/repositories/exemption.repository";
-import { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
-import { ExemptionStatus } from "../../domain/enums/exemption-status.enum";
+} from '../../domain/repositories/exemption.repository';
+import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
 
 export interface ListExemptionsInput {
   workspaceId: string;
@@ -20,20 +21,29 @@ export interface ListExemptionsInput {
 export class ListExemptionsHandler {
   constructor(private readonly exemptionRepository: ExemptionRepository) {}
 
-  async handle(input: ListExemptionsInput): Promise<PaginatedResult<PolicyExemption>> {
+  async handle(
+    input: ListExemptionsInput
+  ): Promise<QueryResult<PaginatedResult<PolicyExemption>>> {
+    let result: PaginatedResult<PolicyExemption>;
+
     if (input.userId) {
-      return this.exemptionRepository.findByUser(
+      result = await this.exemptionRepository.findByUser(
         input.workspaceId,
         input.userId,
-        input.pagination,
+        input.pagination
+      );
+    } else {
+      const filters: ExemptionFilters = {
+        status: input.status,
+        policyId: input.policyId,
+      };
+      result = await this.exemptionRepository.findByWorkspace(
+        input.workspaceId,
+        filters,
+        input.pagination
       );
     }
 
-    const filters: ExemptionFilters = {
-      status: input.status,
-      policyId: input.policyId,
-    };
-
-    return this.exemptionRepository.findByWorkspace(input.workspaceId, filters, input.pagination);
+    return QueryResult.success(result);
   }
 }

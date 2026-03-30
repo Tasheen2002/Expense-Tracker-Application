@@ -1,17 +1,18 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { ZodSchema, ZodError } from 'zod'
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { ZodSchema, ZodError } from 'zod';
 
 /**
  * Validation error response type
  */
 interface ValidationErrorResponse {
-  success: false
-  statusCode: 400
-  message: string
+  success: false;
+  statusCode: 400;
+  message: string;
+  error: 'VALIDATION_ERROR';
   errors: Array<{
-    field: string
-    message: string
-  }>
+    field: string;
+    message: string;
+  }>;
 }
 
 /**
@@ -21,7 +22,7 @@ function formatZodErrors(error: ZodError): ValidationErrorResponse['errors'] {
   return error.errors.map((err) => ({
     field: err.path.join('.'),
     message: err.message,
-  }))
+  }));
 }
 
 /**
@@ -30,19 +31,20 @@ function formatZodErrors(error: ZodError): ValidationErrorResponse['errors'] {
 export function validateBody<T extends ZodSchema>(schema: T) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.body = schema.parse(request.body)
-    } catch (error) {
+      request.body = schema.parse(request.body);
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
           message: 'Validation failed',
+          error: 'VALIDATION_ERROR',
           errors: formatZodErrors(error),
-        })
+        });
       }
-      throw error
+      throw error;
     }
-  }
+  };
 }
 
 /**
@@ -51,19 +53,20 @@ export function validateBody<T extends ZodSchema>(schema: T) {
 export function validateQuery<T extends ZodSchema>(schema: T) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.query = schema.parse(request.query)
-    } catch (error) {
+      request.query = schema.parse(request.query);
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
           message: 'Validation failed',
+          error: 'VALIDATION_ERROR',
           errors: formatZodErrors(error),
-        })
+        });
       }
-      throw error
+      throw error;
     }
-  }
+  };
 }
 
 /**
@@ -72,17 +75,18 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
 export function validateParams<T extends ZodSchema>(schema: T) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.params = schema.parse(request.params)
-    } catch (error) {
+      request.params = schema.parse(request.params);
+    } catch (error: unknown) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
           message: 'Validation failed',
+          error: 'VALIDATION_ERROR',
           errors: formatZodErrors(error),
-        })
+        });
       }
-      throw error
+      throw error;
     }
-  }
+  };
 }

@@ -1,25 +1,25 @@
-import { ApprovalChainId } from "../value-objects/approval-chain-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { ApprovalChainId } from '../value-objects/approval-chain-id';
+import { WorkspaceId } from '../value-objects';
+import { CategoryId } from '../value-objects';
+import { UserId } from '../value-objects';
 import {
   EmptyApproverSequenceError,
   InvalidAmountRangeError,
-} from "../errors/approval-workflow.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+} from '../errors/approval-workflow.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 export class ApprovalChainCreatedEvent extends DomainEvent {
   constructor(
     public readonly chainId: string,
     public readonly workspaceId: string,
-    public readonly name: string,
+    public readonly name: string
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.created";
+    return 'approval-chain.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -40,13 +40,13 @@ export class ApprovalChainUpdatedEvent extends DomainEvent {
       description?: string;
       minAmount?: number;
       maxAmount?: number;
-    },
+    }
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.updated";
+    return 'approval-chain.updated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -63,13 +63,13 @@ export class ApproverSequenceChangedEvent extends DomainEvent {
     public readonly chainId: string,
     public readonly workspaceId: string,
     public readonly oldSequence: string[],
-    public readonly newSequence: string[],
+    public readonly newSequence: string[]
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.approver-sequence-changed";
+    return 'approval-chain.approver-sequence-changed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -85,13 +85,13 @@ export class ApproverSequenceChangedEvent extends DomainEvent {
 export class ApprovalChainActivatedEvent extends DomainEvent {
   constructor(
     public readonly chainId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.activated";
+    return 'approval-chain.activated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -105,13 +105,13 @@ export class ApprovalChainActivatedEvent extends DomainEvent {
 export class ApprovalChainDeactivatedEvent extends DomainEvent {
   constructor(
     public readonly chainId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.deactivated";
+    return 'approval-chain.deactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -125,13 +125,13 @@ export class ApprovalChainDeactivatedEvent extends DomainEvent {
 export class ApprovalChainDeletedEvent extends DomainEvent {
   constructor(
     public readonly chainId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(chainId, "ApprovalChain");
+    super(chainId, 'ApprovalChain');
   }
 
   get eventType(): string {
-    return "approval-chain.deleted";
+    return 'approval-chain.deleted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -197,7 +197,7 @@ export class ApprovalChain extends AggregateRoot {
       categoryIds: params.categoryIds?.map((id) => CategoryId.fromString(id)),
       requiresReceipt: params.requiresReceipt,
       approverSequence: params.approverSequence.map((id) =>
-        UserId.fromString(id),
+        UserId.fromString(id)
       ),
       isActive: true,
       createdAt: new Date(),
@@ -208,8 +208,8 @@ export class ApprovalChain extends AggregateRoot {
       new ApprovalChainCreatedEvent(
         chain.getId().getValue(),
         chain.getWorkspaceId().getValue(),
-        chain.getName(),
-      ),
+        chain.getName()
+      )
     );
 
     return chain;
@@ -277,8 +277,8 @@ export class ApprovalChain extends AggregateRoot {
         new ApprovalChainUpdatedEvent(
           this.getId().getValue(),
           this.getWorkspaceId().getValue(),
-          { name },
-        ),
+          { name }
+        )
       );
     }
   }
@@ -293,8 +293,8 @@ export class ApprovalChain extends AggregateRoot {
         new ApprovalChainUpdatedEvent(
           this.getId().getValue(),
           this.getWorkspaceId().getValue(),
-          { description },
-        ),
+          { description }
+        )
       );
     }
   }
@@ -311,8 +311,8 @@ export class ApprovalChain extends AggregateRoot {
       new ApprovalChainUpdatedEvent(
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
-        { minAmount, maxAmount },
-      ),
+        { minAmount, maxAmount }
+      )
     );
   }
 
@@ -323,7 +323,7 @@ export class ApprovalChain extends AggregateRoot {
 
     const oldSequence = this.props.approverSequence.map((id) => id.getValue());
     this.props.approverSequence = approverSequence.map((id) =>
-      UserId.fromString(id),
+      UserId.fromString(id)
     );
     this.props.updatedAt = new Date();
 
@@ -332,8 +332,8 @@ export class ApprovalChain extends AggregateRoot {
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
         oldSequence,
-        approverSequence,
-      ),
+        approverSequence
+      )
     );
   }
 
@@ -345,8 +345,8 @@ export class ApprovalChain extends AggregateRoot {
       this.addDomainEvent(
         new ApprovalChainActivatedEvent(
           this.getId().getValue(),
-          this.getWorkspaceId().getValue(),
-        ),
+          this.getWorkspaceId().getValue()
+        )
       );
     }
   }
@@ -359,8 +359,8 @@ export class ApprovalChain extends AggregateRoot {
       this.addDomainEvent(
         new ApprovalChainDeactivatedEvent(
           this.getId().getValue(),
-          this.getWorkspaceId().getValue(),
-        ),
+          this.getWorkspaceId().getValue()
+        )
       );
     }
   }
@@ -369,8 +369,8 @@ export class ApprovalChain extends AggregateRoot {
     this.addDomainEvent(
       new ApprovalChainDeletedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-      ),
+        this.getWorkspaceId().getValue()
+      )
     );
   }
 
@@ -396,7 +396,7 @@ export class ApprovalChain extends AggregateRoot {
         return false;
       }
       const categoryIdSet = new Set(
-        this.props.categoryIds.map((id) => id.getValue()),
+        this.props.categoryIds.map((id) => id.getValue())
       );
       if (!categoryIdSet.has(params.categoryId)) {
         return false;
@@ -409,4 +409,36 @@ export class ApprovalChain extends AggregateRoot {
 
     return true;
   }
+
+  toJSON(): ApprovalChainDTO {
+    return {
+      chainId: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      description: this.getDescription(),
+      minAmount: this.getMinAmount(),
+      maxAmount: this.getMaxAmount(),
+      categoryIds: this.getCategoryIds()?.map((id) => id.getValue()),
+      requiresReceipt: this.requiresReceipt(),
+      approverSequence: this.getApproverSequence().map((id) => id.getValue()),
+      isActive: this.isActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ApprovalChainDTO {
+  chainId: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  categoryIds?: string[];
+  requiresReceipt: boolean;
+  approverSequence: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

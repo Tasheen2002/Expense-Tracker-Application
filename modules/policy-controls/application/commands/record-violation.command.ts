@@ -1,6 +1,7 @@
-import { ViolationRepository } from "../../domain/repositories/violation.repository";
-import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface RecordViolationInput {
   workspaceId: string;
@@ -16,7 +17,9 @@ export interface RecordViolationInput {
 export class RecordViolationHandler {
   constructor(private readonly violationRepository: ViolationRepository) {}
 
-  async handle(input: RecordViolationInput): Promise<PolicyViolation> {
+  async handle(
+    input: RecordViolationInput
+  ): Promise<CommandResult<{ violationId: string }>> {
     const violation = PolicyViolation.create({
       workspaceId: input.workspaceId,
       policyId: input.policyId,
@@ -30,6 +33,6 @@ export class RecordViolationHandler {
 
     await this.violationRepository.save(violation);
 
-    return violation;
+    return CommandResult.success({ violationId: violation.getId().getValue() });
   }
 }

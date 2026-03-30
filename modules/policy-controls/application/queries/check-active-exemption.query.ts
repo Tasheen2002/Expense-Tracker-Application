@@ -1,5 +1,6 @@
-import { ExemptionRepository } from "../../domain/repositories/exemption.repository";
-import { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
+import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
+import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
 
 export interface CheckActiveExemptionInput {
   workspaceId: string;
@@ -11,12 +12,13 @@ export class CheckActiveExemptionHandler {
   constructor(private readonly exemptionRepository: ExemptionRepository) {}
 
   async handle(
-    input: CheckActiveExemptionInput,
-  ): Promise<PolicyExemption | null> {
-    return this.exemptionRepository.findActiveForUser(
+    input: CheckActiveExemptionInput
+  ): Promise<QueryResult<PolicyExemption | null>> {
+    const exemption = await this.exemptionRepository.findActiveForUser(
       input.workspaceId,
       input.userId,
-      input.policyId,
+      input.policyId
     );
+    return QueryResult.success(exemption);
   }
 }

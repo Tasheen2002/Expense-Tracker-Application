@@ -1,12 +1,11 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { CreateCategoryHandler } from "../../../application/commands/create-category.command";
-import { UpdateCategoryHandler } from "../../../application/commands/update-category.command";
-import { DeleteCategoryHandler } from "../../../application/commands/delete-category.command";
-import { GetCategoryHandler } from "../../../application/queries/get-category.query";
-import { ListCategoriesHandler } from "../../../application/queries/list-categories.query";
-import { Category } from "../../../domain/entities/category.entity";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CreateCategoryHandler } from '../../../application/commands/create-category.command';
+import { UpdateCategoryHandler } from '../../../application/commands/update-category.command';
+import { DeleteCategoryHandler } from '../../../application/commands/delete-category.command';
+import { GetCategoryHandler } from '../../../application/queries/get-category.query';
+import { ListCategoriesHandler } from '../../../application/queries/list-categories.query';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class CategoryController {
   constructor(
@@ -14,7 +13,7 @@ export class CategoryController {
     private readonly updateCategoryHandler: UpdateCategoryHandler,
     private readonly deleteCategoryHandler: DeleteCategoryHandler,
     private readonly getCategoryHandler: GetCategoryHandler,
-    private readonly listCategoriesHandler: ListCategoriesHandler,
+    private readonly listCategoriesHandler: ListCategoriesHandler
   ) {}
 
   async createCategory(
@@ -27,12 +26,12 @@ export class CategoryController {
         icon?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
 
-      const category = await this.createCategoryHandler.handle({
+      const result = await this.createCategoryHandler.handle({
         workspaceId,
         name: request.body.name,
         description: request.body.description,
@@ -40,22 +39,13 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Category created successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -71,12 +61,12 @@ export class CategoryController {
         icon?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      const category = await this.updateCategoryHandler.handle({
+      const result = await this.updateCategoryHandler.handle({
         categoryId,
         workspaceId,
         name: request.body.name,
@@ -85,21 +75,11 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category updated successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          updatedAt: category.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category updated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -109,21 +89,21 @@ export class CategoryController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      await this.deleteCategoryHandler.handle({
+      const result = await this.deleteCategoryHandler.handle({
         categoryId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category deleted successfully",
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -133,32 +113,22 @@ export class CategoryController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; categoryId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, categoryId } = request.params;
 
-      const category = await this.getCategoryHandler.handle({
+      const result = await this.getCategoryHandler.handle({
         categoryId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Category retrieved successfully",
-        data: {
-          categoryId: category.id.getValue(),
-          workspaceId: category.workspaceId,
-          name: category.name,
-          description: category.description,
-          color: category.color,
-          icon: category.icon,
-          isActive: category.isActive,
-          createdAt: category.createdAt.toISOString(),
-          updatedAt: category.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Category retrieved successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -167,43 +137,37 @@ export class CategoryController {
   async listCategories(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string };
+      Querystring: { activeOnly?: string; limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
-      const { activeOnly } = request.query;
+      const { activeOnly, limit, offset } = request.query;
 
-      const categories = await this.listCategoriesHandler.handle({
+      const result = await this.listCategoriesHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === "true",
+        activeOnly: activeOnly === 'true',
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Categories retrieved successfully",
-        data: {
-          items: categories.items.map((category: Category) => ({
-            categoryId: category.id.getValue(),
-            workspaceId: category.workspaceId,
-            name: category.name,
-            description: category.description,
-            color: category.color,
-            icon: category.icon,
-            isActive: category.isActive,
-            createdAt: category.createdAt.toISOString(),
-            updatedAt: category.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: categories.total,
-            limit: categories.limit,
-            offset: categories.offset,
-            hasMore: categories.hasMore,
-          },
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Categories retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((category) => category.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

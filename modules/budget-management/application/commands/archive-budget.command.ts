@@ -1,20 +1,29 @@
-import { BudgetService } from "../services/budget.service";
-import { Budget } from "../../domain/entities/budget.entity";
+import { BudgetService } from '../services/budget.service';
 
-export interface ArchiveBudgetDto {
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface ArchiveBudgetCommand extends ICommand {
   budgetId: string;
   workspaceId: string;
   userId: string;
 }
 
-export class ArchiveBudgetHandler {
+export class ArchiveBudgetHandler implements ICommandHandler<
+  ArchiveBudgetCommand,
+  CommandResult<void>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: ArchiveBudgetDto): Promise<Budget> {
-    return await this.budgetService.archiveBudget(
-      dto.budgetId,
-      dto.workspaceId,
-      dto.userId,
+  async handle(command: ArchiveBudgetCommand): Promise<CommandResult<void>> {
+    await this.budgetService.archiveBudget(
+      command.budgetId,
+      command.workspaceId,
+      command.userId
     );
+    return CommandResult.success();
   }
 }

@@ -1,28 +1,33 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
-import { Project } from "../../domain/entities/project.entity";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class UpdateProjectCommand {
-  constructor(
-    public readonly id: string,
-    public readonly workspaceId: string,
-    public readonly actorId: string,
-    public readonly name?: string,
-    public readonly code?: string,
-    public readonly description?: string | null,
-    public readonly startDate?: string | Date,
-    public readonly endDate?: string | Date | null,
-    public readonly managerId?: string | null,
-    public readonly budget?: number | null,
-  ) {}
+export interface UpdateProjectCommand extends ICommand {
+  id: string;
+  workspaceId: string;
+  actorId: string;
+  name?: string;
+  code?: string;
+  description?: string | null;
+  startDate?: string | Date;
+  endDate?: string | Date | null;
+  managerId?: string | null;
+  budget?: number | null;
 }
 
-export class UpdateProjectHandler {
+export class UpdateProjectHandler implements ICommandHandler<
+  UpdateProjectCommand,
+  CommandResult<void>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: UpdateProjectCommand): Promise<Project> {
-    return await this.allocationManagementService.updateProject({
+  async handle(command: UpdateProjectCommand): Promise<CommandResult<void>> {
+    await this.allocationManagementService.updateProject({
       id: command.id,
       workspaceId: command.workspaceId,
       actorId: command.actorId,
@@ -34,5 +39,6 @@ export class UpdateProjectHandler {
       managerId: command.managerId,
       budget: command.budget,
     });
+    return CommandResult.success(undefined);
   }
 }

@@ -1,9 +1,53 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidFormatError,
   ValueOutOfRangeError,
   CurrencyMismatchError,
-} from "../../../../apps/api/src/shared/domain/errors";
+} from '../../../../apps/api/src/shared/domain/errors';
+
+/** ISO 4217 currency codes supported by the expense ledger module. */
+export const VALID_CURRENCIES: readonly string[] = [
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'CNY',
+  'AUD',
+  'CAD',
+  'CHF',
+  'INR',
+  'MXN',
+  'BRL',
+  'ZAR',
+  'RUB',
+  'KRW',
+  'SGD',
+  'NZD',
+  'TRY',
+  'HKD',
+  'NOK',
+  'SEK',
+  'DKK',
+  'PLN',
+  'THB',
+  'IDR',
+  'HUF',
+  'CZK',
+  'ILS',
+  'CLP',
+  'PHP',
+  'AED',
+  'SAR',
+  'MYR',
+  'RON',
+  'ARS',
+  'VND',
+  'PKR',
+  'BDT',
+  'EGP',
+  'NGN',
+  'KES',
+];
 
 export class Money {
   private readonly amount: Decimal;
@@ -16,22 +60,22 @@ export class Money {
 
   static create(amount: number | string | Decimal, currency: string): Money {
     if (!this.isValidCurrency(currency)) {
-      throw new InvalidFormatError("currency", "ISO 4217 currency code");
+      throw new InvalidFormatError('currency', 'ISO 4217 currency code');
     }
 
     const decimalAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (decimalAmount.isNegative()) {
-      throw new ValueOutOfRangeError("amount", "Amount cannot be negative");
+      throw new ValueOutOfRangeError('amount', 'Amount cannot be negative');
     }
 
     if (decimalAmount.decimalPlaces() > 2) {
       throw new ValueOutOfRangeError(
-        "amount",
-        "Amount cannot have more than 2 decimal places",
+        'amount',
+        'Amount cannot have more than 2 decimal places'
       );
     }
 
@@ -39,50 +83,7 @@ export class Money {
   }
 
   static isValidCurrency(currency: string): boolean {
-    // ISO 4217 currency codes validation (common currencies)
-    const validCurrencies = [
-      "USD",
-      "EUR",
-      "GBP",
-      "JPY",
-      "CNY",
-      "AUD",
-      "CAD",
-      "CHF",
-      "INR",
-      "MXN",
-      "BRL",
-      "ZAR",
-      "RUB",
-      "KRW",
-      "SGD",
-      "NZD",
-      "TRY",
-      "HKD",
-      "NOK",
-      "SEK",
-      "DKK",
-      "PLN",
-      "THB",
-      "IDR",
-      "HUF",
-      "CZK",
-      "ILS",
-      "CLP",
-      "PHP",
-      "AED",
-      "SAR",
-      "MYR",
-      "RON",
-      "ARS",
-      "VND",
-      "PKR",
-      "BDT",
-      "EGP",
-      "NGN",
-      "KES",
-    ];
-    return validCurrencies.includes(currency.toUpperCase());
+    return VALID_CURRENCIES.includes(currency.toUpperCase());
   }
 
   getAmount(): Decimal {
@@ -95,20 +96,20 @@ export class Money {
 
   add(other: Money): Money {
     if (this.currency !== other.currency) {
-      throw new CurrencyMismatchError("add");
+      throw new CurrencyMismatchError('add');
     }
     return new Money(this.amount.add(other.amount), this.currency);
   }
 
   subtract(other: Money): Money {
     if (this.currency !== other.currency) {
-      throw new CurrencyMismatchError("subtract");
+      throw new CurrencyMismatchError('subtract');
     }
     const result = this.amount.sub(other.amount);
     if (result.isNegative()) {
       throw new ValueOutOfRangeError(
-        "result",
-        "Subtraction result cannot be negative",
+        'result',
+        'Subtraction result cannot be negative'
       );
     }
     return new Money(result, this.currency);
@@ -124,14 +125,14 @@ export class Money {
 
   isGreaterThan(other: Money): boolean {
     if (this.currency !== other.currency) {
-      throw new CurrencyMismatchError("compare");
+      throw new CurrencyMismatchError('compare');
     }
     return this.amount.greaterThan(other.amount);
   }
 
   isLessThan(other: Money): boolean {
     if (this.currency !== other.currency) {
-      throw new CurrencyMismatchError("compare");
+      throw new CurrencyMismatchError('compare');
     }
     return this.amount.lessThan(other.amount);
   }

@@ -13,7 +13,6 @@ import {
   DisconnectBankCommand,
 } from "../commands";
 import { GetBankConnectionsQuery } from "../queries";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class BankConnectionService {
   constructor(
@@ -100,19 +99,15 @@ export class BankConnectionService {
 
   async getConnections(
     query: GetBankConnectionsQuery,
-  ): Promise<PaginatedResult<BankConnection>> {
+  ): Promise<BankConnection[]> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const options = {
-      limit: query.limit,
-      offset: query.offset,
-    };
 
     if (query.userId) {
       const userId = UserId.fromString(query.userId);
-      return this.connectionRepository.findByUser(workspaceId, userId, options);
+      return this.connectionRepository.findByUser(workspaceId, userId);
     }
 
-    return this.connectionRepository.findByWorkspace(workspaceId, options);
+    return this.connectionRepository.findByWorkspace(workspaceId);
   }
 
   async getConnection(

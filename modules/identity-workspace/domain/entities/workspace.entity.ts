@@ -1,8 +1,8 @@
-import { WorkspaceId } from "../value-objects/workspace-id.vo";
-import { UserId } from "../value-objects/user-id.vo";
-import { InvalidWorkspaceNameError } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { WorkspaceId } from '../value-objects/workspace-id.vo';
+import { UserId } from '../value-objects/user-id.vo';
+import { InvalidWorkspaceNameError } from '../errors/identity.errors';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -12,13 +12,13 @@ export class WorkspaceCreatedEvent extends DomainEvent {
   constructor(
     public readonly workspaceId: string,
     public readonly name: string,
-    public readonly ownerId: string,
+    public readonly ownerId: string
   ) {
-    super(workspaceId, "Workspace");
+    super(workspaceId, 'Workspace');
   }
 
   get eventType(): string {
-    return "WorkspaceCreated";
+    return 'WorkspaceCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -34,13 +34,13 @@ export class WorkspaceRenamedEvent extends DomainEvent {
   constructor(
     public readonly workspaceId: string,
     public readonly oldName: string,
-    public readonly newName: string,
+    public readonly newName: string
   ) {
-    super(workspaceId, "Workspace");
+    super(workspaceId, 'Workspace');
   }
 
   get eventType(): string {
-    return "WorkspaceRenamed";
+    return 'WorkspaceRenamed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -54,11 +54,11 @@ export class WorkspaceRenamedEvent extends DomainEvent {
 
 export class WorkspaceDeactivatedEvent extends DomainEvent {
   constructor(public readonly workspaceId: string) {
-    super(workspaceId, "Workspace");
+    super(workspaceId, 'Workspace');
   }
 
   get eventType(): string {
-    return "WorkspaceDeactivated";
+    return 'WorkspaceDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -78,7 +78,7 @@ export class Workspace extends AggregateRoot {
     private readonly ownerId: UserId,
     private isActive: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -96,15 +96,11 @@ export class Workspace extends AggregateRoot {
       ownerId,
       true, // Active by default
       now,
-      now,
+      now
     );
 
     workspace.addDomainEvent(
-      new WorkspaceCreatedEvent(
-        workspaceId.getValue(),
-        data.name,
-        data.ownerId,
-      ),
+      new WorkspaceCreatedEvent(workspaceId.getValue(), data.name, data.ownerId)
     );
 
     return workspace;
@@ -118,7 +114,7 @@ export class Workspace extends AggregateRoot {
       UserId.fromString(data.ownerId),
       data.isActive,
       data.createdAt,
-      data.updatedAt,
+      data.updatedAt
     );
   }
 
@@ -130,7 +126,7 @@ export class Workspace extends AggregateRoot {
       UserId.fromString(row.owner_id),
       row.is_active,
       row.created_at,
-      row.updated_at,
+      row.updated_at
     );
   }
 
@@ -175,7 +171,7 @@ export class Workspace extends AggregateRoot {
     this.updatedAt = new Date();
 
     this.addDomainEvent(
-      new WorkspaceRenamedEvent(this.id.getValue(), oldName, this.name),
+      new WorkspaceRenamedEvent(this.id.getValue(), oldName, this.name)
     );
   }
 
@@ -195,13 +191,13 @@ export class Workspace extends AggregateRoot {
   }
 
   // Slug generation
-  private static generateSlug(name: string): string {
+  public static generateSlug(name: string): string {
     return name
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, "") // Remove special characters
-      .replace(/[\s_-]+/g, "-") // Replace spaces and underscores with hyphens
-      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   }
 
   // Convert to data for persistence
@@ -232,6 +228,18 @@ export class Workspace extends AggregateRoot {
   equals(other: Workspace): boolean {
     return this.id.equals(other.id);
   }
+
+  toJSON(): WorkspaceDTO {
+    return {
+      workspaceId: this.id.getValue(),
+      name: this.name,
+      slug: this.slug,
+      ownerId: this.ownerId.getValue(),
+      isActive: this.isActive,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+    };
+  }
 }
 
 // Supporting types and interfaces
@@ -258,4 +266,14 @@ export interface WorkspaceRow {
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+export interface WorkspaceDTO {
+  workspaceId: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

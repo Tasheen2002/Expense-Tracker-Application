@@ -1,24 +1,35 @@
 import {
   PreferenceService,
   GlobalPreferenceSettings,
-} from "../services/preference.service";
+} from '../services/preference.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class UpdatePreferencesCommand {
-  constructor(
-    public readonly userId: string,
-    public readonly workspaceId: string,
-    public readonly settings: GlobalPreferenceSettings,
-  ) {}
+export interface UpdatePreferencesCommand extends ICommand {
+  userId: string;
+  workspaceId: string;
+  settings: GlobalPreferenceSettings;
 }
 
-export class UpdatePreferencesHandler {
+export class UpdatePreferencesHandler implements ICommandHandler<
+  UpdatePreferencesCommand,
+  CommandResult<void>
+> {
   constructor(private readonly preferenceService: PreferenceService) {}
 
-  async handle(command: UpdatePreferencesCommand) {
-    return await this.preferenceService.updateGlobalPreferences(
-      command.userId,
-      command.workspaceId,
-      command.settings,
-    );
+  async handle(input: UpdatePreferencesCommand): Promise<CommandResult<void>> {
+    try {
+      await this.preferenceService.updateGlobalPreferences(
+        input.userId,
+        input.workspaceId,
+        input.settings
+      );
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

@@ -1,12 +1,12 @@
-import { NotificationType } from "../enums/notification-type.enum";
-import { NotificationChannel } from "../enums/notification-channel.enum";
-import { NotificationPriority } from "../enums/notification-priority.enum";
-import { NotificationStatus } from "../enums/notification-status.enum";
-import { NotificationId } from "../value-objects/notification-id";
-import { WorkspaceId } from "../value-objects";
-import { UserId } from "../value-objects";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { NotificationType } from '../enums/notification-type.enum';
+import { NotificationChannel } from '../enums/notification-channel.enum';
+import { NotificationPriority } from '../enums/notification-priority.enum';
+import { NotificationStatus } from '../enums/notification-status.enum';
+import { NotificationId } from '../value-objects/notification-id';
+import { WorkspaceId } from '../value-objects';
+import { UserId } from '../value-objects';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 /**
  * Emitted when a notification is created.
@@ -18,13 +18,13 @@ export class NotificationCreatedEvent extends DomainEvent {
     public readonly recipientId: string,
     public readonly type: NotificationType,
     public readonly channel: NotificationChannel,
-    public readonly priority: NotificationPriority,
+    public readonly priority: NotificationPriority
   ) {
-    super(notificationId, "Notification");
+    super(notificationId, 'Notification');
   }
 
   get eventType(): string {
-    return "notification.created";
+    return 'notification.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -48,13 +48,13 @@ export class NotificationSentEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly recipientId: string,
     public readonly channel: NotificationChannel,
-    public readonly sentAt: Date,
+    public readonly sentAt: Date
   ) {
-    super(notificationId, "Notification");
+    super(notificationId, 'Notification');
   }
 
   get eventType(): string {
-    return "notification.sent";
+    return 'notification.sent';
   }
 
   getPayload(): Record<string, unknown> {
@@ -78,13 +78,13 @@ export class NotificationFailedEvent extends DomainEvent {
     public readonly recipientId: string,
     public readonly channel: NotificationChannel,
     public readonly error: string,
-    public readonly failedAt: Date,
+    public readonly failedAt: Date
   ) {
-    super(notificationId, "Notification");
+    super(notificationId, 'Notification');
   }
 
   get eventType(): string {
-    return "notification.failed";
+    return 'notification.failed';
   }
 
   getPayload(): Record<string, unknown> {
@@ -107,13 +107,13 @@ export class NotificationReadEvent extends DomainEvent {
     public readonly notificationId: string,
     public readonly workspaceId: string,
     public readonly recipientId: string,
-    public readonly readAt: Date,
+    public readonly readAt: Date
   ) {
-    super(notificationId, "Notification");
+    super(notificationId, 'Notification');
   }
 
   get eventType(): string {
-    return "notification.read";
+    return 'notification.read';
   }
 
   getPayload(): Record<string, unknown> {
@@ -184,8 +184,8 @@ export class Notification extends AggregateRoot {
         notification.getRecipientId().getValue(),
         notification.getType(),
         notification.getChannel(),
-        notification.getPriority(),
-      ),
+        notification.getPriority()
+      )
     );
 
     return notification;
@@ -266,8 +266,8 @@ export class Notification extends AggregateRoot {
         this.getWorkspaceId().getValue(),
         this.getRecipientId().getValue(),
         this.getChannel(),
-        this.props.sentAt,
-      ),
+        this.props.sentAt
+      )
     );
   }
 
@@ -283,8 +283,8 @@ export class Notification extends AggregateRoot {
         this.getRecipientId().getValue(),
         this.getChannel(),
         error,
-        this.props.updatedAt,
-      ),
+        this.props.updatedAt
+      )
     );
   }
 
@@ -299,8 +299,40 @@ export class Notification extends AggregateRoot {
         this.getId().getValue(),
         this.getWorkspaceId().getValue(),
         this.getRecipientId().getValue(),
-        this.props.readAt,
-      ),
+        this.props.readAt
+      )
     );
   }
+
+  toJSON(): NotificationDTO {
+    return {
+      id: this.getId().getValue(),
+      type: this.getType(),
+      channel: this.getChannel(),
+      priority: this.getPriority(),
+      title: this.getTitle(),
+      content: this.getContent(),
+      data: this.getData(),
+      status: this.getStatus(),
+      isRead: this.isRead(),
+      readAt: this.getReadAt()?.toISOString() || null,
+      sentAt: this.getSentAt()?.toISOString() || null,
+      createdAt: this.getCreatedAt().toISOString(),
+    };
+  }
+}
+
+export interface NotificationDTO {
+  id: string;
+  type: NotificationType;
+  channel: NotificationChannel;
+  priority: NotificationPriority;
+  title: string;
+  content: string;
+  data?: Record<string, unknown>;
+  status: NotificationStatus;
+  isRead: boolean;
+  readAt: string | null;
+  sentAt: string | null;
+  createdAt: string;
 }

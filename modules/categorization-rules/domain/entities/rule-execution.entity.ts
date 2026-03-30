@@ -1,10 +1,10 @@
-import { RuleExecutionId } from "../value-objects/rule-execution-id";
-import { RuleId } from "../value-objects/rule-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { RuleExecutionId } from '../value-objects/rule-execution-id';
+import { RuleId } from '../value-objects/rule-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -16,13 +16,13 @@ export class RuleExecutedEvent extends DomainEvent {
     public readonly ruleId: string,
     public readonly expenseId: string,
     public readonly workspaceId: string,
-    public readonly appliedCategoryId: string,
+    public readonly appliedCategoryId: string
   ) {
-    super(executionId, "RuleExecution");
+    super(executionId, 'RuleExecution');
   }
 
   get eventType(): string {
-    return "RuleExecuted";
+    return 'RuleExecuted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -86,8 +86,8 @@ export class RuleExecution extends AggregateRoot {
         props.ruleId.getValue(),
         props.expenseId.getValue(),
         props.workspaceId.getValue(),
-        props.appliedCategoryId.getValue(),
-      ),
+        props.appliedCategoryId.getValue()
+      )
     );
 
     return execution;
@@ -127,5 +127,16 @@ export class RuleExecution extends AggregateRoot {
 
   getExecutedAt(): Date {
     return this.executedAt;
+  }
+
+  toJSON() {
+    return {
+      id: this.getId().getValue(),
+      ruleId: this.getRuleId().getValue(),
+      expenseId: this.getExpenseId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      appliedCategoryId: this.getAppliedCategoryId().getValue(),
+      executedAt: this.getExecutedAt(),
+    };
   }
 }

@@ -1,10 +1,15 @@
-import { ReceiptService } from "../services/receipt.service";
-import { Receipt } from "../../domain/entities/receipt.entity";
-import { StorageLocation } from "../../domain/value-objects/storage-location";
-import { ReceiptType } from "../../domain/enums/receipt-type";
-import { StorageProvider } from "../../domain/enums/storage-provider";
+import { ReceiptService } from '../services/receipt.service';
+import { Receipt } from '../../domain/entities/receipt.entity';
+import { StorageLocation } from '../../domain/value-objects/storage-location';
+import { ReceiptType } from '../../domain/enums/receipt-type';
+import { StorageProvider } from '../../domain/enums/storage-provider';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface UploadReceiptDto {
+export interface UploadReceiptCommand extends ICommand {
   workspaceId: string;
   userId: string;
   fileName: string;
@@ -19,27 +24,33 @@ export interface UploadReceiptDto {
   storageKey?: string;
 }
 
-export class UploadReceiptHandler {
+export class UploadReceiptHandler implements ICommandHandler<
+  UploadReceiptCommand,
+  CommandResult<{ receiptId: string }>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: UploadReceiptDto): Promise<Receipt> {
+  async handle(
+    command: UploadReceiptCommand
+  ): Promise<CommandResult<{ receiptId: string }>> {
     const storageLocation = StorageLocation.create({
-      provider: dto.storageProvider as StorageProvider,
-      bucket: dto.storageBucket,
-      key: dto.storageKey,
+      provider: command.storageProvider as StorageProvider,
+      bucket: command.storageBucket,
+      key: command.storageKey,
     });
 
-    return await this.receiptService.uploadReceipt({
-      workspaceId: dto.workspaceId,
-      userId: dto.userId,
-      fileName: dto.fileName,
-      originalName: dto.originalName,
-      filePath: dto.filePath,
-      fileSize: dto.fileSize,
-      mimeType: dto.mimeType,
-      fileHash: dto.fileHash,
-      receiptType: dto.receiptType,
+    const receipt = await this.receiptService.uploadReceipt({
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      fileName: command.fileName,
+      originalName: command.originalName,
+      filePath: command.filePath,
+      fileSize: command.fileSize,
+      mimeType: command.mimeType,
+      fileHash: command.fileHash,
+      receiptType: command.receiptType,
       storageLocation,
     });
+    return CommandResult.success({ receiptId: receipt.getId().getValue() });
   }
 }

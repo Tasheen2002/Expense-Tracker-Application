@@ -1,29 +1,26 @@
-import { WorkspaceInvitationService } from '../services/workspace-invitation.service'
+import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface CancelInvitationCommand {
-  invitationId: string
+export interface CancelInvitationCommand extends ICommand {
+  invitationId: string;
 }
 
-export interface CancelInvitationResult {
-  success: boolean
-  error?: string
-}
-
-export class CancelInvitationHandler {
+export class CancelInvitationHandler implements ICommandHandler<
+  CancelInvitationCommand,
+  CommandResult<void>
+> {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
-  async handle(command: CancelInvitationCommand): Promise<CancelInvitationResult> {
+  async handle(command: CancelInvitationCommand): Promise<CommandResult<void>> {
     try {
-      await this.invitationService.cancelInvitation(command.invitationId)
-
-      return {
-        success: true,
-      }
+      await this.invitationService.cancelInvitation(command.invitationId);
+      return CommandResult.success<void>(undefined);
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to cancel invitation',
-      }
+      return CommandResult.fromError(error);
     }
   }
 }

@@ -1,14 +1,13 @@
-import { AllocationAmount } from "../value-objects/allocation-amount";
-import { DepartmentId } from "../value-objects/department-id";
-import { CostCenterId } from "../value-objects/cost-center-id";
-import { ProjectId } from "../value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { Decimal } from "@prisma/client/runtime/library";
-import { InvalidAllocationTargetError } from "../errors/cost-allocation.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
-import * as crypto from "crypto";
+import { AllocationAmount } from '../value-objects/allocation-amount';
+import { DepartmentId } from '../value-objects/department-id';
+import { CostCenterId } from '../value-objects/cost-center-id';
+import { ProjectId } from '../value-objects/project-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { Decimal } from '@prisma/client/runtime/library';
+import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import * as crypto from 'crypto';
 
 // ============================================================================
 // Domain Events
@@ -20,15 +19,15 @@ export class ExpenseAllocationCreatedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly expenseId: string,
     public readonly amount: string,
-    public readonly targetType: "department" | "costCenter" | "project",
+    public readonly targetType: 'department' | 'costCenter' | 'project',
     public readonly targetId: string,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(allocationId, "ExpenseAllocation");
+    super(allocationId, 'ExpenseAllocation');
   }
 
   get eventType(): string {
-    return "ExpenseAllocationCreated";
+    return 'ExpenseAllocationCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -60,7 +59,7 @@ export class ExpenseAllocation extends AggregateRoot {
     private readonly projectId: ProjectId | null,
     private readonly notes: string | null,
     private readonly createdBy: UserId,
-    private readonly createdAt: Date,
+    private readonly createdAt: Date
   ) {
     super();
   }
@@ -84,21 +83,21 @@ export class ExpenseAllocation extends AggregateRoot {
     ].filter(Boolean);
     if (targets.length !== 1) {
       throw new InvalidAllocationTargetError(
-        "ExpenseAllocation must target exactly one of Department, CostCenter, or Project.",
+        'ExpenseAllocation must target exactly one of Department, CostCenter, or Project.'
       );
     }
 
     // Determine target type and ID
-    let targetType: "department" | "costCenter" | "project";
+    let targetType: 'department' | 'costCenter' | 'project';
     let targetId: string;
     if (params.departmentId) {
-      targetType = "department";
+      targetType = 'department';
       targetId = params.departmentId.getValue();
     } else if (params.costCenterId) {
-      targetType = "costCenter";
+      targetType = 'costCenter';
       targetId = params.costCenterId.getValue();
     } else {
-      targetType = "project";
+      targetType = 'project';
       targetId = params.projectId!.getValue();
     }
 
@@ -113,7 +112,7 @@ export class ExpenseAllocation extends AggregateRoot {
       params.projectId || null,
       params.notes || null,
       params.createdBy,
-      new Date(),
+      new Date()
     );
 
     allocation.addDomainEvent(
@@ -124,8 +123,8 @@ export class ExpenseAllocation extends AggregateRoot {
         params.amount.getValue().toString(),
         targetType,
         targetId,
-        params.createdBy.getValue(),
-      ),
+        params.createdBy.getValue()
+      )
     );
 
     return allocation;
@@ -155,7 +154,7 @@ export class ExpenseAllocation extends AggregateRoot {
       params.projectId ? ProjectId.fromString(params.projectId) : null,
       params.notes,
       UserId.fromString(params.createdBy),
-      params.createdAt,
+      params.createdAt
     );
   }
 
@@ -202,4 +201,34 @@ export class ExpenseAllocation extends AggregateRoot {
   getCreatedAt(): Date {
     return this.createdAt;
   }
+
+  toJSON(): ExpenseAllocationDTO {
+    return {
+      id: this.getId(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      expenseId: this.getExpenseId(),
+      amount: this.getAmount().getValue().toString(),
+      percentage: this.getPercentage()?.toString() ?? null,
+      departmentId: this.getDepartmentId()?.getValue() ?? null,
+      costCenterId: this.getCostCenterId()?.getValue() ?? null,
+      projectId: this.getProjectId()?.getValue() ?? null,
+      notes: this.getNotes(),
+      createdBy: this.getCreatedBy().getValue(),
+      createdAt: this.getCreatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ExpenseAllocationDTO {
+  id: string;
+  workspaceId: string;
+  expenseId: string;
+  amount: string;
+  percentage: string | null;
+  departmentId: string | null;
+  costCenterId: string | null;
+  projectId: string | null;
+  notes: string | null;
+  createdBy: string;
+  createdAt: string;
 }

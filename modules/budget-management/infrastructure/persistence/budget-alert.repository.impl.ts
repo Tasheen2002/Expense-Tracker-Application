@@ -1,21 +1,28 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
-import { AlertId } from "../../domain/value-objects/alert-id";
-import { BudgetId } from "../../domain/value-objects/budget-id";
-import { AllocationId } from "../../domain/value-objects/allocation-id";
-import { AlertLevel } from "../../domain/enums/alert-level";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
+import { AlertId } from '../../domain/value-objects/alert-id';
+import { BudgetId } from '../../domain/value-objects/budget-id';
+import { AllocationId } from '../../domain/value-objects/allocation-id';
+import { AlertLevel } from '../../domain/enums/alert-level';
 import {
   IBudgetAlertRepository,
   BudgetAlertFilters,
-} from "../../domain/repositories/budget-alert.repository";
+} from '../../domain/repositories/budget-alert.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class BudgetAlertRepositoryImpl
+  extends PrismaRepository<BudgetAlert>
+  implements IBudgetAlertRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(alert: BudgetAlert): Promise<void> {
     await this.prisma.budgetAlert.upsert({
@@ -38,6 +45,8 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
         notifiedAt: alert.getNotifiedAt(),
       },
     });
+
+    await this.dispatchEvents(alert);
   }
 
   async findById(id: AlertId): Promise<BudgetAlert | null> {
@@ -52,7 +61,7 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
 
   async findByBudget(
     budgetId: BudgetId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {
       budgetId: budgetId.getValue(),
@@ -60,15 +69,15 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAlert,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByAllocation(
     allocationId: AllocationId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {
       allocationId: allocationId.getValue(),
@@ -76,16 +85,16 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAlert,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByFilters(
     filters: BudgetAlertFilters,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {};
 
@@ -112,15 +121,15 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAlert,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findUnreadAlerts(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {
       isRead: false,
@@ -131,9 +140,9 @@ export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAlert,
-      { where, orderBy: [{ level: "desc" }, { createdAt: "desc" }] },
+      { where, orderBy: [{ level: 'desc' }, { createdAt: 'desc' }] },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 

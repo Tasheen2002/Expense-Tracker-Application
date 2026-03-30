@@ -27,7 +27,7 @@ export class AuditLogCreatedEvent extends DomainEvent {
     return "audit.log_created";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       auditLogId: this.auditLogId,
       workspaceId: this.workspaceId,
@@ -56,7 +56,7 @@ export class AuditLogsQueriedEvent extends DomainEvent {
     return "audit.logs_queried";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       queriedBy: this.queriedBy,
@@ -83,7 +83,7 @@ export class AuditRetentionAppliedEvent extends DomainEvent {
     return "audit.retention_applied";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       retentionDays: this.retentionDays,

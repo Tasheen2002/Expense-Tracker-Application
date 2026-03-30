@@ -1,14 +1,15 @@
-import { SpendingLimitId } from "../value-objects/spending-limit-id";
-import { BudgetPeriodType } from "../enums/budget-period-type";
-import { Decimal } from "@prisma/client/runtime/library";
+import { SpendingLimitId } from '../value-objects/spending-limit-id';
+import { BudgetPeriodType } from '../enums/budget-period-type';
+import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidAmountError,
   InvalidCurrencyError,
   BudgetAlreadyActiveError,
   InvalidBudgetStatusError,
-} from "../errors/budget.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+  SpendingLimitAlreadyInactiveError,
+} from '../errors/budget.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // Domain Events
@@ -19,13 +20,13 @@ export class SpendingLimitCreatedEvent extends DomainEvent {
     public readonly limitId: string,
     public readonly workspaceId: string,
     public readonly limitAmount: string,
-    public readonly periodType: string,
+    public readonly periodType: string
   ) {
-    super(limitId, "SpendingLimit");
+    super(limitId, 'SpendingLimit');
   }
 
   get eventType(): string {
-    return "spending-limit.created";
+    return 'spending-limit.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -43,13 +44,13 @@ export class SpendingLimitUpdatedEvent extends DomainEvent {
     public readonly limitId: string,
     public readonly workspaceId: string,
     public readonly oldAmount: string,
-    public readonly newAmount: string,
+    public readonly newAmount: string
   ) {
-    super(limitId, "SpendingLimit");
+    super(limitId, 'SpendingLimit');
   }
 
   get eventType(): string {
-    return "spending-limit.updated";
+    return 'spending-limit.updated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -65,13 +66,13 @@ export class SpendingLimitUpdatedEvent extends DomainEvent {
 export class SpendingLimitActivatedEvent extends DomainEvent {
   constructor(
     public readonly limitId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(limitId, "SpendingLimit");
+    super(limitId, 'SpendingLimit');
   }
 
   get eventType(): string {
-    return "spending-limit.activated";
+    return 'spending-limit.activated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -85,13 +86,13 @@ export class SpendingLimitActivatedEvent extends DomainEvent {
 export class SpendingLimitDeactivatedEvent extends DomainEvent {
   constructor(
     public readonly limitId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(limitId, "SpendingLimit");
+    super(limitId, 'SpendingLimit');
   }
 
   get eventType(): string {
-    return "spending-limit.deactivated";
+    return 'spending-limit.deactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -105,13 +106,13 @@ export class SpendingLimitDeactivatedEvent extends DomainEvent {
 export class SpendingLimitDeletedEvent extends DomainEvent {
   constructor(
     public readonly limitId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(limitId, "SpendingLimit");
+    super(limitId, 'SpendingLimit');
   }
 
   get eventType(): string {
-    return "spending-limit.deleted";
+    return 'spending-limit.deleted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -144,6 +145,19 @@ export interface CreateSpendingLimitData {
   periodType: BudgetPeriodType;
 }
 
+export interface SpendingLimitDTO {
+  limitId: string;
+  workspaceId: string;
+  userId: string | null;
+  categoryId: string | null;
+  limitAmount: string;
+  currency: string;
+  periodType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class SpendingLimit extends AggregateRoot {
   private constructor(private props: SpendingLimitProps) {
     super();
@@ -152,26 +166,26 @@ export class SpendingLimit extends AggregateRoot {
   static create(data: CreateSpendingLimitData): SpendingLimit {
     // Validate limit amount
     const limitAmount =
-      typeof data.limitAmount === "number" ||
-      typeof data.limitAmount === "string"
+      typeof data.limitAmount === 'number' ||
+      typeof data.limitAmount === 'string'
         ? new Decimal(data.limitAmount)
         : data.limitAmount;
 
     // ...
     if (limitAmount.isNegative() || limitAmount.isZero()) {
-      throw new InvalidAmountError("Limit amount must be greater than zero");
+      throw new InvalidAmountError('Limit amount must be greater than zero');
     }
 
     if (limitAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Limit amount cannot have more than 2 decimal places",
+        'Limit amount cannot have more than 2 decimal places'
       );
     }
 
     // Validate currency
     if (!data.currency || data.currency.length !== 3) {
       throw new InvalidCurrencyError(
-        "Currency must be a valid 3-letter ISO code",
+        'Currency must be a valid 3-letter ISO code'
       );
     }
 
@@ -195,8 +209,8 @@ export class SpendingLimit extends AggregateRoot {
         spendingLimit.getId().getValue(),
         data.workspaceId,
         limitAmount.toString(),
-        data.periodType,
-      ),
+        data.periodType
+      )
     );
 
     return spendingLimit;
@@ -250,17 +264,17 @@ export class SpendingLimit extends AggregateRoot {
   // Business logic methods
   updateLimitAmount(amount: number | string | Decimal): void {
     const newAmount =
-      typeof amount === "number" || typeof amount === "string"
+      typeof amount === 'number' || typeof amount === 'string'
         ? new Decimal(amount)
         : amount;
 
     if (newAmount.isNegative() || newAmount.isZero()) {
-      throw new InvalidAmountError("Limit amount must be greater than zero");
+      throw new InvalidAmountError('Limit amount must be greater than zero');
     }
 
     if (newAmount.decimalPlaces() > 2) {
       throw new InvalidAmountError(
-        "Limit amount cannot have more than 2 decimal places",
+        'Limit amount cannot have more than 2 decimal places'
       );
     }
 
@@ -274,8 +288,8 @@ export class SpendingLimit extends AggregateRoot {
           this.getId().getValue(),
           this.getWorkspaceId(),
           oldAmount.toString(),
-          newAmount.toString(),
-        ),
+          newAmount.toString()
+        )
       );
     }
   }
@@ -284,7 +298,7 @@ export class SpendingLimit extends AggregateRoot {
 
   activate(): void {
     if (this.props.isActive) {
-      throw new BudgetAlreadyActiveError("Spending limit is already active");
+      throw new BudgetAlreadyActiveError('Spending limit is already active');
     }
     this.props.isActive = true;
     this.props.updatedAt = new Date();
@@ -292,14 +306,14 @@ export class SpendingLimit extends AggregateRoot {
     this.addDomainEvent(
       new SpendingLimitActivatedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId(),
-      ),
+        this.getWorkspaceId()
+      )
     );
   }
 
   deactivate(): void {
     if (!this.props.isActive) {
-      throw new InvalidBudgetStatusError("INACTIVE", "INACTIVE");
+      throw new SpendingLimitAlreadyInactiveError(this.getId().getValue());
     }
     this.props.isActive = false;
     this.props.updatedAt = new Date();
@@ -307,8 +321,8 @@ export class SpendingLimit extends AggregateRoot {
     this.addDomainEvent(
       new SpendingLimitDeactivatedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId(),
-      ),
+        this.getWorkspaceId()
+      )
     );
   }
 
@@ -316,8 +330,8 @@ export class SpendingLimit extends AggregateRoot {
     this.addDomainEvent(
       new SpendingLimitDeletedEvent(
         this.getId().getValue(),
-        this.getWorkspaceId(),
-      ),
+        this.getWorkspaceId()
+      )
     );
   }
 
@@ -362,5 +376,20 @@ export class SpendingLimit extends AggregateRoot {
 
   equals(other: SpendingLimit): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toJSON(): SpendingLimitDTO {
+    return {
+      limitId: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId(),
+      userId: this.getUserId(),
+      categoryId: this.getCategoryId(),
+      limitAmount: this.getLimitAmount().toString(),
+      currency: this.getCurrency(),
+      periodType: this.getPeriodType(),
+      isActive: this.isActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
   }
 }

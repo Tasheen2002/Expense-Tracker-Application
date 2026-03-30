@@ -1,12 +1,12 @@
-import { ApprovalStepId } from "../value-objects/approval-step-id";
-import { ApprovalStatus } from "../enums/approval-status";
+import { ApprovalStepId } from '../value-objects/approval-step-id';
+import { ApprovalStatus } from '../enums/approval-status';
 import {
   ApprovalAlreadyProcessedError,
   RejectionReasonRequiredError,
   InvalidDelegationError,
-} from "../errors/approval-workflow.errors";
-import { WorkflowId } from "../value-objects/workflow-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+} from '../errors/approval-workflow.errors';
+import { WorkflowId } from '../value-objects/workflow-id';
+import { UserId } from '../value-objects';
 
 export interface ApprovalStepProps {
   stepId: ApprovalStepId;
@@ -137,7 +137,7 @@ export class ApprovalStep {
 
     const delegatedUserId = UserId.fromString(toUserId);
     if (delegatedUserId.equals(this.props.approverId)) {
-      throw new InvalidDelegationError("Cannot delegate to the same approver");
+      throw new InvalidDelegationError('Cannot delegate to the same approver');
     }
 
     this.props.delegatedTo = delegatedUserId;
@@ -151,8 +151,36 @@ export class ApprovalStep {
     }
 
     this.props.status = ApprovalStatus.AUTO_APPROVED;
-    this.props.comments = "Auto-approved by system rules";
+    this.props.comments = 'Auto-approved by system rules';
     this.props.processedAt = new Date();
     this.props.updatedAt = new Date();
   }
+
+  toJSON(): ApprovalStepDTO {
+    return {
+      stepId: this.getId().getValue(),
+      workflowId: this.getWorkflowId().getValue(),
+      stepNumber: this.getStepNumber(),
+      approverId: this.getApproverId().getValue(),
+      delegatedTo: this.getDelegatedTo()?.getValue(),
+      status: this.getStatus(),
+      comments: this.getComments(),
+      processedAt: this.getProcessedAt()?.toISOString(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ApprovalStepDTO {
+  stepId: string;
+  workflowId: string;
+  stepNumber: number;
+  approverId: string;
+  delegatedTo?: string;
+  status: ApprovalStatus;
+  comments?: string;
+  processedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }

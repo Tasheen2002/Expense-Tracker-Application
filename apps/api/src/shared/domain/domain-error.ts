@@ -1,10 +1,19 @@
 export abstract class DomainError extends Error {
   public readonly statusCode: number;
+  public readonly code: string;
   public readonly name: string;
 
-  constructor(message: string, statusCode: number = 400) {
+  constructor(message: string, codeOrStatusCode?: string | number, statusCode?: number) {
     super(message);
-    this.statusCode = statusCode;
+    
+    if (typeof codeOrStatusCode === 'string') {
+      this.code = codeOrStatusCode;
+      this.statusCode = statusCode ?? 400;
+    } else {
+      this.code = 'DOMAIN_ERROR';
+      this.statusCode = codeOrStatusCode ?? 400;
+    }
+
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
     Error.captureStackTrace(this, this.constructor);
@@ -13,6 +22,7 @@ export abstract class DomainError extends Error {
   public toJSON() {
     return {
       name: this.name,
+      code: this.code,
       message: this.message,
       statusCode: this.statusCode,
     };

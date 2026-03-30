@@ -1,30 +1,41 @@
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id'
-import { ApprovalChainNotFoundError } from '../../domain/errors/approval-workflow.errors'
+import { ApprovalChainService } from '../services/approval-chain.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface DeleteApprovalChainInput {
-  chainId: string
-  workspaceId: string
+export interface DeleteApprovalChainInput extends ICommand {
+  chainId: string;
+  workspaceId: string;
 }
 
-export class DeleteApprovalChainHandler {
-  constructor(
-    private readonly approvalChainRepository: ApprovalChainRepository
-  ) {}
+export class DeleteApprovalChainHandler implements ICommandHandler<
+  DeleteApprovalChainInput,
+  CommandResult<void>
+> {
+  constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: DeleteApprovalChainInput): Promise<void> {
-    const chainId = ApprovalChainId.fromString(input.chainId)
-    const chain = await this.approvalChainRepository.findById(chainId)
-
-    if (!chain) {
-      throw new ApprovalChainNotFoundError(input.chainId)
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    if (chain.getWorkspaceId().getValue() !== input.workspaceId) {
-      throw new ApprovalChainNotFoundError(input.chainId)
+  async handle(input: DeleteApprovalChainInput): Promise<CommandResult<void>> {
+    try {
+      await this.approvalChainService.deleteChain(
+        input.chainId,
+        input.workspaceId
+      );
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
-
-    chain.markAsDeleted()
-    await this.approvalChainRepository.delete(chainId)
   }
 }

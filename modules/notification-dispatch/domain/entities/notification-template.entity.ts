@@ -1,7 +1,7 @@
-import { NotificationType } from "../enums/notification-type.enum";
-import { NotificationChannel } from "../enums/notification-channel.enum";
-import { TemplateId } from "../value-objects/template-id";
-import { WorkspaceId } from "../value-objects";
+import { NotificationType } from '../enums/notification-type.enum';
+import { NotificationChannel } from '../enums/notification-channel.enum';
+import { TemplateId } from '../value-objects/template-id';
+import { WorkspaceId } from '../value-objects';
 
 export interface NotificationTemplateProps {
   id: TemplateId;
@@ -104,4 +104,32 @@ export class NotificationTemplate {
   getUpdatedAt(): Date {
     return this.props.updatedAt;
   }
+
+  toJSON(): NotificationTemplateDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId()?.getValue() || null,
+      name: this.getName(),
+      type: this.getType(),
+      channel: this.getChannel(),
+      subjectTemplate: this.getSubjectTemplate(),
+      bodyTemplate: this.getBodyTemplate(),
+      isActive: this.isActiveTemplate(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface NotificationTemplateDTO {
+  id: string;
+  workspaceId: string | null;
+  name: string;
+  type: string;
+  channel: string;
+  subjectTemplate: string;
+  bodyTemplate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

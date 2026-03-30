@@ -176,7 +176,7 @@ export class AuditService {
 
     try {
       await this.auditRepository.save(auditLog);
-    } catch (error) {
+    } catch (error: unknown) {
       // Audit logging should not fail the main operation
       console.error("[AuditService] Failed to save audit log:", error);
     }
@@ -218,3 +218,5 @@ export class AuditService {
     return this.auditRepository.deleteOlderThan(cutoffDate);
   }
 }
+
+

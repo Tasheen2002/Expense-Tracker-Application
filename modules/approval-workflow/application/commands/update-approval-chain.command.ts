@@ -1,53 +1,43 @@
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
-import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id'
-import { ApprovalChainNotFoundError } from '../../domain/errors/approval-workflow.errors'
+import { ApprovalChainService } from '../services/approval-chain.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface UpdateApprovalChainInput {
-  chainId: string
-  workspaceId: string
-  name?: string
-  description?: string
-  minAmount?: number
-  maxAmount?: number
-  approverSequence?: string[]
+export interface UpdateApprovalChainInput extends ICommand {
+  chainId: string;
+  workspaceId: string;
+  name?: string;
+  description?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  approverSequence?: string[];
 }
 
-export class UpdateApprovalChainHandler {
-  constructor(
-    private readonly approvalChainRepository: ApprovalChainRepository
-  ) {}
+export class UpdateApprovalChainHandler implements ICommandHandler<
+  UpdateApprovalChainInput,
+  CommandResult<void>
+> {
+  constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: UpdateApprovalChainInput): Promise<ApprovalChain> {
-    const chainId = ApprovalChainId.fromString(input.chainId)
-    const chain = await this.approvalChainRepository.findById(chainId)
-
-    if (!chain) {
-      throw new ApprovalChainNotFoundError(input.chainId)
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    if (chain.getWorkspaceId().getValue() !== input.workspaceId) {
-      throw new ApprovalChainNotFoundError(input.chainId)
+  async handle(input: UpdateApprovalChainInput): Promise<CommandResult<void>> {
+    try {
+      await this.approvalChainService.updateChain(input);
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
-
-    if (input.name) {
-      chain.updateName(input.name)
-    }
-
-    if (input.description !== undefined) {
-      chain.updateDescription(input.description)
-    }
-
-    if (input.minAmount !== undefined || input.maxAmount !== undefined) {
-      chain.updateAmountRange(input.minAmount, input.maxAmount)
-    }
-
-    if (input.approverSequence) {
-      chain.updateApproverSequence(input.approverSequence)
-    }
-
-    await this.approvalChainRepository.save(chain)
-
-    return chain
   }
 }

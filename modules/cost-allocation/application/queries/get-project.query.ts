@@ -1,18 +1,25 @@
-import { AllocationManagementService } from '../services/allocation-management.service'
-import { Project } from '../../domain/entities/project.entity'
+import { AllocationManagementService } from '../services/allocation-management.service';
+import { Project } from '../../domain/entities/project.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetProjectQuery {
-  constructor(
-    public readonly id: string
-  ) {}
+export interface GetProjectQuery extends IQuery {
+  id: string;
 }
 
-export class GetProjectHandler {
+export class GetProjectHandler implements IQueryHandler<
+  GetProjectQuery,
+  QueryResult<Project>
+> {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(query: GetProjectQuery): Promise<Project> {
-    return await this.allocationManagementService.getProject(query.id)
+  async handle(query: GetProjectQuery): Promise<QueryResult<Project>> {
+    const project = await this.allocationManagementService.getProject(query.id);
+    return QueryResult.success(project);
   }
 }

@@ -64,7 +64,7 @@ export class InMemoryEventBus implements IEventBus {
     const handlerPromises = Array.from(handlersForType).map(async (handler) => {
       try {
         await handler.handle(event);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(
           `[EventBus] Handler failed for ${event.eventType}:`,
           error instanceof Error ? error.message : error,
@@ -105,3 +105,5 @@ export function getEventBus(): IEventBus {
 export function resetEventBus(): void {
   eventBusInstance = null;
 }
+
+

@@ -1,36 +1,41 @@
-import { ApprovalChainRepository } from '../../domain/repositories/approval-chain.repository'
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity'
+import { ApprovalChainService } from '../services/approval-chain.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface CreateApprovalChainInput {
-  workspaceId: string
-  name: string
-  description?: string
-  minAmount?: number
-  maxAmount?: number
-  categoryIds?: string[]
-  requiresReceipt: boolean
-  approverSequence: string[]
+export interface CreateApprovalChainInput extends ICommand {
+  workspaceId: string;
+  name: string;
+  description?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  categoryIds?: string[];
+  requiresReceipt: boolean;
+  approverSequence: string[];
 }
 
-export class CreateApprovalChainHandler {
-  constructor(
-    private readonly approvalChainRepository: ApprovalChainRepository
-  ) {}
+export class CreateApprovalChainHandler implements ICommandHandler<
+  CreateApprovalChainInput,
+  CommandResult<{ chainId: string }>
+> {
+  constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: CreateApprovalChainInput): Promise<ApprovalChain> {
-    const chain = ApprovalChain.create({
-      workspaceId: input.workspaceId,
-      name: input.name,
-      description: input.description,
-      minAmount: input.minAmount,
-      maxAmount: input.maxAmount,
-      categoryIds: input.categoryIds,
-      requiresReceipt: input.requiresReceipt,
-      approverSequence: input.approverSequence,
-    })
-
-    await this.approvalChainRepository.save(chain)
-
-    return chain
+  async handle(
+    input: CreateApprovalChainInput
+  ): Promise<CommandResult<{ chainId: string }>> {
+    try {
+      const chain = await this.approvalChainService.createChain(input);
+      return CommandResult.success({ chainId: chain.getId().getValue() });
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        error && typeof error === 'object' && 'statusCode' in error
+          ? (error as { statusCode: number }).statusCode
+          : 500
+      );
+    }
   }
 }

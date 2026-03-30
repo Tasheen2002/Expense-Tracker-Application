@@ -1,17 +1,27 @@
-import { ForecastService } from "../services/forecast.service";
-import { Forecast } from "../../domain/entities/forecast.entity";
+import { ForecastService } from '../services/forecast.service';
+import { Forecast } from '../../domain/entities/forecast.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetForecastQuery {
-  constructor(
-    public readonly id: string,
-    public readonly userId: string,
-  ) {}
+export interface GetForecastQuery extends IQuery {
+  id: string;
+  userId: string;
 }
 
-export class GetForecastHandler {
+export class GetForecastHandler implements IQueryHandler<
+  GetForecastQuery,
+  QueryResult<Forecast>
+> {
   constructor(private readonly forecastService: ForecastService) {}
 
-  async handle(query: GetForecastQuery): Promise<Forecast> {
-    return await this.forecastService.getForecast(query.id, query.userId);
+  async handle(query: GetForecastQuery): Promise<QueryResult<Forecast>> {
+    const result = await this.forecastService.getForecast(
+      query.id,
+      query.userId
+    );
+    return QueryResult.success(result);
   }
 }

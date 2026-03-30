@@ -1,45 +1,45 @@
-import { WorkspaceInvitationService } from '../services/workspace-invitation.service'
+import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface AcceptInvitationCommand {
-  token: string
-  userId: string
+export interface AcceptInvitationCommand extends ICommand {
+  token: string;
+  userId: string;
 }
 
-export interface AcceptInvitationResult {
-  success: boolean
-  data?: {
-    membershipId: string
-    workspaceId: string
-    userId: string
-    role: string
-  }
-  error?: string
-}
+export type AcceptInvitationResultType = {
+  membershipId: string;
+  workspaceId: string;
+  userId: string;
+  role: string;
+};
 
-export class AcceptInvitationHandler {
+export class AcceptInvitationHandler implements ICommandHandler<
+  AcceptInvitationCommand,
+  CommandResult<AcceptInvitationResultType>
+> {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
-  async handle(command: AcceptInvitationCommand): Promise<AcceptInvitationResult> {
+  async handle(
+    command: AcceptInvitationCommand
+  ): Promise<CommandResult<AcceptInvitationResultType>> {
     try {
       const membership = await this.invitationService.acceptInvitation(
         command.token,
         command.userId
-      )
+      );
 
-      return {
-        success: true,
-        data: {
-          membershipId: membership.getId().getValue(),
-          workspaceId: membership.getWorkspaceId().getValue(),
-          userId: membership.getUserId().getValue(),
-          role: membership.getRole(),
-        },
-      }
+      return CommandResult.success({
+        membershipId: membership.getId().getValue(),
+        workspaceId: membership.getWorkspaceId().getValue(),
+        userId: membership.getUserId().getValue(),
+        role: membership.getRole(),
+      });
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to accept invitation',
-      }
+      return CommandResult.fromError(error);
     }
   }
 }

@@ -1,7 +1,12 @@
-import { BudgetService } from "../services/budget.service";
-import { BudgetAllocation } from "../../domain/entities/budget-allocation.entity";
+import { BudgetService } from '../services/budget.service';
 
-export interface UpdateAllocationDto {
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface UpdateAllocationCommand extends ICommand {
   allocationId: string;
   workspaceId: string;
   userId: string;
@@ -9,18 +14,22 @@ export interface UpdateAllocationDto {
   description?: string | null;
 }
 
-export class UpdateAllocationHandler {
+export class UpdateAllocationHandler implements ICommandHandler<
+  UpdateAllocationCommand,
+  CommandResult<void>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: UpdateAllocationDto): Promise<BudgetAllocation> {
-    return await this.budgetService.updateAllocation(
-      dto.allocationId,
-      dto.workspaceId,
-      dto.userId,
+  async handle(command: UpdateAllocationCommand): Promise<CommandResult<void>> {
+    await this.budgetService.updateAllocation(
+      command.allocationId,
+      command.workspaceId,
+      command.userId,
       {
-        allocatedAmount: dto.allocatedAmount,
-        description: dto.description,
-      },
+        allocatedAmount: command.allocatedAmount,
+        description: command.description,
+      }
     );
+    return CommandResult.success();
   }
 }

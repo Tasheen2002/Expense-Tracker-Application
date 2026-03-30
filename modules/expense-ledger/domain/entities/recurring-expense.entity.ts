@@ -1,7 +1,7 @@
-import { RecurrenceFrequency } from "../enums/recurrence-frequency";
-import { RecurrenceStatus } from "../enums/recurrence-status";
-import { ExpenseId } from "../value-objects/expense-id";
-import { Money } from "../value-objects/money"; // Assuming Money is reusable or we use raw values in template
+import { RecurrenceFrequency } from '../enums/recurrence-frequency';
+import { RecurrenceStatus } from '../enums/recurrence-status';
+import { ExpenseId } from '../value-objects/expense-id';
+import { Money } from '../value-objects/money'; // Assuming Money is reusable or we use raw values in template
 // We might need to handle the template structure carefully.
 // For now, let's treat the template as a plain object or interface.
 
@@ -42,8 +42,8 @@ export class RecurringExpense {
   static create(
     props: Omit<
       RecurringExpenseProps,
-      "id" | "createdAt" | "updatedAt" | "nextRunDate" | "status"
-    > & { startDate: Date },
+      'id' | 'createdAt' | 'updatedAt' | 'nextRunDate' | 'status'
+    > & { startDate: Date }
   ): RecurringExpense {
     const status = RecurrenceStatus.ACTIVE;
     // Initial nextRunDate is usually start date or calculated from it
@@ -166,4 +166,36 @@ export class RecurringExpense {
     this.props.status = RecurrenceStatus.COMPLETED;
     this.props.updatedAt = new Date();
   }
+
+  toJSON(): RecurringExpenseDTO {
+    return {
+      id: this.id,
+      workspaceId: this.workspaceId,
+      userId: this.userId,
+      frequency: this.frequency,
+      interval: this.interval,
+      startDate: this.startDate.toISOString(),
+      endDate: this.endDate?.toISOString(),
+      nextRunDate: this.nextRunDate.toISOString(),
+      status: this.status,
+      template: this.template,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+    };
+  }
+}
+
+export interface RecurringExpenseDTO {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  frequency: string;
+  interval: number;
+  startDate: string;
+  endDate?: string;
+  nextRunDate: string;
+  status: string;
+  template: ExpenseTemplate;
+  createdAt: string;
+  updatedAt: string;
 }

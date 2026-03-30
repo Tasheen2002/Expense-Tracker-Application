@@ -1,17 +1,27 @@
-import { IOutboxEventRepository } from "../../domain/repositories/outbox-event.repository";
-import { OutboxEvent } from "../../domain/entities/outbox-event.entity";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { IOutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
+import { OutboxEvent } from '../../domain/entities/outbox-event.entity';
 
-export interface StoreOutboxEventCommand {
+export interface StoreOutboxEventCommand extends ICommand {
   aggregateType: string;
   aggregateId: string;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
-export class StoreOutboxEventHandler {
+export class StoreOutboxEventHandler implements ICommandHandler<
+  StoreOutboxEventCommand,
+  CommandResult<{ eventId: string }>
+> {
   constructor(private readonly repository: IOutboxEventRepository) {}
 
-  async handle(command: StoreOutboxEventCommand): Promise<{ eventId: string }> {
+  async handle(
+    command: StoreOutboxEventCommand
+  ): Promise<CommandResult<{ eventId: string }>> {
     const event = OutboxEvent.create({
       aggregateType: command.aggregateType,
       aggregateId: command.aggregateId,
@@ -21,6 +31,6 @@ export class StoreOutboxEventHandler {
 
     await this.repository.save(event);
 
-    return { eventId: event.id.getValue() };
+    return CommandResult.success({ eventId: event.id.getValue() });
   }
 }

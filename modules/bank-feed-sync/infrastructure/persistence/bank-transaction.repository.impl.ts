@@ -1,20 +1,27 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { BankTransaction } from "../../domain/entities/bank-transaction.entity";
-import { BankTransactionId } from "../../domain/value-objects/bank-transaction-id";
-import { BankConnectionId } from "../../domain/value-objects/bank-connection-id";
-import { SyncSessionId } from "../../domain/value-objects/sync-session-id";
-import { IBankTransactionRepository } from "../../domain/repositories/bank-transaction.repository";
-import { TransactionStatus } from "../../domain/enums/transaction-status.enum";
-import { DUPLICATE_TIME_THRESHOLD_MINUTES } from "../../domain/constants/bank-feed-sync.constants";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { WorkspaceId } from '../../../identity-workspace';
+import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
+import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
+import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
+import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
+import { TransactionStatus } from '../../domain/enums/transaction-status.enum';
+import { DUPLICATE_TIME_THRESHOLD_MINUTES } from '../../domain/constants/bank-feed-sync.constants';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaBankTransactionRepository implements IBankTransactionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaBankTransactionRepository
+  extends PrismaRepository<BankTransaction>
+  implements IBankTransactionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(transaction: BankTransaction): Promise<void> {
     const data = {
@@ -42,6 +49,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
       create: data,
       update: data,
     });
+    await this.dispatchEvents(transaction);
   }
 
   async saveBatch(transactions: BankTransaction[]): Promise<void> {
@@ -73,7 +81,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
 
   async findById(
     id: BankTransactionId,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<BankTransaction | null> {
     const record = await this.prisma.bankTransaction.findFirst({
       where: {
@@ -87,7 +95,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
 
   async findByExternalId(
     workspaceId: WorkspaceId,
-    externalId: string,
+    externalId: string
   ): Promise<BankTransaction | null> {
     const record = await this.prisma.bankTransaction.findFirst({
       where: {
@@ -101,7 +109,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
 
   async findByExternalIds(
     workspaceId: WorkspaceId,
-    externalIds: string[],
+    externalIds: string[]
   ): Promise<Set<string>> {
     if (externalIds.length === 0) return new Set();
 
@@ -119,7 +127,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
   async findByConnection(
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankTransaction,
@@ -129,18 +137,18 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
           connectionId: connectionId.getValue(),
         },
         orderBy: {
-          transactionDate: "desc",
+          transactionDate: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 
   async findBySession(
     workspaceId: WorkspaceId,
     sessionId: SyncSessionId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankTransaction,
@@ -150,18 +158,18 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
           sessionId: sessionId.getValue(),
         },
         orderBy: {
-          transactionDate: "desc",
+          transactionDate: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 
   async findByStatus(
     workspaceId: WorkspaceId,
     status: TransactionStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankTransaction,
@@ -171,11 +179,11 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
           status,
         },
         orderBy: {
-          transactionDate: "desc",
+          transactionDate: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 
@@ -183,7 +191,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
     workspaceId: WorkspaceId,
     connectionId: BankConnectionId,
     status: TransactionStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.bankTransaction,
@@ -194,11 +202,11 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
           status,
         },
         orderBy: {
-          transactionDate: "desc",
+          transactionDate: 'desc',
         },
       },
       (r) => this.toDomain(r),
-      options,
+      options
     );
   }
 
@@ -206,13 +214,13 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
     workspaceId: WorkspaceId,
     amount: number,
     transactionDate: Date,
-    description: string,
+    description: string
   ): Promise<BankTransaction[]> {
     const startDate = new Date(
-      transactionDate.getTime() - DUPLICATE_TIME_THRESHOLD_MINUTES * 60 * 1000,
+      transactionDate.getTime() - DUPLICATE_TIME_THRESHOLD_MINUTES * 60 * 1000
     );
     const endDate = new Date(
-      transactionDate.getTime() + DUPLICATE_TIME_THRESHOLD_MINUTES * 60 * 1000,
+      transactionDate.getTime() + DUPLICATE_TIME_THRESHOLD_MINUTES * 60 * 1000
     );
 
     const records = await this.prisma.bankTransaction.findMany({
@@ -231,7 +239,7 @@ export class PrismaBankTransactionRepository implements IBankTransactionReposito
   }
 
   private toDomain(
-    record: Prisma.BankTransactionGetPayload<object>,
+    record: Prisma.BankTransactionGetPayload<object>
   ): BankTransaction {
     return BankTransaction.fromPersistence({
       id: BankTransactionId.fromString(record.id),

@@ -1,32 +1,41 @@
-import { ExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository'
-import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity'
-import { WorkflowNotFoundError } from '../../domain/errors/approval-workflow.errors'
+import { WorkflowService } from '../services/workflow.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface CancelWorkflowInput {
-  expenseId: string
-  workspaceId: string
+export interface CancelWorkflowInput extends ICommand {
+  expenseId: string;
+  workspaceId: string;
 }
 
-export class CancelWorkflowHandler {
-  constructor(
-    private readonly workflowRepository: ExpenseWorkflowRepository
-  ) {}
+export class CancelWorkflowHandler implements ICommandHandler<
+  CancelWorkflowInput,
+  CommandResult<void>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: CancelWorkflowInput): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(input.expenseId)
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(input.expenseId)
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    if (workflow.getWorkspaceId().getValue() !== input.workspaceId) {
-      throw new WorkflowNotFoundError(input.expenseId)
+  async handle(input: CancelWorkflowInput): Promise<CommandResult<void>> {
+    try {
+      await this.workflowService.cancelWorkflow(
+        input.expenseId,
+        input.workspaceId
+      );
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
-
-    workflow.cancel()
-
-    await this.workflowRepository.save(workflow)
-
-    return workflow
   }
 }

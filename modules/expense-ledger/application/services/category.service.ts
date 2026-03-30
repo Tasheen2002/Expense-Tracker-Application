@@ -1,17 +1,20 @@
-import { CategoryRepository } from "../../domain/repositories/category.repository";
-import { Category } from "../../domain/entities/category.entity";
-import { CategoryId } from "../../domain/value-objects/category-id";
+import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { Category } from '../../domain/entities/category.entity';
+import { CategoryId } from '../../domain/value-objects/category-id';
 import {
   CategoryNotFoundError,
   CategoryAlreadyExistsError,
-} from "../../domain/errors/expense.errors";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { ICacheService } from "../../../../apps/api/src/shared/infrastructure/cache/cache.service";
+} from '../../domain/errors/expense.errors';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
 
 export class CategoryService {
   constructor(
     private readonly categoryRepository: CategoryRepository,
-    private readonly cacheService: ICacheService,
+    private readonly cacheService: ICacheService
   ) {}
 
   async createCategory(params: {
@@ -24,7 +27,7 @@ export class CategoryService {
     // Check if category with the same name already exists
     const existingCategory = await this.categoryRepository.findByName(
       params.name,
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (existingCategory) {
@@ -43,7 +46,9 @@ export class CategoryService {
     await this.categoryRepository.save(category);
 
     // Invalidate workspace categories cache
-    await this.cacheService.deletePattern(`workspace:${params.workspaceId}:categories*`);
+    await this.cacheService.deletePattern(
+      `workspace:${params.workspaceId}:categories*`
+    );
 
     return category;
   }
@@ -56,11 +61,11 @@ export class CategoryService {
       description?: string;
       color?: string;
       icon?: string;
-    },
+    }
   ): Promise<Category> {
     const category = await this.categoryRepository.findById(
       CategoryId.fromString(categoryId),
-      workspaceId,
+      workspaceId
     );
 
     if (!category) {
@@ -71,7 +76,7 @@ export class CategoryService {
     if (params.name && params.name !== category.name) {
       const existingCategory = await this.categoryRepository.findByName(
         params.name,
-        workspaceId,
+        workspaceId
       );
       if (existingCategory) {
         throw new CategoryAlreadyExistsError(params.name, workspaceId);
@@ -95,7 +100,9 @@ export class CategoryService {
 
     // Invalidate cache
     await this.cacheService.delete(`category:${categoryId}`);
-    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
+    await this.cacheService.deletePattern(
+      `workspace:${workspaceId}:categories*`
+    );
 
     return category;
   }
@@ -103,7 +110,7 @@ export class CategoryService {
   async deleteCategory(categoryId: string, workspaceId: string): Promise<void> {
     const category = await this.categoryRepository.findById(
       CategoryId.fromString(categoryId),
-      workspaceId,
+      workspaceId
     );
 
     if (!category) {
@@ -112,17 +119,19 @@ export class CategoryService {
 
     await this.categoryRepository.delete(
       CategoryId.fromString(categoryId),
-      workspaceId,
+      workspaceId
     );
 
     // Invalidate cache
     await this.cacheService.delete(`category:${categoryId}`);
-    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
+    await this.cacheService.deletePattern(
+      `workspace:${workspaceId}:categories*`
+    );
   }
 
   async getCategoryById(
     categoryId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Category | null> {
     const cacheKey = `category:${categoryId}`;
 
@@ -131,70 +140,27 @@ export class CategoryService {
       async () => {
         return await this.categoryRepository.findById(
           CategoryId.fromString(categoryId),
-          workspaceId,
+          workspaceId
         );
       },
-      300, // 5 minutes TTL
+      300 // 5 minutes TTL
     );
   }
 
   async getCategoriesByWorkspace(
     workspaceId: string,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Category>> {
-    return await this.categoryRepository.findByWorkspace(workspaceId);
+    return await this.categoryRepository.findByWorkspace(workspaceId, options);
   }
 
   async getActiveCategoriesByWorkspace(
     workspaceId: string,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Category>> {
-    return await this.categoryRepository.findActiveByWorkspace(workspaceId);
-  }
-
-  async activateCategory(
-    categoryId: string,
-    workspaceId: string,
-  ): Promise<Category> {
-    const category = await this.categoryRepository.findById(
-      CategoryId.fromString(categoryId),
+    return await this.categoryRepository.findActiveByWorkspace(
       workspaceId,
+      options
     );
-
-    if (!category) {
-      throw new CategoryNotFoundError(categoryId, workspaceId);
-    }
-
-    category.activate();
-
-    await this.categoryRepository.update(category);
-
-    // Invalidate cache
-    await this.cacheService.delete(`category:${categoryId}`);
-    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
-
-    return category;
-  }
-
-  async deactivateCategory(
-    categoryId: string,
-    workspaceId: string,
-  ): Promise<Category> {
-    const category = await this.categoryRepository.findById(
-      CategoryId.fromString(categoryId),
-      workspaceId,
-    );
-
-    if (!category) {
-      throw new CategoryNotFoundError(categoryId, workspaceId);
-    }
-
-    category.deactivate();
-
-    await this.categoryRepository.update(category);
-
-    // Invalidate cache
-    await this.cacheService.delete(`category:${categoryId}`);
-    await this.cacheService.deletePattern(`workspace:${workspaceId}:categories*`);
-
-    return category;
   }
 }

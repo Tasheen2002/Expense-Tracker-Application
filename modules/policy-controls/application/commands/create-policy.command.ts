@@ -1,10 +1,12 @@
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
 import {
   ExpensePolicy,
   PolicyConfiguration,
-} from "../../domain/entities/expense-policy.entity";
-import { PolicyType } from "../../domain/enums/policy-type.enum";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+} from '../../domain/entities/expense-policy.entity';
+import { PolicyType } from '../../domain/enums/policy-type.enum';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { PolicyNameAlreadyExistsError } from '../../domain/errors/policy-controls.errors';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface CreatePolicyInput {
   workspaceId: string;
@@ -20,7 +22,17 @@ export interface CreatePolicyInput {
 export class CreatePolicyHandler {
   constructor(private readonly policyRepository: PolicyRepository) {}
 
-  async handle(input: CreatePolicyInput): Promise<ExpensePolicy> {
+  async handle(
+    input: CreatePolicyInput
+  ): Promise<CommandResult<{ policyId: string }>> {
+    const existingPolicy = await this.policyRepository.findByNameInWorkspace(
+      input.workspaceId,
+      input.name
+    );
+    if (existingPolicy) {
+      throw new PolicyNameAlreadyExistsError(input.name, input.workspaceId);
+    }
+
     const policy = ExpensePolicy.create({
       workspaceId: input.workspaceId,
       name: input.name,
@@ -34,6 +46,6 @@ export class CreatePolicyHandler {
 
     await this.policyRepository.save(policy);
 
-    return policy;
+    return CommandResult.success({ policyId: policy.getId().getValue() });
   }
 }

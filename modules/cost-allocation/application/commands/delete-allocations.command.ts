@@ -1,23 +1,32 @@
-import { ExpenseAllocationService } from "../services/expense-allocation.service";
+import { ExpenseAllocationService } from '../services/expense-allocation.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class DeleteAllocationsCommand {
-  constructor(
-    public readonly expenseId: string,
-    public readonly workspaceId: string,
-    public readonly userId: string,
-  ) {}
+export interface DeleteAllocationsCommand extends ICommand {
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
 }
 
-export class DeleteAllocationsHandler {
+export class DeleteAllocationsHandler implements ICommandHandler<
+  DeleteAllocationsCommand,
+  CommandResult<void>
+> {
   constructor(
-    private readonly expenseAllocationService: ExpenseAllocationService,
+    private readonly expenseAllocationService: ExpenseAllocationService
   ) {}
 
-  async handle(command: DeleteAllocationsCommand): Promise<void> {
+  async handle(
+    command: DeleteAllocationsCommand
+  ): Promise<CommandResult<void>> {
     await this.expenseAllocationService.deleteAllocations(
       command.expenseId,
       command.workspaceId,
-      command.userId,
+      command.userId
     );
+    return CommandResult.success(undefined);
   }
 }

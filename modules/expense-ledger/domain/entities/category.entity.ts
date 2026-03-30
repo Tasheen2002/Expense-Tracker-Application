@@ -1,11 +1,11 @@
-import { CategoryId } from "../value-objects/category-id";
+import { CategoryId } from '../value-objects/category-id';
 import {
   CategoryNameRequiredError,
   CategoryNameTooLongError,
   CategoryDescriptionTooLongError,
   InvalidHexColorError,
   IconNameTooLongError,
-} from "../errors/expense.errors";
+} from '../errors/expense.errors';
 
 export interface CategoryProps {
   id: CategoryId;
@@ -27,7 +27,7 @@ export class Category {
   }
 
   static create(
-    props: Omit<CategoryProps, "id" | "createdAt" | "updatedAt">,
+    props: Omit<CategoryProps, 'id' | 'createdAt' | 'updatedAt'>
   ): Category {
     this.validateName(props.name);
     this.validateDescription(props.description);
@@ -148,4 +148,30 @@ export class Category {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
   }
+
+  toJSON(): CategoryDTO {
+    return {
+      categoryId: this.id.getValue(),
+      workspaceId: this.workspaceId,
+      name: this.name,
+      description: this.description,
+      color: this.color,
+      icon: this.icon,
+      isActive: this.isActive,
+      createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(),
+    };
+  }
+}
+
+export interface CategoryDTO {
+  categoryId: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

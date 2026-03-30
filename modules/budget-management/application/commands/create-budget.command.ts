@@ -1,25 +1,37 @@
-import { BudgetService } from '../services/budget.service'
-import { Budget } from '../../domain/entities/budget.entity'
-import { BudgetPeriodType } from '../../domain/enums/budget-period-type'
+import { BudgetService } from '../services/budget.service';
+import { Budget } from '../../domain/entities/budget.entity';
+import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 
-export interface CreateBudgetDto {
-  workspaceId: string
-  name: string
-  description?: string
-  totalAmount: number | string
-  currency: string
-  periodType: BudgetPeriodType
-  startDate: Date
-  endDate?: Date
-  createdBy: string
-  isRecurring?: boolean
-  rolloverUnused?: boolean
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface CreateBudgetCommand extends ICommand {
+  workspaceId: string;
+  name: string;
+  description?: string;
+  totalAmount: number | string;
+  currency: string;
+  periodType: BudgetPeriodType;
+  startDate: Date;
+  endDate?: Date;
+  createdBy: string;
+  isRecurring?: boolean;
+  rolloverUnused?: boolean;
 }
 
-export class CreateBudgetHandler {
+export class CreateBudgetHandler implements ICommandHandler<
+  CreateBudgetCommand,
+  CommandResult<{ budgetId: string }>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: CreateBudgetDto): Promise<Budget> {
-    return await this.budgetService.createBudget(dto)
+  async handle(
+    command: CreateBudgetCommand
+  ): Promise<CommandResult<{ budgetId: string }>> {
+    const budget = await this.budgetService.createBudget(command);
+    return CommandResult.success({ budgetId: budget.getId().getValue() });
   }
 }

@@ -1,19 +1,28 @@
-import { ExpenseSplitService } from "../services/expense-split.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseSplitService } from '../services/expense-split.service';
 
-export interface DeleteSplitCommand {
-  splitId: string;
-  workspaceId: string;
-  userId: string;
+export interface DeleteSplitCommand extends ICommand {
+  readonly splitId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
-export class DeleteSplitHandler {
+export class DeleteSplitHandler implements ICommandHandler<
+  DeleteSplitCommand,
+  CommandResult<void>
+> {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(command: DeleteSplitCommand) {
-    return await this.splitService.deleteSplit(
+  async handle(command: DeleteSplitCommand): Promise<CommandResult<void>> {
+    await this.splitService.deleteSplit(
       command.splitId,
       command.workspaceId,
-      command.userId,
+      command.userId
     );
+    return CommandResult.success();
   }
 }

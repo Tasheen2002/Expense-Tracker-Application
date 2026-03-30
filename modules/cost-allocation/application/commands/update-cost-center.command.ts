@@ -1,24 +1,29 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
-import { CostCenter } from "../../domain/entities/cost-center.entity";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class UpdateCostCenterCommand {
-  constructor(
-    public readonly id: string,
-    public readonly workspaceId: string,
-    public readonly actorId: string,
-    public readonly name?: string,
-    public readonly code?: string,
-    public readonly description?: string | null,
-  ) {}
+export interface UpdateCostCenterCommand extends ICommand {
+  id: string;
+  workspaceId: string;
+  actorId: string;
+  name?: string;
+  code?: string;
+  description?: string | null;
 }
 
-export class UpdateCostCenterHandler {
+export class UpdateCostCenterHandler implements ICommandHandler<
+  UpdateCostCenterCommand,
+  CommandResult<void>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: UpdateCostCenterCommand): Promise<CostCenter> {
-    return await this.allocationManagementService.updateCostCenter({
+  async handle(command: UpdateCostCenterCommand): Promise<CommandResult<void>> {
+    await this.allocationManagementService.updateCostCenter({
       id: command.id,
       workspaceId: command.workspaceId,
       actorId: command.actorId,
@@ -26,5 +31,6 @@ export class UpdateCostCenterHandler {
       code: command.code,
       description: command.description,
     });
+    return CommandResult.success(undefined);
   }
 }

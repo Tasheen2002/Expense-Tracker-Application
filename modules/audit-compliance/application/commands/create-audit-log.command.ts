@@ -1,26 +1,28 @@
-import { AuditService } from "../services/audit.service";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { AuditService, CreateAuditLogDTO } from '../services/audit.service';
 
-export interface CreateAuditLogDTO {
-  workspaceId: string;
-  userId: string | null;
-  action: string;
-  entityType: string;
-  entityId: string;
-  details?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
+export interface CreateAuditLogCommand extends ICommand {
+  data: CreateAuditLogDTO;
 }
 
-export class CreateAuditLogCommand {
-  constructor(public readonly data: CreateAuditLogDTO) {}
-}
-
-export class CreateAuditLogHandler {
+export class CreateAuditLogHandler implements ICommandHandler<
+  CreateAuditLogCommand,
+  CommandResult<{ auditLogId: string }>
+> {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(command: CreateAuditLogCommand): Promise<AuditLog> {
-    return await this.auditService.createAuditLog(command.data);
+  async handle(
+    input: CreateAuditLogCommand
+  ): Promise<CommandResult<{ auditLogId: string }>> {
+    try {
+      const auditLog = await this.auditService.createAuditLog(input.data);
+      return CommandResult.success({ auditLogId: auditLog.id.getValue() });
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

@@ -1,176 +1,182 @@
-import { FastifyInstance } from "fastify";
-import { TemplateController } from "../controllers/template.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { TemplateController } from '../controllers/template.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 export function registerTemplateRoutes(
   fastify: FastifyInstance,
-  controller: TemplateController,
+  controller: TemplateController
 ) {
   const opts = { preHandler: [fastify.authenticate] };
 
   // Create notification template
   fastify.post(
-    "/admin/notification-templates",
+    '/admin/notification-templates',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Create a new notification template",
+        tags: ['Notification Templates'],
+        description: 'Create a new notification template',
         body: {
-          type: "object",
+          type: 'object',
           required: [
-            "name",
-            "type",
-            "channel",
-            "subjectTemplate",
-            "bodyTemplate",
+            'name',
+            'type',
+            'channel',
+            'subjectTemplate',
+            'bodyTemplate',
           ],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            name: { type: "string", minLength: 1, maxLength: 100 },
+            workspaceId: { type: 'string', format: 'uuid' },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
             type: {
-              type: "string",
+              type: 'string',
               enum: [
-                "EXPENSE_APPROVED",
-                "EXPENSE_REJECTED",
-                "APPROVAL_REQUIRED",
-                "BUDGET_ALERT",
-                "INVITATION",
-                "SYSTEM_ALERT",
+                'EXPENSE_APPROVED',
+                'EXPENSE_REJECTED',
+                'APPROVAL_REQUIRED',
+                'BUDGET_ALERT',
+                'INVITATION',
+                'SYSTEM_ALERT',
               ],
             },
             channel: {
-              type: "string",
-              enum: ["EMAIL", "IN_APP", "PUSH"],
+              type: 'string',
+              enum: ['EMAIL', 'IN_APP', 'PUSH'],
             },
-            subjectTemplate: { type: "string", minLength: 1, maxLength: 255 },
-            bodyTemplate: { type: "string", minLength: 1 },
+            subjectTemplate: { type: 'string', minLength: 1, maxLength: 255 },
+            bodyTemplate: { type: 'string', minLength: 1 },
           },
         },
       },
     },
-    (request, reply) => controller.createTemplate(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createTemplate(request as AuthenticatedRequest, reply)
   );
 
   // Get template by ID
   fastify.get(
-    "/admin/notification-templates/:templateId",
+    '/admin/notification-templates/:templateId',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Get a notification template by ID",
+        tags: ['Notification Templates'],
+        description: 'Get a notification template by ID',
         params: {
-          type: "object",
+          type: 'object',
           properties: {
-            templateId: { type: "string", format: "uuid" },
+            templateId: { type: 'string', format: 'uuid' },
           },
-          required: ["templateId"],
+          required: ['templateId'],
         },
       },
     },
-    (request, reply) => controller.getTemplateById(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getTemplateById(request as AuthenticatedRequest, reply)
   );
 
   // Get active template by type and channel
   fastify.get(
-    "/admin/notification-templates/active",
+    '/admin/notification-templates/active',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Get the active template for a specific type and channel",
+        tags: ['Notification Templates'],
+        description: 'Get the active template for a specific type and channel',
         querystring: {
-          type: "object",
-          required: ["type", "channel"],
+          type: 'object',
+          required: ['type', 'channel'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
             type: {
-              type: "string",
+              type: 'string',
               enum: [
-                "EXPENSE_APPROVED",
-                "EXPENSE_REJECTED",
-                "APPROVAL_REQUIRED",
-                "BUDGET_ALERT",
-                "INVITATION",
-                "SYSTEM_ALERT",
+                'EXPENSE_APPROVED',
+                'EXPENSE_REJECTED',
+                'APPROVAL_REQUIRED',
+                'BUDGET_ALERT',
+                'INVITATION',
+                'SYSTEM_ALERT',
               ],
             },
             channel: {
-              type: "string",
-              enum: ["EMAIL", "IN_APP", "PUSH"],
+              type: 'string',
+              enum: ['EMAIL', 'IN_APP', 'PUSH'],
             },
           },
         },
       },
     },
-    (request, reply) => controller.getActiveTemplate(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getActiveTemplate(request as AuthenticatedRequest, reply)
   );
 
   // Update template
   fastify.patch(
-    "/admin/notification-templates/:templateId",
+    '/admin/notification-templates/:templateId',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Update a notification template",
+        tags: ['Notification Templates'],
+        description: 'Update a notification template',
         params: {
-          type: "object",
+          type: 'object',
           properties: {
-            templateId: { type: "string", format: "uuid" },
+            templateId: { type: 'string', format: 'uuid' },
           },
-          required: ["templateId"],
+          required: ['templateId'],
         },
         body: {
-          type: "object",
+          type: 'object',
           properties: {
-            subjectTemplate: { type: "string", maxLength: 255 },
-            bodyTemplate: { type: "string" },
+            subjectTemplate: { type: 'string', maxLength: 255 },
+            bodyTemplate: { type: 'string' },
           },
         },
       },
     },
-    (request, reply) => controller.updateTemplate(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.updateTemplate(request as AuthenticatedRequest, reply)
   );
 
   // Activate template
   fastify.patch(
-    "/admin/notification-templates/:templateId/activate",
+    '/admin/notification-templates/:templateId/activate',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Activate a notification template",
+        tags: ['Notification Templates'],
+        description: 'Activate a notification template',
         params: {
-          type: "object",
+          type: 'object',
           properties: {
-            templateId: { type: "string", format: "uuid" },
+            templateId: { type: 'string', format: 'uuid' },
           },
-          required: ["templateId"],
+          required: ['templateId'],
         },
       },
     },
-    (request, reply) => controller.activateTemplate(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.activateTemplate(request as AuthenticatedRequest, reply)
   );
 
   // Deactivate template
   fastify.patch(
-    "/admin/notification-templates/:templateId/deactivate",
+    '/admin/notification-templates/:templateId/deactivate',
     {
       ...opts,
       schema: {
-        tags: ["Notification Templates"],
-        description: "Deactivate a notification template",
+        tags: ['Notification Templates'],
+        description: 'Deactivate a notification template',
         params: {
-          type: "object",
+          type: 'object',
           properties: {
-            templateId: { type: "string", format: "uuid" },
+            templateId: { type: 'string', format: 'uuid' },
           },
-          required: ["templateId"],
+          required: ['templateId'],
         },
       },
     },
-    (request, reply) => controller.deactivateTemplate(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deactivateTemplate(request as AuthenticatedRequest, reply)
   );
 }

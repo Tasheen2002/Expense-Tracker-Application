@@ -1,7 +1,12 @@
-import { BudgetService } from "../services/budget.service";
-import { Budget } from "../../domain/entities/budget.entity";
+import { BudgetService } from '../services/budget.service';
 
-export interface UpdateBudgetDto {
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface UpdateBudgetCommand extends ICommand {
   budgetId: string;
   workspaceId: string;
   userId: string;
@@ -10,19 +15,23 @@ export interface UpdateBudgetDto {
   totalAmount?: number | string;
 }
 
-export class UpdateBudgetHandler {
+export class UpdateBudgetHandler implements ICommandHandler<
+  UpdateBudgetCommand,
+  CommandResult<void>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: UpdateBudgetDto): Promise<Budget> {
-    return await this.budgetService.updateBudget(
-      dto.budgetId,
-      dto.workspaceId,
-      dto.userId,
+  async handle(command: UpdateBudgetCommand): Promise<CommandResult<void>> {
+    await this.budgetService.updateBudget(
+      command.budgetId,
+      command.workspaceId,
+      command.userId,
       {
-        name: dto.name,
-        description: dto.description,
-        totalAmount: dto.totalAmount,
-      },
+        name: command.name,
+        description: command.description,
+        totalAmount: command.totalAmount,
+      }
     );
+    return CommandResult.success();
   }
 }

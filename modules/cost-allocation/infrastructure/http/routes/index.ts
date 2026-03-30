@@ -1,11 +1,11 @@
-import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
-import { allocationManagementRoutes } from "./allocation-management.routes";
-import { expenseAllocationRoutes } from "./expense-allocation.routes";
-import { AllocationManagementController } from "../controllers/allocation-management.controller";
-import { ExpenseAllocationController } from "../controllers/expense-allocation.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
+import { allocationManagementRoutes } from './allocation-management.routes';
+import { expenseAllocationRoutes } from './expense-allocation.routes';
+import { AllocationManagementController } from '../controllers/allocation-management.controller';
+import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
+import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 export async function registerCostAllocationRoutes(
   fastify: FastifyInstance,
@@ -13,32 +13,32 @@ export async function registerCostAllocationRoutes(
     allocationManagementController: AllocationManagementController;
     expenseAllocationController: ExpenseAllocationController;
   },
-  prisma: PrismaClient,
+  prisma: PrismaClient
 ) {
   await fastify.register(
     async (instance) => {
       // Add authentication hook first
-      instance.addHook("onRequest", async (request, reply) => {
+      instance.addHook('onRequest', async (request, reply) => {
         await fastify.authenticate(request);
       });
 
-      instance.addHook("preHandler", async (request, reply) => {
+      instance.addHook('preHandler', async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,
-          prisma,
+          prisma
         );
       });
 
       await allocationManagementRoutes(
         instance,
-        controllers.allocationManagementController,
+        controllers.allocationManagementController
       );
       await expenseAllocationRoutes(
         instance,
-        controllers.expenseAllocationController,
+        controllers.expenseAllocationController
       );
     },
-    { prefix: "/api/v1" },
+    { prefix: '/api/v1' }
   );
 }

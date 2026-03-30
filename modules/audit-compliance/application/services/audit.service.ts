@@ -1,16 +1,16 @@
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
-import { AuditAction } from "../../domain/value-objects/audit-action.vo";
-import { AuditResource } from "../../domain/value-objects/audit-resource.vo";
-import { AuditLogId } from "../../domain/value-objects/audit-log-id.vo";
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditAction } from '../../domain/value-objects/audit-action.vo';
+import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
+import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
-  AuditLogRepository,
+  IAuditLogRepository,
   AuditLogFilter,
-} from "../../domain/repositories/audit-log.repository";
+} from '../../domain/repositories/audit-log.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -43,7 +43,7 @@ export class AuditService {
   private consecutiveFailures = 0;
   private static readonly FAILURE_ALERT_THRESHOLD = 5;
 
-  constructor(private readonly auditRepository: AuditLogRepository) {}
+  constructor(private readonly auditRepository: IAuditLogRepository) {}
 
   async log(event: DomainEvent): Promise<void> {
     try {
@@ -53,7 +53,7 @@ export class AuditService {
       // Skip logging system-level events without a workspaceId
       if (!workspaceId) {
         console.debug(
-          `[AuditService] Skipping system-level event without workspaceId: ${event.eventType}`,
+          `[AuditService] Skipping system-level event without workspaceId: ${event.eventType}`
         );
         return;
       }
@@ -62,8 +62,8 @@ export class AuditService {
 
       const action = AuditAction.create(event.eventType);
       const resource = AuditResource.create(
-        event.aggregateId.split(":")[0] || "Unknown",
-        event.aggregateId,
+        event.aggregateType,
+        event.aggregateId
       );
 
       const auditLog = AuditLog.create({
@@ -83,29 +83,18 @@ export class AuditService {
       await this.auditRepository.save(auditLog);
 
       // Reset failure counter on success
-      if (this.consecutiveFailures > 0) {
-        console.info(
-          `[AuditService] Audit logging recovered after ${this.consecutiveFailures} consecutive failures`,
-        );
-        this.consecutiveFailures = 0;
-      }
+      this.consecutiveFailures = 0;
     } catch (error) {
       this.consecutiveFailures++;
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      console.warn(
+      console.error(
         `[AuditService] AUDIT_FAILURE: Failed to log event "${event.eventType}" ` +
-          `(failure #${this.consecutiveFailures}): ${errorMessage}`,
+          `(failure #${this.consecutiveFailures}): ${errorMessage}`
       );
 
-      // Escalate warning when consecutive failures exceed threshold
-      if (this.consecutiveFailures >= AuditService.FAILURE_ALERT_THRESHOLD) {
-        // Throw error for critical failures - caller or monitoring system should handle
-        throw new Error(
-          `[AuditService] CRITICAL: ${this.consecutiveFailures} consecutive audit failures. Audit trail integrity compromised.`,
-        );
-      }
+      throw error;
     }
   }
 
@@ -136,7 +125,7 @@ export class AuditService {
    */
   async getAuditLogById(
     workspaceId: string,
-    auditLogId: string,
+    auditLogId: string
   ): Promise<AuditLog | null> {
     const id = AuditLogId.fromString(auditLogId);
     const auditLog = await this.auditRepository.findById(id);
@@ -156,7 +145,7 @@ export class AuditService {
     workspaceId: string,
     filters?: ListAuditLogsFilters,
     limit: number = 50,
-    offset: number = 0,
+    offset: number = 0
   ): Promise<PaginatedResult<AuditLog>> {
     const filter: AuditLogFilter = {
       workspaceId,
@@ -175,13 +164,13 @@ export class AuditService {
     workspaceId: string,
     entityType: string,
     entityId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<AuditLog>> {
     return await this.auditRepository.findByEntityId(
       workspaceId,
       entityType,
       entityId,
-      options,
+      options
     );
   }
 
@@ -191,7 +180,7 @@ export class AuditService {
   async getAuditSummary(
     workspaceId: string,
     startDate: Date,
-    endDate: Date,
+    endDate: Date
   ): Promise<AuditSummary> {
     const [totalLogs, actionBreakdown] = await Promise.all([
       this.auditRepository.countByWorkspace(workspaceId),

@@ -1,30 +1,37 @@
-import { AttachmentService } from "../services/attachment.service";
-import { Attachment } from "../../domain/entities/attachment.entity";
-import { AttachmentNotFoundError } from "../../domain/errors/expense.errors";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { AttachmentService } from '../services/attachment.service';
+import { Attachment } from '../../domain/entities/attachment.entity';
+import { AttachmentNotFoundError } from '../../domain/errors/expense.errors';
 
-export interface GetAttachmentDto {
-  attachmentId: string;
-  expenseId: string;
-  workspaceId: string;
+export interface GetAttachmentQuery extends IQuery {
+  readonly attachmentId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
-export class GetAttachmentHandler {
+export class GetAttachmentHandler implements IQueryHandler<
+  GetAttachmentQuery,
+  QueryResult<Attachment>
+> {
   constructor(private readonly attachmentService: AttachmentService) {}
 
-  async handle(dto: GetAttachmentDto): Promise<Attachment> {
+  async handle(query: GetAttachmentQuery): Promise<QueryResult<Attachment>> {
     const attachment = await this.attachmentService.getAttachmentById(
-      dto.attachmentId,
+      query.attachmentId
     );
 
     if (!attachment) {
-      throw new AttachmentNotFoundError(dto.attachmentId);
+      throw new AttachmentNotFoundError(query.attachmentId);
     }
 
-    // Verify attachment belongs to the specified expense
-    if (attachment.expenseId !== dto.expenseId) {
-      throw new AttachmentNotFoundError(dto.attachmentId);
+    if (attachment.expenseId !== query.expenseId) {
+      throw new AttachmentNotFoundError(query.attachmentId);
     }
 
-    return attachment;
+    return QueryResult.success(attachment);
   }
 }

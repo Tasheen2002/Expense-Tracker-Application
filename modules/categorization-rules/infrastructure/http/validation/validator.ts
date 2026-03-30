@@ -1,64 +1,68 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
-import { z, ZodError, ZodSchema } from 'zod'
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { ZodError, ZodSchema } from 'zod';
 
-export function formatZodErrors(error: ZodError) {
-  return error.errors.map((err) => ({
-    field: err.path.join('.'),
-    message: err.message,
-    code: err.code,
-  }))
-}
-
-export function validateBody<T extends ZodSchema>(schema: T) {
+export const validateBody = (schema: ZodSchema) => {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.body = schema.parse(request.body)
+      request.body = await schema.parseAsync(request.body);
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
           message: 'Validation failed',
-          errors: formatZodErrors(error),
-        })
+          error: 'VALIDATION_ERROR',
+          errors: error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        });
       }
-      throw error
+      throw error;
     }
-  }
-}
+  };
+};
 
-export function validateQuery<T extends ZodSchema>(schema: T) {
+export const validateParams = (schema: ZodSchema) => {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.query = schema.parse(request.query)
+      request.params = await schema.parseAsync(request.params);
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
-          message: 'Validation failed',
-          errors: formatZodErrors(error),
-        })
+          message: 'Invalid parameters',
+          error: 'VALIDATION_ERROR',
+          errors: error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        });
       }
-      throw error
+      throw error;
     }
-  }
-}
+  };
+};
 
-export function validateParams<T extends ZodSchema>(schema: T) {
+export const validateQuery = (schema: ZodSchema) => {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.params = schema.parse(request.params)
+      request.query = await schema.parseAsync(request.query);
     } catch (error) {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
-          message: 'Validation failed',
-          errors: formatZodErrors(error),
-        })
+          message: 'Invalid query parameters',
+          error: 'VALIDATION_ERROR',
+          errors: error.errors.map((err) => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        });
       }
-      throw error
+      throw error;
     }
-  }
-}
+  };
+};

@@ -1,22 +1,38 @@
-import { BudgetService } from '../services/budget.service'
-import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity'
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { BudgetService } from '../services/budget.service';
+import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetAllocationsDto {
-  budgetId: string
-  limit?: number
-  offset?: number
+export interface GetAllocationsQuery extends IQuery {
+  budgetId: string;
+  workspaceId: string;
+  limit?: number;
+  offset?: number;
 }
 
-export class GetAllocationsHandler {
+export class GetAllocationsHandler implements IQueryHandler<
+  GetAllocationsQuery,
+  QueryResult<PaginatedResult<BudgetAllocation>>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: GetAllocationsDto): Promise<PaginatedResult<BudgetAllocation>> {
+  async handle(
+    query: GetAllocationsQuery
+  ): Promise<QueryResult<PaginatedResult<BudgetAllocation>>> {
     const options = {
-      limit: dto.limit,
-      offset: dto.offset,
-    }
+      limit: query.limit,
+      offset: query.offset,
+    };
 
-    return await this.budgetService.getAllocationsByBudget(dto.budgetId, options)
+    const result = await this.budgetService.getAllocationsByBudget(
+      query.budgetId,
+      query.workspaceId,
+      options
+    );
+    return QueryResult.success(result);
   }
 }

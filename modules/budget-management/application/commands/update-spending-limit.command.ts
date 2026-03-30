@@ -1,18 +1,34 @@
-import { SpendingLimitService } from '../services/spending-limit.service'
-import { SpendingLimit } from '../../domain/entities/spending-limit.entity'
+import { SpendingLimitService } from '../services/spending-limit.service';
 
-export interface UpdateSpendingLimitDto {
-  limitId: string
-  workspaceId: string
-  limitAmount?: number | string
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface UpdateSpendingLimitCommand extends ICommand {
+  limitId: string;
+  workspaceId: string;
+  userId?: string;
+  limitAmount?: number | string;
 }
 
-export class UpdateSpendingLimitHandler {
+export class UpdateSpendingLimitHandler implements ICommandHandler<
+  UpdateSpendingLimitCommand,
+  CommandResult<void>
+> {
   constructor(private readonly limitService: SpendingLimitService) {}
 
-  async handle(dto: UpdateSpendingLimitDto): Promise<SpendingLimit> {
-    return await this.limitService.updateSpendingLimit(dto.limitId, dto.workspaceId, {
-      limitAmount: dto.limitAmount,
-    })
+  async handle(
+    command: UpdateSpendingLimitCommand
+  ): Promise<CommandResult<void>> {
+    await this.limitService.updateSpendingLimit(
+      command.limitId,
+      command.workspaceId,
+      {
+        limitAmount: command.limitAmount,
+      }
+    );
+    return CommandResult.success();
   }
 }

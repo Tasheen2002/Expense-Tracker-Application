@@ -15,7 +15,7 @@ class MockEvent extends DomainEvent {
   get eventType() {
     return "mock.event";
   }
-  getPayload() {
+  protected getPayload() {
     return {
       workspaceId: "123e4567-e89b-12d3-a456-426614174000",
       userId: "123e4567-e89b-12d3-a456-426614174001",
@@ -192,7 +192,6 @@ describe("AuditService", () => {
         "123e4567-e89b-12d3-a456-426614174000",
         "EXPENSE",
         "expense-123",
-        undefined,
       );
     });
   });

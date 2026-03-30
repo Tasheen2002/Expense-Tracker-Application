@@ -1,37 +1,36 @@
-import { WorkspaceManagementService } from '../services/workspace-management.service'
-import { ICommand, ICommandHandler, CommandResult } from './register-user.command'
+import { WorkspaceManagementService } from '../services/workspace-management.service';
+import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
 export interface DeleteWorkspaceCommand extends ICommand {
-  workspaceId: string
+  workspaceId: string;
 }
 
-export class DeleteWorkspaceHandler
-  implements ICommandHandler<DeleteWorkspaceCommand, CommandResult<boolean>>
-{
-  constructor(private readonly workspaceManagementService: WorkspaceManagementService) {}
+export class DeleteWorkspaceHandler implements ICommandHandler<
+  DeleteWorkspaceCommand,
+  CommandResult<void>
+> {
+  constructor(
+    private readonly workspaceManagementService: WorkspaceManagementService
+  ) {}
 
-  async handle(command: DeleteWorkspaceCommand): Promise<CommandResult<boolean>> {
+  async handle(command: DeleteWorkspaceCommand): Promise<CommandResult<void>> {
     try {
-      // Validate workspaceId
-      if (!command.workspaceId || typeof command.workspaceId !== 'string') {
-        return CommandResult.failure<boolean>('Workspace ID is required', ['workspaceId'])
-      }
-
-      const deleted = await this.workspaceManagementService.deleteWorkspace(command.workspaceId)
+      const deleted = await this.workspaceManagementService.deleteWorkspace(
+        command.workspaceId
+      );
 
       if (!deleted) {
-        return CommandResult.failure<boolean>('Workspace not found', ['workspaceId'])
+        throw new WorkspaceNotFoundError(command.workspaceId);
       }
 
-      return CommandResult.success<boolean>(deleted)
+      return CommandResult.success();
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<boolean>(error.message, [error.message])
-      }
-
-      return CommandResult.failure<boolean>(
-        'An unexpected error occurred during workspace deletion'
-      )
+      return CommandResult.fromError(error);
     }
   }
 }

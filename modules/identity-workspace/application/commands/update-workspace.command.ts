@@ -1,54 +1,43 @@
-import { WorkspaceManagementService } from '../services/workspace-management.service'
-import { Workspace } from '../../domain/entities/workspace.entity'
-import { ICommand, ICommandHandler, CommandResult } from './register-user.command'
+import { WorkspaceManagementService } from '../services/workspace-management.service';
+import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
 export interface UpdateWorkspaceCommand extends ICommand {
-  workspaceId: string
-  name?: string
+  workspaceId: string;
+  name?: string;
 }
 
-export class UpdateWorkspaceHandler
-  implements ICommandHandler<UpdateWorkspaceCommand, CommandResult<Workspace>>
-{
-  constructor(private readonly workspaceManagementService: WorkspaceManagementService) {}
+export class UpdateWorkspaceHandler implements ICommandHandler<
+  UpdateWorkspaceCommand,
+  CommandResult<void>
+> {
+  constructor(
+    private readonly workspaceManagementService: WorkspaceManagementService
+  ) {}
 
-  async handle(command: UpdateWorkspaceCommand): Promise<CommandResult<Workspace>> {
+  async handle(command: UpdateWorkspaceCommand): Promise<CommandResult<void>> {
     try {
-      // Validate workspaceId
-      if (!command.workspaceId || typeof command.workspaceId !== 'string') {
-        return CommandResult.failure<Workspace>('Workspace ID is required', ['workspaceId'])
-      }
-
-      // Validate name if provided
-      if (command.name !== undefined && (!command.name || typeof command.name !== 'string')) {
-        return CommandResult.failure<Workspace>('Workspace name must be a valid string', [
-          'name',
-        ])
-      }
-
-      const updateData: { name?: string } = {}
+      const updateData: { name?: string } = {};
       if (command.name !== undefined) {
-        updateData.name = command.name
+        updateData.name = command.name;
       }
 
       const workspace = await this.workspaceManagementService.updateWorkspace(
         command.workspaceId,
         updateData
-      )
+      );
 
       if (!workspace) {
-        return CommandResult.failure<Workspace>('Workspace not found', ['workspaceId'])
+        throw new WorkspaceNotFoundError(command.workspaceId);
       }
 
-      return CommandResult.success<Workspace>(workspace)
+      return CommandResult.success();
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<Workspace>(error.message, [error.message])
-      }
-
-      return CommandResult.failure<Workspace>(
-        'An unexpected error occurred during workspace update'
-      )
+      return CommandResult.fromError(error);
     }
   }
 }

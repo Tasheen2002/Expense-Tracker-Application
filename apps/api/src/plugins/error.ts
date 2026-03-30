@@ -1,13 +1,18 @@
-import fp from 'fastify-plugin'
-import { FastifyPluginAsync, FastifyError, FastifyReply, FastifyRequest } from 'fastify'
-import { ZodError } from 'zod'
-import { Prisma } from '@prisma/client'
+import fp from 'fastify-plugin';
+import {
+  FastifyPluginAsync,
+  FastifyError,
+  FastifyReply,
+  FastifyRequest,
+} from 'fastify';
+import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 
 /**
  * Base class for domain errors (can be used by all modules)
  */
 abstract class DomainError extends Error {
-  abstract readonly statusCode: number
+  abstract readonly statusCode: number;
 }
 
 /**
@@ -26,27 +31,31 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         err: error,
         url: request.url,
         method: request.method,
-      })
-
-      // Domain-specific errors (from all modules)
-      // Checks if error has statusCode property (all our domain errors have this)
-      if ('statusCode' in error && typeof error.statusCode === 'number' && error.statusCode < 600) {
-        return reply.status(error.statusCode).send({
-          success: false,
-          statusCode: error.statusCode,
-          message: error.message,
-          error: error.name,
-        })
-      }
+      });
 
       // Fastify validation errors (JSON Schema)
       if (error.code === 'FST_ERR_VALIDATION') {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
-          error: 'Bad Request',
+          error: 'VALIDATION_ERROR',
           message: error.message,
-        })
+        });
+      }
+
+      // Domain-specific errors (from all modules)
+      // Checks if error has statusCode property (all our domain errors have this)
+      if (
+        'statusCode' in error &&
+        typeof error.statusCode === 'number' &&
+        error.statusCode < 600
+      ) {
+        return reply.status(error.statusCode).send({
+          success: false,
+          statusCode: error.statusCode,
+          message: error.message,
+          error: error.name,
+        });
       }
 
       // Zod validation errors
@@ -60,7 +69,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             field: err.path.join('.'),
             message: err.message,
           })),
-        })
+        });
       }
 
       // Prisma errors
@@ -73,7 +82,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             error: 'Conflict',
             message: 'Resource already exists',
             details: error.meta,
-          })
+          });
         }
 
         // Record not found
@@ -83,7 +92,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             statusCode: 404,
             error: 'Not Found',
             message: 'Resource not found',
-          })
+          });
         }
 
         // Foreign key constraint violation
@@ -93,7 +102,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             statusCode: 400,
             error: 'Bad Request',
             message: 'Invalid reference to related resource',
-          })
+          });
         }
       }
 
@@ -104,7 +113,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
           statusCode: 400,
           error: 'Validation Error',
           message: 'Invalid database operation',
-        })
+        });
       }
 
       // Fastify HTTP errors (from @fastify/sensible)
@@ -114,12 +123,12 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
           statusCode: error.statusCode,
           error: error.name,
           message: error.message,
-        })
+        });
       }
 
       // Internal server errors (5xx)
-      const statusCode = error.statusCode || 500
-      const isDevelopment = process.env.NODE_ENV === 'development'
+      const statusCode = error.statusCode || 500;
+      const isDevelopment = process.env.NODE_ENV === 'development';
 
       return reply.status(statusCode).send({
         success: false,
@@ -127,9 +136,9 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         error: 'Internal Server Error',
         message: isDevelopment ? error.message : 'An unexpected error occurred',
         ...(isDevelopment && { stack: error.stack }),
-      })
+      });
     }
-  )
+  );
 
   /**
    * Not Found handler
@@ -140,12 +149,12 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       statusCode: 404,
       error: 'Not Found',
       message: `Route ${request.method}:${request.url} not found`,
-    })
-  })
+    });
+  });
 
-  fastify.log.info('Error handler plugin registered')
-}
+  fastify.log.info('Error handler plugin registered');
+};
 
 export default fp(errorPlugin, {
   name: 'error-plugin',
-})
+});

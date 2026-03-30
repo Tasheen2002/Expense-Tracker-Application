@@ -1,45 +1,40 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
+import { WorkflowService } from '../services/workflow.service';
 import {
-  WorkflowNotFoundError,
-  UnauthorizedApproverError,
-  CurrentStepNotFoundError,
-} from "../../domain/errors/approval-workflow.errors";
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface DelegateStepInput {
+export interface DelegateStepInput extends ICommand {
   expenseId: string;
+  workspaceId: string;
   fromUserId: string;
   toUserId: string;
 }
 
-export class DelegateStepHandler {
-  constructor(private readonly workflowRepository: ExpenseWorkflowRepository) {}
+export class DelegateStepHandler implements ICommandHandler<
+  DelegateStepInput,
+  CommandResult<void>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: DelegateStepInput): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
-      input.expenseId,
-    );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(input.expenseId);
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    const currentStep = workflow.getCurrentStep();
-    if (!currentStep) {
-      throw new CurrentStepNotFoundError(input.expenseId);
-    }
-
-    if (currentStep.getCurrentApproverId().getValue() !== input.fromUserId) {
-      throw new UnauthorizedApproverError(
-        input.fromUserId,
-        currentStep.getId().getValue(),
+  async handle(input: DelegateStepInput): Promise<CommandResult<void>> {
+    try {
+      await this.workflowService.delegateStep(input);
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
       );
     }
-
-    currentStep.delegate(input.toUserId);
-
-    await this.workflowRepository.save(workflow);
-
-    return workflow;
   }
 }

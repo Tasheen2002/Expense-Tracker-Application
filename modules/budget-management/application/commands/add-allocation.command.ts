@@ -1,7 +1,13 @@
-import { BudgetService } from "../services/budget.service";
-import { BudgetAllocation } from "../../domain/entities/budget-allocation.entity";
+import { BudgetService } from '../services/budget.service';
+import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
 
-export interface AddAllocationDto {
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+
+export interface AddAllocationCommand extends ICommand {
   budgetId: string;
   workspaceId: string;
   userId: string;
@@ -10,17 +16,25 @@ export interface AddAllocationDto {
   description?: string;
 }
 
-export class AddAllocationHandler {
+export class AddAllocationHandler implements ICommandHandler<
+  AddAllocationCommand,
+  CommandResult<{ allocationId: string }>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(dto: AddAllocationDto): Promise<BudgetAllocation> {
-    return await this.budgetService.addAllocation({
-      budgetId: dto.budgetId,
-      workspaceId: dto.workspaceId,
-      userId: dto.userId,
-      categoryId: dto.categoryId,
-      allocatedAmount: dto.allocatedAmount,
-      description: dto.description,
+  async handle(
+    command: AddAllocationCommand
+  ): Promise<CommandResult<{ allocationId: string }>> {
+    const allocation = await this.budgetService.addAllocation({
+      budgetId: command.budgetId,
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      categoryId: command.categoryId,
+      allocatedAmount: command.allocatedAmount,
+      description: command.description,
+    });
+    return CommandResult.success({
+      allocationId: allocation.getId().getValue(),
     });
   }
 }

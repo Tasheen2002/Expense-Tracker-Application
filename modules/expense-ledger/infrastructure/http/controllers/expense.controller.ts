@@ -1,28 +1,19 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { CreateExpenseHandler } from "../../../application/commands/create-expense.command";
-import { UpdateExpenseHandler } from "../../../application/commands/update-expense.command";
-import { DeleteExpenseHandler } from "../../../application/commands/delete-expense.command";
-import { SubmitExpenseHandler } from "../../../application/commands/submit-expense.command";
-import { ApproveExpenseHandler } from "../../../application/commands/approve-expense.command";
-import { RejectExpenseHandler } from "../../../application/commands/reject-expense.command";
-import { ReimburseExpenseHandler } from "../../../application/commands/reimburse-expense.command";
-import { GetExpenseHandler } from "../../../application/queries/get-expense.query";
-import { ListExpensesHandler } from "../../../application/queries/list-expenses.query";
-import { FilterExpensesHandler } from "../../../application/queries/filter-expenses.query";
-import { GetExpenseStatisticsHandler } from "../../../application/queries/get-expense-statistics.query";
-import { Expense } from "../../../domain/entities/expense.entity";
-import { TagId } from "../../../domain/value-objects/tag-id";
-import { AttachmentId } from "../../../domain/value-objects/attachment-id";
-import {
-  PaymentMethod,
-  isValidPaymentMethod,
-} from "../../../domain/enums/payment-method";
-import {
-  ExpenseStatus,
-  isValidExpenseStatus,
-} from "../../../domain/enums/expense-status";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CreateExpenseHandler } from '../../../application/commands/create-expense.command';
+import { UpdateExpenseHandler } from '../../../application/commands/update-expense.command';
+import { DeleteExpenseHandler } from '../../../application/commands/delete-expense.command';
+import { SubmitExpenseHandler } from '../../../application/commands/submit-expense.command';
+import { ApproveExpenseHandler } from '../../../application/commands/approve-expense.command';
+import { RejectExpenseHandler } from '../../../application/commands/reject-expense.command';
+import { ReimburseExpenseHandler } from '../../../application/commands/reimburse-expense.command';
+import { GetExpenseHandler } from '../../../application/queries/get-expense.query';
+import { FilterExpensesHandler } from '../../../application/queries/filter-expenses.query';
+import { GetExpenseStatisticsHandler } from '../../../application/queries/get-expense-statistics.query';
+import { Expense } from '../../../domain/entities/expense.entity';
+import { PaymentMethod } from '../../../domain/enums/payment-method';
+import { ExpenseStatus } from '../../../domain/enums/expense-status';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class ExpenseController {
   constructor(
@@ -34,23 +25,14 @@ export class ExpenseController {
     private readonly rejectExpenseHandler: RejectExpenseHandler,
     private readonly reimburseExpenseHandler: ReimburseExpenseHandler,
     private readonly getExpenseHandler: GetExpenseHandler,
-    private readonly listExpensesHandler: ListExpensesHandler,
     private readonly filterExpensesHandler: FilterExpensesHandler,
-    private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler,
+    private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler
   ) {}
 
-  async createExpense(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const userId = request.user.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
-      const { workspaceId } = request.params as { workspaceId: string };
-      const body = request.body as {
+  async createExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
         title: string;
         description?: string;
         amount: number;
@@ -58,20 +40,23 @@ export class ExpenseController {
         expenseDate: string;
         categoryId?: string;
         merchant?: string;
-        paymentMethod: string;
+        paymentMethod: PaymentMethod;
         isReimbursable: boolean;
         tagIds?: string[];
       };
-
-      if (!isValidPaymentMethod(body.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${body.paymentMethod}`,
-        });
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = request.user.userId;
+      if (!userId) {
+        return ResponseHelper.unauthorized(reply);
       }
 
-      const expense = await this.createExpenseHandler.handle({
+      const { workspaceId } = request.params;
+      const body = request.body;
+
+      const result = await this.createExpenseHandler.handle({
         workspaceId,
         userId,
         title: body.title,
@@ -86,54 +71,22 @@ export class ExpenseController {
         tagIds: body.tagIds,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Expense created successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          tagIds: expense.tagIds
-            ? expense.tagIds.map((id: TagId) => id.getValue())
-            : [],
-          attachmentIds: expense.attachmentIds
-            ? expense.attachmentIds.map((id: AttachmentId) => id.getValue())
-            : [],
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async updateExpense(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const userId = request.user?.userId;
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
-      }
-      const { workspaceId, expenseId } = request.params as {
-        workspaceId: string;
-        expenseId: string;
-      };
-      const body = request.body as {
+  async updateExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+      Body: {
         title?: string;
         description?: string;
         amount?: number;
@@ -141,19 +94,22 @@ export class ExpenseController {
         expenseDate?: string;
         categoryId?: string;
         merchant?: string;
-        paymentMethod?: string;
+        paymentMethod?: PaymentMethod;
         isReimbursable?: boolean;
       };
-
-      if (body.paymentMethod && !isValidPaymentMethod(body.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${body.paymentMethod}`,
-        });
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = request.user?.userId;
+      if (!userId) {
+        return ResponseHelper.unauthorized(reply);
       }
 
-      const expense = await this.updateExpenseHandler.handle({
+      const { workspaceId, expenseId } = request.params;
+      const body = request.body;
+
+      const result = await this.updateExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
@@ -164,31 +120,15 @@ export class ExpenseController {
         expenseDate: body.expenseDate,
         categoryId: body.categoryId,
         merchant: body.merchant,
-        paymentMethod: body.paymentMethod as PaymentMethod | undefined,
+        paymentMethod: body.paymentMethod,
         isReimbursable: body.isReimbursable,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense updated successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense updated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -198,30 +138,27 @@ export class ExpenseController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
+
       const { workspaceId, expenseId } = request.params;
 
-      await this.deleteExpenseHandler.handle({
+      const result = await this.deleteExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense deleted successfully",
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -231,42 +168,22 @@ export class ExpenseController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const expense = await this.getExpenseHandler.handle({
+      const result = await this.getExpenseHandler.handle({
         expenseId,
         workspaceId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense retrieved successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          workspaceId: expense.workspaceId,
-          userId: expense.userId,
-          title: expense.title,
-          description: expense.description,
-          amount: expense.amount.getAmount().toString(),
-          currency: expense.amount.getCurrency(),
-          expenseDate: expense.expenseDate.toDateString(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
-          paymentMethod: expense.paymentMethod,
-          isReimbursable: expense.isReimbursable,
-          status: expense.status,
-          tagIds: expense.tagIds.map((id: TagId) => id.getValue()),
-          attachmentIds: expense.attachmentIds.map((id: AttachmentId) =>
-            id.getValue(),
-          ),
-          createdAt: expense.createdAt.toISOString(),
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expense retrieved successfully',
+        result.data?.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -281,49 +198,37 @@ export class ExpenseController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { userId, limit, offset } = request.query;
 
-      const result = await this.listExpensesHandler.handle({
+      const result = await this.filterExpensesHandler.handle({
         workspaceId,
-        userId: userId || request.user?.userId, // Default to own expenses if no specific user requested (Privacy Fix)
+        userId: userId || request.user?.userId,
         limit: limit ? parseInt(limit) : undefined,
         offset: offset ? parseInt(offset) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expenses retrieved successfully",
-        data: {
-          items: result.items.map((expense: Expense) => ({
-            expenseId: expense.id.getValue(),
-            workspaceId: expense.workspaceId,
-            userId: expense.userId,
-            title: expense.title,
-            description: expense.description,
-            amount: expense.amount.getAmount().toString(),
-            currency: expense.amount.getCurrency(),
-            expenseDate: expense.expenseDate.toDateString(),
-            categoryId: expense.categoryId?.getValue(),
-            merchant: expense.merchant,
-            paymentMethod: expense.paymentMethod,
-            isReimbursable: expense.isReimbursable,
-            status: expense.status,
-            createdAt: expense.createdAt.toISOString(),
-            updatedAt: expense.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expenses retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((expense: Expense) =>
+                expense.toJSON()
+              ),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -348,27 +253,11 @@ export class ExpenseController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const query = request.query;
-
-      if (query.status && !isValidExpenseStatus(query.status)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid expense status: ${query.status}`,
-        });
-      }
-
-      if (query.paymentMethod && !isValidPaymentMethod(query.paymentMethod)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: `Invalid payment method: ${query.paymentMethod}`,
-        });
-      }
 
       const result = await this.filterExpensesHandler.handle({
         workspaceId,
@@ -376,7 +265,7 @@ export class ExpenseController {
         categoryId: query.categoryId,
         status: query.status as ExpenseStatus | undefined,
         paymentMethod: query.paymentMethod as PaymentMethod | undefined,
-        isReimbursable: query.isReimbursable === "true",
+        isReimbursable: query.isReimbursable === 'true',
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
         minAmount: query.minAmount ? parseFloat(query.minAmount) : undefined,
@@ -387,213 +276,175 @@ export class ExpenseController {
         offset: query.offset ? parseInt(query.offset) : undefined,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expenses filtered successfully",
-        data: {
-          items: result.items.map((expense: Expense) => ({
-            expenseId: expense.id.getValue(),
-            workspaceId: expense.workspaceId,
-            userId: expense.userId,
-            title: expense.title,
-            description: expense.description,
-            amount: expense.amount.getAmount().toString(),
-            currency: expense.amount.getCurrency(),
-            expenseDate: expense.expenseDate.toDateString(),
-            categoryId: expense.categoryId?.getValue(),
-            merchant: expense.merchant,
-            paymentMethod: expense.paymentMethod,
-            isReimbursable: expense.isReimbursable,
-            status: expense.status,
-            createdAt: expense.createdAt.toISOString(),
-            updatedAt: expense.updatedAt.toISOString(),
-          })),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expenses filtered successfully',
+        result.data
+          ? {
+              items: result.data.items.map((expense: Expense) =>
+                expense.toJSON()
+              ),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getExpenseStatistics(
-    request: AuthenticatedRequest,
-    reply: FastifyReply,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { userId?: string; currency?: string };
+    }>,
+    reply: FastifyReply
   ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { userId, currency } = request.query as {
-        userId?: string;
-        currency?: string;
-      };
+      const { workspaceId } = request.params;
+      const { userId, currency } = request.query;
 
-      const statistics = await this.getExpenseStatisticsHandler.handle({
+      const result = await this.getExpenseStatisticsHandler.handle({
         workspaceId,
         userId,
         currency,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense statistics retrieved successfully",
-        data: statistics,
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expense statistics retrieved successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async submitExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+  async submitExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
-      const { workspaceId, expenseId } = request.params as {
-        workspaceId: string;
-        expenseId: string;
-      };
 
-      const expense = await this.submitExpenseHandler.handle({
+      const { workspaceId, expenseId } = request.params;
+
+      const result = await this.submitExpenseHandler.handle({
         expenseId,
         workspaceId,
         userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense submitted successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense submitted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async approveExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+  async approveExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
-      const { workspaceId, expenseId } = request.params as {
-        workspaceId: string;
-        expenseId: string;
-      };
+      const { workspaceId, expenseId } = request.params;
 
-      const expense = await this.approveExpenseHandler.handle({
+      const result = await this.approveExpenseHandler.handle({
         expenseId,
         workspaceId,
         approverId: userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense approved successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense approved successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async rejectExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+  async rejectExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+      Body: { reason?: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
-      const { workspaceId, expenseId } = request.params as {
-        workspaceId: string;
-        expenseId: string;
-      };
-      const reason = (request.body as { reason?: string })?.reason;
+      const { workspaceId, expenseId } = request.params;
+      const reason = request.body?.reason;
 
-      const expense = await this.rejectExpenseHandler.handle({
+      const result = await this.rejectExpenseHandler.handle({
         expenseId,
         workspaceId,
         rejecterId: userId,
         reason,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense rejected successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense rejected successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async reimburseExpense(request: AuthenticatedRequest, reply: FastifyReply) {
+  async reimburseExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = request.user?.userId;
       if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          message: "User not authenticated",
-        });
+        return ResponseHelper.unauthorized(reply);
       }
 
-      const { workspaceId, expenseId } = request.params as {
-        workspaceId: string;
-        expenseId: string;
-      };
+      const { workspaceId, expenseId } = request.params;
 
-      const expense = await this.reimburseExpenseHandler.handle({
+      const result = await this.reimburseExpenseHandler.handle({
         expenseId,
         workspaceId,
         processedBy: userId,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Expense marked as reimbursed successfully",
-        data: {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        },
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense marked as reimbursed successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

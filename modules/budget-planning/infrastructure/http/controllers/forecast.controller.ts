@@ -1,72 +1,52 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { CreateForecastHandler } from '../../../application/commands/create-forecast.command';
+import { AddForecastItemHandler } from '../../../application/commands/add-forecast-item.command';
 import {
-  CreateForecastHandler,
-  CreateForecastCommand,
-} from "../../../application/commands/create-forecast.command";
-import {
-  AddForecastItemHandler,
-  AddForecastItemCommand,
-} from "../../../application/commands/add-forecast-item.command";
-import {
-  GetForecastHandler,
-  GetForecastQuery,
-} from "../../../application/queries/get-forecast.query";
-import {
-  ListForecastsHandler,
-  ListForecastsQuery,
-} from "../../../application/queries/list-forecasts.query";
-import {
-  GetForecastItemsHandler,
-  GetForecastItemsQuery,
-} from "../../../application/queries/get-forecast-items.query";
-import { ForecastService } from "../../../application/services/forecast.service";
-import { validateRequest } from "../validation/validator";
-import {
-  createForecastSchema,
-  addForecastItemSchema,
-} from "../validation/forecast.schema";
+  DeleteForecastHandler,
+  DeleteForecastItemHandler,
+} from '../../../application/commands/delete-forecast.command';
+import { GetForecastHandler } from '../../../application/queries/get-forecast.query';
+import { ListForecastsHandler } from '../../../application/queries/list-forecasts.query';
+import { GetForecastItemsHandler } from '../../../application/queries/get-forecast-items.query';
 
-import { ForecastType } from "../../../domain/enums/forecast-type.enum";
+import { ForecastType } from '../../../domain/enums/forecast-type.enum';
 
 export class ForecastController {
   constructor(
     private readonly createForecastHandler: CreateForecastHandler,
     private readonly addForecastItemHandler: AddForecastItemHandler,
+    private readonly deleteForecastHandler: DeleteForecastHandler,
+    private readonly deleteForecastItemHandler: DeleteForecastItemHandler,
     private readonly getForecastHandler: GetForecastHandler,
     private readonly listForecastsHandler: ListForecastsHandler,
-    private readonly getForecastItemsHandler: GetForecastItemsHandler,
-    private readonly forecastService: ForecastService,
+    private readonly getForecastItemsHandler: GetForecastItemsHandler
   ) {}
 
   async create(req: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
-      const body = await validateRequest(req, createForecastSchema);
-      const command = new CreateForecastCommand(
-        body.planId,
-        body.name,
-        body.type as ForecastType,
+      const { planId } = req.params as { planId: string };
+      const body = req.body as {
+        name: string;
+        type: string;
+      };
+      const result = await this.createForecastHandler.handle({
+        planId,
+        name: body.name,
+        type: body.type as ForecastType,
         userId,
-      );
-      const result = await this.createForecastHandler.handle(command);
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Forecast created successfully",
-        {
-          id: result.getId().getValue(),
-          planId: result.getPlanId().getValue(),
-          name: result.getName(),
-          type: result.getType(),
-          isActive: result.getIsActive(),
-          createdAt: result.getCreatedAt().toISOString(),
-          updatedAt: result.getUpdatedAt().toISOString(),
-        },
+        result,
+        'Forecast created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -77,30 +57,27 @@ export class ForecastController {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
-      const body = await validateRequest(req, addForecastItemSchema);
-      const command = new AddForecastItemCommand(
-        body.forecastId,
-        body.categoryId,
-        body.amount,
+      const { forecastId } = req.params as { forecastId: string };
+      const body = req.body as {
+        categoryId: string;
+        amount: number;
+        notes?: string;
+      };
+      const result = await this.addForecastItemHandler.handle({
+        forecastId,
+        categoryId: body.categoryId,
+        amount: body.amount,
         userId,
-        body.notes,
-      );
-      const result = await this.addForecastItemHandler.handle(command);
-      return ResponseHelper.success(
+        notes: body.notes,
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Forecast item added successfully",
-        {
-          id: result.getId().getValue(),
-          forecastId: result.getForecastId().getValue(),
-          categoryId: result.getCategoryId().getValue(),
-          amount: result.getAmount().toNumber(),
-          notes: result.getNotes(),
-          createdAt: result.getCreatedAt().toISOString(),
-          updatedAt: result.getUpdatedAt().toISOString(),
-        },
+        result,
+        'Forecast item added successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -109,29 +86,20 @@ export class ForecastController {
 
   async get(
     req: AuthenticatedRequest<{ Params: { id: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { id } = req.params;
-      const query = new GetForecastQuery(id, userId);
-      const result = await this.getForecastHandler.handle(query);
-      return ResponseHelper.success(
+      const result = await this.getForecastHandler.handle({ id, userId });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Forecast retrieved successfully",
-        {
-          id: result.getId().getValue(),
-          planId: result.getPlanId().getValue(),
-          name: result.getName(),
-          type: result.getType(),
-          isActive: result.getIsActive(),
-          createdAt: result.getCreatedAt().toISOString(),
-          updatedAt: result.getUpdatedAt().toISOString(),
-        },
+        result,
+        'Forecast retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -140,29 +108,20 @@ export class ForecastController {
 
   async list(
     req: AuthenticatedRequest<{ Params: { planId: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { planId } = req.params;
-      const query = new ListForecastsQuery(planId, userId);
-      const result = await this.listForecastsHandler.handle(query);
-      return ResponseHelper.success(
+      const result = await this.listForecastsHandler.handle({ planId, userId });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Forecasts retrieved successfully",
-        result.items.map((f) => ({
-          id: f.getId().getValue(),
-          planId: f.getPlanId().getValue(),
-          name: f.getName(),
-          type: f.getType(),
-          isActive: f.getIsActive(),
-          createdAt: f.getCreatedAt().toISOString(),
-          updatedAt: f.getUpdatedAt().toISOString(),
-        })),
+        result,
+        'Forecasts retrieved successfully',
+        result.data?.items.map((f) => f.toJSON())
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -171,29 +130,23 @@ export class ForecastController {
 
   async listItems(
     req: AuthenticatedRequest<{ Params: { forecastId: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { forecastId } = req.params;
-      const query = new GetForecastItemsQuery(forecastId, userId);
-      const result = await this.getForecastItemsHandler.handle(query);
-      return ResponseHelper.success(
+      const result = await this.getForecastItemsHandler.handle({
+        forecastId,
+        userId,
+      });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Forecast items retrieved successfully",
-        result.items.map((item) => ({
-          id: item.getId().getValue(),
-          forecastId: item.getForecastId().getValue(),
-          categoryId: item.getCategoryId().getValue(),
-          amount: item.getAmount().toNumber(),
-          notes: item.getNotes(),
-          createdAt: item.getCreatedAt().toISOString(),
-          updatedAt: item.getUpdatedAt().toISOString(),
-        })),
+        result,
+        'Forecast items retrieved successfully',
+        result.data?.items.map((item) => item.toJSON())
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -202,19 +155,19 @@ export class ForecastController {
 
   async delete(
     req: AuthenticatedRequest<{ Params: { id: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { id } = req.params;
-      await this.forecastService.deleteForecast(id, userId);
-      return ResponseHelper.success(
+      const result = await this.deleteForecastHandler.handle({ id, userId });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Forecast deleted successfully",
+        result,
+        'Forecast deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -223,19 +176,22 @@ export class ForecastController {
 
   async deleteItem(
     req: AuthenticatedRequest<{ Params: { itemId: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { itemId } = req.params;
-      await this.forecastService.deleteForecastItem(itemId, userId);
-      return ResponseHelper.success(
+      const result = await this.deleteForecastItemHandler.handle({
+        itemId,
+        userId,
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Forecast item deleted successfully",
+        result,
+        'Forecast item deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

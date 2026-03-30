@@ -1,139 +1,114 @@
-import { FastifyInstance } from "fastify";
-import { ExpenseAllocationController } from "../controllers/expense-allocation.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware/workspace-authorization.middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseAllocationController,
+  controller: ExpenseAllocationController
 ) {
   // Allocate expense to departments/cost centers/projects
   fastify.post(
-    "/:workspaceId/expenses/:expenseId/allocations",
+    '/expenses/:expenseId/allocations',
     {
       schema: {
-        tags: ["Cost Allocation - Expense Allocations"],
+        tags: ['Cost Allocation - Expense Allocations'],
         description:
-          "Allocate expense to departments, cost centers, or projects",
+          'Allocate expense to departments, cost centers, or projects',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
         body: {
-          type: "object",
-          required: ["allocations"],
+          type: 'object',
+          required: ['allocations'],
           properties: {
             allocations: {
-              type: "array",
+              type: 'array',
               minItems: 1,
               items: {
-                type: "object",
-                required: ["amount"],
+                type: 'object',
+                required: ['amount'],
                 properties: {
-                  amount: { type: "number", minimum: 0.01 },
-                  percentage: { type: "number", minimum: 0, maximum: 100 },
-                  departmentId: { type: "string", format: "uuid" },
-                  costCenterId: { type: "string", format: "uuid" },
-                  projectId: { type: "string", format: "uuid" },
-                  notes: { type: "string", maxLength: 500 },
+                  amount: { type: 'number', minimum: 0.01 },
+                  percentage: { type: 'number', minimum: 0, maximum: 100 },
+                  departmentId: { type: 'string', format: 'uuid' },
+                  costCenterId: { type: 'string', format: 'uuid' },
+                  projectId: { type: 'string', format: 'uuid' },
+                  notes: { type: 'string', maxLength: 500 },
                 },
               },
             },
           },
         },
       },
-      preHandler: async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          (fastify as any).prisma,
-        );
-      },
     },
-    (request, reply) => controller.allocateExpense(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.allocateExpense(request as AuthenticatedRequest, reply)
   );
 
   // Get expense allocations
   fastify.get(
-    "/:workspaceId/expenses/:expenseId/allocations",
+    '/expenses/:expenseId/allocations',
     {
       schema: {
-        tags: ["Cost Allocation - Expense Allocations"],
-        description: "Get all allocations for an expense",
+        tags: ['Cost Allocation - Expense Allocations'],
+        description: 'Get all allocations for an expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
       },
-      preHandler: async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          (fastify as any).prisma,
-        );
-      },
     },
-    (request, reply) => controller.getAllocations(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getAllocations(request as AuthenticatedRequest, reply)
   );
 
   // Delete expense allocations
   fastify.delete(
-    "/:workspaceId/expenses/:expenseId/allocations",
+    '/expenses/:expenseId/allocations',
     {
       schema: {
-        tags: ["Cost Allocation - Expense Allocations"],
-        description: "Delete all allocations for an expense",
+        tags: ['Cost Allocation - Expense Allocations'],
+        description: 'Delete all allocations for an expense',
         params: {
-          type: "object",
-          required: ["workspaceId", "expenseId"],
+          type: 'object',
+          required: ['workspaceId', 'expenseId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            expenseId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
+            expenseId: { type: 'string', format: 'uuid' },
           },
         },
       },
-      preHandler: async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          (fastify as any).prisma,
-        );
-      },
     },
-    (request, reply) => controller.deleteAllocations(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteAllocations(request as AuthenticatedRequest, reply)
   );
 
   // Get allocation summary for workspace
   fastify.get(
-    "/:workspaceId/allocations/summary",
+    '/allocations/summary',
     {
       schema: {
-        tags: ["Cost Allocation - Expense Allocations"],
-        description: "Get allocation summary statistics for workspace",
+        tags: ['Cost Allocation - Expense Allocations'],
+        description: 'Get allocation summary statistics for workspace',
         params: {
-          type: "object",
-          required: ["workspaceId"],
+          type: 'object',
+          required: ['workspaceId'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            workspaceId: { type: 'string', format: 'uuid' },
           },
         },
       },
-      preHandler: async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          (fastify as any).prisma,
-        );
-      },
     },
-    (request, reply) => controller.getAllocationSummary(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getAllocationSummary(request as AuthenticatedRequest, reply)
   );
 }

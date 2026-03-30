@@ -1,14 +1,21 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   ReceiptMetadata,
   LineItem,
-} from "../../domain/entities/receipt-metadata.entity";
-import { MetadataId } from "../../domain/value-objects/metadata-id";
-import { ReceiptId } from "../../domain/value-objects/receipt-id";
-import { IReceiptMetadataRepository } from "../../domain/repositories/receipt-metadata.repository";
+} from '../../domain/entities/receipt-metadata.entity';
+import { MetadataId } from '../../domain/value-objects/metadata-id';
+import { ReceiptId } from '../../domain/value-objects/receipt-id';
+import { IReceiptMetadataRepository } from '../../domain/repositories/receipt-metadata.repository';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class ReceiptMetadataRepositoryImpl implements IReceiptMetadataRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ReceiptMetadataRepositoryImpl
+  extends PrismaRepository<ReceiptMetadata>
+  implements IReceiptMetadataRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(metadata: ReceiptMetadata): Promise<void> {
     await this.prisma.receiptMetadata.upsert({
@@ -61,6 +68,7 @@ export class ReceiptMetadataRepositoryImpl implements IReceiptMetadataRepository
         updatedAt: metadata.getUpdatedAt(),
       },
     });
+    await this.dispatchEvents(metadata);
   }
 
   async findById(id: MetadataId): Promise<ReceiptMetadata | null> {
@@ -100,7 +108,7 @@ export class ReceiptMetadataRepositoryImpl implements IReceiptMetadataRepository
   }
 
   private toDomain(
-    row: Prisma.ReceiptMetadataGetPayload<object>,
+    row: Prisma.ReceiptMetadataGetPayload<object>
   ): ReceiptMetadata {
     return ReceiptMetadata.fromPersistence({
       id: MetadataId.fromString(row.id),

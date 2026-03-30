@@ -1,14 +1,14 @@
-import { ApprovalChainRepository } from "../../domain/repositories/approval-chain.repository";
-import { ApprovalChain } from "../../domain/entities/approval-chain.entity";
-import { ApprovalChainId } from "../../domain/value-objects/approval-chain-id";
-import { ApprovalChainNotFoundError } from "../../domain/errors/approval-workflow.errors";
+import { IApprovalChainRepository } from '../../domain/repositories/approval-chain.repository';
+import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
+import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
+import { ApprovalChainNotFoundError } from '../../domain/errors/approval-workflow.errors';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export class ApprovalChainService {
-  constructor(private readonly chainRepository: ApprovalChainRepository) {}
+  constructor(private readonly chainRepository: IApprovalChainRepository) {}
 
   async createChain(params: {
     workspaceId: string;
@@ -75,7 +75,7 @@ export class ApprovalChainService {
 
   async getChain(chainId: string, workspaceId: string): Promise<ApprovalChain> {
     const chain = await this.chainRepository.findById(
-      ApprovalChainId.fromString(chainId),
+      ApprovalChainId.fromString(chainId)
     );
 
     if (!chain || chain.getWorkspaceId().getValue() !== workspaceId) {
@@ -88,12 +88,12 @@ export class ApprovalChainService {
   async listChains(
     workspaceId: string,
     activeOnly = false,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ApprovalChain>> {
     if (activeOnly) {
       return await this.chainRepository.findActiveByWorkspace(
         workspaceId,
-        options,
+        options
       );
     }
 
@@ -102,7 +102,7 @@ export class ApprovalChainService {
 
   async activateChain(
     chainId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ApprovalChain> {
     const chain = await this.getChain(chainId, workspaceId);
     chain.activate();
@@ -112,7 +112,7 @@ export class ApprovalChainService {
 
   async deactivateChain(
     chainId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ApprovalChain> {
     const chain = await this.getChain(chainId, workspaceId);
     chain.deactivate();

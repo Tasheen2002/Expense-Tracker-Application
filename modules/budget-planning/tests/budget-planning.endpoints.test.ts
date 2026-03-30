@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { FastifyInstance } from "fastify";
-import { createServer } from "../../../apps/api/src/server";
-import { PrismaClient } from "@prisma/client";
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { FastifyInstance } from 'fastify';
+import { createServer } from '../../../apps/api/src/server';
+import { PrismaClient } from '@prisma/client';
 
-describe("Budget Planning Module - Endpoint Tests", () => {
+describe.sequential('Budget Planning Module - Endpoint Tests', () => {
   let app: FastifyInstance;
   let prisma: PrismaClient;
   let authToken: string;
@@ -14,7 +14,8 @@ describe("Budget Planning Module - Endpoint Tests", () => {
   let testScenarioId: string;
   let testForecastItemId: string;
   const testEmail = `budget-planning-test-${Date.now()}@example.com`;
-  const testPassword = "TestPassword123!";
+  const testPassword = 'TestPassword123!';
+  const testWorkspaceName = `Budget Planning Test Workspace ${Date.now()}`;
 
   beforeAll(async () => {
     app = await createServer();
@@ -23,15 +24,15 @@ describe("Budget Planning Module - Endpoint Tests", () => {
 
     // Register a test user
     const registerRes = await app.inject({
-      method: "POST",
-      url: "/auth/register",
+      method: 'POST',
+      url: '/api/v1/auth/register',
       payload: {
         email: testEmail,
         password: testPassword,
-        name: "Budget Planning Test User",
+        name: 'Budget Planning Test User',
       },
     });
-    console.log("Setup - Register:", registerRes.statusCode);
+    console.log('Setup - Register:', registerRes.statusCode);
 
     if (registerRes.statusCode === 201) {
       const registerBody = JSON.parse(registerRes.payload);
@@ -42,11 +43,11 @@ describe("Budget Planning Module - Endpoint Tests", () => {
     // Try login if registration didn't return token
     if (!authToken) {
       const loginRes = await app.inject({
-        method: "POST",
-        url: "/auth/login",
+        method: 'POST',
+        url: '/api/v1/auth/login',
         payload: { email: testEmail, password: testPassword },
       });
-      console.log("Setup - Login fallback:", loginRes.statusCode);
+      console.log('Setup - Login fallback:', loginRes.statusCode);
       if (loginRes.statusCode === 200) {
         const loginBody = JSON.parse(loginRes.payload);
         authToken = loginBody.data?.token || loginBody.token;
@@ -57,15 +58,14 @@ describe("Budget Planning Module - Endpoint Tests", () => {
     // Create a test workspace
     if (authToken) {
       const wsRes = await app.inject({
-        method: "POST",
-        url: "/workspaces",
+        method: 'POST',
+        url: '/api/v1/workspaces',
         headers: { authorization: `Bearer ${authToken}` },
         payload: {
-          name: "Budget Planning Test Workspace",
-          description: "Test workspace for budget planning endpoints",
+          name: testWorkspaceName,
         },
       });
-      console.log("Setup - Create Workspace:", wsRes.statusCode);
+      console.log('Setup - Create Workspace:', wsRes.statusCode);
 
       if (wsRes.statusCode === 201) {
         const wsBody = JSON.parse(wsRes.payload);
@@ -73,7 +73,7 @@ describe("Budget Planning Module - Endpoint Tests", () => {
           wsBody.data?.workspaceId ||
           wsBody.data?.workspace?.id ||
           wsBody.data?.id;
-        console.log("Setup - Workspace ID:", testWorkspaceId);
+        console.log('Setup - Workspace ID:', testWorkspaceId);
       }
     }
   });
@@ -84,26 +84,26 @@ describe("Budget Planning Module - Endpoint Tests", () => {
   });
 
   // ==================== BUDGET PLAN ENDPOINTS ====================
-  describe("Budget Plan Endpoints", () => {
-    describe("POST /api/v1/:workspaceId/budget-plans", () => {
-      it("✅ should create a budget plan", async () => {
+  describe('Budget Plan Endpoints', () => {
+    describe('POST /api/v1/:workspaceId/budget-plans', () => {
+      it('✅ should create a budget plan', async () => {
         const startDate = new Date();
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + 12);
 
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
           headers: { Authorization: `Bearer ${authToken}` },
           payload: {
-            name: "Annual Budget 2026",
-            description: "Annual budget plan for 2026",
-            periodType: "YEARLY",
-            startDate: startDate.toISOString().split("T")[0],
-            endDate: endDate.toISOString().split("T")[0],
+            name: 'Annual Budget 2026',
+            description: 'Annual budget plan for 2026',
+            periodType: 'YEARLY',
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
           },
         });
-        console.log("Create Budget Plan:", res.statusCode);
+        console.log('Create Budget Plan:', res.statusCode);
 
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
@@ -118,161 +118,161 @@ describe("Budget Planning Module - Endpoint Tests", () => {
         expect([201, 400, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
           payload: {
-            name: "Unauthorized Plan",
-            periodType: "MONTHLY",
-            startDate: "2026-01-01",
-            endDate: "2026-12-31",
+            name: 'Unauthorized Plan',
+            periodType: 'MONTHLY',
+            startDate: '2026-01-01',
+            endDate: '2026-12-31',
           },
         });
-        console.log("Create Budget Plan No Auth:", res.statusCode);
+        console.log('Create Budget Plan No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
 
-      it("❌ should fail with missing required fields", async () => {
+      it('❌ should fail with missing required fields', async () => {
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
           headers: { Authorization: `Bearer ${authToken}` },
-          payload: { name: "Missing Fields Plan" },
+          payload: { name: 'Missing Fields Plan' },
         });
-        console.log("Create Budget Plan Missing Fields:", res.statusCode);
+        console.log('Create Budget Plan Missing Fields:', res.statusCode);
         expect(res.statusCode).toBe(400);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/budget-plans", () => {
-      it("✅ should list budget plans", async () => {
+    describe('GET /api/v1/:workspaceId/budget-plans', () => {
+      it('✅ should list budget plans', async () => {
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("List Budget Plans:", res.statusCode);
+        console.log('List Budget Plans:', res.statusCode);
         // 200 = success, 400 = validation, 500 = server error
         expect([200, 400, 500]).toContain(res.statusCode);
       });
 
-      it("✅ should filter by status", async () => {
+      it('✅ should filter by status', async () => {
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans?status=DRAFT`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans?status=DRAFT`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("List Budget Plans by Status:", res.statusCode);
+        console.log('List Budget Plans by Status:', res.statusCode);
         expect([200, 400, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
         });
-        console.log("List Budget Plans No Auth:", res.statusCode);
+        console.log('List Budget Plans No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/budget-plans/:id", () => {
-      it("✅ should get budget plan by ID", async () => {
+    describe('GET /api/v1/:workspaceId/budget-plans/:id', () => {
+      it('✅ should get budget plan by ID', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Get Budget Plan:", res.statusCode);
+        console.log('Get Budget Plan:', res.statusCode);
         // 200 = found, 400 = validation, 404 = not found, 500 = error
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}`,
         });
-        console.log("Get Budget Plan No Auth:", res.statusCode);
+        console.log('Get Budget Plan No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("PATCH /api/v1/:workspaceId/budget-plans/:id", () => {
-      it("✅ should update budget plan", async () => {
+    describe('PATCH /api/v1/:workspaceId/budget-plans/:id', () => {
+      it('✅ should update budget plan', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "PATCH",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}`,
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}`,
           headers: { Authorization: `Bearer ${authToken}` },
-          payload: { name: "Updated Annual Budget 2026" },
+          payload: { name: 'Updated Annual Budget 2026' },
         });
-        console.log("Update Budget Plan:", res.statusCode);
+        console.log('Update Budget Plan:', res.statusCode);
         // 200 = updated, 400 = validation, 404 = not found, 500 = error
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "PATCH",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}`,
-          payload: { name: "Unauthorized Update" },
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}`,
+          payload: { name: 'Unauthorized Update' },
         });
-        console.log("Update Budget Plan No Auth:", res.statusCode);
+        console.log('Update Budget Plan No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("PATCH /api/v1/:workspaceId/budget-plans/:id/activate", () => {
-      it("✅ should activate budget plan", async () => {
+    describe('PATCH /api/v1/:workspaceId/budget-plans/:id/activate', () => {
+      it('✅ should activate budget plan', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "PATCH",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/activate`,
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/activate`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Activate Budget Plan:", res.statusCode);
+        console.log('Activate Budget Plan:', res.statusCode);
         // 200 = activated, 400 = validation, 404 = not found, 500 = error
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "PATCH",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/activate`,
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/activate`,
         });
-        console.log("Activate Budget Plan No Auth:", res.statusCode);
+        console.log('Activate Budget Plan No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("DELETE /api/v1/:workspaceId/budget-plans/:id", () => {
-      it("✅ should delete budget plan", async () => {
+    describe('DELETE /api/v1/:workspaceId/budget-plans/:id', () => {
+      it('✅ should delete budget plan', async () => {
         // Create a plan to delete
         const createRes = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
           headers: { Authorization: `Bearer ${authToken}` },
           payload: {
-            name: "To Delete Plan",
-            periodType: "MONTHLY",
-            startDate: "2026-01-01",
-            endDate: "2026-01-31",
+            name: 'To Delete Plan',
+            periodType: 'MONTHLY',
+            startDate: '2026-01-01',
+            endDate: '2026-01-31',
           },
         });
 
-        let deletePlanId = "00000000-0000-0000-0000-000000000001";
+        let deletePlanId = '00000000-0000-4000-8000-000000000001';
         if (createRes.statusCode === 201) {
           const data = JSON.parse(createRes.payload);
           deletePlanId =
@@ -283,46 +283,46 @@ describe("Budget Planning Module - Endpoint Tests", () => {
         }
 
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${deletePlanId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${deletePlanId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Delete Budget Plan:", res.statusCode);
-        // 200/204 = deleted, 400 = validation, 404 = not found, 500 = error
-        expect([200, 204, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(204);
+        expect(res.payload).toBe('');
       });
 
-      it("❌ should fail without auth token", async () => {
-        const planId = "00000000-0000-0000-0000-000000000001";
+      it('❌ should fail without auth token', async () => {
+        const planId = '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}`,
         });
-        console.log("Delete Budget Plan No Auth:", res.statusCode);
+        console.log('Delete Budget Plan No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
   });
 
   // ==================== FORECAST ENDPOINTS ====================
-  describe("Forecast Endpoints", () => {
-    describe("POST /api/v1/:workspaceId/budget-plans/:planId/forecasts", () => {
-      it("✅ should create a forecast", async () => {
+  describe('Forecast Endpoints', () => {
+    describe('POST /api/v1/:workspaceId/budget-plans/:planId/forecasts', () => {
+      it('✅ should create a forecast', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
           headers: { Authorization: `Bearer ${authToken}` },
           payload: {
-            name: "Baseline Forecast",
-            type: "BASELINE",
+            name: 'Baseline Forecast',
+            type: 'BASELINE',
           },
         });
-        console.log("Create Forecast:", res.statusCode);
+        console.log('Create Forecast:', res.statusCode);
 
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
+          console.log('Create Forecast Success Data:', JSON.stringify(data));
           testForecastId =
             data.data?.forecast?.id ||
             data.forecast?.id ||
@@ -333,231 +333,234 @@ describe("Budget Planning Module - Endpoint Tests", () => {
         expect([201, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
-          payload: { name: "Unauthorized Forecast", type: "BASELINE" },
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          payload: { name: 'Unauthorized Forecast', type: 'BASELINE' },
         });
-        console.log("Create Forecast No Auth:", res.statusCode);
+        console.log('Create Forecast No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
 
-      it("❌ should fail with missing required fields", async () => {
+      it('❌ should fail with missing required fields', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
           headers: { Authorization: `Bearer ${authToken}` },
-          payload: { name: "Missing Type Forecast" },
+          payload: { name: 'Missing Type Forecast' },
         });
-        console.log("Create Forecast Missing Fields:", res.statusCode);
+        console.log('Create Forecast Missing Fields:', res.statusCode);
         expect(res.statusCode).toBe(400);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/budget-plans/:planId/forecasts", () => {
-      it("✅ should list forecasts for a plan", async () => {
+    describe('GET /api/v1/:workspaceId/budget-plans/:planId/forecasts', () => {
+      it('✅ should list forecasts for a plan', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("List Forecasts:", res.statusCode);
+        console.log('List Forecasts:', res.statusCode);
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
         });
-        console.log("List Forecasts No Auth:", res.statusCode);
+        console.log('List Forecasts No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/forecasts/:id", () => {
-      it("✅ should get forecast by ID", async () => {
+    describe('GET /api/v1/:workspaceId/forecasts/:id', () => {
+      it('✅ should get forecast by ID', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Get Forecast:", res.statusCode);
+        console.log('Get Forecast:', res.statusCode);
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}`,
         });
-        console.log("Get Forecast No Auth:", res.statusCode);
+        console.log('Get Forecast No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("DELETE /api/v1/:workspaceId/forecasts/:id", () => {
-      it("✅ should delete forecast", async () => {
+    describe('DELETE /api/v1/:workspaceId/forecasts/:id', () => {
+      it('✅ should delete forecast', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Delete Forecast:", res.statusCode);
-        expect([200, 204, 400, 404, 500]).toContain(res.statusCode);
+        console.log('Delete Forecast:', res.statusCode);
+        expect(res.statusCode).toBe(204);
+        expect(res.payload).toBe('');
       });
 
-      it("❌ should fail without auth token", async () => {
-        const forecastId = "00000000-0000-0000-0000-000000000001";
+      it('❌ should fail without auth token', async () => {
+        const forecastId = '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}`,
         });
-        console.log("Delete Forecast No Auth:", res.statusCode);
+        console.log('Delete Forecast No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
   });
 
   // ==================== FORECAST ITEM ENDPOINTS ====================
-  describe("Forecast Item Endpoints", () => {
-    const testCategoryId = "00000000-0000-0000-0000-000000000001";
+  describe('Forecast Item Endpoints', () => {
+    const testCategoryId = '00000000-0000-4000-8000-000000000001';
 
-    describe("POST /api/v1/:workspaceId/forecasts/:forecastId/items", () => {
-      it("✅ should add forecast item", async () => {
+    describe('POST /api/v1/:workspaceId/forecasts/:forecastId/items', () => {
+      it('✅ should add forecast item', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}/items`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}/items`,
           headers: { Authorization: `Bearer ${authToken}` },
           payload: {
             categoryId: testCategoryId,
             amount: 5000,
-            notes: "Marketing budget allocation",
+            notes: 'Marketing budget allocation',
           },
         });
-        console.log("Add Forecast Item:", res.statusCode);
+        console.log('Add Forecast Item:', res.statusCode);
 
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testForecastItemId =
             data.data?.item?.id || data.item?.id || data.data?.id || data.id;
         }
-
         expect([201, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}/items`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}/items`,
           payload: { categoryId: testCategoryId, amount: 1000 },
         });
-        console.log("Add Forecast Item No Auth:", res.statusCode);
+        console.log('Add Forecast Item No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
 
-      it("❌ should fail with missing required fields", async () => {
+      it('❌ should fail with missing required fields', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}/items`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}/items`,
           headers: { Authorization: `Bearer ${authToken}` },
-          payload: { notes: "Missing category and amount" },
+          payload: { notes: 'Missing category and amount' },
         });
-        console.log("Add Forecast Item Missing Fields:", res.statusCode);
+        console.log('Add Forecast Item Missing Fields:', res.statusCode);
         expect(res.statusCode).toBe(400);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/forecasts/:forecastId/items", () => {
-      it("✅ should list forecast items", async () => {
+    describe('GET /api/v1/:workspaceId/forecasts/:forecastId/items', () => {
+      it('✅ should list forecast items', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}/items`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}/items`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("List Forecast Items:", res.statusCode);
+        console.log('List Forecast Items:', res.statusCode);
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const forecastId =
-          testForecastId || "00000000-0000-0000-0000-000000000001";
+          testForecastId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/forecasts/${forecastId}/items`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}/items`,
         });
-        console.log("List Forecast Items No Auth:", res.statusCode);
+        console.log('List Forecast Items No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("DELETE /api/v1/:workspaceId/forecast-items/:itemId", () => {
-      it("✅ should delete forecast item", async () => {
+    describe('DELETE /api/v1/:workspaceId/forecast-items/:itemId', () => {
+      it('✅ should delete forecast item', async () => {
         const itemId =
-          testForecastItemId || "00000000-0000-0000-0000-000000000001";
+          testForecastItemId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/forecast-items/${itemId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecast-items/${itemId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Delete Forecast Item:", res.statusCode);
-        expect([200, 204, 400, 404, 500]).toContain(res.statusCode);
+        console.log('Delete Forecast Item:', res.statusCode);
+        expect([204, 404]).toContain(res.statusCode);
+        if (res.statusCode === 204) {
+          expect(res.payload).toBe('');
+        }
       });
 
-      it("❌ should fail without auth token", async () => {
-        const itemId = "00000000-0000-0000-0000-000000000001";
+      it('❌ should fail without auth token', async () => {
+        const itemId = '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/forecast-items/${itemId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/forecast-items/${itemId}`,
         });
-        console.log("Delete Forecast Item No Auth:", res.statusCode);
+        console.log('Delete Forecast Item No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
   });
 
   // ==================== SCENARIO ENDPOINTS ====================
-  describe("Scenario Endpoints", () => {
-    describe("POST /api/v1/:workspaceId/budget-plans/:planId/scenarios", () => {
-      it("✅ should create a scenario", async () => {
+  describe('Scenario Endpoints', () => {
+    describe('POST /api/v1/:workspaceId/budget-plans/:planId/scenarios', () => {
+      it('✅ should create a scenario', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
-        const userId = testUserId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
+        const userId = testUserId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
           headers: { Authorization: `Bearer ${authToken}` },
           payload: {
-            name: "Best Case Scenario",
-            description: "Optimistic scenario assumptions",
+            name: 'Best Case Scenario',
+            description: 'Optimistic scenario assumptions',
             assumptions: { growthRate: 0.15, costReduction: 0.05 },
             createdBy: userId,
           },
         });
-        console.log("Create Scenario:", res.statusCode);
+        console.log('Create Scenario:', res.statusCode);
 
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
@@ -571,113 +574,116 @@ describe("Budget Planning Module - Endpoint Tests", () => {
         expect([201, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
           payload: {
-            name: "Unauthorized Scenario",
-            createdBy: "00000000-0000-0000-0000-000000000001",
+            name: 'Unauthorized Scenario',
+            createdBy: '00000000-0000-4000-8000-000000000001',
           },
         });
-        console.log("Create Scenario No Auth:", res.statusCode);
+        console.log('Create Scenario No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
 
-      it("❌ should fail with missing required fields", async () => {
+      it('❌ should fail with missing required fields', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "POST",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
           headers: { Authorization: `Bearer ${authToken}` },
-          payload: { description: "Missing name and createdBy" },
+          payload: { description: 'Missing name and createdBy' },
         });
-        console.log("Create Scenario Missing Fields:", res.statusCode);
+        console.log('Create Scenario Missing Fields:', res.statusCode);
         expect(res.statusCode).toBe(400);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/budget-plans/:planId/scenarios", () => {
-      it("✅ should list scenarios for a plan", async () => {
+    describe('GET /api/v1/:workspaceId/budget-plans/:planId/scenarios', () => {
+      it('✅ should list scenarios for a plan', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("List Scenarios:", res.statusCode);
+        console.log('List Scenarios:', res.statusCode);
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const planId =
-          testBudgetPlanId || "00000000-0000-0000-0000-000000000001";
+          testBudgetPlanId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
         });
-        console.log("List Scenarios No Auth:", res.statusCode);
+        console.log('List Scenarios No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("GET /api/v1/:workspaceId/scenarios/:id", () => {
-      it("✅ should get scenario by ID", async () => {
+    describe('GET /api/v1/:workspaceId/scenarios/:id', () => {
+      it('✅ should get scenario by ID', async () => {
         const scenarioId =
-          testScenarioId || "00000000-0000-0000-0000-000000000001";
+          testScenarioId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/scenarios/${scenarioId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/scenarios/${scenarioId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Get Scenario:", res.statusCode);
+        console.log('Get Scenario:', res.statusCode);
         expect([200, 400, 404, 500]).toContain(res.statusCode);
       });
 
-      it("❌ should fail without auth token", async () => {
+      it('❌ should fail without auth token', async () => {
         const scenarioId =
-          testScenarioId || "00000000-0000-0000-0000-000000000001";
+          testScenarioId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "GET",
-          url: `/api/v1/${testWorkspaceId}/scenarios/${scenarioId}`,
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/scenarios/${scenarioId}`,
         });
-        console.log("Get Scenario No Auth:", res.statusCode);
+        console.log('Get Scenario No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
 
-    describe("DELETE /api/v1/:workspaceId/scenarios/:id", () => {
-      it("✅ should delete scenario", async () => {
+    describe('DELETE /api/v1/:workspaceId/scenarios/:id', () => {
+      it('✅ should delete scenario', async () => {
         const scenarioId =
-          testScenarioId || "00000000-0000-0000-0000-000000000001";
+          testScenarioId || '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/scenarios/${scenarioId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/scenarios/${scenarioId}`,
           headers: { Authorization: `Bearer ${authToken}` },
         });
-        console.log("Delete Scenario:", res.statusCode);
-        expect([200, 204, 400, 404, 500]).toContain(res.statusCode);
+        if (res.statusCode !== 204) {
+          console.log('Delete Scenario Error:', res.payload);
+        }
+        expect(res.statusCode).toBe(204);
+        expect(res.payload).toBe('');
       });
 
-      it("❌ should fail without auth token", async () => {
-        const scenarioId = "00000000-0000-0000-0000-000000000001";
+      it('❌ should fail without auth token', async () => {
+        const scenarioId = '00000000-0000-4000-8000-000000000001';
         const res = await app.inject({
-          method: "DELETE",
-          url: `/api/v1/${testWorkspaceId}/scenarios/${scenarioId}`,
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/scenarios/${scenarioId}`,
         });
-        console.log("Delete Scenario No Auth:", res.statusCode);
+        console.log('Delete Scenario No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
     });
   });
 
   // ==================== ENDPOINT SUMMARY ====================
-  describe("📊 Endpoint Summary Report", () => {
-    it("should print endpoint summary", () => {
+  describe('📊 Endpoint Summary Report', () => {
+    it('should print endpoint summary', () => {
       console.log(`
 ============================================================
 BUDGET PLANNING MODULE - ENDPOINT TEST SUMMARY
@@ -710,10 +716,10 @@ BUDGET PLANNING MODULE - ENDPOINT TEST SUMMARY
 
 ============================================================
 Test User: ${testEmail}
-Test Workspace ID: ${testWorkspaceId || "N/A"}
-Test Budget Plan ID: ${testBudgetPlanId || "N/A"}
-Test Forecast ID: ${testForecastId || "N/A"}
-Test Scenario ID: ${testScenarioId || "N/A"}
+Test Workspace ID: ${testWorkspaceId || 'N/A'}
+Test Budget Plan ID: ${testBudgetPlanId || 'N/A'}
+Test Forecast ID: ${testForecastId || 'N/A'}
+Test Scenario ID: ${testScenarioId || 'N/A'}
 ============================================================
       `);
       expect(true).toBe(true);

@@ -36,7 +36,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.decorate("verifyToken", (token: string): JWTPayload => {
     try {
       return jwt.verify(token, JWT_SECRET) as JWTPayload;
-    } catch (error) {
+    } catch (error: unknown) {
       const err = new Error("Invalid or expired token") as Error & {
         statusCode: number;
       };
@@ -66,7 +66,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
       // Attach user info to request
       (request as FastifyRequest & { user: JWTPayload }).user = payload;
-    } catch (error) {
+    } catch (error: unknown) {
       const err = new Error(
         error instanceof Error ? error.message : "Authentication failed",
       ) as Error & { statusCode: number };
@@ -81,3 +81,5 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 export default fp(authPlugin, {
   name: "auth-plugin",
 });
+
+

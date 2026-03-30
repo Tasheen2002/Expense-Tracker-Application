@@ -1,6 +1,6 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ApprovalChainRepository } from "../../domain/repositories/approval-chain.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
+import { IExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository';
+import { IApprovalChainRepository } from '../../domain/repositories/approval-chain.repository';
+import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
 import {
   WorkflowNotFoundError,
   WorkflowAlreadyExistsError,
@@ -9,17 +9,17 @@ import {
   SelfApprovalNotAllowedError,
   WorkflowAlreadyCompletedError,
   CurrentStepNotFoundError,
-} from "../../domain/errors/approval-workflow.errors";
-import { AUTO_APPROVAL_THRESHOLD } from "../../domain/constants/approval-workflow.constants";
+} from '../../domain/errors/approval-workflow.errors';
+import { AUTO_APPROVAL_THRESHOLD } from '../../domain/constants/approval-workflow.constants';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export class WorkflowService {
   constructor(
-    private readonly workflowRepository: ExpenseWorkflowRepository,
-    private readonly chainRepository: ApprovalChainRepository,
+    private readonly workflowRepository: IExpenseWorkflowRepository,
+    private readonly chainRepository: IApprovalChainRepository
   ) {}
 
   async initiateWorkflow(params: {
@@ -31,7 +31,7 @@ export class WorkflowService {
     hasReceipt: boolean;
   }): Promise<ExpenseWorkflow> {
     const existing = await this.workflowRepository.findByExpenseId(
-      params.expenseId,
+      params.expenseId
     );
     if (existing) {
       throw new WorkflowAlreadyExistsError(params.expenseId);
@@ -88,7 +88,7 @@ export class WorkflowService {
 
   async getWorkflow(
     expenseId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ExpenseWorkflow> {
     const workflow = await this.workflowRepository.findByExpenseId(expenseId);
 
@@ -101,22 +101,20 @@ export class WorkflowService {
 
   async approveStep(params: {
     expenseId: string;
+    workspaceId: string;
     approverId: string;
     comments?: string;
   }): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
+    const workflow = await this.getWorkflow(
       params.expenseId,
+      params.workspaceId
     );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(params.expenseId);
-    }
 
     // Guard: Check if workflow is already completed
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus(),
+        workflow.getStatus()
       );
     }
 
@@ -128,7 +126,7 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
       throw new UnauthorizedApproverError(
         params.approverId,
-        currentStep.getId().getValue(),
+        currentStep.getId().getValue()
       );
     }
 
@@ -147,22 +145,20 @@ export class WorkflowService {
 
   async rejectStep(params: {
     expenseId: string;
+    workspaceId: string;
     approverId: string;
     comments: string;
   }): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
+    const workflow = await this.getWorkflow(
       params.expenseId,
+      params.workspaceId
     );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(params.expenseId);
-    }
 
     // Guard: Check if workflow is already completed
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus(),
+        workflow.getStatus()
       );
     }
 
@@ -174,7 +170,7 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
       throw new UnauthorizedApproverError(
         params.approverId,
-        currentStep.getId().getValue(),
+        currentStep.getId().getValue()
       );
     }
 
@@ -193,22 +189,20 @@ export class WorkflowService {
 
   async delegateStep(params: {
     expenseId: string;
+    workspaceId: string;
     fromUserId: string;
     toUserId: string;
   }): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(
+    const workflow = await this.getWorkflow(
       params.expenseId,
+      params.workspaceId
     );
-
-    if (!workflow) {
-      throw new WorkflowNotFoundError(params.expenseId);
-    }
 
     // Guard: Check if workflow is already completed
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus(),
+        workflow.getStatus()
       );
     }
 
@@ -220,7 +214,7 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.fromUserId) {
       throw new UnauthorizedApproverError(
         params.fromUserId,
-        currentStep.getId().getValue(),
+        currentStep.getId().getValue()
       );
     }
 
@@ -238,7 +232,7 @@ export class WorkflowService {
 
   async cancelWorkflow(
     expenseId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ExpenseWorkflow> {
     const workflow = await this.getWorkflow(expenseId, workspaceId);
     workflow.cancel();
@@ -255,24 +249,24 @@ export class WorkflowService {
   async listPendingApprovals(
     approverId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
     return await this.workflowRepository.findPendingByApprover(
       approverId,
       workspaceId,
-      options,
+      options
     );
   }
 
   async listUserWorkflows(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
     return await this.workflowRepository.findByUser(
       userId,
       workspaceId,
-      options,
+      options
     );
   }
 }

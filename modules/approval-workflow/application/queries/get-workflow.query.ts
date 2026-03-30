@@ -1,24 +1,41 @@
-import { ExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository'
-import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity'
-import { WorkflowNotFoundError } from '../../domain/errors/approval-workflow.errors'
+import { WorkflowService } from '../services/workflow.service';
+import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetWorkflowInput {
-  expenseId: string
-  workspaceId: string
+export interface GetWorkflowInput extends IQuery {
+  expenseId: string;
+  workspaceId: string;
 }
 
-export class GetWorkflowHandler {
-  constructor(
-    private readonly workflowRepository: ExpenseWorkflowRepository
-  ) {}
+export class GetWorkflowHandler implements IQueryHandler<
+  GetWorkflowInput,
+  QueryResult<ExpenseWorkflow>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: GetWorkflowInput): Promise<ExpenseWorkflow> {
-    const workflow = await this.workflowRepository.findByExpenseId(input.expenseId)
-
-    if (!workflow || workflow.getWorkspaceId().getValue() !== input.workspaceId) {
-      throw new WorkflowNotFoundError(input.expenseId)
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
     }
+    return 500;
+  }
 
-    return workflow
+  async handle(input: GetWorkflowInput): Promise<QueryResult<ExpenseWorkflow>> {
+    try {
+      const workflow = await this.workflowService.getWorkflow(
+        input.expenseId,
+        input.workspaceId
+      );
+      return QueryResult.success(workflow);
+    } catch (error: unknown) {
+      return QueryResult.failure(
+        error instanceof Error ? error.message : 'Query failed',
+        this.getStatusCode(error)
+      );
+    }
   }
 }

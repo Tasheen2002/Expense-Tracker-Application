@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { OutboxEventRepositoryImpl } from "../../../modules/event-outbox/infrastructure/persistence/outbox-event.repository.impl";
 import { OutboxEventService } from "../../../modules/event-outbox/application/services/outbox-event.service";
-import { ProcessPendingEventsHandler } from "../../../modules/event-outbox/application/queries/process-pending-events.query";
+import { GetPendingEventsHandler } from "../../../modules/event-outbox/application/queries/get-pending-events.query";
 import { GetFailedEventsHandler } from "../../../modules/event-outbox/application/queries/get-failed-events.query";
 import { InMemoryEventBus } from "../../api/src/shared/domain/events/event-bus";
 import {
@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 const eventBus = new InMemoryEventBus();
 const repository = new OutboxEventRepositoryImpl(prisma);
 const service = new OutboxEventService(repository, eventBus);
-const processPendingHandler = new ProcessPendingEventsHandler(repository);
+const getPendingHandler = new GetPendingEventsHandler(repository);
 const getFailedHandler = new GetFailedEventsHandler(repository);
 
 let isShuttingDown = false;
@@ -26,7 +26,7 @@ async function processOutboxEvents() {
 
   try {
     // Process pending events
-    const pendingResult = await processPendingHandler.handle({});
+    const pendingResOrErr = await getPendingHandler.handle({}); if (!pendingResOrErr.success || !pendingResOrErr.data) return; const pendingResult = pendingResOrErr.data;
     console.log(
       `[${new Date().toISOString()}] Found ${pendingResult.total} pending events (processing ${pendingResult.items.length})`,
     );
@@ -46,9 +46,7 @@ async function processOutboxEvents() {
     }
 
     // Retry failed events
-    const failedResult = await getFailedHandler.handle({
-      maxRetries: MAX_RETRY_COUNT,
-    });
+    const failedResOrErr = await getFailedHandler.handle({ maxRetries: MAX_RETRY_COUNT }); if (!failedResOrErr.success || !failedResOrErr.data) return; const failedResult = failedResOrErr.data;
     console.log(
       `[${new Date().toISOString()}] Found ${failedResult.total} failed events (processing ${failedResult.items.length})`,
     );

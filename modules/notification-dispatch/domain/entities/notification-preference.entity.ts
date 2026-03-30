@@ -1,6 +1,6 @@
-import { NotificationType } from "../enums/notification-type.enum";
-import { PreferenceId } from "../value-objects/preference-id";
-import { UserId, WorkspaceId } from "../value-objects";
+import { NotificationType } from '../enums/notification-type.enum';
+import { PreferenceId } from '../value-objects/preference-id';
+import { UserId, WorkspaceId } from '../value-objects';
 
 export interface TypeSettingValue {
   email?: boolean;
@@ -45,7 +45,7 @@ export class NotificationPreference {
   }
 
   static reconstitute(
-    props: NotificationPreferenceProps,
+    props: NotificationPreferenceProps
   ): NotificationPreference {
     return new NotificationPreference(props);
   }
@@ -80,12 +80,12 @@ export class NotificationPreference {
 
   isChannelEnabledForType(
     type: NotificationType,
-    channel: "email" | "inApp" | "push",
+    channel: 'email' | 'inApp' | 'push'
   ): boolean {
     // Global switch check
-    if (channel === "email" && !this.props.emailEnabled) return false;
-    if (channel === "inApp" && !this.props.inAppEnabled) return false;
-    if (channel === "push" && !this.props.pushEnabled) return false;
+    if (channel === 'email' && !this.props.emailEnabled) return false;
+    if (channel === 'inApp' && !this.props.inAppEnabled) return false;
+    if (channel === 'push' && !this.props.pushEnabled) return false;
 
     // Granular type check
     const typeSetting = this.props.typeSettings[type];
@@ -117,4 +117,24 @@ export class NotificationPreference {
     this.props.typeSettings[type] = { ...current, ...settings };
     this.props.updatedAt = new Date();
   }
+
+  toJSON(): NotificationPreferenceDTO {
+    return {
+      id: this.getId().getValue(),
+      userId: this.getUserId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      emailEnabled: this.isEmailEnabled(),
+      inAppEnabled: this.isInAppEnabled(),
+      pushEnabled: this.isPushEnabled(),
+    };
+  }
+}
+
+export interface NotificationPreferenceDTO {
+  id: string;
+  userId: string;
+  workspaceId: string;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  pushEnabled: boolean;
 }

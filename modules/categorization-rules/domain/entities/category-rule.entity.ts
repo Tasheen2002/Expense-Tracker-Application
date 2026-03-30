@@ -1,11 +1,11 @@
-import { RuleId } from "../value-objects/rule-id";
-import { RuleCondition } from "../value-objects/rule-condition";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { InvalidRuleError } from "../errors/categorization-rules.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { RuleId } from '../value-objects/rule-id';
+import { RuleCondition } from '../value-objects/rule-condition';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { InvalidRuleError } from '../errors/categorization-rules.errors';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -17,13 +17,13 @@ export class CategoryRuleCreatedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly name: string,
     public readonly targetCategoryId: string,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(ruleId, "CategoryRule");
+    super(ruleId, 'CategoryRule');
   }
 
   get eventType(): string {
-    return "CategoryRuleCreated";
+    return 'CategoryRuleCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -39,11 +39,11 @@ export class CategoryRuleCreatedEvent extends DomainEvent {
 
 export class CategoryRuleActivatedEvent extends DomainEvent {
   constructor(public readonly ruleId: string) {
-    super(ruleId, "CategoryRule");
+    super(ruleId, 'CategoryRule');
   }
 
   get eventType(): string {
-    return "CategoryRuleActivated";
+    return 'CategoryRuleActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -53,11 +53,11 @@ export class CategoryRuleActivatedEvent extends DomainEvent {
 
 export class CategoryRuleDeactivatedEvent extends DomainEvent {
   constructor(public readonly ruleId: string) {
-    super(ruleId, "CategoryRule");
+    super(ruleId, 'CategoryRule');
   }
 
   get eventType(): string {
-    return "CategoryRuleDeactivated";
+    return 'CategoryRuleDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -68,13 +68,13 @@ export class CategoryRuleDeactivatedEvent extends DomainEvent {
 export class CategoryRuleUpdatedEvent extends DomainEvent {
   constructor(
     public readonly ruleId: string,
-    public readonly name: string,
+    public readonly name: string
   ) {
-    super(ruleId, "CategoryRule");
+    super(ruleId, 'CategoryRule');
   }
 
   get eventType(): string {
-    return "CategoryRuleUpdated";
+    return 'CategoryRuleUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -139,22 +139,22 @@ export class CategoryRule extends AggregateRoot {
     createdBy: UserId;
   }): CategoryRule {
     if (!props.name || props.name.trim().length === 0) {
-      throw new InvalidRuleError("Rule name cannot be empty");
+      throw new InvalidRuleError('Rule name cannot be empty');
     }
 
     if (props.name.length > 100) {
-      throw new InvalidRuleError("Rule name cannot exceed 100 characters");
+      throw new InvalidRuleError('Rule name cannot exceed 100 characters');
     }
 
     if (props.description && props.description.length > 500) {
       throw new InvalidRuleError(
-        "Rule description cannot exceed 500 characters",
+        'Rule description cannot exceed 500 characters'
       );
     }
 
     const priority = props.priority ?? 0;
     if (priority < 0) {
-      throw new InvalidRuleError("Priority cannot be negative");
+      throw new InvalidRuleError('Priority cannot be negative');
     }
 
     const now = new Date();
@@ -180,8 +180,8 @@ export class CategoryRule extends AggregateRoot {
         props.workspaceId.getValue(),
         props.name.trim(),
         props.targetCategoryId.getValue(),
-        props.createdBy.getValue(),
-      ),
+        props.createdBy.getValue()
+      )
     );
 
     return rule;
@@ -211,10 +211,10 @@ export class CategoryRule extends AggregateRoot {
   }): void {
     if (props.name !== undefined) {
       if (!props.name || props.name.trim().length === 0) {
-        throw new InvalidRuleError("Rule name cannot be empty");
+        throw new InvalidRuleError('Rule name cannot be empty');
       }
       if (props.name.length > 100) {
-        throw new InvalidRuleError("Rule name cannot exceed 100 characters");
+        throw new InvalidRuleError('Rule name cannot exceed 100 characters');
       }
       this.name = props.name.trim();
     }
@@ -222,7 +222,7 @@ export class CategoryRule extends AggregateRoot {
     if (props.description !== undefined) {
       if (props.description && props.description.length > 500) {
         throw new InvalidRuleError(
-          "Rule description cannot exceed 500 characters",
+          'Rule description cannot exceed 500 characters'
         );
       }
       this.description = props.description?.trim() || null;
@@ -230,7 +230,7 @@ export class CategoryRule extends AggregateRoot {
 
     if (props.priority !== undefined) {
       if (props.priority < 0) {
-        throw new InvalidRuleError("Priority cannot be negative");
+        throw new InvalidRuleError('Priority cannot be negative');
       }
       this.priority = props.priority;
     }
@@ -238,29 +238,29 @@ export class CategoryRule extends AggregateRoot {
     this.updatedAt = new Date();
     if (props.name) {
       this.addDomainEvent(
-        new CategoryRuleUpdatedEvent(this.id.getValue(), this.name),
+        new CategoryRuleUpdatedEvent(this.id.getValue(), this.name)
       );
     }
   }
 
   updateName(name: string): void {
     if (!name || name.trim().length === 0) {
-      throw new InvalidRuleError("Rule name cannot be empty");
+      throw new InvalidRuleError('Rule name cannot be empty');
     }
     if (name.length > 100) {
-      throw new InvalidRuleError("Rule name cannot exceed 100 characters");
+      throw new InvalidRuleError('Rule name cannot exceed 100 characters');
     }
     this.name = name.trim();
     this.updatedAt = new Date();
     this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), this.name),
+      new CategoryRuleUpdatedEvent(this.id.getValue(), this.name)
     );
   }
 
   updateDescription(description: string | null): void {
     if (description && description.length > 500) {
       throw new InvalidRuleError(
-        "Rule description cannot exceed 500 characters",
+        'Rule description cannot exceed 500 characters'
       );
     }
     this.description = description?.trim() || null;
@@ -269,7 +269,7 @@ export class CategoryRule extends AggregateRoot {
 
   updatePriority(priority: number): void {
     if (priority < 0) {
-      throw new InvalidRuleError("Priority cannot be negative");
+      throw new InvalidRuleError('Priority cannot be negative');
     }
     this.priority = priority;
     this.updatedAt = new Date();
@@ -353,5 +353,24 @@ export class CategoryRule extends AggregateRoot {
 
   getUpdatedAt(): Date {
     return this.updatedAt;
+  }
+
+  toJSON() {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      description: this.getDescription(),
+      priority: this.getPriority(),
+      isActive: this.getIsActive(),
+      condition: {
+        type: this.getCondition().getType(),
+        value: this.getCondition().getValue(),
+      },
+      targetCategoryId: this.getTargetCategoryId().getValue(),
+      createdBy: this.getCreatedBy().getValue(),
+      createdAt: this.getCreatedAt(),
+      updatedAt: this.getUpdatedAt(),
+    };
   }
 }

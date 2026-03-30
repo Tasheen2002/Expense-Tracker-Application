@@ -1,18 +1,24 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { ApprovalChainRepository } from "../../domain/repositories/approval-chain.repository";
-import { ApprovalChain } from "../../domain/entities/approval-chain.entity";
-import { ApprovalChainId } from "../../domain/value-objects/approval-chain-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { IApprovalChainRepository } from '../../domain/repositories/approval-chain.repository';
+import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
+import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { CategoryId } from '../../../expense-ledger';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaApprovalChainRepository implements ApprovalChainRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaApprovalChainRepository
+  extends PrismaRepository<ApprovalChain>
+  implements IApprovalChainRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(chain: ApprovalChain): Promise<void> {
     await this.prisma.approvalChain.upsert({
@@ -47,6 +53,7 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
         updatedAt: chain.getUpdatedAt(),
       },
     });
+    await this.dispatchEvents(chain);
   }
 
   async findById(chainId: ApprovalChainId): Promise<ApprovalChain | null> {
@@ -59,21 +66,21 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ApprovalChain>> {
     const where: Prisma.ApprovalChainWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.approvalChain,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findActiveByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ApprovalChain>> {
     const where: Prisma.ApprovalChainWhereInput = {
       workspaceId,
@@ -82,9 +89,9 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.approvalChain,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
-      options,
+      options
     );
   }
 
@@ -97,23 +104,17 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
     const where: Prisma.ApprovalChainWhereInput = {
       workspaceId: params.workspaceId,
       isActive: true,
-      OR: [
-        { minAmount: null },
-        { minAmount: { lte: params.amount } },
-      ],
+      OR: [{ minAmount: null }, { minAmount: { lte: params.amount } }],
       AND: [
         {
-          OR: [
-            { maxAmount: null },
-            { maxAmount: { gte: params.amount } },
-          ],
+          OR: [{ maxAmount: null }, { maxAmount: { gte: params.amount } }],
         },
       ],
     };
 
     const rows = await this.prisma.approvalChain.findMany({
       where,
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: 'asc' },
     });
 
     // Apply remaining filters that can't be expressed in SQL (categoryId array, receipt)
@@ -153,7 +154,7 @@ export class PrismaApprovalChainRepository implements ApprovalChainRepository {
           : undefined,
       requiresReceipt: row.requiresReceipt,
       approverSequence: row.approverSequence.map((id: string) =>
-        UserId.fromString(id),
+        UserId.fromString(id)
       ),
       isActive: row.isActive,
       createdAt: row.createdAt,

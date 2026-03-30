@@ -1,51 +1,51 @@
-import { WorkspaceInvitationService } from '../services/workspace-invitation.service'
-import { WorkspaceRole } from '../../domain/entities/workspace-membership.entity'
+import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
+import { WorkspaceRole } from '../../domain/entities/workspace-membership.entity';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface CreateInvitationCommand {
-  workspaceId: string
-  email: string
-  role: WorkspaceRole
-  invitedBy: string
-  expiryHours?: number
+export interface CreateInvitationCommand extends ICommand {
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+  invitedBy: string;
+  expiryHours?: number;
 }
 
-export interface CreateInvitationResult {
-  success: boolean
-  data?: {
-    invitationId: string
-    token: string
-    email: string
-    expiresAt: Date
-  }
-  error?: string
-}
+export type CreateInvitationResultType = {
+  invitationId: string;
+  token: string;
+  email: string;
+  expiresAt: Date;
+};
 
-export class CreateInvitationHandler {
+export class CreateInvitationHandler implements ICommandHandler<
+  CreateInvitationCommand,
+  CommandResult<CreateInvitationResultType>
+> {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
-  async handle(command: CreateInvitationCommand): Promise<CreateInvitationResult> {
+  async handle(
+    command: CreateInvitationCommand
+  ): Promise<CommandResult<CreateInvitationResultType>> {
     try {
       const invitation = await this.invitationService.createInvitation({
         workspaceId: command.workspaceId,
         email: command.email,
         role: command.role,
         expiryHours: command.expiryHours ?? 168, // Default: 168 hours (7 days)
-      })
+      });
 
-      return {
-        success: true,
-        data: {
-          invitationId: invitation.getId().getValue(),
-          token: invitation.getToken(),
-          email: invitation.getEmail(),
-          expiresAt: invitation.getExpiresAt(),
-        },
-      }
+      return CommandResult.success({
+        invitationId: invitation.getId().getValue(),
+        token: invitation.getToken(),
+        email: invitation.getEmail(),
+        expiresAt: invitation.getExpiresAt(),
+      });
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to create invitation',
-      }
+      return CommandResult.fromError(error);
     }
   }
 }

@@ -1,48 +1,35 @@
-import { CategoryRuleService } from "../services/category-rule.service";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { CategoryRule } from "../../domain/entities/category-rule.entity";
+import { CategoryRuleService } from '../services/category-rule.service';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { CategoryRule } from '../../domain/entities/category-rule.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetActiveRulesByWorkspaceQuery {
+export interface GetActiveRulesByWorkspaceQuery extends IQuery {
   workspaceId: string;
   userId: string;
   limit?: number;
   offset?: number;
 }
 
-export class GetActiveRulesByWorkspaceHandler {
+export class GetActiveRulesByWorkspaceHandler implements IQueryHandler<
+  GetActiveRulesByWorkspaceQuery,
+  QueryResult<PaginatedResult<CategoryRule>>
+> {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
-  async execute(
-    query: GetActiveRulesByWorkspaceQuery,
-  ): Promise<PaginatedResult<any>> {
+  async handle(
+    query: GetActiveRulesByWorkspaceQuery
+  ): Promise<QueryResult<PaginatedResult<CategoryRule>>> {
     const result = await this.ruleService.getActiveRulesByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       query.userId,
-      { limit: query.limit, offset: query.offset },
+      { limit: query.limit, offset: query.offset }
     );
 
-    return {
-      items: result.items.map((rule: CategoryRule) => ({
-        id: rule.getId().getValue(),
-        workspaceId: rule.getWorkspaceId().getValue(),
-        name: rule.getName(),
-        description: rule.getDescription(),
-        priority: rule.getPriority(),
-        isActive: rule.getIsActive(),
-        condition: {
-          type: rule.getCondition().getType(),
-          value: rule.getCondition().getValue(),
-        },
-        targetCategoryId: rule.getTargetCategoryId().getValue(),
-        createdBy: rule.getCreatedBy().getValue(),
-        createdAt: rule.getCreatedAt(),
-        updatedAt: rule.getUpdatedAt(),
-      })),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
+    return QueryResult.success(result);
   }
 }

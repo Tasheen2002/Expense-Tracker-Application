@@ -1,29 +1,36 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
-import { CostCenter } from "../../domain/entities/cost-center.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import { CostCenter } from '../../domain/entities/cost-center.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class ListCostCentersQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly limit?: number,
-    public readonly offset?: number,
-  ) {}
+export interface ListCostCentersQuery extends IQuery {
+  workspaceId: string;
+  limit?: number;
+  offset?: number;
 }
 
-export class ListCostCentersHandler {
+export class ListCostCentersHandler implements IQueryHandler<
+  ListCostCentersQuery,
+  QueryResult<PaginatedResult<CostCenter>>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
   async handle(
-    query: ListCostCentersQuery,
-  ): Promise<PaginatedResult<CostCenter>> {
-    return await this.allocationManagementService.listCostCenters(
+    query: ListCostCentersQuery
+  ): Promise<QueryResult<PaginatedResult<CostCenter>>> {
+    const result = await this.allocationManagementService.listCostCenters(
       query.workspaceId,
       {
         limit: query.limit || 50,
         offset: query.offset || 0,
-      },
+      }
     );
+    return QueryResult.success(result);
   }
 }

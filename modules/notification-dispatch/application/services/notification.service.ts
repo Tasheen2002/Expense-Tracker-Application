@@ -1,24 +1,25 @@
-import { INotificationRepository } from "../../domain/repositories/notification.repository";
-import { INotificationTemplateRepository } from "../../domain/repositories/notification-template.repository";
-import { INotificationPreferenceRepository } from "../../domain/repositories/notification-preference.repository";
-import { IUserRepository } from "../../../identity-workspace/domain/repositories/user.repository";
-import { Notification } from "../../domain/entities/notification.entity";
-import { NotificationPreference } from "../../domain/entities/notification-preference.entity";
-import { NotificationType } from "../../domain/enums/notification-type.enum";
-import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
-import { NotificationPriority } from "../../domain/enums/notification-priority.enum";
-import { NotificationId } from "../../domain/value-objects/notification-id";
-import { UserId, WorkspaceId } from "../../domain/value-objects";
+import { INotificationRepository } from '../../domain/repositories/notification.repository';
+import { INotificationTemplateRepository } from '../../domain/repositories/notification-template.repository';
+import { INotificationPreferenceRepository } from '../../domain/repositories/notification-preference.repository';
+import { IRecipientLookup } from '../../domain/repositories/recipient-lookup';
+
+import { Notification } from '../../domain/entities/notification.entity';
+import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
+import { NotificationType } from '../../domain/enums/notification-type.enum';
+import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
+import { NotificationPriority } from '../../domain/enums/notification-priority.enum';
+import { NotificationId } from '../../domain/value-objects/notification-id';
+import { UserId, WorkspaceId } from '../../domain/value-objects';
 import {
   NotificationNotFoundError,
   UnauthorizedNotificationAccessError,
   NotificationSendFailedError,
-} from "../../domain/errors/notification.errors";
-import { IChannelProvider } from "../providers/channel-provider.interface";
+} from '../../domain/errors/notification.errors';
+import { IChannelProvider } from '../providers/channel-provider.interface';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export interface SendNotificationParams {
   workspaceId: string;
@@ -35,8 +36,8 @@ export class NotificationService {
     private readonly notificationRepository: INotificationRepository,
     private readonly templateRepository: INotificationTemplateRepository,
     private readonly preferenceRepository: INotificationPreferenceRepository,
-    private readonly userRepository: IUserRepository,
-    private readonly emailProvider?: IChannelProvider,
+    private readonly recipientLookup: IRecipientLookup,
+    private readonly emailProvider?: IChannelProvider
   ) {}
 
   async send(params: SendNotificationParams): Promise<Notification[]> {
@@ -47,7 +48,7 @@ export class NotificationService {
     // Get user preferences (or create default)
     let preferences = await this.preferenceRepository.findByUserAndWorkspace(
       recipientId,
-      workspaceId,
+      workspaceId
     );
     if (!preferences) {
       preferences = NotificationPreference.create({
@@ -73,7 +74,7 @@ export class NotificationService {
       const template = await this.templateRepository.findActiveTemplate(
         workspaceId,
         params.type,
-        channel,
+        channel
       );
 
       if (!template) {
@@ -105,7 +106,7 @@ export class NotificationService {
             notification.markAsSent();
           } catch (error) {
             notification.markAsFailed(
-              error instanceof Error ? error.message : "Unknown error",
+              error instanceof Error ? error.message : 'Unknown error'
             );
           }
 
@@ -118,11 +119,11 @@ export class NotificationService {
       // Render template
       const title = this.renderTemplate(
         template.getSubjectTemplate(),
-        params.data,
+        params.data
       );
       const content = this.renderTemplate(
         template.getBodyTemplate(),
-        params.data,
+        params.data
       );
 
       const notification = Notification.create({
@@ -144,7 +145,7 @@ export class NotificationService {
         notification.markAsSent();
       } catch (error) {
         notification.markAsFailed(
-          error instanceof Error ? error.message : "Unknown error",
+          error instanceof Error ? error.message : 'Unknown error'
         );
       }
 
@@ -157,7 +158,7 @@ export class NotificationService {
 
   async markAsRead(
     notificationId: string,
-    userId: string,
+    userId: string
   ): Promise<Notification> {
     const id = NotificationId.fromString(notificationId);
     const recipientId = UserId.fromString(userId);
@@ -186,21 +187,21 @@ export class NotificationService {
   async getUnreadNotifications(
     recipientId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Notification>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
     return this.notificationRepository.findUnreadByRecipient(
       userId,
       wsId,
-      options,
+      options
     );
   }
 
   async getNotifications(
     recipientId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Notification>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
@@ -209,58 +210,25 @@ export class NotificationService {
 
   async getUnreadCount(
     recipientId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<number> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
     return this.notificationRepository.countUnread(userId, wsId);
   }
 
-  async getPreferences(
-    userId: string,
-    workspaceId: string,
-  ): Promise<NotificationPreference | null> {
-    const userIdVO = UserId.fromString(userId);
-    const wsId = WorkspaceId.fromString(workspaceId);
-    return this.preferenceRepository.findByUserAndWorkspace(userIdVO, wsId);
-  }
-
-  async updatePreferences(
-    userId: string,
-    workspaceId: string,
-    settings: { email?: boolean; inApp?: boolean; push?: boolean },
-  ): Promise<NotificationPreference> {
-    const userIdVO = UserId.fromString(userId);
-    const wsId = WorkspaceId.fromString(workspaceId);
-
-    let preferences = await this.preferenceRepository.findByUserAndWorkspace(
-      userIdVO,
-      wsId,
-    );
-    if (!preferences) {
-      preferences = NotificationPreference.create({
-        userId: userIdVO,
-        workspaceId: wsId,
-      });
-    }
-
-    preferences.updateGlobalSettings(settings);
-    await this.preferenceRepository.save(preferences);
-    return preferences;
-  }
-
   // --- Private Helpers ---
 
   private channelToPreferenceKey(
-    channel: NotificationChannel,
-  ): "email" | "inApp" | "push" {
+    channel: NotificationChannel
+  ): 'email' | 'inApp' | 'push' {
     switch (channel) {
       case NotificationChannel.EMAIL:
-        return "email";
+        return 'email';
       case NotificationChannel.IN_APP:
-        return "inApp";
+        return 'inApp';
       case NotificationChannel.PUSH:
-        return "push";
+        return 'push';
     }
   }
 
@@ -269,22 +237,22 @@ export class NotificationService {
    */
   private escapeHtml(unsafe: string): string {
     return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   private renderTemplate(
     template: string,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ): string {
     // Simple Mustache-like replacement: {{key}} -> value
     // XSS PROTECTION: Escape all values before inserting
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
       const value = data[key];
-      if (value === undefined) return "";
+      if (value === undefined) return '';
       // Escape HTML to prevent XSS attacks
       return this.escapeHtml(String(value));
     });
@@ -292,32 +260,32 @@ export class NotificationService {
 
   private getDefaultTitle(type: NotificationType): string {
     const titles: Record<NotificationType, string> = {
-      [NotificationType.EXPENSE_APPROVED]: "Expense Approved",
-      [NotificationType.EXPENSE_REJECTED]: "Expense Rejected",
-      [NotificationType.APPROVAL_REQUIRED]: "Approval Required",
-      [NotificationType.BUDGET_ALERT]: "Budget Alert",
-      [NotificationType.INVITATION]: "Workspace Invitation",
-      [NotificationType.SYSTEM_ALERT]: "System Alert",
+      [NotificationType.EXPENSE_APPROVED]: 'Expense Approved',
+      [NotificationType.EXPENSE_REJECTED]: 'Expense Rejected',
+      [NotificationType.APPROVAL_REQUIRED]: 'Approval Required',
+      [NotificationType.BUDGET_ALERT]: 'Budget Alert',
+      [NotificationType.INVITATION]: 'Workspace Invitation',
+      [NotificationType.SYSTEM_ALERT]: 'System Alert',
     };
-    return titles[type] || "Notification";
+    return titles[type] || 'Notification';
   }
 
   private getDefaultContent(
     type: NotificationType,
-    data: Record<string, unknown>,
+    data: Record<string, unknown>
   ): string {
     // Generate basic content based on type
     switch (type) {
       case NotificationType.EXPENSE_APPROVED:
-        return `Your expense "${data.expenseTitle || "Expense"}" has been approved.`;
+        return `Your expense "${data.expenseTitle || 'Expense'}" has been approved.`;
       case NotificationType.EXPENSE_REJECTED:
-        return `Your expense "${data.expenseTitle || "Expense"}" has been rejected. Reason: ${data.reason || "Not specified"}`;
+        return `Your expense "${data.expenseTitle || 'Expense'}" has been rejected. Reason: ${data.reason || 'Not specified'}`;
       case NotificationType.APPROVAL_REQUIRED:
-        return `You have a pending expense to approve: "${data.expenseTitle || "Expense"}" for ${data.amount || "unknown amount"}.`;
+        return `You have a pending expense to approve: "${data.expenseTitle || 'Expense'}" for ${data.amount || 'unknown amount'}.`;
       case NotificationType.BUDGET_ALERT:
-        return `Budget alert: ${data.message || "You are approaching your budget limit."}`;
+        return `Budget alert: ${data.message || 'You are approaching your budget limit.'}`;
       case NotificationType.INVITATION:
-        return `You have been invited to join workspace "${data.workspaceName || "a workspace"}".`;
+        return `You have been invited to join workspace "${data.workspaceName || 'a workspace'}".`;
       default:
         return `You have a new notification.`;
     }
@@ -326,25 +294,23 @@ export class NotificationService {
   private async sendEmail(
     recipientId: string,
     subject: string,
-    body: string,
+    body: string
   ): Promise<void> {
     if (!this.emailProvider) {
       console.warn(
-        `[EMAIL] No email provider configured. Email not sent to: ${recipientId}`,
+        `[EMAIL] No email provider configured. Email not sent to: ${recipientId}`
       );
       return;
     }
 
-    const user = await this.userRepository.findById(
-      UserId.fromString(recipientId),
+    const email = await this.recipientLookup.findEmail(
+      UserId.fromString(recipientId)
     );
 
-    if (!user) {
+    if (!email) {
       console.warn(`[EMAIL] User not found: ${recipientId}. Email not sent.`);
       return;
     }
-
-    const email = user.getEmail().getValue();
 
     const result = await this.emailProvider.send({
       recipientId,
@@ -355,8 +321,8 @@ export class NotificationService {
 
     if (!result.success) {
       throw new NotificationSendFailedError(
-        "EMAIL",
-        result.error || "Failed to send email",
+        'EMAIL',
+        result.error || 'Failed to send email'
       );
     }
   }

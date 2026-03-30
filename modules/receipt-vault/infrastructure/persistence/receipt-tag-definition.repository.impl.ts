@@ -1,15 +1,22 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definition.entity";
-import { TagId } from "../../domain/value-objects/tag-id";
-import { IReceiptTagDefinitionRepository } from "../../domain/repositories/receipt-tag-definition.repository";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { ReceiptTagDefinition } from '../../domain/entities/receipt-tag-definition.entity';
+import { TagId } from '../../domain/value-objects/tag-id';
+import { IReceiptTagDefinitionRepository } from '../../domain/repositories/receipt-tag-definition.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinitionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ReceiptTagDefinitionRepositoryImpl
+  extends PrismaRepository<ReceiptTagDefinition>
+  implements IReceiptTagDefinitionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(tag: ReceiptTagDefinition): Promise<void> {
     await this.prisma.receiptTagDefinition.upsert({
@@ -28,11 +35,12 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
         description: tag.getDescription(),
       },
     });
+    await this.dispatchEvents(tag);
   }
 
   async findById(
     id: TagId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ReceiptTagDefinition | null> {
     const row = await this.prisma.receiptTagDefinition.findFirst({
       where: {
@@ -46,7 +54,7 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
 
   async findByName(
     name: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ReceiptTagDefinition | null> {
     const row = await this.prisma.receiptTagDefinition.findUnique({
       where: {
@@ -62,16 +70,16 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ReceiptTagDefinition>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receiptTagDefinition,
       {
         where: { workspaceId },
-        orderBy: { name: "asc" },
+        orderBy: { name: 'asc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
@@ -106,7 +114,7 @@ export class ReceiptTagDefinitionRepositoryImpl implements IReceiptTagDefinition
   }
 
   private toDomain(
-    row: Prisma.ReceiptTagDefinitionGetPayload<object>,
+    row: Prisma.ReceiptTagDefinitionGetPayload<object>
   ): ReceiptTagDefinition {
     return ReceiptTagDefinition.fromPersistence({
       id: TagId.fromString(row.id),

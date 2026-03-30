@@ -1,25 +1,25 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   ExpenseRepository,
   ExpenseFilters,
   PaginatedResult,
   PaginationOptions,
-} from "../../domain/repositories/expense.repository";
-import { Expense } from "../../domain/entities/expense.entity";
-import { ExpenseId } from "../../domain/value-objects/expense-id";
-import { CategoryId } from "../../domain/value-objects/category-id";
-import { TagId } from "../../domain/value-objects/tag-id";
-import { AttachmentId } from "../../domain/value-objects/attachment-id";
-import { Money } from "../../domain/value-objects/money";
-import { ExpenseDate } from "../../domain/value-objects/expense-date";
-import { ExpenseStatus } from "../../domain/enums/expense-status";
-import { PaymentMethod } from "../../domain/enums/payment-method";
-import { CurrencyRequiredError } from "../../domain/errors/expense.errors";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../domain/repositories/expense.repository';
+import { Expense } from '../../domain/entities/expense.entity';
+import { ExpenseId } from '../../domain/value-objects/expense-id';
+import { CategoryId } from '../../domain/value-objects/category-id';
+import { TagId } from '../../domain/value-objects/tag-id';
+import { AttachmentId } from '../../domain/value-objects/attachment-id';
+import { Money } from '../../domain/value-objects/money';
+import { ExpenseDate } from '../../domain/value-objects/expense-date';
+import { ExpenseStatus } from '../../domain/enums/expense-status';
+import { PaymentMethod } from '../../domain/enums/payment-method';
+import { CurrencyRequiredError } from '../../domain/errors/expense.errors';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
   include: { category: true; tags: true; attachments: true };
@@ -106,7 +106,7 @@ export class ExpenseRepositoryImpl
 
       // Find tags to delete (in existing but not in new)
       const tagsToDelete = Array.from(existingTagIds).filter(
-        (id) => !newTagIds.has(id),
+        (id) => !newTagIds.has(id)
       );
       if (tagsToDelete.length > 0) {
         await tx.expenseTag.deleteMany({
@@ -119,7 +119,7 @@ export class ExpenseRepositoryImpl
 
       // Find tags to add (in new but not in existing)
       const tagsToAdd = Array.from(newTagIds).filter(
-        (id) => !existingTagIds.has(id),
+        (id) => !existingTagIds.has(id)
       );
       if (tagsToAdd.length > 0) {
         await tx.expenseTag.createMany({
@@ -155,7 +155,7 @@ export class ExpenseRepositoryImpl
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
       this.prisma.expense as any,
@@ -166,17 +166,17 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" },
+        orderBy: { expenseDate: 'desc' },
       },
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
   async findByUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
       this.prisma.expense as any,
@@ -187,17 +187,17 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" },
+        orderBy: { expenseDate: 'desc' },
       },
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
   async findByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
       this.prisma.expense as any,
@@ -211,17 +211,17 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" },
+        orderBy: { expenseDate: 'desc' },
       },
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
   async findByStatus(
     status: ExpenseStatus,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
       this.prisma.expense as any,
@@ -232,15 +232,15 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" },
+        orderBy: { expenseDate: 'desc' },
       },
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
   async findWithFilters(
-    filters: ExpenseFilters,
+    filters: ExpenseFilters
   ): Promise<PaginatedResult<Expense>> {
     const where: Prisma.ExpenseWhereInput = {
       workspaceId: filters.workspaceId,
@@ -268,9 +268,9 @@ export class ExpenseRepositoryImpl
 
     if (filters.searchText) {
       where.OR = [
-        { title: { contains: filters.searchText, mode: "insensitive" } },
-        { description: { contains: filters.searchText, mode: "insensitive" } },
-        { merchant: { contains: filters.searchText, mode: "insensitive" } },
+        { title: { contains: filters.searchText, mode: 'insensitive' } },
+        { description: { contains: filters.searchText, mode: 'insensitive' } },
+        { merchant: { contains: filters.searchText, mode: 'insensitive' } },
       ];
     }
 
@@ -285,7 +285,7 @@ export class ExpenseRepositoryImpl
           tags: true,
           attachments: true,
         },
-        orderBy: { expenseDate: "desc" },
+        orderBy: { expenseDate: 'desc' },
         skip: offset,
         take: limit,
       }),
@@ -322,7 +322,7 @@ export class ExpenseRepositoryImpl
 
   async getTotalByWorkspace(
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
@@ -345,7 +345,7 @@ export class ExpenseRepositoryImpl
   async getTotalByUser(
     userId: string,
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
@@ -369,7 +369,7 @@ export class ExpenseRepositoryImpl
   async getTotalByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<number> {
     // Currency is required to prevent summing different currencies together
     if (!currency) {
@@ -392,17 +392,26 @@ export class ExpenseRepositoryImpl
 
   async getCountByStatus(
     status: ExpenseStatus,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<number> {
     return await this.prisma.expense.count({
       where: { status, workspaceId },
     });
   }
 
+  async getCountByCategory(
+    categoryId: CategoryId,
+    workspaceId: string
+  ): Promise<number> {
+    return await this.prisma.expense.count({
+      where: { categoryId: categoryId.getValue(), workspaceId },
+    });
+  }
+
   private toDomain(
     data: Prisma.ExpenseGetPayload<{
       include: { category: true; tags: true; attachments: true };
-    }>,
+    }>
   ): Expense {
     return Expense.fromPersistence({
       id: ExpenseId.fromString(data.id),
@@ -433,7 +442,7 @@ export class ExpenseRepositoryImpl
   async getStatistics(
     workspaceId: string,
     userId?: string,
-    currency?: string,
+    currency?: string
   ): Promise<{
     totalAmount: number;
     currency: string;
@@ -447,7 +456,7 @@ export class ExpenseRepositoryImpl
 
     const [stats, total] = await Promise.all([
       this.prisma.expense.groupBy({
-        by: ["status"],
+        by: ['status'],
         where,
         _count: { _all: true },
       }),
@@ -471,7 +480,7 @@ export class ExpenseRepositoryImpl
 
     return {
       totalAmount: total._sum.amount?.toNumber() || 0,
-      currency: currency || "USD",
+      currency: currency || 'USD',
       countByStatus,
     };
   }

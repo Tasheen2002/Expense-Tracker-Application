@@ -413,6 +413,7 @@ model ExpenseWorkflow {
   chainId           String         @map("chain_id") @db.Uuid
   status            WorkflowStatus @default(PENDING)
   currentStepNumber Int            @default(1) @map("current_step_number")
+  version           Int            @default(1)
   createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   completedAt       DateTime?      @map("completed_at") @db.Timestamptz(6)

@@ -1,13 +1,13 @@
-import { Expense } from "../entities/expense.entity";
-import { ExpenseId } from "../value-objects/expense-id";
-import { CategoryId } from "../value-objects/category-id";
-import { ExpenseStatus } from "../enums/expense-status";
-import { PaymentMethod } from "../enums/payment-method";
+import { Expense } from '../entities/expense.entity';
+import { ExpenseId } from '../value-objects/expense-id';
+import { CategoryId } from '../value-objects/category-id';
+import { ExpenseStatus } from '../enums/expense-status';
+import { PaymentMethod } from '../enums/payment-method';
 
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 export { PaginatedResult, PaginationOptions };
 
 export interface ExpenseFilters {
@@ -48,7 +48,7 @@ export interface ExpenseRepository {
    */
   findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>>;
 
   /**
@@ -57,7 +57,7 @@ export interface ExpenseRepository {
   findByUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>>;
 
   /**
@@ -66,7 +66,7 @@ export interface ExpenseRepository {
   findByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>>;
 
   /**
@@ -75,7 +75,7 @@ export interface ExpenseRepository {
   findByStatus(
     status: ExpenseStatus,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>>;
 
   /**
@@ -104,7 +104,7 @@ export interface ExpenseRepository {
   getTotalByUser(
     userId: string,
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<number>;
 
   /**
@@ -113,7 +113,7 @@ export interface ExpenseRepository {
   getTotalByCategory(
     categoryId: CategoryId,
     workspaceId: string,
-    currency?: string,
+    currency?: string
   ): Promise<number>;
 
   /**
@@ -122,12 +122,20 @@ export interface ExpenseRepository {
   getCountByStatus(status: ExpenseStatus, workspaceId: string): Promise<number>;
 
   /**
+   * Get expense count by category
+   */
+  getCountByCategory(
+    categoryId: CategoryId,
+    workspaceId: string
+  ): Promise<number>;
+
+  /**
    * Get aggregated statistics (optimized single query)
    */
   getStatistics(
     workspaceId: string,
     userId?: string,
-    currency?: string,
+    currency?: string
   ): Promise<{
     totalAmount: number;
     currency: string;

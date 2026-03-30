@@ -1,35 +1,46 @@
-import { FastifyInstance } from "fastify";
-import { WorkspaceController } from "../controllers/workspace.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { WorkspaceController } from '../controllers/workspace.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+import { validateBody } from '../validation/validator';
+import {
+  createWorkspaceSchema as createWorkspaceZodSchema,
+  updateWorkspaceSchema as updateWorkspaceZodSchema,
+} from '../validation/workspace.schema';
+
+const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 
 const createWorkspaceSchema = {
   schema: {
-    tags: ["Workspace"],
-    description: "Create a new workspace",
+    tags: ['Workspace'],
+    description: 'Create a new workspace',
     body: {
-      type: "object",
-      required: ["name"],
+      type: 'object',
+      required: ['name'],
       properties: {
-        name: { type: "string", minLength: 1 },
+        name: { type: 'string', minLength: 1 },
       },
     },
     response: {
       201: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
-          message: { type: "string" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
+          message: { type: 'string' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
-              workspaceId: { type: "string" },
-              name: { type: "string" },
-              slug: { type: "string" },
-              ownerId: { type: "string" },
-              isActive: { type: "boolean" },
-              createdAt: { type: "string" },
-              updatedAt: { type: "string" },
+              workspaceId: { type: 'string' },
+              name: { type: 'string' },
+              slug: { type: 'string' },
+              ownerId: { type: 'string' },
+              isActive: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
             },
           },
         },
@@ -40,31 +51,31 @@ const createWorkspaceSchema = {
 
 const getWorkspaceSchema = {
   schema: {
-    tags: ["Workspace"],
-    description: "Get workspace by ID",
+    tags: ['Workspace'],
+    description: 'Get workspace by ID',
     params: {
-      type: "object",
-      required: ["id"],
+      type: 'object',
+      required: ['workspaceId'],
       properties: {
-        id: { type: "string" },
+        workspaceId: { type: 'string', format: 'uuid' },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
-              workspaceId: { type: "string" },
-              name: { type: "string" },
-              slug: { type: "string" },
-              ownerId: { type: "string" },
-              isActive: { type: "boolean" },
-              createdAt: { type: "string" },
-              updatedAt: { type: "string" },
+              workspaceId: { type: 'string' },
+              name: { type: 'string' },
+              slug: { type: 'string' },
+              ownerId: { type: 'string' },
+              isActive: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
             },
           },
         },
@@ -75,39 +86,39 @@ const getWorkspaceSchema = {
 
 const getUserWorkspacesSchema = {
   schema: {
-    tags: ["Workspace"],
-    description: "Get all workspaces for the authenticated user",
+    tags: ['Workspace'],
+    description: 'Get all workspaces for the authenticated user',
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
               items: {
-                type: "array",
+                type: 'array',
                 items: {
-                  type: "object",
+                  type: 'object',
                   properties: {
-                    workspaceId: { type: "string" },
-                    name: { type: "string" },
-                    slug: { type: "string" },
-                    ownerId: { type: "string" },
-                    isActive: { type: "boolean" },
-                    createdAt: { type: "string" },
-                    updatedAt: { type: "string" },
+                    workspaceId: { type: 'string' },
+                    name: { type: 'string' },
+                    slug: { type: 'string' },
+                    ownerId: { type: 'string' },
+                    isActive: { type: 'boolean' },
+                    createdAt: { type: 'string' },
+                    updatedAt: { type: 'string' },
                   },
                 },
               },
               pagination: {
-                type: "object",
+                type: 'object',
                 properties: {
-                  total: { type: "number" },
-                  limit: { type: "number" },
-                  offset: { type: "number" },
-                  hasMore: { type: "boolean" },
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },
@@ -120,38 +131,38 @@ const getUserWorkspacesSchema = {
 
 const updateWorkspaceSchema = {
   schema: {
-    tags: ["Workspace"],
-    description: "Update workspace",
+    tags: ['Workspace'],
+    description: 'Update workspace',
     params: {
-      type: "object",
-      required: ["id"],
+      type: 'object',
+      required: ['workspaceId'],
       properties: {
-        id: { type: "string" },
+        workspaceId: { type: 'string', format: 'uuid' },
       },
     },
     body: {
-      type: "object",
+      type: 'object',
       properties: {
-        name: { type: "string", minLength: 1 },
+        name: { type: 'string', minLength: 1 },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
-          message: { type: "string" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
+          message: { type: 'string' },
           data: {
-            type: "object",
+            type: 'object',
             properties: {
-              workspaceId: { type: "string" },
-              name: { type: "string" },
-              slug: { type: "string" },
-              ownerId: { type: "string" },
-              isActive: { type: "boolean" },
-              createdAt: { type: "string" },
-              updatedAt: { type: "string" },
+              workspaceId: { type: 'string' },
+              name: { type: 'string' },
+              slug: { type: 'string' },
+              ownerId: { type: 'string' },
+              isActive: { type: 'boolean' },
+              createdAt: { type: 'string' },
+              updatedAt: { type: 'string' },
             },
           },
         },
@@ -162,22 +173,22 @@ const updateWorkspaceSchema = {
 
 const deleteWorkspaceSchema = {
   schema: {
-    tags: ["Workspace"],
-    description: "Delete workspace",
+    tags: ['Workspace'],
+    description: 'Delete workspace',
     params: {
-      type: "object",
-      required: ["id"],
+      type: 'object',
+      required: ['workspaceId'],
       properties: {
-        id: { type: "string" },
+        workspaceId: { type: 'string', format: 'uuid' },
       },
     },
     response: {
       200: {
-        type: "object",
+        type: 'object',
         properties: {
-          success: { type: "boolean" },
-          statusCode: { type: "number" },
-          message: { type: "string" },
+          success: { type: 'boolean' },
+          statusCode: { type: 'number' },
+          message: { type: 'string' },
         },
       },
     },
@@ -186,56 +197,62 @@ const deleteWorkspaceSchema = {
 
 export async function registerWorkspaceRoutes(
   fastify: FastifyInstance,
-  controller: WorkspaceController,
+  controller: WorkspaceController
 ) {
   // Create workspace (requires authentication)
   fastify.post(
-    "/workspaces",
+    '/workspaces',
     {
       ...createWorkspaceSchema,
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
+      preValidation: [validateBody(createWorkspaceZodSchema)],
     },
-    async (request, reply) => controller.createWorkspace(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.createWorkspace(request as AuthenticatedRequest, reply)
   );
 
   // Get user's workspaces (requires authentication)
   fastify.get(
-    "/workspaces",
+    '/workspaces',
     {
       ...getUserWorkspacesSchema,
       onRequest: [fastify.authenticate],
     },
     async (request, reply) =>
-      controller.getUserWorkspaces(request as AuthenticatedRequest, reply),
+      controller.getUserWorkspaces(request as AuthenticatedRequest, reply)
   );
 
   // Get workspace by ID (requires authentication)
   fastify.get(
-    "/workspaces/:id",
+    '/workspaces/:workspaceId',
     {
       ...getWorkspaceSchema,
       onRequest: [fastify.authenticate],
     },
-    async (request, reply) => controller.getWorkspace(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.getWorkspace(request as AuthenticatedRequest, reply)
   );
 
   // Update workspace (requires authentication)
   fastify.patch(
-    "/workspaces/:id",
+    '/workspaces/:workspaceId',
     {
       ...updateWorkspaceSchema,
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
+      preValidation: [validateBody(updateWorkspaceZodSchema)],
     },
-    async (request, reply) => controller.updateWorkspace(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.updateWorkspace(request as AuthenticatedRequest, reply)
   );
 
   // Delete workspace (requires authentication)
   fastify.delete(
-    "/workspaces/:id",
+    '/workspaces/:workspaceId',
     {
       ...deleteWorkspaceSchema,
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
     },
-    async (request, reply) => controller.deleteWorkspace(request as AuthenticatedRequest, reply),
+    async (request, reply) =>
+      controller.deleteWorkspace(request as AuthenticatedRequest, reply)
   );
 }

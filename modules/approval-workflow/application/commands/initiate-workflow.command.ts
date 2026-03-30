@@ -1,12 +1,11 @@
-import { ExpenseWorkflowRepository } from "../../domain/repositories/expense-workflow.repository";
-import { ApprovalChainRepository } from "../../domain/repositories/approval-chain.repository";
-import { ExpenseWorkflow } from "../../domain/entities/expense-workflow.entity";
+import { WorkflowService } from '../services/workflow.service';
 import {
-  WorkflowAlreadyExistsError,
-  NoMatchingApprovalChainError,
-} from "../../domain/errors/approval-workflow.errors";
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface InitiateWorkflowInput {
+export interface InitiateWorkflowInput extends ICommand {
   expenseId: string;
   workspaceId: string;
   userId: string;
@@ -15,43 +14,26 @@ export interface InitiateWorkflowInput {
   hasReceipt: boolean;
 }
 
-export class InitiateWorkflowHandler {
-  constructor(
-    private readonly workflowRepository: ExpenseWorkflowRepository,
-    private readonly chainRepository: ApprovalChainRepository,
-  ) {}
+export class InitiateWorkflowHandler implements ICommandHandler<
+  InitiateWorkflowInput,
+  CommandResult<{ workflowId: string }>
+> {
+  constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: InitiateWorkflowInput): Promise<ExpenseWorkflow> {
-    const existing = await this.workflowRepository.findByExpenseId(
-      input.expenseId,
-    );
-    if (existing) {
-      throw new WorkflowAlreadyExistsError(input.expenseId);
+  async handle(
+    input: InitiateWorkflowInput
+  ): Promise<CommandResult<{ workflowId: string }>> {
+    try {
+      const workflow = await this.workflowService.initiateWorkflow(input);
+      return CommandResult.success({ workflowId: workflow.getId().getValue() });
+    } catch (error: unknown) {
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        error && typeof error === 'object' && 'statusCode' in error
+          ? (error as { statusCode: number }).statusCode
+          : 500
+      );
     }
-
-    const chain = await this.chainRepository.findApplicableChain({
-      workspaceId: input.workspaceId,
-      amount: input.amount,
-      categoryId: input.categoryId,
-      hasReceipt: input.hasReceipt,
-    });
-
-    if (!chain) {
-      throw new NoMatchingApprovalChainError(input.workspaceId, input.amount);
-    }
-
-    const workflow = ExpenseWorkflow.create({
-      expenseId: input.expenseId,
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      chainId: chain.getId().getValue(),
-      approverSequence: chain.getApproverSequence().map((id) => id.getValue()),
-    });
-
-    workflow.start();
-
-    await this.workflowRepository.save(workflow);
-
-    return workflow;
   }
 }

@@ -1,25 +1,33 @@
-import { ForecastService } from "../services/forecast.service";
-import { Forecast } from "../../domain/entities/forecast.entity";
-import { ForecastType } from "../../domain/enums/forecast-type.enum";
+import { ForecastService } from '../services/forecast.service';
+import { ForecastType } from '../../domain/enums/forecast-type.enum';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class CreateForecastCommand {
-  constructor(
-    public readonly planId: string,
-    public readonly name: string,
-    public readonly type: ForecastType,
-    public readonly userId: string,
-  ) {}
+export interface CreateForecastCommand extends ICommand {
+  planId: string;
+  name: string;
+  type: ForecastType;
+  userId: string;
 }
 
-export class CreateForecastHandler {
+export class CreateForecastHandler implements ICommandHandler<
+  CreateForecastCommand,
+  CommandResult<{ forecastId: string }>
+> {
   constructor(private readonly forecastService: ForecastService) {}
 
-  async handle(command: CreateForecastCommand): Promise<Forecast> {
-    return await this.forecastService.createForecast({
+  async handle(
+    command: CreateForecastCommand
+  ): Promise<CommandResult<{ forecastId: string }>> {
+    const forecast = await this.forecastService.createForecast({
       planId: command.planId,
       name: command.name,
       type: command.type,
       userId: command.userId,
     });
+    return CommandResult.success({ forecastId: forecast.getId().getValue() });
   }
 }

@@ -1,17 +1,41 @@
-import {
+﻿import {
   PolicyEvaluationService,
   ExpenseContext,
-  PolicyEvaluationResult,
-} from "../services/policy-evaluation.service";
+} from '../services/policy-evaluation.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+export interface EvaluateExpenseInput extends ICommand, ExpenseContext {}
 
-export interface EvaluateExpenseInput extends ExpenseContext {}
+export interface EvaluateExpenseResult {
+  passed: boolean;
+  violationIds: string[];
+  blockedByPolicyId?: string;
+}
 
-export class EvaluateExpenseHandler {
+export class EvaluateExpenseHandler implements ICommandHandler<
+  EvaluateExpenseInput,
+  CommandResult<EvaluateExpenseResult>
+> {
   constructor(
-    private readonly policyEvaluationService: PolicyEvaluationService,
+    private readonly policyEvaluationService: PolicyEvaluationService
   ) {}
 
-  async handle(input: EvaluateExpenseInput): Promise<PolicyEvaluationResult> {
-    return this.policyEvaluationService.evaluateExpense(input);
+  async handle(
+    input: EvaluateExpenseInput
+  ): Promise<CommandResult<EvaluateExpenseResult>> {
+    try {
+      const result = await this.policyEvaluationService.evaluateExpense(input);
+
+      return CommandResult.success({
+        passed: result.passed,
+        violationIds: result.violations.map((v) => v.getId().getValue()),
+        blockedByPolicyId: result.blockedByPolicy?.getId().getValue(),
+      });
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

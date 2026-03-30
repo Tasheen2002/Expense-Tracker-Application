@@ -1,28 +1,32 @@
-import { RuleExecutionService } from '../services/rule-execution.service'
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
+import { RuleExecutionService } from '../services/rule-execution.service';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { RuleExecution } from '../../domain/entities/rule-execution.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetExecutionsByExpenseQuery {
-  expenseId: string
-  workspaceId: string
+export interface GetExecutionsByExpenseQuery extends IQuery {
+  expenseId: string;
+  workspaceId: string;
 }
 
-export class GetExecutionsByExpenseHandler {
+export class GetExecutionsByExpenseHandler implements IQueryHandler<
+  GetExecutionsByExpenseQuery,
+  QueryResult<RuleExecution[]>
+> {
   constructor(private readonly executionService: RuleExecutionService) {}
 
-  async execute(query: GetExecutionsByExpenseQuery) {
+  async handle(
+    query: GetExecutionsByExpenseQuery
+  ): Promise<QueryResult<RuleExecution[]>> {
     const executions = await this.executionService.getExecutionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
-    )
+    );
 
-    return executions.items.map((execution) => ({
-      id: execution.getId().getValue(),
-      ruleId: execution.getRuleId().getValue(),
-      expenseId: execution.getExpenseId().getValue(),
-      workspaceId: execution.getWorkspaceId().getValue(),
-      appliedCategoryId: execution.getAppliedCategoryId().getValue(),
-      executedAt: execution.getExecutedAt(),
-    }))
+    return QueryResult.success(executions.items);
   }
 }

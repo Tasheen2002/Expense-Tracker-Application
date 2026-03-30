@@ -1,20 +1,35 @@
-import { AuditService } from "../services/audit.service";
-import { AuditLog } from "../../domain/entities/audit-log.entity";
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
+import { AuditService } from '../services/audit.service';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLogNotFoundError } from '../../domain/errors/audit.errors';
 
-export class GetAuditLogQuery {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly auditLogId: string,
-  ) {}
+export interface GetAuditLogQuery extends IQuery {
+  workspaceId: string;
+  auditLogId: string;
 }
 
-export class GetAuditLogHandler {
+export class GetAuditLogHandler implements IQueryHandler<
+  GetAuditLogQuery,
+  QueryResult<AuditLog>
+> {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(query: GetAuditLogQuery): Promise<AuditLog | null> {
-    return await this.auditService.getAuditLogById(
-      query.workspaceId,
-      query.auditLogId,
-    );
+  async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLog>> {
+    try {
+      const auditLog = await this.auditService.getAuditLogById(
+        input.workspaceId,
+        input.auditLogId
+      );
+      if (!auditLog) {
+        throw new AuditLogNotFoundError(input.auditLogId);
+      }
+      return QueryResult.success(auditLog);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

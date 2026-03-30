@@ -1,8 +1,7 @@
-import { DepartmentId } from "../value-objects/department-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { DepartmentId } from '../value-objects/department-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -13,13 +12,13 @@ export class DepartmentCreatedEvent extends DomainEvent {
     public readonly departmentId: string,
     public readonly workspaceId: string,
     public readonly name: string,
-    public readonly code: string,
+    public readonly code: string
   ) {
-    super(departmentId, "Department");
+    super(departmentId, 'Department');
   }
 
   get eventType(): string {
-    return "DepartmentCreated";
+    return 'DepartmentCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -35,13 +34,13 @@ export class DepartmentCreatedEvent extends DomainEvent {
 export class DepartmentUpdatedEvent extends DomainEvent {
   constructor(
     public readonly departmentId: string,
-    public readonly changes: Record<string, unknown>,
+    public readonly changes: Record<string, unknown>
   ) {
-    super(departmentId, "Department");
+    super(departmentId, 'Department');
   }
 
   get eventType(): string {
-    return "DepartmentUpdated";
+    return 'DepartmentUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -54,11 +53,11 @@ export class DepartmentUpdatedEvent extends DomainEvent {
 
 export class DepartmentActivatedEvent extends DomainEvent {
   constructor(public readonly departmentId: string) {
-    super(departmentId, "Department");
+    super(departmentId, 'Department');
   }
 
   get eventType(): string {
-    return "DepartmentActivated";
+    return 'DepartmentActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -68,11 +67,11 @@ export class DepartmentActivatedEvent extends DomainEvent {
 
 export class DepartmentDeactivatedEvent extends DomainEvent {
   constructor(public readonly departmentId: string) {
-    super(departmentId, "Department");
+    super(departmentId, 'Department');
   }
 
   get eventType(): string {
-    return "DepartmentDeactivated";
+    return 'DepartmentDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -95,7 +94,7 @@ export class Department extends AggregateRoot {
     private parentDepartmentId: DepartmentId | null,
     private isActive: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -118,7 +117,7 @@ export class Department extends AggregateRoot {
       params.parentDepartmentId || null,
       true,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     department.addDomainEvent(
@@ -126,8 +125,8 @@ export class Department extends AggregateRoot {
         department.id.getValue(),
         params.workspaceId.getValue(),
         params.name,
-        params.code,
-      ),
+        params.code
+      )
     );
 
     return department;
@@ -157,7 +156,7 @@ export class Department extends AggregateRoot {
         : null,
       params.isActive,
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -234,7 +233,7 @@ export class Department extends AggregateRoot {
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new DepartmentUpdatedEvent(this.id.getValue(), changes),
+        new DepartmentUpdatedEvent(this.id.getValue(), changes)
       );
     }
   }
@@ -252,4 +251,32 @@ export class Department extends AggregateRoot {
     this.updatedAt = new Date();
     this.addDomainEvent(new DepartmentActivatedEvent(this.id.getValue()));
   }
+
+  toJSON(): DepartmentDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      code: this.getCode(),
+      description: this.getDescription(),
+      managerId: this.getManagerId()?.getValue() ?? null,
+      parentDepartmentId: this.getParentDepartmentId()?.getValue() ?? null,
+      isActive: this.getIsActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface DepartmentDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  managerId: string | null;
+  parentDepartmentId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

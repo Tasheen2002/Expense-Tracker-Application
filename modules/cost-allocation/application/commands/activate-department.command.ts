@@ -1,24 +1,32 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
-import { Department } from "../../domain/entities/department.entity";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class ActivateDepartmentCommand {
-  constructor(
-    public readonly id: string,
-    public readonly workspaceId: string,
-    public readonly actorId: string,
-  ) {}
+export interface ActivateDepartmentCommand extends ICommand {
+  id: string;
+  workspaceId: string;
+  actorId: string;
 }
 
-export class ActivateDepartmentHandler {
+export class ActivateDepartmentHandler implements ICommandHandler<
+  ActivateDepartmentCommand,
+  CommandResult<void>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: ActivateDepartmentCommand): Promise<Department> {
-    return await this.allocationManagementService.activateDepartment(
+  async handle(
+    command: ActivateDepartmentCommand
+  ): Promise<CommandResult<void>> {
+    await this.allocationManagementService.activateDepartment(
       command.id,
       command.workspaceId,
-      command.actorId,
+      command.actorId
     );
+    return CommandResult.success(undefined);
   }
 }

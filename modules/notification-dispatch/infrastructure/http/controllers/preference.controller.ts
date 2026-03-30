@@ -1,39 +1,49 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import {
-  PreferenceService,
-  GlobalPreferenceSettings,
-} from "../../../application/services/preference.service";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import {
   NotificationPreference,
   TypeSettingValue,
-} from "../../../domain/entities/notification-preference.entity";
-import { NotificationType } from "../../../domain/enums/notification-type.enum";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+} from '../../../domain/entities/notification-preference.entity';
+import { NotificationType } from '../../../domain/enums/notification-type.enum';
+import type { GlobalPreferenceSettings } from '../../../application/services/preference.service';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { GetPreferencesHandler } from '../../../application/queries/get-preferences.query';
+import { UpdatePreferencesHandler } from '../../../application/commands/update-preferences.command';
+import { UpdateTypePreferenceHandler } from '../../../application/commands/update-type-preference.command';
+import { CheckChannelEnabledHandler } from '../../../application/queries/check-channel-enabled.query';
 
 export class PreferenceController {
-  constructor(private readonly preferenceService: PreferenceService) {}
+  constructor(
+    private readonly getPreferencesHandler: GetPreferencesHandler,
+    private readonly updatePreferencesHandler: UpdatePreferencesHandler,
+    private readonly updateTypePreferenceHandler: UpdateTypePreferenceHandler,
+    private readonly checkChannelEnabledHandler: CheckChannelEnabledHandler
+  ) {}
 
   async getPreferences(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const userId = request.user.userId;
 
-      const preferences = await this.preferenceService.getOrCreatePreferences(
+      const result = await this.getPreferencesHandler.handle({
         userId,
         workspaceId,
-      );
-
-      return ResponseHelper.success(
+      });
+      // When no preferences exist yet, return safe defaults without persisting.
+      // Preferences are created lazily on the first PATCH.
+      const data = result.data
+        ? result.data.toJSON()
+        : { emailEnabled: true, inAppEnabled: true, pushEnabled: false };
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Preferences retrieved successfully",
-        this.serializePreference(preferences),
+        result,
+        'Preferences retrieved successfully',
+        data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -45,24 +55,22 @@ export class PreferenceController {
       Params: { workspaceId: string };
       Body: GlobalPreferenceSettings;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const userId = request.user.userId;
       const settings = request.body;
 
-      const preferences = await this.preferenceService.updateGlobalPreferences(
+      const result = await this.updatePreferencesHandler.handle({
         userId,
         workspaceId,
         settings,
-      );
-
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Preferences updated successfully",
-        this.serializePreference(preferences),
+        result,
+        'Preferences updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -74,25 +82,23 @@ export class PreferenceController {
       Params: { workspaceId: string; type: string };
       Body: TypeSettingValue;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, type } = request.params;
       const userId = request.user.userId;
       const settings = request.body;
 
-      const preferences = await this.preferenceService.updateTypePreference(
+      const result = await this.updateTypePreferenceHandler.handle({
         userId,
         workspaceId,
-        type as NotificationType,
+        type: type as NotificationType,
         settings,
-      );
-
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Type preference updated successfully",
-        this.serializePreference(preferences),
+        result,
+        'Type preference updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -102,45 +108,29 @@ export class PreferenceController {
   async checkChannelEnabled(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { type: string; channel: "email" | "inApp" | "push" };
+      Querystring: { type: string; channel: 'email' | 'inApp' | 'push' };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { type, channel } = request.query;
       const userId = request.user.userId;
 
-      const isEnabled = await this.preferenceService.isChannelEnabled(
+      const result = await this.checkChannelEnabledHandler.handle({
         userId,
         workspaceId,
-        type as NotificationType,
+        type: type as NotificationType,
         channel,
-      );
-
-      return ResponseHelper.success(
+      });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Channel status retrieved successfully",
-        {
-          type,
-          channel,
-          isEnabled,
-        },
+        result,
+        'Channel status retrieved successfully',
+        { type, channel, isEnabled: result.data ?? false }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializePreference(preference: NotificationPreference) {
-    return {
-      id: preference.getId().getValue(),
-      userId: preference.getUserId().getValue(),
-      workspaceId: preference.getWorkspaceId().getValue(),
-      emailEnabled: preference.isEmailEnabled(),
-      inAppEnabled: preference.isInAppEnabled(),
-      pushEnabled: preference.isPushEnabled(),
-    };
   }
 }

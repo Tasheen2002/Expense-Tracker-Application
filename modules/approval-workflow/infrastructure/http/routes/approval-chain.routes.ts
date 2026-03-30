@@ -1,188 +1,380 @@
-import { FastifyInstance } from "fastify";
-import { ApprovalChainController } from "../controllers/approval-chain.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { FastifyInstance } from 'fastify';
+import { ApprovalChainController } from '../controllers/approval-chain.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import {
+  validateBody,
+  validateQuery,
+  validateParams,
+} from '../validation/validator';
+import {
+  createChainSchema,
+  updateChainSchema,
+  listChainsSchema,
+  chainParamsSchema,
+  workspaceParamsSchema,
+} from '../validation/approval.schema';
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
-  controller: ApprovalChainController,
+  controller: ApprovalChainController
 ) {
   // Create approval chain
   fastify.post(
-    "/:workspaceId/approval-chains",
+    '/workspaces/:workspaceId/approval-chains',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(createChainSchema),
+      ],
       schema: {
-        tags: ["Approval Workflow"],
-        description: "Create a new approval chain",
-        params: {
-          type: "object",
-          required: ["workspaceId"],
+        tags: ['Approval Workflow'],
+        description: 'Create a new approval chain',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['name', 'requiresReceipt', 'approverSequence'],
           properties: {
-            workspaceId: { type: "string", format: "uuid" },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            description: { type: 'string', nullable: true },
+            minAmount: { type: 'number', minimum: 0, nullable: true },
+            maxAmount: { type: 'number', minimum: 0, nullable: true },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              nullable: true,
+            },
+            requiresReceipt: { type: 'boolean' },
+            approverSequence: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              minItems: 1,
+            },
           },
         },
-        body: {
-          type: "object",
-          required: ["name", "requiresReceipt", "approverSequence"],
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 100 },
-            description: { type: "string" },
-            minAmount: { type: "number", minimum: 0 },
-            maxAmount: { type: "number", minimum: 0 },
-            categoryIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-            },
-            requiresReceipt: { type: "boolean" },
-            approverSequence: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-              minItems: 1,
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  chainId: { type: 'string', format: 'uuid' },
+                },
+              },
             },
           },
         },
       },
     },
-    (request, reply) => controller.createChain(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createChain(request as AuthenticatedRequest, reply)
   );
 
   // List approval chains
   fastify.get(
-    "/:workspaceId/approval-chains",
+    '/workspaces/:workspaceId/approval-chains',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(listChainsSchema),
+      ],
       schema: {
-        tags: ["Approval Workflow"],
-        description: "List all approval chains in workspace",
-        params: {
-          type: "object",
-          required: ["workspaceId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            activeOnly: { type: "string", enum: ["true", "false"] },
-            limit: { type: "string", pattern: "^[0-9]+$" },
-            offset: { type: "string", pattern: "^[0-9]+$" },
-          },
-        },
-      },
-    },
-    (request, reply) => controller.listChains(request as AuthenticatedRequest, reply),
-  );
-
-  // Get approval chain
-  fastify.get(
-    "/:workspaceId/approval-chains/:chainId",
-    {
-      schema: {
-        tags: ["Approval Workflow"],
-        description: "Get approval chain by ID",
-        params: {
-          type: "object",
-          required: ["workspaceId", "chainId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            chainId: { type: "string", format: "uuid" },
-          },
-        },
-      },
-    },
-    (request, reply) => controller.getChain(request as AuthenticatedRequest, reply),
-  );
-
-  // Update approval chain
-  fastify.patch(
-    "/:workspaceId/approval-chains/:chainId",
-    {
-      schema: {
-        tags: ["Approval Workflow"],
-        description: "Update approval chain",
-        params: {
-          type: "object",
-          required: ["workspaceId", "chainId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            chainId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 100 },
-            description: { type: "string" },
-            minAmount: { type: "number", minimum: 0 },
-            maxAmount: { type: "number", minimum: 0 },
-            approverSequence: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-              minItems: 1,
+        tags: ['Approval Workflow'],
+        description: 'List all approval chains in workspace',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        chainId: { type: 'string', format: 'uuid' },
+                        workspaceId: { type: 'string', format: 'uuid' },
+                        name: { type: 'string' },
+                        description: { type: 'string', nullable: true },
+                        minAmount: { type: 'number', nullable: true },
+                        maxAmount: { type: 'number', nullable: true },
+                        categoryIds: {
+                          type: 'array',
+                          items: { type: 'string', format: 'uuid' },
+                          nullable: true,
+                        },
+                        requiresReceipt: { type: 'boolean' },
+                        approverSequence: {
+                          type: 'array',
+                          items: { type: 'string', format: 'uuid' },
+                        },
+                        isActive: { type: 'boolean' },
+                        createdAt: { type: 'string', format: 'date-time' },
+                        updatedAt: { type: 'string', format: 'date-time' },
+                      },
+                    },
+                  },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
             },
           },
         },
       },
     },
-    (request, reply) => controller.updateChain(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listChains(request as AuthenticatedRequest, reply)
+  );
+
+  // Get approval chain
+  fastify.get(
+    '/workspaces/:workspaceId/approval-chains/:chainId',
+    {
+      preValidation: [validateParams(chainParamsSchema)],
+      schema: {
+        tags: ['Approval Workflow'],
+        description: 'Get approval chain by ID',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  chainId: { type: 'string', format: 'uuid' },
+                  workspaceId: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  minAmount: { type: 'number', nullable: true },
+                  maxAmount: { type: 'number', nullable: true },
+                  categoryIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    nullable: true,
+                  },
+                  requiresReceipt: { type: 'boolean' },
+                  approverSequence: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                  isActive: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    (request, reply) =>
+      controller.getChain(request as AuthenticatedRequest, reply)
+  );
+
+  // Update approval chain
+  fastify.patch(
+    '/workspaces/:workspaceId/approval-chains/:chainId',
+    {
+      preValidation: [
+        validateParams(chainParamsSchema),
+        validateBody(updateChainSchema),
+      ],
+      schema: {
+        tags: ['Approval Workflow'],
+        description: 'Update approval chain',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 100,
+              nullable: true,
+            },
+            description: { type: 'string', nullable: true },
+            minAmount: { type: 'number', minimum: 0, nullable: true },
+            maxAmount: { type: 'number', minimum: 0, nullable: true },
+            categoryIds: {
+              type: 'array',
+              items: { type: 'string', format: 'uuid' },
+              nullable: true,
+            },
+            requiresReceipt: { type: 'boolean', nullable: true },
+            isActive: { type: 'boolean', nullable: true },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  chainId: { type: 'string', format: 'uuid' },
+                  workspaceId: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  minAmount: { type: 'number', nullable: true },
+                  maxAmount: { type: 'number', nullable: true },
+                  categoryIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    nullable: true,
+                  },
+                  requiresReceipt: { type: 'boolean' },
+                  approverSequence: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                  isActive: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    (request, reply) =>
+      controller.updateChain(request as AuthenticatedRequest, reply)
   );
 
   // Activate approval chain
   fastify.post(
-    "/:workspaceId/approval-chains/:chainId/activate",
+    '/workspaces/:workspaceId/approval-chains/:chainId/activate',
     {
+      preValidation: [validateParams(chainParamsSchema)],
       schema: {
-        tags: ["Approval Workflow"],
-        description: "Activate approval chain",
-        params: {
-          type: "object",
-          required: ["workspaceId", "chainId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            chainId: { type: "string", format: "uuid" },
+        tags: ['Approval Workflow'],
+        description: 'Activate approval chain',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  chainId: { type: 'string', format: 'uuid' },
+                  workspaceId: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  minAmount: { type: 'number', nullable: true },
+                  maxAmount: { type: 'number', nullable: true },
+                  categoryIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    nullable: true,
+                  },
+                  requiresReceipt: { type: 'boolean' },
+                  approverSequence: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                  isActive: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
           },
         },
       },
     },
-    (request, reply) => controller.activateChain(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.activateChain(request as AuthenticatedRequest, reply)
   );
 
   // Deactivate approval chain
   fastify.post(
-    "/:workspaceId/approval-chains/:chainId/deactivate",
+    '/workspaces/:workspaceId/approval-chains/:chainId/deactivate',
     {
+      preValidation: [validateParams(chainParamsSchema)],
       schema: {
-        tags: ["Approval Workflow"],
-        description: "Deactivate approval chain",
-        params: {
-          type: "object",
-          required: ["workspaceId", "chainId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            chainId: { type: "string", format: "uuid" },
+        tags: ['Approval Workflow'],
+        description: 'Deactivate approval chain',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  chainId: { type: 'string', format: 'uuid' },
+                  workspaceId: { type: 'string', format: 'uuid' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  minAmount: { type: 'number', nullable: true },
+                  maxAmount: { type: 'number', nullable: true },
+                  categoryIds: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                    nullable: true,
+                  },
+                  requiresReceipt: { type: 'boolean' },
+                  approverSequence: {
+                    type: 'array',
+                    items: { type: 'string', format: 'uuid' },
+                  },
+                  isActive: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
           },
         },
       },
     },
-    (request, reply) => controller.deactivateChain(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deactivateChain(request as AuthenticatedRequest, reply)
   );
 
   // Delete approval chain
   fastify.delete(
-    "/:workspaceId/approval-chains/:chainId",
+    '/workspaces/:workspaceId/approval-chains/:chainId',
     {
+      preValidation: [validateParams(chainParamsSchema)],
       schema: {
-        tags: ["Approval Workflow"],
-        description: "Delete approval chain",
-        params: {
-          type: "object",
-          required: ["workspaceId", "chainId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            chainId: { type: "string", format: "uuid" },
+        tags: ['Approval Workflow'],
+        description: 'Delete approval chain',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
           },
         },
       },
     },
-    (request, reply) => controller.deleteChain(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.deleteChain(request as AuthenticatedRequest, reply)
   );
 }
