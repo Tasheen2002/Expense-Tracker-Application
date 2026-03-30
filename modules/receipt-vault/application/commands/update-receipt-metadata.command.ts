@@ -1,7 +1,12 @@
-import { ReceiptService } from "../services/receipt.service";
-import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
+import { ReceiptService } from '../services/receipt.service';
+import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface UpdateReceiptMetadataDto {
+export interface UpdateReceiptMetadataCommand extends ICommand {
   receiptId: string;
   workspaceId: string;
   userId: string;
@@ -23,27 +28,24 @@ export interface UpdateReceiptMetadataDto {
   notes?: string;
 }
 
-export class UpdateReceiptMetadataHandler {
+// Keep DTO alias for backward compatibility with service
+export type UpdateReceiptMetadataDto = UpdateReceiptMetadataCommand;
+
+export class UpdateReceiptMetadataHandler implements ICommandHandler<
+  UpdateReceiptMetadataCommand,
+  CommandResult<void>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: UpdateReceiptMetadataDto): Promise<ReceiptMetadata> {
-    if (dto.notes) {
-      dto.notes = this.escapeHtml(dto.notes);
-    }
-    return await this.receiptService.updateMetadata(
-      dto.receiptId,
-      dto.workspaceId,
-      dto.userId,
-      dto,
+  async handle(
+    command: UpdateReceiptMetadataCommand
+  ): Promise<CommandResult<void>> {
+    await this.receiptService.updateMetadata(
+      command.receiptId,
+      command.workspaceId,
+      command.userId,
+      command
     );
-  }
-
-  private escapeHtml(unsafe: string): string {
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return CommandResult.success();
   }
 }

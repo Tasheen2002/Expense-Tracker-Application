@@ -25,11 +25,7 @@ export class GetUserInvitationsHandler implements IQueryHandler<
       );
       return QueryResult.success(invitations);
     } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error
-          ? error.message
-          : 'Failed to get user invitations'
-      );
+      return QueryResult.fromError(error);
     }
   }
 }

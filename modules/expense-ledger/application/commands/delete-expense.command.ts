@@ -1,5 +1,9 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../apps/api/src/shared/application";
-import { ExpenseService } from "../services/expense.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { ExpenseService } from '../services/expense.service';
 
 export interface DeleteExpenseCommand extends ICommand {
   readonly expenseId: string;
@@ -7,21 +11,18 @@ export interface DeleteExpenseCommand extends ICommand {
   readonly userId: string;
 }
 
-export class DeleteExpenseHandler implements ICommandHandler<DeleteExpenseCommand, CommandResult<void>> {
+export class DeleteExpenseHandler implements ICommandHandler<
+  DeleteExpenseCommand,
+  CommandResult<void>
+> {
   constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(command: DeleteExpenseCommand): Promise<CommandResult<void>> {
-    try {
-      await this.expenseService.deleteExpense(
-        command.expenseId,
-        command.workspaceId,
-        command.userId,
-      );
-      return CommandResult.success();
-    } catch (error) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : "Failed to delete expense",
-      );
-    }
+    await this.expenseService.deleteExpense(
+      command.expenseId,
+      command.workspaceId,
+      command.userId
+    );
+    return CommandResult.success();
   }
 }

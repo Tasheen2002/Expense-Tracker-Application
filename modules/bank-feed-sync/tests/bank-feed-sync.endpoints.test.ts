@@ -124,10 +124,10 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         );
 
         expect(response.statusCode).toBe(201);
-        expect(body.data).toHaveProperty('connectionId');
-        expect(body.data.connectionId).toBeDefined();
+        expect(body.data).toHaveProperty('id');
+        expect(body.data.id).toBeDefined();
 
-        testConnectionId = body.data.connectionId;
+        testConnectionId = body.data.id;
       });
 
       it('❌ should fail to create connection with missing required fields', async () => {
@@ -234,8 +234,10 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         });
 
         const body = JSON.parse(response.body);
-        console.log('Update Token:', response.statusCode);
-
+        console.log('Update Token:', response.statusCode, body);
+        if (response.statusCode !== 200) {
+          throw new Error(JSON.stringify(body));
+        }
         expect(response.statusCode).toBe(200);
         expect(body.message).toBe('Connection token updated successfully');
       });
@@ -268,7 +270,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
 
         console.log('Disconnect Connection:', response.statusCode);
 
-        expect(response.statusCode).toBe(204);
+        expect(response.statusCode).toBe(200);
       });
     });
 
@@ -327,7 +329,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
       });
 
       const body = JSON.parse(response.body);
-      activeConnectionId = body.data.connectionId;
+      activeConnectionId = body.data.id;
     });
 
     describe('POST /api/v1/bank-feed/:connectionId/sync', () => {
@@ -462,7 +464,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
       });
 
       const connBody = JSON.parse(connResponse.body);
-      testConnectionForTransactions = connBody.data.connectionId;
+      testConnectionForTransactions = connBody.data.id;
 
       // Create sync session first
       const testSyncSession = await prisma.syncSession.create({

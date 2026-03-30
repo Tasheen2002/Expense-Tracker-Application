@@ -25,9 +25,7 @@ export class GetInvitationByTokenHandler implements IQueryHandler<
       );
       return QueryResult.success(invitation);
     } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to get invitation'
-      );
+      return QueryResult.fromError(error);
     }
   }
 }

@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { WorkspaceInvitationService } from "../application/services/workspace-invitation.service";
-import { IWorkspaceInvitationRepository } from "../domain/repositories/workspace-invitation.repository";
-import { IWorkspaceMembershipRepository } from "../domain/repositories/workspace-membership.repository";
-import { IUserRepository } from "../domain/repositories/user.repository";
-import { WorkspaceRole } from "../domain/entities/workspace-membership.entity";
-import { WorkspaceInvitation } from "../domain/entities/workspace-invitation.entity";
-import { WorkspaceMembership } from "../domain/entities/workspace-membership.entity";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { WorkspaceInvitationService } from '../application/services/workspace-invitation.service';
+import { IWorkspaceInvitationRepository } from '../domain/repositories/workspace-invitation.repository';
+import { IWorkspaceMembershipRepository } from '../domain/repositories/workspace-membership.repository';
+import { IUserRepository } from '../domain/repositories/user.repository';
+import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
+import { WorkspaceInvitation } from '../domain/entities/workspace-invitation.entity';
+import { WorkspaceMembership } from '../domain/entities/workspace-membership.entity';
 
 // Valid UUIDs for testing
-const WORKSPACE_ID = "123e4567-e89b-42d3-a456-426614174000";
-const USER_ID = "123e4567-e89b-42d3-a456-426614174001";
-const INVITATION_ID = "123e4567-e89b-42d3-a456-426614174002";
-const EMAIL = "test@example.com";
+const WORKSPACE_ID = '123e4567-e89b-42d3-a456-426614174000';
+const USER_ID = '123e4567-e89b-42d3-a456-426614174001';
+const INVITATION_ID = '123e4567-e89b-42d3-a456-426614174002';
+const EMAIL = 'test@example.com';
 
 // Mocks
 const mockInvitationRepo = {
@@ -36,7 +36,7 @@ const mockUserRepo = {
   findById: vi.fn(),
 } as unknown as IUserRepository;
 
-describe("WorkspaceInvitationService", () => {
+describe('WorkspaceInvitationService', () => {
   let service: WorkspaceInvitationService;
 
   beforeEach(() => {
@@ -44,16 +44,16 @@ describe("WorkspaceInvitationService", () => {
     service = new WorkspaceInvitationService(
       mockInvitationRepo,
       mockMembershipRepo,
-      mockUserRepo,
+      mockUserRepo
     );
   });
 
-  describe("createInvitation", () => {
-    it("should create an invitation successfully when all conditions are met", async () => {
+  describe('createInvitation', () => {
+    it('should create an invitation successfully when all conditions are met', async () => {
       // Setup mocks
       vi.mocked(mockUserRepo.findByEmail).mockResolvedValue(null); // User might not exist yet
       vi.mocked(
-        mockInvitationRepo.findPendingByWorkspaceAndEmail,
+        mockInvitationRepo.findPendingByWorkspaceAndEmail
       ).mockResolvedValue(null);
 
       const data = {
@@ -71,12 +71,12 @@ describe("WorkspaceInvitationService", () => {
       expect(mockInvitationRepo.save).toHaveBeenCalledTimes(1);
     });
 
-    it("should throw error if user is already a member", async () => {
+    it('should throw error if user is already a member', async () => {
       // Mock existing user and membership
       const mockUser = { getId: () => ({ getValue: () => USER_ID }) };
       vi.mocked(mockUserRepo.findByEmail).mockResolvedValue(mockUser as any);
       vi.mocked(mockMembershipRepo.findByUserAndWorkspace).mockResolvedValue(
-        {} as any,
+        {} as any
       );
 
       const data = {
@@ -88,14 +88,14 @@ describe("WorkspaceInvitationService", () => {
       };
 
       await expect(service.createInvitation(data)).rejects.toThrow(
-        /already a member/,
+        /already a member/
       );
     });
 
-    it("should throw error if pending invitation exists", async () => {
+    it('should throw error if pending invitation exists', async () => {
       vi.mocked(mockUserRepo.findByEmail).mockResolvedValue(null);
       vi.mocked(
-        mockInvitationRepo.findPendingByWorkspaceAndEmail,
+        mockInvitationRepo.findPendingByWorkspaceAndEmail
       ).mockResolvedValue({} as any);
 
       const data = {
@@ -107,14 +107,14 @@ describe("WorkspaceInvitationService", () => {
       };
 
       await expect(service.createInvitation(data)).rejects.toThrow(
-        /already a member/, // Reused error class per service implementation
+        /Pending invitation already exists/i
       );
     });
   });
 
-  describe("acceptInvitation", () => {
-    it("should accept invitation and create membership", async () => {
-      const token = "valid-token";
+  describe('acceptInvitation', () => {
+    it('should accept invitation and create membership', async () => {
+      const token = 'valid-token';
 
       // Mock valid invitation
       const mockInvitation = {
@@ -126,7 +126,7 @@ describe("WorkspaceInvitationService", () => {
         accept: vi.fn(),
       };
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(
-        mockInvitation as any,
+        mockInvitation as any
       );
 
       // Mock user finding
@@ -138,7 +138,7 @@ describe("WorkspaceInvitationService", () => {
 
       // Mock no existing membership
       vi.mocked(mockMembershipRepo.findByUserAndWorkspace).mockResolvedValue(
-        null,
+        null
       );
 
       await service.acceptInvitation(token, USER_ID);
@@ -147,35 +147,35 @@ describe("WorkspaceInvitationService", () => {
       expect(mockInvitationRepo.acceptInvitationTransaction).toHaveBeenCalled();
     });
 
-    it("should throw error if invitation not found", async () => {
+    it('should throw error if invitation not found', async () => {
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(null);
-      await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        /not found/,
+      await expect(service.acceptInvitation('token', USER_ID)).rejects.toThrow(
+        /not found/
       );
     });
 
-    it("should throw error if invitation expired", async () => {
+    it('should throw error if invitation expired', async () => {
       const mockInvitation = {
         isExpired: () => true,
       };
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(
-        mockInvitation as any,
+        mockInvitation as any
       );
-      await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        /expired/,
+      await expect(service.acceptInvitation('token', USER_ID)).rejects.toThrow(
+        /expired/
       );
     });
 
-    it("should throw error if invitation already accepted", async () => {
+    it('should throw error if invitation already accepted', async () => {
       const mockInvitation = {
         isExpired: () => false,
         isAccepted: () => true,
       };
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(
-        mockInvitation as any,
+        mockInvitation as any
       );
-      await expect(service.acceptInvitation("token", USER_ID)).rejects.toThrow(
-        /already been accepted/,
+      await expect(service.acceptInvitation('token', USER_ID)).rejects.toThrow(
+        /already been accepted/
       );
     });
   });

@@ -28,13 +28,11 @@ export class MemberController {
       return; // Response already sent by helper
     }
 
-    const members =
-      await this.membershipService.getWorkspaceMembers(workspaceId);
+    try {
+      const members =
+        await this.membershipService.getWorkspaceMembers(workspaceId);
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      data: {
+      return ResponseHelper.ok(reply, 'Members retrieved successfully', {
         items: members.items.map((member) => member.toJSON()),
         pagination: {
           total: members.total,
@@ -42,8 +40,10 @@ export class MemberController {
           offset: members.offset,
           hasMore: members.hasMore,
         },
-      },
-    });
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async removeMember(
@@ -67,12 +67,10 @@ export class MemberController {
 
     // Don't allow removing yourself
     if (currentUser.userId === userId) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'You cannot remove yourself from the workspace',
-      });
+      return ResponseHelper.badRequest(
+        reply,
+        'You cannot remove yourself from the workspace'
+      );
     }
 
     try {
@@ -82,20 +80,12 @@ export class MemberController {
         workspaceId
       );
       if (!membership) {
-        return reply.status(404).send({
-          success: false,
-          statusCode: 404,
-          message: 'Member not found in this workspace',
-        });
+        return ResponseHelper.notFound(reply, 'Member not found in this workspace');
       }
 
       await this.membershipService.removeMember(membership.getId().getValue());
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: 'Member removed successfully',
-      });
+      return ResponseHelper.ok(reply, 'Member removed successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -124,12 +114,7 @@ export class MemberController {
 
     // Don't allow changing your own role
     if (currentUser.userId === userId) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'You cannot change your own role',
-      });
+      return ResponseHelper.badRequest(reply, 'You cannot change your own role');
     }
 
     // Only owners can assign owner role
@@ -151,11 +136,7 @@ export class MemberController {
         workspaceId
       );
       if (!membership) {
-        return reply.status(404).send({
-          success: false,
-          statusCode: 404,
-          message: 'Member not found in this workspace',
-        });
+        return ResponseHelper.notFound(reply, 'Member not found in this workspace');
       }
 
       const updatedMembership = await this.membershipService.changeMemberRole(
@@ -163,12 +144,11 @@ export class MemberController {
         role
       );
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: 'Member role updated successfully',
-        data: updatedMembership.toJSON(),
-      });
+      return ResponseHelper.ok(
+        reply,
+        'Member role updated successfully',
+        updatedMembership.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

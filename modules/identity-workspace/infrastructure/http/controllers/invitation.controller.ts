@@ -56,20 +56,13 @@ export class InvitationController {
         expiryHours,
       });
 
-      if (!result.success || !result.data) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: result.error || 'Failed to create invitation',
-        });
-      }
-
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: 'Invitation created successfully',
-        data: result.data,
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Invitation created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -82,44 +75,35 @@ export class InvitationController {
     const { token } = request.params as { token: string };
 
     try {
-      const result = await this.getInvitationByTokenHandler.handle({
-        token,
-      });
+      const result = await this.getInvitationByTokenHandler.handle({ token });
 
-      if (!result.success || !result.data) {
-        return reply.status(404).send({
-          success: false,
-          statusCode: 404,
-          error: 'Not Found',
-          message: result.error || 'Invitation not found',
-        });
+      if (!result.success) {
+        return ResponseHelper.fromQuery(reply, result, 'Invitation retrieved');
+      }
+
+      if (!result.data) {
+        return ResponseHelper.notFound(reply, 'Invitation not found');
       }
 
       const invitation = result.data;
 
       if (invitation.isExpired()) {
-        return reply.status(410).send({
-          success: false,
-          statusCode: 410,
-          error: 'Gone',
-          message: 'Invitation has expired',
-        });
+        return ResponseHelper.gone(reply, 'Invitation has expired');
       }
 
       if (invitation.isAccepted()) {
-        return reply.status(410).send({
-          success: false,
-          statusCode: 410,
-          error: 'Gone',
-          message: 'Invitation has already been accepted',
-        });
+        return ResponseHelper.gone(
+          reply,
+          'Invitation has already been accepted'
+        );
       }
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        data: invitation.toJSON(),
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Invitation retrieved successfully',
+        invitation.toJSON()
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -138,21 +122,12 @@ export class InvitationController {
         userId: user.userId,
       });
 
-      if (!result.success) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          error: 'Bad Request',
-          message: result.error || 'Failed to accept invitation',
-        });
-      }
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: 'Invitation accepted successfully',
-        data: result.data,
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Invitation accepted successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -191,31 +166,26 @@ export class InvitationController {
         },
       });
 
-      if (!result.success || !result.data) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: result.error || 'Failed to fetch pending invitations',
-        });
-      }
-
       const paginatedResult = result.data;
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: paginatedResult.items.map((inv: WorkspaceInvitation) =>
-            inv.toJSON()
-          ),
-          pagination: {
-            total: paginatedResult.total,
-            limit: paginatedResult.limit,
-            offset: paginatedResult.offset,
-            hasMore: paginatedResult.hasMore,
-          },
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Invitations retrieved successfully',
+        paginatedResult
+          ? {
+              items: paginatedResult.items.map((inv: WorkspaceInvitation) =>
+                inv.toJSON()
+              ),
+              pagination: {
+                total: paginatedResult.total,
+                limit: paginatedResult.limit,
+                offset: paginatedResult.offset,
+                hasMore: paginatedResult.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -241,13 +211,15 @@ export class InvitationController {
     }
 
     try {
-      await this.cancelInvitationHandler.handle({ invitationId });
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: 'Invitation cancelled successfully',
+      const result = await this.cancelInvitationHandler.handle({
+        invitationId,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Invitation cancelled successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

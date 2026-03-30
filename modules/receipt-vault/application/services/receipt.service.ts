@@ -1,17 +1,17 @@
 import {
   IReceiptRepository,
   ReceiptFilters,
-} from "../../domain/repositories/receipt.repository";
-import { IReceiptMetadataRepository } from "../../domain/repositories/receipt-metadata.repository";
-import { IReceiptTagRepository } from "../../domain/repositories/receipt-tag.repository";
-import { IFileStorageService } from "../../domain/ports/file-storage.port";
-import { Receipt } from "../../domain/entities/receipt.entity";
-import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
-import { ReceiptId } from "../../domain/value-objects/receipt-id";
-import { TagId } from "../../domain/value-objects/tag-id";
-import { StorageLocation } from "../../domain/value-objects/storage-location";
-import { ReceiptType } from "../../domain/enums/receipt-type";
-import { ReceiptStatus } from "../../domain/enums/receipt-status";
+} from '../../domain/repositories/receipt.repository';
+import { IReceiptMetadataRepository } from '../../domain/repositories/receipt-metadata.repository';
+import { IReceiptTagRepository } from '../../domain/repositories/receipt-tag.repository';
+import { IFileStorageService } from '../../domain/ports/file-storage.port';
+import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import { ReceiptId } from '../../domain/value-objects/receipt-id';
+import { TagId } from '../../domain/value-objects/tag-id';
+import { StorageLocation } from '../../domain/value-objects/storage-location';
+import { ReceiptType } from '../../domain/enums/receipt-type';
+import { ReceiptStatus } from '../../domain/enums/receipt-status';
 import {
   ReceiptNotFoundError,
   DuplicateReceiptError,
@@ -19,20 +19,20 @@ import {
   ReceiptMetadataAlreadyExistsError,
   DeletedReceiptError,
   ReceiptMissingStorageKeyError,
-} from "../../domain/errors/receipt.errors";
-import { UnauthorizedAccessError } from "../../domain/errors/unauthorized-access.error";
-import { UpdateReceiptMetadataDto } from "../commands/update-receipt-metadata.command";
+} from '../../domain/errors/receipt.errors';
+import { UnauthorizedAccessError } from '../../domain/errors/unauthorized-access.error';
+import { UpdateReceiptMetadataDto } from '../commands/update-receipt-metadata.command';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export class ReceiptService {
   constructor(
     private readonly receiptRepository: IReceiptRepository,
     private readonly metadataRepository: IReceiptMetadataRepository,
     private readonly tagRepository: IReceiptTagRepository,
-    private readonly fileStorage: IFileStorageService,
+    private readonly fileStorage: IFileStorageService
   ) {}
 
   async uploadReceipt(params: {
@@ -51,7 +51,7 @@ export class ReceiptService {
     if (params.fileHash) {
       const existing = await this.receiptRepository.findByFileHash(
         params.fileHash,
-        params.workspaceId,
+        params.workspaceId
       );
 
       if (existing && !existing.isDeleted()) {
@@ -79,17 +79,17 @@ export class ReceiptService {
 
   async getReceipt(
     receiptId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Receipt | null> {
     return await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
   }
 
   async getReceiptsByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return await this.receiptRepository.findByWorkspace(workspaceId, options);
   }
@@ -97,54 +97,43 @@ export class ReceiptService {
   async getReceiptsByExpense(
     expenseId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return await this.receiptRepository.findByExpenseId(
       expenseId,
       workspaceId,
-      options,
+      options
     );
   }
 
   async getReceiptsByUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return await this.receiptRepository.findByUserId(
       userId,
       workspaceId,
-      options,
+      options
     );
   }
 
   async filterReceipts(
     filters: ReceiptFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return await this.receiptRepository.findByFilters(filters, options);
-  }
-
-  // Deprecated/Refactored to match standard
-  async filterReceiptsPaginated(
-    filters: ReceiptFilters & { page?: number; pageSize?: number },
-  ): Promise<PaginatedResult<Receipt>> {
-    const page = filters.page || 1;
-    const pageSize = filters.pageSize || 20;
-    const offset = (page - 1) * pageSize;
-
-    return await this.filterReceipts(filters, { limit: pageSize, offset });
   }
 
   async linkToExpense(
     receiptId: string,
     expenseId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -169,11 +158,11 @@ export class ReceiptService {
   async unlinkFromExpense(
     receiptId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -196,11 +185,11 @@ export class ReceiptService {
     workspaceId: string,
     userId: string,
     ocrText?: string,
-    ocrConfidence?: number,
+    ocrConfidence?: number
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -228,11 +217,11 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    reason: string,
+    reason: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -253,11 +242,11 @@ export class ReceiptService {
   async verifyReceipt(
     receiptId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -279,11 +268,11 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    reason?: string,
+    reason?: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -304,11 +293,11 @@ export class ReceiptService {
   async setThumbnail(
     receiptId: string,
     thumbnailPath: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -326,11 +315,11 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    permanent: boolean = false,
+    permanent: boolean = false
   ): Promise<void> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -345,12 +334,12 @@ export class ReceiptService {
       // Transactional delete of receipt and dependencies
       await this.receiptRepository.deleteWithDependencies(
         receipt.getId(),
-        workspaceId,
+        workspaceId
       );
 
       // Clean up file storage
       const storageLocation = receipt.getStorageLocation();
-      const bucket = storageLocation.getBucket() || "local";
+      const bucket = storageLocation.getBucket() || 'local';
       const key = storageLocation.getKey();
 
       if (key) {
@@ -360,7 +349,7 @@ export class ReceiptService {
           // Log but don't fail as the DB delete succeeded
           console.error(
             `Failed to delete file for receipt ${receiptId}:`,
-            error,
+            error
           );
         }
       }
@@ -374,11 +363,11 @@ export class ReceiptService {
   async restoreReceipt(
     receiptId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -410,7 +399,7 @@ export class ReceiptService {
   }): Promise<ReceiptMetadata> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(params.receiptId),
-      params.workspaceId,
+      params.workspaceId
     );
 
     if (!receipt) {
@@ -423,7 +412,7 @@ export class ReceiptService {
 
     // Check if metadata already exists
     const existing = await this.metadataRepository.findByReceiptId(
-      receipt.getId(),
+      receipt.getId()
     );
     if (existing) {
       throw new ReceiptMetadataAlreadyExistsError(params.receiptId);
@@ -440,11 +429,11 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    updates: UpdateReceiptMetadataDto,
+    updates: UpdateReceiptMetadataDto
   ): Promise<ReceiptMetadata> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -456,7 +445,7 @@ export class ReceiptService {
     }
 
     const metadata = await this.metadataRepository.findByReceiptId(
-      receipt.getId(),
+      receipt.getId()
     );
 
     if (!metadata) {
@@ -500,7 +489,7 @@ export class ReceiptService {
     ) {
       metadata.updateTransactionInfo(
         updates.transactionDate,
-        updates.transactionTime,
+        updates.transactionTime
       );
     }
 
@@ -515,11 +504,11 @@ export class ReceiptService {
 
   async getMetadata(
     receiptId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ReceiptMetadata | null> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -534,11 +523,11 @@ export class ReceiptService {
     receiptId: string,
     tagId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<void> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -551,7 +540,7 @@ export class ReceiptService {
 
     const hasTag = await this.tagRepository.hasTag(
       receipt.getId(),
-      TagId.fromString(tagId),
+      TagId.fromString(tagId)
     );
 
     if (hasTag) {
@@ -565,11 +554,11 @@ export class ReceiptService {
     receiptId: string,
     tagId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<void> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -582,17 +571,17 @@ export class ReceiptService {
 
     await this.tagRepository.removeTag(
       receipt.getId(),
-      TagId.fromString(tagId),
+      TagId.fromString(tagId)
     );
   }
 
   async getReceiptTags(
     receiptId: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<TagId[]> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -626,11 +615,11 @@ export class ReceiptService {
   async getDownloadUrl(
     receiptId: string,
     workspaceId: string,
-    userId: string,
+    userId: string
   ): Promise<string> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
-      workspaceId,
+      workspaceId
     );
 
     if (!receipt) {
@@ -642,7 +631,7 @@ export class ReceiptService {
     }
 
     const storageLocation = receipt.getStorageLocation();
-    const bucket = storageLocation.getBucket() || "local";
+    const bucket = storageLocation.getBucket() || 'local';
     const key = storageLocation.getKey();
 
     if (!key) {

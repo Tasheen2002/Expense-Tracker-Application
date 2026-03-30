@@ -1,7 +1,12 @@
-import { ReceiptService } from "../services/receipt.service";
-import { Receipt } from "../../domain/entities/receipt.entity";
+import { ReceiptService } from '../services/receipt.service';
+import { Receipt } from '../../domain/entities/receipt.entity';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface ProcessReceiptDto {
+export interface ProcessReceiptCommand extends ICommand {
   receiptId: string;
   workspaceId: string;
   userId: string;
@@ -9,16 +14,20 @@ export interface ProcessReceiptDto {
   ocrConfidence?: number;
 }
 
-export class ProcessReceiptHandler {
+export class ProcessReceiptHandler implements ICommandHandler<
+  ProcessReceiptCommand,
+  CommandResult<void>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: ProcessReceiptDto): Promise<Receipt> {
-    return await this.receiptService.processReceipt(
-      dto.receiptId,
-      dto.workspaceId,
-      dto.userId,
-      dto.ocrText,
-      dto.ocrConfidence,
+  async handle(command: ProcessReceiptCommand): Promise<CommandResult<void>> {
+    await this.receiptService.processReceipt(
+      command.receiptId,
+      command.workspaceId,
+      command.userId,
+      command.ocrText,
+      command.ocrConfidence
     );
+    return CommandResult.success();
   }
 }

@@ -27,9 +27,13 @@ export class InitiateWorkflowHandler implements ICommandHandler<
       const workflow = await this.workflowService.initiateWorkflow(input);
       return CommandResult.success({ workflowId: workflow.getId().getValue() });
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        error && typeof error === 'object' && 'statusCode' in error
+          ? (error as { statusCode: number }).statusCode
+          : 500
+      );
     }
   }
 }
-
-export type InitiateWorkflowCommand = InitiateWorkflowInput;

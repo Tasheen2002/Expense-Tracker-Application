@@ -44,22 +44,12 @@ export class AttachmentController {
         uploadedBy: userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to create attachment'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Failed to create attachment');
-      }
-
-      const attachment = result.data;
-
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'Attachment created successfully',
-        attachment.toJSON()
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -81,14 +71,11 @@ export class AttachmentController {
         workspaceId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to delete attachment'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Attachment deleted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Attachment deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -109,17 +96,11 @@ export class AttachmentController {
         workspaceId,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.notFound(
-          reply,
-          result.error ?? 'Attachment not found'
-        );
-      }
-      const attachment = result.data;
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Attachment retrieved successfully',
-        attachment.toJSON()
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -140,19 +121,14 @@ export class AttachmentController {
         workspaceId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve attachments'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'No attachments found');
-      }
-
-      return ResponseHelper.ok(reply, 'Attachments retrieved successfully', {
-        items: result.data.map((attachment) => attachment.toJSON()),
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Attachments retrieved successfully',
+        result.data
+          ? { items: result.data.map((attachment) => attachment.toJSON()) }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

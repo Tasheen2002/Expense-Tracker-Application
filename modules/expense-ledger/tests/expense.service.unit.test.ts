@@ -1,12 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ExpenseService } from "../application/services/expense.service";
-import { ExpenseRepository } from "../domain/repositories/expense.repository";
-import { CategoryRepository } from "../domain/repositories/category.repository";
-import { TagRepository } from "../domain/repositories/tag.repository";
-import { TagId } from "../domain/value-objects/tag-id";
-import { Expense } from "../domain/entities/expense.entity";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ExpenseService } from '../application/services/expense.service';
+import { ExpenseRepository } from '../domain/repositories/expense.repository';
+import { CategoryRepository } from '../domain/repositories/category.repository';
+import { TagRepository } from '../domain/repositories/tag.repository';
+import { TagId } from '../domain/value-objects/tag-id';
+import { Expense } from '../domain/entities/expense.entity';
 
-import { PaymentMethod } from "../domain/enums/payment-method";
+import { PaymentMethod } from '../domain/enums/payment-method';
 
 // Mocks
 const mockExpenseRepo = {
@@ -23,30 +23,26 @@ const mockTagRepo = {
   findByIds: vi.fn(),
 } as unknown as TagRepository;
 
-describe("ExpenseService (Unit)", () => {
+describe('ExpenseService (Unit)', () => {
   let service: ExpenseService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ExpenseService(
-      mockExpenseRepo,
-      mockCategoryRepo,
-      mockTagRepo,
-    );
+    service = new ExpenseService(mockExpenseRepo, mockTagRepo);
   });
 
-  it("should dedup duplicate tag IDs and validate them only once", async () => {
+  it('should dedup duplicate tag IDs and validate them only once', async () => {
     // Valid v4 UUIDs
-    const uuid1 = "123e4567-e89b-42d3-a456-426614174000";
-    const uuid2 = "123e4567-e89b-42d3-a456-426614174001";
+    const uuid1 = '123e4567-e89b-42d3-a456-426614174000';
+    const uuid2 = '123e4567-e89b-42d3-a456-426614174001';
 
     const params = {
-      workspaceId: "123e4567-e89b-42d3-a456-426614174999",
-      userId: "123e4567-e89b-42d3-a456-426614174888",
-      title: "Test Expense",
+      workspaceId: '123e4567-e89b-42d3-a456-426614174999',
+      userId: '123e4567-e89b-42d3-a456-426614174888',
+      title: 'Test Expense',
       amount: 100,
-      currency: "USD",
-      expenseDate: "2023-01-01",
+      currency: 'USD',
+      expenseDate: '2023-01-01',
       paymentMethod: PaymentMethod.CASH,
       isReimbursable: false,
       tagIds: [uuid1, uuid1, uuid2],

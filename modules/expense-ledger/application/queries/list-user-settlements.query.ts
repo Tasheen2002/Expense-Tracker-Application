@@ -25,20 +25,12 @@ export class ListUserSettlementsHandler implements IQueryHandler<
   async handle(
     query: ListUserSettlementsQuery
   ): Promise<QueryResult<PaginatedResult<SplitSettlement>>> {
-    try {
-      const result = await this.splitService.getUserSettlements(
-        query.userId,
-        query.workspaceId,
-        query.status,
-        { limit: query.limit, offset: query.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error
-          ? error.message
-          : 'Failed to list user settlements'
-      );
-    }
+    const result = await this.splitService.getUserSettlements(
+      query.userId,
+      query.workspaceId,
+      query.status,
+      { limit: query.limit, offset: query.offset }
+    );
+    return QueryResult.success(result);
   }
 }

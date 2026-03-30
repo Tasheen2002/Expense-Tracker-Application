@@ -181,13 +181,11 @@ export class WorkflowController {
     reply: FastifyReply
   ) {
     try {
-      const cancelledBy = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
       const result = await this.cancelWorkflowHandler.handle({
         expenseId,
         workspaceId,
-        cancelledBy,
       });
 
       return ResponseHelper.fromCommand(

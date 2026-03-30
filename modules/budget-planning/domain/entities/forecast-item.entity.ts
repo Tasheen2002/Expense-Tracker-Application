@@ -1,9 +1,9 @@
-import { ForecastItemId } from "../value-objects/forecast-item-id";
-import { ForecastId } from "../value-objects/forecast-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { ForecastAmount } from "../value-objects/forecast-amount";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { ForecastItemId } from '../value-objects/forecast-item-id';
+import { ForecastId } from '../value-objects/forecast-id';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { ForecastAmount } from '../value-objects/forecast-amount';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -14,13 +14,13 @@ export class ForecastItemCreatedEvent extends DomainEvent {
     public readonly forecastItemId: string,
     public readonly forecastId: string,
     public readonly categoryId: string,
-    public readonly amount: string,
+    public readonly amount: string
   ) {
-    super(forecastItemId, "ForecastItem");
+    super(forecastItemId, 'ForecastItem');
   }
 
   get eventType(): string {
-    return "ForecastItemCreated";
+    return 'ForecastItemCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -36,13 +36,13 @@ export class ForecastItemCreatedEvent extends DomainEvent {
 export class ForecastItemUpdatedEvent extends DomainEvent {
   constructor(
     public readonly forecastItemId: string,
-    public readonly changes: Record<string, unknown>,
+    public readonly changes: Record<string, unknown>
   ) {
-    super(forecastItemId, "ForecastItem");
+    super(forecastItemId, 'ForecastItem');
   }
 
   get eventType(): string {
-    return "ForecastItemUpdated";
+    return 'ForecastItemUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -65,7 +65,7 @@ export class ForecastItem extends AggregateRoot {
     private amount: ForecastAmount,
     private notes: string | null,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -83,7 +83,7 @@ export class ForecastItem extends AggregateRoot {
       params.amount,
       params.notes || null,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     item.addDomainEvent(
@@ -91,8 +91,8 @@ export class ForecastItem extends AggregateRoot {
         item.id.getValue(),
         params.forecastId.getValue(),
         params.categoryId.getValue(),
-        params.amount.getValue().toString(),
-      ),
+        params.amount.getValue().toString()
+      )
     );
 
     return item;
@@ -114,7 +114,7 @@ export class ForecastItem extends AggregateRoot {
       ForecastAmount.create(params.amount),
       params.notes,
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -160,8 +160,30 @@ export class ForecastItem extends AggregateRoot {
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new ForecastItemUpdatedEvent(this.id.getValue(), changes),
+        new ForecastItemUpdatedEvent(this.id.getValue(), changes)
       );
     }
   }
+
+  toJSON(): ForecastItemDTO {
+    return {
+      id: this.getId().getValue(),
+      forecastId: this.getForecastId().getValue(),
+      categoryId: this.getCategoryId().getValue(),
+      amount: this.getAmount().toNumber(),
+      notes: this.getNotes(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ForecastItemDTO {
+  id: string;
+  forecastId: string;
+  categoryId: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

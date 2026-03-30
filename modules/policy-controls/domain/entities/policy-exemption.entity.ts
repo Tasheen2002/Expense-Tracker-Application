@@ -1,13 +1,13 @@
-import { ExemptionId } from "../value-objects/exemption-id";
-import { PolicyId } from "../value-objects/policy-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExemptionStatus } from "../enums/exemption-status.enum";
+import { ExemptionId } from '../value-objects/exemption-id';
+import { PolicyId } from '../value-objects/policy-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExemptionStatus } from '../enums/exemption-status.enum';
 import {
   ExemptionAlreadyProcessedError,
   InvalidExemptionDateRangeError,
-} from "../errors/policy-controls.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+} from '../errors/policy-controls.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // Domain Events
@@ -25,13 +25,13 @@ export class ExemptionRequestedEvent extends DomainEvent {
     public readonly requestedBy: string,
     public readonly reason: string,
     public readonly startDate: Date,
-    public readonly endDate: Date,
+    public readonly endDate: Date
   ) {
-    super(exemptionId, "PolicyExemption");
+    super(exemptionId, 'PolicyExemption');
   }
 
   get eventType(): string {
-    return "exemption.requested";
+    return 'exemption.requested';
   }
 
   getPayload(): Record<string, unknown> {
@@ -57,13 +57,13 @@ export class ExemptionApprovedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly policyId: string,
     public readonly userId: string,
-    public readonly approvedBy: string,
+    public readonly approvedBy: string
   ) {
-    super(exemptionId, "PolicyExemption");
+    super(exemptionId, 'PolicyExemption');
   }
 
   get eventType(): string {
-    return "exemption.approved";
+    return 'exemption.approved';
   }
 
   getPayload(): Record<string, unknown> {
@@ -87,13 +87,13 @@ export class ExemptionRejectedEvent extends DomainEvent {
     public readonly policyId: string,
     public readonly userId: string,
     public readonly rejectedBy: string,
-    public readonly rejectionReason?: string,
+    public readonly rejectionReason?: string
   ) {
-    super(exemptionId, "PolicyExemption");
+    super(exemptionId, 'PolicyExemption');
   }
 
   get eventType(): string {
-    return "exemption.rejected";
+    return 'exemption.rejected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -116,13 +116,13 @@ export class ExemptionExpiredEvent extends DomainEvent {
     public readonly exemptionId: string,
     public readonly workspaceId: string,
     public readonly policyId: string,
-    public readonly userId: string,
+    public readonly userId: string
   ) {
-    super(exemptionId, "PolicyExemption");
+    super(exemptionId, 'PolicyExemption');
   }
 
   get eventType(): string {
-    return "exemption.expired";
+    return 'exemption.expired';
   }
 
   getPayload(): Record<string, unknown> {
@@ -206,8 +206,8 @@ export class PolicyExemption extends AggregateRoot {
         params.requestedBy,
         params.reason,
         params.startDate,
-        params.endDate,
-      ),
+        params.endDate
+      )
     );
 
     return exemption;
@@ -314,7 +314,7 @@ export class PolicyExemption extends AggregateRoot {
   approve(approvedBy: string): void {
     if (!this.isPending()) {
       throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue(),
+        this.props.exemptionId.getValue()
       );
     }
 
@@ -330,15 +330,15 @@ export class PolicyExemption extends AggregateRoot {
         this.props.workspaceId.getValue(),
         this.props.policyId.getValue(),
         this.props.userId,
-        approvedBy,
-      ),
+        approvedBy
+      )
     );
   }
 
   reject(rejectedBy: string, reason?: string): void {
     if (!this.isPending()) {
       throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue(),
+        this.props.exemptionId.getValue()
       );
     }
 
@@ -356,8 +356,8 @@ export class PolicyExemption extends AggregateRoot {
         this.props.policyId.getValue(),
         this.props.userId,
         rejectedBy,
-        reason,
-      ),
+        reason
+      )
     );
   }
 
@@ -372,8 +372,8 @@ export class PolicyExemption extends AggregateRoot {
           this.props.exemptionId.getValue(),
           this.props.workspaceId.getValue(),
           this.props.policyId.getValue(),
-          this.props.userId,
-        ),
+          this.props.userId
+        )
       );
     }
   }
@@ -381,7 +381,7 @@ export class PolicyExemption extends AggregateRoot {
   updateDates(startDate: Date, endDate: Date): void {
     if (!this.isPending()) {
       throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue(),
+        this.props.exemptionId.getValue()
       );
     }
 
@@ -397,11 +397,53 @@ export class PolicyExemption extends AggregateRoot {
   updateReason(reason: string): void {
     if (!this.isPending()) {
       throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue(),
+        this.props.exemptionId.getValue()
       );
     }
 
     this.props.reason = reason;
     this.props.updatedAt = new Date();
   }
+
+  toJSON(): PolicyExemptionDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      policyId: this.getPolicyId().getValue(),
+      userId: this.getUserId(),
+      status: this.getStatus(),
+      reason: this.getReason(),
+      requestedBy: this.getRequestedBy(),
+      approvedBy: this.getApprovedBy(),
+      approvedAt: this.getApprovedAt()?.toISOString(),
+      rejectedBy: this.getRejectedBy(),
+      rejectedAt: this.getRejectedAt()?.toISOString(),
+      rejectionReason: this.getRejectionReason(),
+      startDate: this.getStartDate().toISOString(),
+      endDate: this.getEndDate().toISOString(),
+      isActive: this.isActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface PolicyExemptionDTO {
+  id: string;
+  workspaceId: string;
+  policyId: string;
+  userId: string;
+  status: ExemptionStatus;
+  reason: string;
+  requestedBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -1,6 +1,10 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../apps/api/src/shared/application";
-import { CategoryService } from "../services/category.service";
-import { Category } from "../../domain/entities/category.entity";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
+import { CategoryService } from '../services/category.service';
+import { Category } from '../../domain/entities/category.entity';
 
 export interface CreateCategoryCommand extends ICommand {
   readonly workspaceId: string;
@@ -10,23 +14,22 @@ export interface CreateCategoryCommand extends ICommand {
   readonly icon?: string;
 }
 
-export class CreateCategoryHandler implements ICommandHandler<CreateCategoryCommand, CommandResult<Category>> {
+export class CreateCategoryHandler implements ICommandHandler<
+  CreateCategoryCommand,
+  CommandResult<{ categoryId: string }>
+> {
   constructor(private readonly categoryService: CategoryService) {}
 
-  async handle(command: CreateCategoryCommand): Promise<CommandResult<Category>> {
-    try {
-      const category = await this.categoryService.createCategory({
-        workspaceId: command.workspaceId,
-        name: command.name,
-        description: command.description,
-        color: command.color,
-        icon: command.icon,
-      });
-      return CommandResult.success(category);
-    } catch (error) {
-      return CommandResult.failure<Category>(
-        error instanceof Error ? error.message : "Failed to create category",
-      );
-    }
+  async handle(
+    command: CreateCategoryCommand
+  ): Promise<CommandResult<{ categoryId: string }>> {
+    const category = await this.categoryService.createCategory({
+      workspaceId: command.workspaceId,
+      name: command.name,
+      description: command.description,
+      color: command.color,
+      icon: command.icon,
+    });
+    return CommandResult.success({ categoryId: category.id.getValue() });
   }
 }

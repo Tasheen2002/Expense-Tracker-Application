@@ -1,7 +1,8 @@
-import { MetadataId } from "../value-objects/metadata-id";
-import { ReceiptId } from "../value-objects/receipt-id";
-import { Decimal } from "@prisma/client/runtime/library";
-import sanitizeHtml from "sanitize-html";
+import { MetadataId } from '../value-objects/metadata-id';
+import { ReceiptId } from '../value-objects/receipt-id';
+import { Decimal } from '@prisma/client/runtime/library';
+import sanitizeHtml from 'sanitize-html';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 export interface LineItem {
   description: string;
@@ -57,8 +58,10 @@ export interface CreateMetadataData {
   customFields?: Record<string, any>;
 }
 
-export class ReceiptMetadata {
-  private constructor(private props: ReceiptMetadataProps) {}
+export class ReceiptMetadata extends AggregateRoot {
+  private constructor(private props: ReceiptMetadataProps) {
+    super();
+  }
 
   static create(data: CreateMetadataData): ReceiptMetadata {
     return new ReceiptMetadata({
@@ -345,5 +348,32 @@ export class ReceiptMetadata {
     }
 
     return total;
+  }
+
+  toJSON() {
+    return {
+      metadataId: this.getId().getValue(),
+      receiptId: this.getReceiptId().getValue(),
+      merchantName: this.getMerchantName(),
+      merchantAddress: this.getMerchantAddress(),
+      merchantPhone: this.getMerchantPhone(),
+      merchantTaxId: this.getMerchantTaxId(),
+      transactionDate: this.getTransactionDate()?.toISOString(),
+      transactionTime: this.getTransactionTime(),
+      subtotal: this.getSubtotal()?.toString(),
+      taxAmount: this.getTaxAmount()?.toString(),
+      tipAmount: this.getTipAmount()?.toString(),
+      totalAmount: this.getTotalAmount()?.toString(),
+      currency: this.getCurrency(),
+      paymentMethod: this.getPaymentMethod(),
+      lastFourDigits: this.getLastFourDigits(),
+      invoiceNumber: this.getInvoiceNumber(),
+      poNumber: this.getPoNumber(),
+      lineItems: this.getLineItems(),
+      notes: this.getNotes(),
+      customFields: this.getCustomFields(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
   }
 }

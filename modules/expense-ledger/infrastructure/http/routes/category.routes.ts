@@ -77,7 +77,7 @@ export async function categoryRoutes(
   );
 
   // Update category
-  fastify.put(
+  fastify.patch(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
       schema: {

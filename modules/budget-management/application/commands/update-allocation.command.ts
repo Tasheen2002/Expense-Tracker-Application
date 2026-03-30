@@ -21,21 +21,15 @@ export class UpdateAllocationHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: UpdateAllocationCommand): Promise<CommandResult<void>> {
-    try {
-      
-          await this.budgetService.updateAllocation(
-            command.allocationId,
-            command.workspaceId,
-            command.userId,
-            {
-              allocatedAmount: command.allocatedAmount,
-              description: command.description,
-            }
-          );
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.budgetService.updateAllocation(
+      command.allocationId,
+      command.workspaceId,
+      command.userId,
+      {
+        allocatedAmount: command.allocatedAmount,
+        description: command.description,
+      }
+    );
+    return CommandResult.success();
   }
 }

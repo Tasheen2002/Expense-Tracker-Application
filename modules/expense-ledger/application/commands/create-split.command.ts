@@ -26,7 +26,7 @@ export interface CreateSplitCommand extends ICommand {
 
 export class CreateSplitHandler implements ICommandHandler<
   CreateSplitCommand,
-  CommandResult<ExpenseSplit>
+  CommandResult<{ splitId: string }>
 > {
   constructor(
     private readonly splitService: ExpenseSplitService,
@@ -35,38 +35,32 @@ export class CreateSplitHandler implements ICommandHandler<
 
   async handle(
     command: CreateSplitCommand
-  ): Promise<CommandResult<ExpenseSplit>> {
-    try {
-      const expense = await this.expenseService.getExpenseById(
+  ): Promise<CommandResult<{ splitId: string }>> {
+    const expense = await this.expenseService.getExpenseById(
+      command.expenseId,
+      command.workspaceId
+    );
+
+    if (!expense) {
+      throw new ExpenseNotFoundError(command.expenseId, command.workspaceId);
+    }
+
+    if (expense.userId !== command.userId) {
+      throw new UnauthorizedExpenseAccessError(
         command.expenseId,
-        command.workspaceId
-      );
-
-      if (!expense) {
-        throw new ExpenseNotFoundError(command.expenseId, command.workspaceId);
-      }
-
-      if (expense.userId !== command.userId) {
-        throw new UnauthorizedExpenseAccessError(
-          command.expenseId,
-          command.userId,
-          'split'
-        );
-      }
-
-      const split = await this.splitService.createSplit({
-        expenseId: command.expenseId,
-        workspaceId: command.workspaceId,
-        userId: command.userId,
-        totalAmount: expense.amount,
-        splitType: command.splitType,
-        participants: command.participants,
-      });
-      return CommandResult.success(split);
-    } catch (error) {
-      return CommandResult.failure<ExpenseSplit>(
-        error instanceof Error ? error.message : 'Failed to create split'
+        command.userId,
+        'split'
       );
     }
+
+    const split = await this.splitService.createSplit({
+      expenseId: command.expenseId,
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      totalAmount: expense.amount,
+      splitType: command.splitType,
+      participants: command.participants,
+    });
+    return CommandResult.success({ splitId: split.getId().getValue() });
   }
 }

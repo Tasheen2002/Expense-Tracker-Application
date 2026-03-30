@@ -1,8 +1,8 @@
-import { ForecastId } from "../value-objects/forecast-id";
-import { PlanId } from "../value-objects/plan-id";
-import { ForecastType } from "../enums/forecast-type.enum";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { ForecastId } from '../value-objects/forecast-id';
+import { PlanId } from '../value-objects/plan-id';
+import { ForecastType } from '../enums/forecast-type.enum';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -13,13 +13,13 @@ export class ForecastCreatedEvent extends DomainEvent {
     public readonly forecastId: string,
     public readonly planId: string,
     public readonly name: string,
-    public readonly type: ForecastType,
+    public readonly type: ForecastType
   ) {
-    super(forecastId, "Forecast");
+    super(forecastId, 'Forecast');
   }
 
   get eventType(): string {
-    return "ForecastCreated";
+    return 'ForecastCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -35,13 +35,13 @@ export class ForecastCreatedEvent extends DomainEvent {
 export class ForecastNameUpdatedEvent extends DomainEvent {
   constructor(
     public readonly forecastId: string,
-    public readonly newName: string,
+    public readonly newName: string
   ) {
-    super(forecastId, "Forecast");
+    super(forecastId, 'Forecast');
   }
 
   get eventType(): string {
-    return "ForecastNameUpdated";
+    return 'ForecastNameUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -54,11 +54,11 @@ export class ForecastNameUpdatedEvent extends DomainEvent {
 
 export class ForecastActivatedEvent extends DomainEvent {
   constructor(public readonly forecastId: string) {
-    super(forecastId, "Forecast");
+    super(forecastId, 'Forecast');
   }
 
   get eventType(): string {
-    return "ForecastActivated";
+    return 'ForecastActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -68,11 +68,11 @@ export class ForecastActivatedEvent extends DomainEvent {
 
 export class ForecastDeactivatedEvent extends DomainEvent {
   constructor(public readonly forecastId: string) {
-    super(forecastId, "Forecast");
+    super(forecastId, 'Forecast');
   }
 
   get eventType(): string {
-    return "ForecastDeactivated";
+    return 'ForecastDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -92,7 +92,7 @@ export class Forecast extends AggregateRoot {
     private readonly type: ForecastType,
     private isActive: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -109,7 +109,7 @@ export class Forecast extends AggregateRoot {
       params.type,
       true,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     forecast.addDomainEvent(
@@ -117,8 +117,8 @@ export class Forecast extends AggregateRoot {
         forecast.id.getValue(),
         params.planId.getValue(),
         params.name,
-        params.type,
-      ),
+        params.type
+      )
     );
 
     return forecast;
@@ -140,7 +140,7 @@ export class Forecast extends AggregateRoot {
       params.type,
       params.isActive,
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -191,4 +191,26 @@ export class Forecast extends AggregateRoot {
     this.updatedAt = new Date();
     this.addDomainEvent(new ForecastDeactivatedEvent(this.id.getValue()));
   }
+
+  toJSON(): ForecastDTO {
+    return {
+      id: this.getId().getValue(),
+      planId: this.getPlanId().getValue(),
+      name: this.getName(),
+      type: this.getType(),
+      isActive: this.getIsActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ForecastDTO {
+  id: string;
+  planId: string;
+  name: string;
+  type: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

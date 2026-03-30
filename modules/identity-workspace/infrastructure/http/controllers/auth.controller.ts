@@ -30,26 +30,18 @@ export class AuthController {
     try {
       const { email, password, fullName } = request.body;
 
-      // Execute command
       const result = await this.registerUserHandler.handle({
         email,
         password,
         fullName,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error || 'Registration failed'
-        );
-      }
-
-      const user = result.data!;
-
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'User registered successfully',
-        user.toJSON()
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -69,7 +61,7 @@ export class AuthController {
       if (!result.success) {
         return ResponseHelper.unauthorized(
           reply,
-          result.error || 'Invalid credentials'
+          result.error ?? 'Invalid credentials'
         );
       }
 
@@ -97,11 +89,12 @@ export class AuthController {
 
       const result = await this.getUserHandler.handle({ userId: user.userId });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.notFound(reply, 'User not found');
-      }
-
-      return ResponseHelper.ok(reply, 'User profile retrieved', result.data);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'User profile retrieved',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

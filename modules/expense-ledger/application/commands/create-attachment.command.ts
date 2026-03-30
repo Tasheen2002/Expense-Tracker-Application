@@ -20,7 +20,7 @@ export interface CreateAttachmentCommand extends ICommand {
 
 export class CreateAttachmentHandler implements ICommandHandler<
   CreateAttachmentCommand,
-  CommandResult<Attachment>
+  CommandResult<{ attachmentId: string }>
 > {
   constructor(
     private readonly attachmentService: AttachmentService,
@@ -29,38 +29,32 @@ export class CreateAttachmentHandler implements ICommandHandler<
 
   async handle(
     command: CreateAttachmentCommand
-  ): Promise<CommandResult<Attachment>> {
+  ): Promise<CommandResult<{ attachmentId: string }>> {
+    const attachment = await this.attachmentService.createAttachment({
+      expenseId: command.expenseId,
+      workspaceId: command.workspaceId,
+      fileName: command.fileName,
+      filePath: command.filePath,
+      fileSize: command.fileSize,
+      mimeType: command.mimeType,
+      uploadedBy: command.uploadedBy,
+    });
+
     try {
-      const attachment = await this.attachmentService.createAttachment({
-        expenseId: command.expenseId,
-        workspaceId: command.workspaceId,
-        fileName: command.fileName,
-        filePath: command.filePath,
-        fileSize: command.fileSize,
-        mimeType: command.mimeType,
-        uploadedBy: command.uploadedBy,
-      });
-
-      try {
-        await this.expenseService.addAttachmentRecord(
-          command.expenseId,
-          command.workspaceId,
-          AttachmentId.fromString(attachment.id.getValue())
-        );
-      } catch (linkError) {
-        // Compensate: remove the orphaned attachment row so state is consistent
-        await this.attachmentService.deleteAttachment(
-          attachment.id.getValue(),
-          command.expenseId
-        );
-        throw linkError;
-      }
-
-      return CommandResult.success(attachment);
-    } catch (error) {
-      return CommandResult.failure<Attachment>(
-        error instanceof Error ? error.message : 'Failed to create attachment'
+      await this.expenseService.addAttachmentRecord(
+        command.expenseId,
+        command.workspaceId,
+        AttachmentId.fromString(attachment.id.getValue())
       );
+    } catch (linkError) {
+      // Compensate: remove the orphaned attachment row so state is consistent
+      await this.attachmentService.deleteAttachment(
+        attachment.id.getValue(),
+        command.expenseId
+      );
+      throw linkError;
     }
+
+    return CommandResult.success({ attachmentId: attachment.id.getValue() });
   }
 }

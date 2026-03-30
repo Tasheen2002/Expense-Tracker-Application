@@ -6,15 +6,16 @@ import {
   MissingExpenseIdError,
   InvalidTransactionActionError,
 } from '../../domain/errors';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../apps/api/src/shared/application';
-export interface ProcessTransactionCommand extends ICommand {
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+
+export interface ProcessTransactionCommand {
   workspaceId: string;
   transactionId: string;
   action: 'import' | 'match' | 'ignore';
   expenseId?: string;
 }
 
-export class ProcessTransactionHandler implements ICommandHandler<ProcessTransactionCommand, CommandResult<void>> {
+export class ProcessTransactionHandler {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
   ) {}
@@ -22,48 +23,42 @@ export class ProcessTransactionHandler implements ICommandHandler<ProcessTransac
   async handle(
     command: ProcessTransactionCommand
   ): Promise<CommandResult<void>> {
-    try {
-      
-          const workspaceId = WorkspaceId.fromString(command.workspaceId);
-          const transactionId = BankTransactionId.fromString(command.transactionId);
-      
-          const transaction = await this.transactionRepository.findById(
-            transactionId,
-            workspaceId
-          );
-      
-          if (!transaction) {
-            throw new BankTransactionNotFoundError(command.transactionId);
-          }
-      
-          switch (command.action) {
-            case 'import':
-              if (!command.expenseId) {
-                throw new MissingExpenseIdError('import');
-              }
-              transaction.markAsImported(command.expenseId);
-              break;
-      
-            case 'match':
-              if (!command.expenseId) {
-                throw new MissingExpenseIdError('match');
-              }
-              transaction.markAsMatched(command.expenseId);
-              break;
-      
-            case 'ignore':
-              transaction.markAsIgnored();
-              break;
-      
-            default:
-              throw new InvalidTransactionActionError(command.action);
-          }
-      
-          await this.transactionRepository.save(transaction);
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
+    const workspaceId = WorkspaceId.fromString(command.workspaceId);
+    const transactionId = BankTransactionId.fromString(command.transactionId);
+
+    const transaction = await this.transactionRepository.findById(
+      transactionId,
+      workspaceId
+    );
+
+    if (!transaction) {
+      throw new BankTransactionNotFoundError(command.transactionId);
     }
+
+    switch (command.action) {
+      case 'import':
+        if (!command.expenseId) {
+          throw new MissingExpenseIdError('import');
+        }
+        transaction.markAsImported(command.expenseId);
+        break;
+
+      case 'match':
+        if (!command.expenseId) {
+          throw new MissingExpenseIdError('match');
+        }
+        transaction.markAsMatched(command.expenseId);
+        break;
+
+      case 'ignore':
+        transaction.markAsIgnored();
+        break;
+
+      default:
+        throw new InvalidTransactionActionError(command.action);
+    }
+
+    await this.transactionRepository.save(transaction);
+    return CommandResult.success();
   }
 }

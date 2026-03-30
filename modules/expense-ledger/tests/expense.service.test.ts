@@ -1,8 +1,23 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { createServer } from "../../../apps/api/src/server";
-import { FastifyInstance } from "fastify";
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
-describe("Expense-Ledger Module - Expense Service", () => {
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      writeOperations: { windowMs: 60000, maxRequests: 100 },
+      auth: { windowMs: 60000, maxRequests: 100 },
+    },
+    userKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    defaultKeyGenerator: () => 'test-user',
+  })
+);
+
+import { createServer } from '../../../apps/api/src/server';
+import { FastifyInstance } from 'fastify';
+
+describe('Expense-Ledger Module - Expense Service', () => {
   let server: FastifyInstance;
   let token: string;
   let workspaceId: string;
@@ -17,41 +32,76 @@ describe("Expense-Ledger Module - Expense Service", () => {
 
     // Register & Login User
     const regRes = await server.inject({
-      method: "POST",
-      url: "/auth/register",
+      method: 'POST',
+      url: '/api/v1/auth/register',
       payload: {
         email,
-        password: "password123",
-        fullName: "Ledger User",
+        password: 'password123',
+        firstName: 'Ledger',
+        lastName: 'User',
       },
     });
-    const loginRes = await server.inject({
-      method: "POST",
-      url: "/auth/login",
-      payload: { email, password: "password123" },
-    });
-    token = JSON.parse(loginRes.body).data?.token;
+    const regBody = JSON.parse(regRes.body);
+
+    if (regRes.statusCode === 201 || regRes.statusCode === 200) {
+      token =
+        regBody.data?.token ||
+        regBody.data?.accessToken ||
+        regBody.token ||
+        regBody.accessToken;
+    }
+
+    if (!token) {
+      const loginRes = await server.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email, password: 'password123' },
+      });
+      const loginBody = JSON.parse(loginRes.body);
+      token =
+        loginBody.data?.token ||
+        loginBody.data?.accessToken ||
+        loginBody.token ||
+        loginBody.accessToken;
+    }
+
+    if (!token) {
+      throw new Error('Test setup failed: auth token was not created');
+    }
 
     // Create Workspace
     const wsRes = await server.inject({
-      method: "POST",
-      url: "/workspaces",
+      method: 'POST',
+      url: '/api/v1/workspaces',
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: `Ledger WS ${uniqueId}`, description: "Testing Ledger" },
+      payload: { name: `Ledger WS ${uniqueId}` },
     });
-    workspaceId = JSON.parse(wsRes.body).data?.workspaceId;
+    const wsBody = JSON.parse(wsRes.body);
+    if (wsRes.statusCode === 200 || wsRes.statusCode === 201) {
+      workspaceId =
+        wsBody.data?.workspaceId ||
+        wsBody.data?.workspace?.id ||
+        wsBody.data?.id ||
+        wsBody.workspaceId ||
+        wsBody.workspace?.id ||
+        wsBody.id;
+    }
+
+    if (!workspaceId) {
+      throw new Error('Test setup failed: workspace was not created');
+    }
 
     // Create Tag
     const tagRes = await server.inject({
-      method: "POST",
-      url: `/api/v1/${workspaceId}/tags`,
+      method: 'POST',
+      url: `/api/v1/workspaces/${workspaceId}/tags`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { name: "Test Tag", color: "#000000" },
+      payload: { name: 'Test Tag', color: '#000000' },
     });
     tagId = JSON.parse(tagRes.body).data?.tagId;
     if (!tagId) {
-      console.error("Failed to create tag:", tagRes.body);
-      throw new Error("Failed to create tag");
+      console.error('Failed to create tag:', tagRes.body);
+      throw new Error('Failed to create tag');
     }
   });
 
@@ -59,18 +109,18 @@ describe("Expense-Ledger Module - Expense Service", () => {
     await server.close();
   });
 
-  it("should handle duplicate tags gracefully (Bug Fix Verification)", async () => {
+  it('should handle duplicate tags gracefully (Bug Fix Verification)', async () => {
     // Attempt to create expense with DUPLICATE tag IDs
     const response = await server.inject({
-      method: "POST",
-      url: `/api/v1/${workspaceId}/expenses`,
+      method: 'POST',
+      url: `/api/v1/workspaces/${workspaceId}/expenses`,
       headers: { authorization: `Bearer ${token}` },
       payload: {
-        title: "Duplicate Tag Test",
+        title: 'Duplicate Tag Test',
         amount: 100,
-        currency: "USD",
-        expenseDate: "2023-01-01",
-        paymentMethod: "CASH",
+        currency: 'USD',
+        expenseDate: '2023-01-01T00:00:00.000Z',
+        paymentMethod: 'CASH',
         isReimbursable: false,
         tagIds: [tagId, tagId], // DUPLICATE SENT HERE
       },
@@ -85,7 +135,7 @@ describe("Expense-Ledger Module - Expense Service", () => {
     // Should handle it without erroring "Tags not found" due to count mismatch
   });
 
-  it("should fail with invalid tax", async () => {
+  it('should fail with invalid tax', async () => {
     // Negative test case can go here
   });
 });

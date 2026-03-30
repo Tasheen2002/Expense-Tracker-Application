@@ -25,22 +25,16 @@ export class AddAllocationHandler implements ICommandHandler<
   async handle(
     command: AddAllocationCommand
   ): Promise<CommandResult<{ allocationId: string }>> {
-    try {
-      
-          const allocation = await this.budgetService.addAllocation({
-            budgetId: command.budgetId,
-            workspaceId: command.workspaceId,
-            userId: command.userId,
-            categoryId: command.categoryId,
-            allocatedAmount: command.allocatedAmount,
-            description: command.description,
-          });
-          return CommandResult.success({
-            allocationId: allocation.getId().getValue(),
-          });
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const allocation = await this.budgetService.addAllocation({
+      budgetId: command.budgetId,
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      categoryId: command.categoryId,
+      allocatedAmount: command.allocatedAmount,
+      description: command.description,
+    });
+    return CommandResult.success({
+      allocationId: allocation.getId().getValue(),
+    });
   }
 }

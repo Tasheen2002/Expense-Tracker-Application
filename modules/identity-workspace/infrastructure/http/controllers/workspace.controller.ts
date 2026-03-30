@@ -7,6 +7,7 @@ import { GetWorkspaceByIdHandler } from '../../../application/queries/get-worksp
 import { GetUserWorkspacesHandler } from '../../../application/queries/get-user-workspaces.query';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { Workspace } from '../../../domain/entities/workspace.entity';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class WorkspaceController {
   constructor(
@@ -22,40 +23,25 @@ export class WorkspaceController {
     request: AuthenticatedRequest<{ Body: { name: string } }>,
     reply: FastifyReply
   ) {
-    const { name } = request.body;
-    const user = request.user;
+    try {
+      const { name } = request.body;
+      const user = request.user;
 
-    const result = await this.createWorkspaceHandler.handle({
-      name,
-      ownerId: user.userId,
-    });
-
-    if (!result.success) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: 'Bad Request',
-        message: result.error || 'Failed to create workspace',
-        details: result.errors,
+      const result = await this.createWorkspaceHandler.handle({
+        name,
+        ownerId: user.userId,
       });
-    }
 
-    const workspace = result.data;
-    if (!workspace) {
-      return reply.status(500).send({
-        success: false,
-        statusCode: 500,
-        error: 'Internal Server Error',
-        message: 'Failed to create workspace',
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Workspace created successfully',
+        result.data,
+        201
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
     }
-
-    return reply.status(201).send({
-      success: true,
-      statusCode: 201,
-      message: 'Workspace created successfully',
-      data: workspace.toJSON(),
-    });
   }
 
   async getWorkspace(
@@ -75,26 +61,20 @@ export class WorkspaceController {
       return; // Response already sent by helper
     }
 
-    const result = await this.getWorkspaceByIdHandler.handle({
-      workspaceId,
-    });
-
-    if (!result.success || !result.data) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        error: 'Not Found',
-        message: result.error || 'Workspace not found',
+    try {
+      const result = await this.getWorkspaceByIdHandler.handle({
+        workspaceId,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Workspace retrieved successfully',
+        result.data?.toJSON()
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const workspace = result.data;
-
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      data: workspace.toJSON(),
-    });
   }
 
   async getUserWorkspaces(
@@ -109,40 +89,36 @@ export class WorkspaceController {
       limit?: number;
     };
 
-    const result = await this.getUserWorkspacesHandler.handle({
-      userId: user.userId,
-      options: {
-        limit: Number(limit),
-        offset: (Number(page) - 1) * Number(limit),
-      },
-    });
-
-    if (!result.success || !result.data) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: 'Bad Request',
-        message: result.error || 'Failed to fetch user workspaces',
-      });
-    }
-
-    const paginatedResult = result.data;
-
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      data: {
-        items: paginatedResult.items.map((workspace: Workspace) =>
-          workspace.toJSON()
-        ),
-        pagination: {
-          total: paginatedResult.total,
-          limit: paginatedResult.limit,
-          offset: paginatedResult.offset,
-          hasMore: paginatedResult.hasMore,
+    try {
+      const result = await this.getUserWorkspacesHandler.handle({
+        userId: user.userId,
+        options: {
+          limit: Number(limit),
+          offset: (Number(page) - 1) * Number(limit),
         },
-      },
-    });
+      });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Workspaces retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((workspace: Workspace) =>
+                workspace.toJSON()
+              ),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async updateWorkspace(
@@ -166,36 +142,20 @@ export class WorkspaceController {
       return; // Response already sent by helper
     }
 
-    const result = await this.updateWorkspaceHandler.handle({
-      workspaceId,
-      name,
-    });
-
-    if (!result.success) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: 'Bad Request',
-        message: result.error || 'Failed to update workspace',
+    try {
+      const result = await this.updateWorkspaceHandler.handle({
+        workspaceId,
+        name,
       });
-    }
 
-    const workspace = result.data;
-    if (!workspace) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        error: 'Not Found',
-        message: 'Workspace not found',
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Workspace updated successfully'
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
     }
-
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Workspace updated successfully',
-      data: workspace.toJSON(),
-    });
   }
 
   async deleteWorkspace(
@@ -215,23 +175,18 @@ export class WorkspaceController {
       return; // Response already sent by helper
     }
 
-    const result = await this.deleteWorkspaceHandler.handle({
-      workspaceId,
-    });
-
-    if (!result.success) {
-      return reply.status(404).send({
-        success: false,
-        statusCode: 404,
-        error: 'Not Found',
-        message: result.error || 'Workspace not found',
+    try {
+      const result = await this.deleteWorkspaceHandler.handle({
+        workspaceId,
       });
-    }
 
-    return reply.status(200).send({
-      success: true,
-      statusCode: 200,
-      message: 'Workspace deleted successfully',
-    });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Workspace deleted successfully'
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

@@ -20,6 +20,13 @@ export class ListPendingApprovalsHandler implements IQueryHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(
     input: ListPendingApprovalsInput
   ): Promise<QueryResult<PaginatedResult<ExpenseWorkflow>>> {
@@ -31,9 +38,10 @@ export class ListPendingApprovalsHandler implements IQueryHandler<
       );
       return QueryResult.success(result);
     } catch (error: unknown) {
-      return QueryResult.fromError(error);
+      return QueryResult.failure(
+        error instanceof Error ? error.message : 'Query failed',
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type ListPendingApprovalsQuery = ListPendingApprovalsInput;

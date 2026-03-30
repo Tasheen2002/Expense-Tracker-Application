@@ -104,40 +104,40 @@ export class PrismaApprovalChainRepository
     const where: Prisma.ApprovalChainWhereInput = {
       workspaceId: params.workspaceId,
       isActive: true,
-      // Amount range: no minimum set, OR minimum is <= the expense amount
       OR: [{ minAmount: null }, { minAmount: { lte: params.amount } }],
       AND: [
-        // Amount range: no maximum set, OR maximum is >= the expense amount
         {
           OR: [{ maxAmount: null }, { maxAmount: { gte: params.amount } }],
         },
-        // Category: chain has no category restriction, OR it includes this expense's category
-        {
-          OR: [
-            { categoryIds: { isEmpty: true } },
-            ...(params.categoryId !== undefined
-              ? [{ categoryIds: { has: params.categoryId } }]
-              : []),
-          ],
-        },
-        // Receipt: if the expense has no receipt, skip chains that require one
-        ...(params.hasReceipt ? [] : [{ requiresReceipt: false }]),
       ],
     };
 
-    const row = await this.prisma.approvalChain.findFirst({
+    const rows = await this.prisma.approvalChain.findMany({
       where,
       orderBy: { createdAt: 'asc' },
     });
 
-    return row ? this.toDomain(row) : null;
+    // Apply remaining filters that can't be expressed in SQL (categoryId array, receipt)
+    for (const row of rows) {
+      const chain = this.toDomain(row);
+      if (
+        chain.appliesTo({
+          amount: params.amount,
+          categoryId: params.categoryId,
+          hasReceipt: params.hasReceipt,
+        })
+      ) {
+        return chain;
+      }
+    }
+
+    return null;
   }
 
-  async delete(chain: ApprovalChain): Promise<void> {
+  async delete(chainId: ApprovalChainId): Promise<void> {
     await this.prisma.approvalChain.delete({
-      where: { id: chain.getId().getValue() },
+      where: { id: chainId.getValue() },
     });
-    await this.dispatchEvents(chain);
   }
 
   private toDomain(row: Prisma.ApprovalChainGetPayload<object>): ApprovalChain {

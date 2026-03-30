@@ -16,6 +16,13 @@ export class ActivateApprovalChainHandler implements ICommandHandler<
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(
     input: ActivateApprovalChainInput
   ): Promise<CommandResult<void>> {
@@ -26,9 +33,11 @@ export class ActivateApprovalChainHandler implements ICommandHandler<
       );
       return CommandResult.success();
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type ActivateApprovalChainCommand = ActivateApprovalChainInput;

@@ -69,10 +69,20 @@ export class WorkflowService {
     if (params.amount <= AUTO_APPROVAL_THRESHOLD) {
       workflow.autoApproveAll();
       await this.workflowRepository.save(workflow);
+
+      // TODO: Implement notification for auto-approved workflow
+      // Need to notify the requester that their expense was auto-approved
+      // Requires: NotificationService or EventBus integration
+
       return workflow;
     }
 
     await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for workflow initiation
+    // Need to notify the first approver that they have a pending approval
+    // Requires: NotificationService or EventBus integration
+
     return workflow;
   }
 
@@ -124,6 +134,12 @@ export class WorkflowService {
     workflow.processStepApproval(currentStep.getStepNumber());
 
     await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step approval
+    // If workflow is fully approved, notify requester of final approval
+    // If more steps remain, notify next approver in the chain
+    // Requires: NotificationService or EventBus integration
+
     return workflow;
   }
 
@@ -162,6 +178,12 @@ export class WorkflowService {
     workflow.processStepRejection();
 
     await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step rejection
+    // Need to notify the requester that their expense was rejected
+    // Include rejection comments in the notification
+    // Requires: NotificationService or EventBus integration
+
     return workflow;
   }
 
@@ -199,17 +221,28 @@ export class WorkflowService {
     currentStep.delegate(params.toUserId);
 
     await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step delegation
+    // Need to notify the new approver that a task has been delegated to them
+    // Optionally notify the original approver of successful delegation
+    // Requires: NotificationService or EventBus integration
+
     return workflow;
   }
 
   async cancelWorkflow(
     expenseId: string,
-    workspaceId: string,
-    cancelledBy: string
+    workspaceId: string
   ): Promise<ExpenseWorkflow> {
     const workflow = await this.getWorkflow(expenseId, workspaceId);
-    workflow.cancel(cancelledBy);
+    workflow.cancel();
     await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for workflow cancellation
+    // Need to notify all pending approvers that the workflow was cancelled
+    // Optionally notify the requester of successful cancellation
+    // Requires: NotificationService or EventBus integration
+
     return workflow;
   }
 

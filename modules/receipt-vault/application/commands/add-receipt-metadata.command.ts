@@ -1,7 +1,12 @@
-import { ReceiptService } from "../services/receipt.service";
-import { ReceiptMetadata } from "../../domain/entities/receipt-metadata.entity";
+import { ReceiptService } from '../services/receipt.service';
+import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface AddReceiptMetadataDto {
+export interface AddReceiptMetadataCommand extends ICommand {
   receiptId: string;
   workspaceId: string;
   userId: string;
@@ -23,22 +28,16 @@ export interface AddReceiptMetadataDto {
   notes?: string;
 }
 
-export class AddReceiptMetadataHandler {
+export class AddReceiptMetadataHandler implements ICommandHandler<
+  AddReceiptMetadataCommand,
+  CommandResult<{ metadataId: string }>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: AddReceiptMetadataDto): Promise<ReceiptMetadata> {
-    if (dto.notes) {
-      dto.notes = this.escapeHtml(dto.notes);
-    }
-    return await this.receiptService.addMetadata(dto);
-  }
-
-  private escapeHtml(unsafe: string): string {
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  async handle(
+    command: AddReceiptMetadataCommand
+  ): Promise<CommandResult<{ metadataId: string }>> {
+    const metadata = await this.receiptService.addMetadata(command);
+    return CommandResult.success({ metadataId: metadata.getId().getValue() });
   }
 }

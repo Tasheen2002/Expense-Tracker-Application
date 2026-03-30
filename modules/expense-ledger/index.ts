@@ -26,3 +26,7 @@ export { ExpenseStatus } from './domain/enums/expense-status';
 export { SplitType } from './domain/enums/split-type';
 export { SettlementStatus } from './domain/enums/settlement-status';
 export { RecurrenceFrequency } from './domain/enums/recurrence-frequency';
+
+// Shared Value Objects (safe to consume by other modules)
+export { ExpenseId } from './domain/value-objects/expense-id';
+export { CategoryId } from './domain/value-objects/category-id';

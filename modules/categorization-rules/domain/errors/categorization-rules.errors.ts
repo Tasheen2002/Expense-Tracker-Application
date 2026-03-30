@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
+import { DomainError } from '../../../../apps/api/src/shared/domain/errors';
 
 // Base Domain Error with HTTP Status Code Support
 export class CategorizationRuleDomainError extends DomainError {

@@ -1,18 +1,17 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
-import { AllocationId } from '../../domain/value-objects/allocation-id';
-import { BudgetId } from '../../domain/value-objects/budget-id';
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
-import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
-import { BudgetAllocationExceededError } from '../../domain/errors/budget.errors';
-import { Decimal } from '@prisma/client/runtime/library';
+import { PrismaClient, Prisma } from "@prisma/client";
+import { BudgetAllocation } from "../../domain/entities/budget-allocation.entity";
+import { AllocationId } from "../../domain/value-objects/allocation-id";
+import { BudgetId } from "../../domain/value-objects/budget-id";
+import { BudgetAlert } from "../../domain/entities/budget-alert.entity";
+import { IBudgetAllocationRepository } from "../../domain/repositories/budget-allocation.repository";
+import { Decimal } from "@prisma/client/runtime/library";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 
 export class BudgetAllocationRepositoryImpl
   extends PrismaRepository<BudgetAllocation>
@@ -48,7 +47,7 @@ export class BudgetAllocationRepositoryImpl
 
   async saveWithAlerts(
     allocation: BudgetAllocation,
-    alerts: BudgetAlert[]
+    alerts: BudgetAlert[],
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // 1. Save Allocation
@@ -95,66 +94,6 @@ export class BudgetAllocationRepositoryImpl
     await this.dispatchEvents(allocation);
   }
 
-  async saveWithBudgetValidation(
-    allocation: BudgetAllocation,
-    budgetTotalAmount: Decimal,
-    excludeAllocationId?: string
-  ): Promise<void> {
-    await this.prisma.$transaction(
-      async (tx) => {
-        // Atomically check total allocated within the transaction
-        const whereClause: Prisma.BudgetAllocationWhereInput = {
-          budgetId: allocation.getBudgetId().getValue(),
-        };
-        if (excludeAllocationId) {
-          whereClause.id = { not: excludeAllocationId };
-        }
-
-        const result = await tx.budgetAllocation.aggregate({
-          where: whereClause,
-          _sum: { allocatedAmount: true },
-        });
-
-        const currentAllocated = result._sum.allocatedAmount || new Decimal(0);
-        const newTotal = currentAllocated.plus(allocation.getAllocatedAmount());
-
-        if (newTotal.gt(budgetTotalAmount)) {
-          throw new BudgetAllocationExceededError(
-            allocation.getBudgetId().getValue(),
-            budgetTotalAmount.toNumber(),
-            newTotal.toNumber()
-          );
-        }
-
-        // Save within the same transaction
-        await tx.budgetAllocation.upsert({
-          where: { id: allocation.getId().getValue() },
-          create: {
-            id: allocation.getId().getValue(),
-            budgetId: allocation.getBudgetId().getValue(),
-            categoryId: allocation.getCategoryId(),
-            allocatedAmount: allocation.getAllocatedAmount(),
-            spentAmount: allocation.getSpentAmount(),
-            description: allocation.getDescription(),
-            createdAt: allocation.getCreatedAt(),
-            updatedAt: allocation.getUpdatedAt(),
-          },
-          update: {
-            allocatedAmount: allocation.getAllocatedAmount(),
-            spentAmount: allocation.getSpentAmount(),
-            description: allocation.getDescription(),
-            updatedAt: allocation.getUpdatedAt(),
-          },
-        });
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      }
-    );
-
-    await this.dispatchEvents(allocation);
-  }
-
   async findById(id: AllocationId): Promise<BudgetAllocation | null> {
     const row = await this.prisma.budgetAllocation.findUnique({
       where: { id: id.getValue() },
@@ -167,7 +106,7 @@ export class BudgetAllocationRepositoryImpl
 
   async findByBudget(
     budgetId: BudgetId,
-    options?: PaginationOptions
+    options?: PaginationOptions,
   ): Promise<PaginatedResult<BudgetAllocation>> {
     const where: Prisma.BudgetAllocationWhereInput = {
       budgetId: budgetId.getValue(),
@@ -175,15 +114,15 @@ export class BudgetAllocationRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.budgetAllocation,
-      { where, orderBy: { createdAt: 'asc' } },
+      { where, orderBy: { createdAt: "asc" } },
       (record) => this.toDomain(record),
-      options
+      options,
     );
   }
 
   async findByBudgetAndCategory(
     budgetId: BudgetId,
-    categoryId: string
+    categoryId: string,
   ): Promise<BudgetAllocation | null> {
     const row = await this.prisma.budgetAllocation.findFirst({
       where: {
@@ -219,7 +158,7 @@ export class BudgetAllocationRepositoryImpl
   }
 
   private toDomain(
-    row: Prisma.BudgetAllocationGetPayload<object>
+    row: Prisma.BudgetAllocationGetPayload<object>,
   ): BudgetAllocation {
     return BudgetAllocation.fromPersistence({
       id: AllocationId.fromString(row.id),

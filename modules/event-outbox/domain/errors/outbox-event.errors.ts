@@ -1,12 +1,8 @@
-export class OutboxEventError extends Error {
-  readonly statusCode: number;
-  readonly code: string;
+import { DomainError } from '../../../../apps/api/src/shared/domain/errors';
 
+export class OutboxEventError extends DomainError {
   constructor(message: string, statusCode: number, code: string) {
-    super(message);
-    this.name = this.constructor.name;
-    this.statusCode = statusCode;
-    this.code = code;
+    super(message, code, statusCode);
   }
 }
 
@@ -15,7 +11,7 @@ export class OutboxEventNotFoundError extends OutboxEventError {
     super(
       `Outbox event with ID ${eventId} not found`,
       404,
-      "OUTBOX_EVENT_NOT_FOUND",
+      'OUTBOX_EVENT_NOT_FOUND'
     );
   }
 }
@@ -25,13 +21,13 @@ export class OutboxEventProcessingError extends OutboxEventError {
     super(
       `Failed to process outbox event ${eventId}: ${reason}`,
       500,
-      "OUTBOX_EVENT_PROCESSING_ERROR",
+      'OUTBOX_EVENT_PROCESSING_ERROR'
     );
   }
 }
 
 export class InvalidOutboxEventError extends OutboxEventError {
   constructor(message: string) {
-    super(message, 400, "INVALID_OUTBOX_EVENT");
+    super(message, 400, 'INVALID_OUTBOX_EVENT');
   }
 }

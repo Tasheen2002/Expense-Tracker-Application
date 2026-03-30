@@ -22,22 +22,16 @@ export class UpdateBudgetHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: UpdateBudgetCommand): Promise<CommandResult<void>> {
-    try {
-      
-          await this.budgetService.updateBudget(
-            command.budgetId,
-            command.workspaceId,
-            command.userId,
-            {
-              name: command.name,
-              description: command.description,
-              totalAmount: command.totalAmount,
-            }
-          );
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.budgetService.updateBudget(
+      command.budgetId,
+      command.workspaceId,
+      command.userId,
+      {
+        name: command.name,
+        description: command.description,
+        totalAmount: command.totalAmount,
+      }
+    );
+    return CommandResult.success();
   }
 }

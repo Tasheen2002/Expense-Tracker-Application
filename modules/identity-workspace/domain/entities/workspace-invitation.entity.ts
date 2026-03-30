@@ -1,13 +1,13 @@
-import { InvitationId } from '../value-objects/invitation-id.vo';
-import { WorkspaceId } from '../value-objects/workspace-id.vo';
-import { WorkspaceRole } from './workspace-membership.entity';
-import { randomBytes } from 'crypto';
+import { InvitationId } from "../value-objects/invitation-id.vo";
+import { WorkspaceId } from "../value-objects/workspace-id.vo";
+import { WorkspaceRole } from "./workspace-membership.entity";
+import { randomBytes } from "crypto";
 import {
   InvitationAlreadyAcceptedError,
   InvitationExpiredError,
-} from '../errors/identity.errors';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+} from "../errors/identity.errors";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
 
 // ============================================================================
 // Domain Events
@@ -18,16 +18,16 @@ export class InvitationCreatedEvent extends DomainEvent {
     public readonly invitationId: string,
     public readonly workspaceId: string,
     public readonly email: string,
-    public readonly role: string
+    public readonly role: string,
   ) {
-    super(invitationId, 'WorkspaceInvitation');
+    super(invitationId, "WorkspaceInvitation");
   }
 
   get eventType(): string {
-    return 'InvitationCreated';
+    return "InvitationCreated";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -41,16 +41,16 @@ export class InvitationAcceptedEvent extends DomainEvent {
   constructor(
     public readonly invitationId: string,
     public readonly workspaceId: string,
-    public readonly email: string
+    public readonly email: string,
   ) {
-    super(invitationId, 'WorkspaceInvitation');
+    super(invitationId, "WorkspaceInvitation");
   }
 
   get eventType(): string {
-    return 'InvitationAccepted';
+    return "InvitationAccepted";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -72,7 +72,7 @@ export class WorkspaceInvitation extends AggregateRoot {
     private readonly token: string,
     private readonly expiresAt: Date,
     private acceptedAt: Date | null,
-    private readonly createdAt: Date
+    private readonly createdAt: Date,
   ) {
     super();
   }
@@ -83,7 +83,7 @@ export class WorkspaceInvitation extends AggregateRoot {
     const token = WorkspaceInvitation.generateToken();
     const now = new Date();
     const expiresAt = new Date(
-      now.getTime() + data.expiryHours * 60 * 60 * 1000
+      now.getTime() + data.expiryHours * 60 * 60 * 1000,
     );
 
     const invitation = new WorkspaceInvitation(
@@ -94,7 +94,7 @@ export class WorkspaceInvitation extends AggregateRoot {
       token,
       expiresAt,
       null,
-      now
+      now,
     );
 
     invitation.addDomainEvent(
@@ -102,8 +102,8 @@ export class WorkspaceInvitation extends AggregateRoot {
         invitationId.getValue(),
         data.workspaceId,
         data.email.toLowerCase(),
-        data.role
-      )
+        data.role,
+      ),
     );
 
     return invitation;
@@ -118,7 +118,7 @@ export class WorkspaceInvitation extends AggregateRoot {
       data.token,
       data.expiresAt,
       data.acceptedAt,
-      data.createdAt
+      data.createdAt,
     );
   }
 
@@ -131,7 +131,7 @@ export class WorkspaceInvitation extends AggregateRoot {
       row.token,
       row.expires_at,
       row.accepted_at,
-      row.created_at
+      row.created_at,
     );
   }
 
@@ -194,15 +194,15 @@ export class WorkspaceInvitation extends AggregateRoot {
       new InvitationAcceptedEvent(
         this.id.getValue(),
         this.workspaceId.getValue(),
-        this.email
-      )
+        this.email,
+      ),
     );
   }
 
   // Helper methods
   private static generateToken(): string {
     // Generate a secure random token (32 bytes = 64 hex characters)
-    return randomBytes(32).toString('hex');
+    return randomBytes(32).toString("hex");
   }
 
   // Convert to data for persistence
@@ -235,24 +235,6 @@ export class WorkspaceInvitation extends AggregateRoot {
   equals(other: WorkspaceInvitation): boolean {
     return this.id.equals(other.id);
   }
-
-  toJSON(): WorkspaceInvitationDTO {
-    return {
-      id: this.id.getValue(),
-      workspaceId: this.workspaceId.getValue(),
-      email: this.email,
-      role: this.role,
-      expiresAt: this.expiresAt.toISOString(),
-      acceptedAt: this.acceptedAt ? this.acceptedAt.toISOString() : null,
-      createdAt: this.createdAt.toISOString(),
-      isExpired: this.isExpired(),
-      status: this.isAccepted()
-        ? 'ACCEPTED'
-        : this.isExpired()
-          ? 'EXPIRED'
-          : 'PENDING',
-    };
-  }
 }
 
 // Supporting types and interfaces
@@ -283,16 +265,4 @@ export interface WorkspaceInvitationRow {
   expires_at: Date;
   accepted_at: Date | null;
   created_at: Date;
-}
-
-export interface WorkspaceInvitationDTO {
-  id: string;
-  workspaceId: string;
-  email: string;
-  role: WorkspaceRole;
-  expiresAt: string;
-  acceptedAt: string | null;
-  createdAt: string;
-  isExpired: boolean;
-  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED';
 }

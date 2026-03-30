@@ -1,24 +1,24 @@
-import { PrismaClient, Prisma, Receipt as ReceiptModel } from "@prisma/client";
-import { Receipt } from "../../domain/entities/receipt.entity";
-import { ReceiptId } from "../../domain/value-objects/receipt-id";
-import { FileInfo } from "../../domain/value-objects/file-info";
-import { StorageLocation } from "../../domain/value-objects/storage-location";
+import { PrismaClient, Prisma, Receipt as ReceiptModel } from '@prisma/client';
+import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptId } from '../../domain/value-objects/receipt-id';
+import { FileInfo } from '../../domain/value-objects/file-info';
+import { StorageLocation } from '../../domain/value-objects/storage-location';
 import {
   IReceiptRepository,
   ReceiptFilters,
-} from "../../domain/repositories/receipt.repository";
-import { ReceiptStatus } from "../../domain/enums/receipt-status";
-import { ReceiptType } from "../../domain/enums/receipt-type";
-import { StorageProvider } from "../../domain/enums/storage-provider";
+} from '../../domain/repositories/receipt.repository';
+import { ReceiptStatus } from '../../domain/enums/receipt-status';
+import { ReceiptType } from '../../domain/enums/receipt-type';
+import { StorageProvider } from '../../domain/enums/storage-provider';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 export class ReceiptRepositoryImpl
   extends PrismaRepository<Receipt>
@@ -92,7 +92,7 @@ export class ReceiptRepositoryImpl
   async findByExpenseId(
     expenseId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
@@ -102,16 +102,16 @@ export class ReceiptRepositoryImpl
           workspaceId,
           deletedAt: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
@@ -120,17 +120,17 @@ export class ReceiptRepositoryImpl
           workspaceId,
           deletedAt: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findByUserId(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
@@ -140,30 +140,27 @@ export class ReceiptRepositoryImpl
           workspaceId,
           deletedAt: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findByFilters(
     filters: ReceiptFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
     const where = this.buildWhereClause(filters);
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
       {
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
@@ -206,14 +203,14 @@ export class ReceiptRepositoryImpl
 
     if (filters.fromDate) {
       where.createdAt = {
-        ...(typeof where.createdAt === "object" ? where.createdAt : {}),
+        ...(typeof where.createdAt === 'object' ? where.createdAt : {}),
         gte: filters.fromDate,
       };
     }
 
     if (filters.toDate) {
       where.createdAt = {
-        ...(typeof where.createdAt === "object" ? where.createdAt : {}),
+        ...(typeof where.createdAt === 'object' ? where.createdAt : {}),
         lte: filters.toDate,
       };
     }
@@ -223,7 +220,7 @@ export class ReceiptRepositoryImpl
 
   async findByFileHash(
     fileHash: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Receipt | null> {
     const row = await this.prisma.receipt.findFirst({
       where: {
@@ -238,7 +235,7 @@ export class ReceiptRepositoryImpl
 
   async findPendingReceipts(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
@@ -248,16 +245,16 @@ export class ReceiptRepositoryImpl
           status: ReceiptStatus.PENDING,
           deletedAt: null,
         },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: 'asc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findFailedReceipts(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.receipt,
@@ -267,10 +264,10 @@ export class ReceiptRepositoryImpl
           status: ReceiptStatus.FAILED,
           deletedAt: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
@@ -304,7 +301,7 @@ export class ReceiptRepositoryImpl
 
   async countByStatus(
     workspaceId: string,
-    status: ReceiptStatus,
+    status: ReceiptStatus
   ): Promise<number> {
     return await this.prisma.receipt.count({
       where: {
@@ -317,7 +314,7 @@ export class ReceiptRepositoryImpl
 
   async getStatusCounts(workspaceId: string): Promise<Record<string, number>> {
     const groups = await this.prisma.receipt.groupBy({
-      by: ["status"],
+      by: ['status'],
       where: {
         workspaceId,
         deletedAt: null,
@@ -369,7 +366,7 @@ export class ReceiptRepositoryImpl
   }
   async deleteWithDependencies(
     id: ReceiptId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.receiptMetadata.deleteMany({

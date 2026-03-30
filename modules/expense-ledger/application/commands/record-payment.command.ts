@@ -4,7 +4,6 @@ import {
   CommandResult,
 } from '../../../../apps/api/src/shared/application';
 import { ExpenseSplitService } from '../services/expense-split.service';
-import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
 
 export interface RecordPaymentCommand extends ICommand {
   readonly settlementId: string;
@@ -15,20 +14,12 @@ export interface RecordPaymentCommand extends ICommand {
 
 export class RecordPaymentHandler implements ICommandHandler<
   RecordPaymentCommand,
-  CommandResult<SplitSettlement>
+  CommandResult<void>
 > {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(
-    command: RecordPaymentCommand
-  ): Promise<CommandResult<SplitSettlement>> {
-    try {
-      const result = await this.splitService.recordPayment(command);
-      return CommandResult.success(result);
-    } catch (error) {
-      return CommandResult.failure<SplitSettlement>(
-        error instanceof Error ? error.message : 'Failed to record payment'
-      );
-    }
+  async handle(command: RecordPaymentCommand): Promise<CommandResult<void>> {
+    await this.splitService.recordPayment(command);
+    return CommandResult.success();
   }
 }

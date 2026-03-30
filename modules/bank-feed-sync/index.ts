@@ -17,3 +17,6 @@ export { BankConnectionController } from "./infrastructure/http/controllers/bank
 export { TransactionSyncController } from "./infrastructure/http/controllers/transaction-sync.controller";
 export { BankTransactionController } from "./infrastructure/http/controllers/bank-transaction.controller";
 export { registerBankFeedSyncRoutes } from "./infrastructure/http/routes";
+
+// Validation Schemas
+export * from "./infrastructure/http/validation";

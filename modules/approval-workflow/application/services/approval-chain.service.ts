@@ -122,8 +122,7 @@ export class ApprovalChainService {
 
   async deleteChain(chainId: string, workspaceId: string): Promise<void> {
     const chain = await this.getChain(chainId, workspaceId);
-    chain.markAsDeleted();
-    await this.chainRepository.delete(chain);
+    await this.chainRepository.delete(chain.getId());
   }
 
   async findApplicableChain(params: {

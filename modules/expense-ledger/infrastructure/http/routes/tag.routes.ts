@@ -74,7 +74,7 @@ export async function tagRoutes(
   );
 
   // Update tag
-  fastify.put(
+  fastify.patch(
     '/workspaces/:workspaceId/tags/:tagId',
     {
       preValidation: [validateBody(updateTagSchema)],

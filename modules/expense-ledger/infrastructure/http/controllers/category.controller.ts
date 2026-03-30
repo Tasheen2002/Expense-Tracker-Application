@@ -39,23 +39,12 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to create category'
-        );
-      }
-
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Category data unavailable');
-      }
-
-      const category = result.data;
-
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'Category created successfully',
-        category.toJSON()
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -86,23 +75,10 @@ export class CategoryController {
         icon: request.body.icon,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to update category'
-        );
-      }
-
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Category not found');
-      }
-
-      const category = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
-        'Category updated successfully',
-        category.toJSON()
+        result,
+        'Category updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -123,14 +99,11 @@ export class CategoryController {
         workspaceId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to delete category'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Category deleted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -150,19 +123,11 @@ export class CategoryController {
         workspaceId,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.notFound(
-          reply,
-          result.error ?? 'Category not found'
-        );
-      }
-
-      const category = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Category retrieved successfully',
-        category.toJSON()
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -187,26 +152,22 @@ export class CategoryController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve categories'
-        );
-      }
-
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Categories data unavailable');
-      }
-
-      return ResponseHelper.ok(reply, 'Categories retrieved successfully', {
-        items: result.data.items.map((category) => category.toJSON()),
-        pagination: {
-          total: result.data.total,
-          limit: result.data.limit,
-          offset: result.data.offset,
-          hasMore: result.data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Categories retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((category) => category.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

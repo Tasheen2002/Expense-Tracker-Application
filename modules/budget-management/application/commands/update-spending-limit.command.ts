@@ -22,19 +22,13 @@ export class UpdateSpendingLimitHandler implements ICommandHandler<
   async handle(
     command: UpdateSpendingLimitCommand
   ): Promise<CommandResult<void>> {
-    try {
-      
-          await this.limitService.updateSpendingLimit(
-            command.limitId,
-            command.workspaceId,
-            {
-              limitAmount: command.limitAmount,
-            }
-          );
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.limitService.updateSpendingLimit(
+      command.limitId,
+      command.workspaceId,
+      {
+        limitAmount: command.limitAmount,
+      }
+    );
+    return CommandResult.success();
   }
 }

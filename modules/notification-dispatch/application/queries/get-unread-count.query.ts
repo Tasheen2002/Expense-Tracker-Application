@@ -1,19 +1,30 @@
-import { NotificationService } from "../services/notification.service";
+import { NotificationService } from '../services/notification.service';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetUnreadCountQuery {
-  constructor(
-    public readonly recipientId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface GetUnreadCountQuery extends IQuery {
+  recipientId: string;
+  workspaceId: string;
 }
 
-export class GetUnreadCountHandler {
+export class GetUnreadCountHandler implements IQueryHandler<
+  GetUnreadCountQuery,
+  QueryResult<number>
+> {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(query: GetUnreadCountQuery) {
-    return await this.notificationService.getUnreadCount(
-      query.recipientId,
-      query.workspaceId,
-    );
+  async handle(input: GetUnreadCountQuery): Promise<QueryResult<number>> {
+    try {
+      const count = await this.notificationService.getUnreadCount(
+        input.recipientId,
+        input.workspaceId
+      );
+      return QueryResult.success(count);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

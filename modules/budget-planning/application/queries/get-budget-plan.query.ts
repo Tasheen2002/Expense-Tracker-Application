@@ -1,17 +1,24 @@
-import { BudgetPlanService } from "../services/budget-plan.service";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
+import { BudgetPlanService } from '../services/budget-plan.service';
+import { BudgetPlan } from '../../domain/entities/budget-plan.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetBudgetPlanQuery {
-  constructor(
-    public readonly id: string,
-    public readonly userId: string,
-  ) {}
+export interface GetBudgetPlanQuery extends IQuery {
+  id: string;
+  userId: string;
 }
 
-export class GetBudgetPlanHandler {
+export class GetBudgetPlanHandler implements IQueryHandler<
+  GetBudgetPlanQuery,
+  QueryResult<BudgetPlan>
+> {
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
-  async handle(query: GetBudgetPlanQuery): Promise<BudgetPlan> {
-    return await this.budgetPlanService.getPlan(query.id, query.userId);
+  async handle(query: GetBudgetPlanQuery): Promise<QueryResult<BudgetPlan>> {
+    const result = await this.budgetPlanService.getPlan(query.id, query.userId);
+    return QueryResult.success(result);
   }
 }

@@ -231,7 +231,7 @@ export class Workspace extends AggregateRoot {
 
   toJSON(): WorkspaceDTO {
     return {
-      id: this.id.getValue(),
+      workspaceId: this.id.getValue(),
       name: this.name,
       slug: this.slug,
       ownerId: this.ownerId.getValue(),
@@ -269,7 +269,7 @@ export interface WorkspaceRow {
 }
 
 export interface WorkspaceDTO {
-  id: string;
+  workspaceId: string;
   name: string;
   slug: string;
   ownerId: string;

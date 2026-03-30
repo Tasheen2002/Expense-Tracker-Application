@@ -1,8 +1,9 @@
-import { ExemptionRepository } from "../../domain/repositories/exemption.repository";
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
-import { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { PolicyNotFoundError } from "../../domain/errors/policy-controls.errors";
+import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
+import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import { PolicyNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface RequestExemptionInput {
   workspaceId: string;
@@ -17,13 +18,15 @@ export interface RequestExemptionInput {
 export class RequestExemptionHandler {
   constructor(
     private readonly exemptionRepository: ExemptionRepository,
-    private readonly policyRepository: PolicyRepository,
+    private readonly policyRepository: PolicyRepository
   ) {}
 
-  async handle(input: RequestExemptionInput): Promise<PolicyExemption> {
+  async handle(
+    input: RequestExemptionInput
+  ): Promise<CommandResult<{ exemptionId: string }>> {
     // Verify policy exists
     const policy = await this.policyRepository.findById(
-      PolicyId.fromString(input.policyId),
+      PolicyId.fromString(input.policyId)
     );
     if (!policy) {
       throw new PolicyNotFoundError(input.policyId);
@@ -41,6 +44,6 @@ export class RequestExemptionHandler {
 
     await this.exemptionRepository.save(exemption);
 
-    return exemption;
+    return CommandResult.success({ exemptionId: exemption.getId().getValue() });
   }
 }

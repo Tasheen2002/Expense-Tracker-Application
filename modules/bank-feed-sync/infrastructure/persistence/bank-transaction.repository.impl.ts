@@ -53,8 +53,6 @@ export class PrismaBankTransactionRepository
   }
 
   async saveBatch(transactions: BankTransaction[]): Promise<void> {
-    if (transactions.length === 0) return;
-
     const data = transactions.map((t) => ({
       id: t.getId().getValue(),
       workspaceId: t.getWorkspaceId().getValue(),
@@ -79,10 +77,6 @@ export class PrismaBankTransactionRepository
       data,
       skipDuplicates: true,
     });
-
-    for (const transaction of transactions) {
-      await this.dispatchEvents(transaction);
-    }
   }
 
   async findById(

@@ -1,10 +1,10 @@
-import { PlanId } from "../value-objects/plan-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
-import { PlanPeriod } from "../value-objects/plan-period";
-import { PlanStatus } from "../enums/plan-status.enum";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { PlanId } from '../value-objects/plan-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { UserId } from '../../../identity-workspace';
+import { PlanPeriod } from '../value-objects/plan-period';
+import { PlanStatus } from '../enums/plan-status.enum';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -15,13 +15,13 @@ export class BudgetPlanCreatedEvent extends DomainEvent {
     public readonly planId: string,
     public readonly workspaceId: string,
     public readonly name: string,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(planId, "BudgetPlan");
+    super(planId, 'BudgetPlan');
   }
 
   get eventType(): string {
-    return "BudgetPlanCreated";
+    return 'BudgetPlanCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -38,13 +38,13 @@ export class BudgetPlanStatusChangedEvent extends DomainEvent {
   constructor(
     public readonly planId: string,
     public readonly oldStatus: string,
-    public readonly newStatus: string,
+    public readonly newStatus: string
   ) {
-    super(planId, "BudgetPlan");
+    super(planId, 'BudgetPlan');
   }
 
   get eventType(): string {
-    return "BudgetPlanStatusChanged";
+    return 'BudgetPlanStatusChanged';
   }
 
   getPayload(): Record<string, unknown> {
@@ -59,13 +59,13 @@ export class BudgetPlanStatusChangedEvent extends DomainEvent {
 export class BudgetPlanUpdatedEvent extends DomainEvent {
   constructor(
     public readonly planId: string,
-    public readonly name: string,
+    public readonly name: string
   ) {
-    super(planId, "BudgetPlan");
+    super(planId, 'BudgetPlan');
   }
 
   get eventType(): string {
-    return "BudgetPlanUpdated";
+    return 'BudgetPlanUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -90,7 +90,7 @@ export class BudgetPlan extends AggregateRoot {
     private status: PlanStatus,
     private readonly createdBy: UserId,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -113,7 +113,7 @@ export class BudgetPlan extends AggregateRoot {
       PlanStatus.DRAFT,
       params.createdBy,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     plan.addDomainEvent(
@@ -121,8 +121,8 @@ export class BudgetPlan extends AggregateRoot {
         planId.getValue(),
         params.workspaceId.getValue(),
         params.name,
-        params.createdBy.getValue(),
-      ),
+        params.createdBy.getValue()
+      )
     );
 
     return plan;
@@ -149,7 +149,7 @@ export class BudgetPlan extends AggregateRoot {
       params.status,
       UserId.fromString(params.createdBy),
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -195,7 +195,7 @@ export class BudgetPlan extends AggregateRoot {
     this.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanUpdatedEvent(this.id.getValue(), this.name),
+      new BudgetPlanUpdatedEvent(this.id.getValue(), this.name)
     );
   }
 
@@ -205,7 +205,36 @@ export class BudgetPlan extends AggregateRoot {
     this.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanStatusChangedEvent(this.id.getValue(), oldStatus, status),
+      new BudgetPlanStatusChangedEvent(this.id.getValue(), oldStatus, status)
     );
   }
+
+  toJSON(): BudgetPlanDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      description: this.getDescription(),
+      period: {
+        startDate: this.getPeriod().getStartDate().toISOString(),
+        endDate: this.getPeriod().getEndDate().toISOString(),
+      },
+      status: this.getStatus(),
+      createdBy: this.getCreatedBy().getValue(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface BudgetPlanDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  period: { startDate: string; endDate: string };
+  status: PlanStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

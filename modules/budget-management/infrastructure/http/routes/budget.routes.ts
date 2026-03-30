@@ -6,16 +6,22 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
-import { validateBody, validateQuery } from '../validation/validator';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
 import {
   createBudgetSchema,
   updateBudgetSchema,
-  listBudgetsSchema,
-} from '../validation/budget.schema';
-import {
+  budgetQuerySchema,
   addAllocationSchema,
   updateAllocationSchema,
-} from '../validation/allocation.schema';
+  workspaceParamsSchema,
+  budgetParamsSchema,
+  allocationParamsSchema,
+} from '../validation/budget.schema';
+import { requireRole } from '../../../../../apps/api/src/shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -32,21 +38,78 @@ export async function budgetRoutes(
       await writeRateLimiter(request, reply);
     }
   });
+
+  const budgetSchema = {
+    type: 'object',
+    properties: {
+      budgetId: { type: 'string', format: 'uuid' },
+      workspaceId: { type: 'string' },
+      name: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      totalAmount: { type: 'string' },
+      currency: { type: 'string' },
+      period: {
+        type: 'object',
+        properties: {
+          startDate: { type: 'string', format: 'date-time' },
+          endDate: { type: 'string', format: 'date-time', nullable: true },
+          type: { type: 'string' },
+        },
+      },
+      status: { type: 'string' },
+      createdBy: { type: 'string' },
+      isRecurring: { type: 'boolean' },
+      rolloverUnused: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const allocationSchema = {
+    type: 'object',
+    properties: {
+      allocationId: { type: 'string', format: 'uuid' },
+      budgetId: { type: 'string' },
+      categoryId: { type: 'string', nullable: true },
+      allocatedAmount: { type: 'string' },
+      spentAmount: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      remainingAmount: { type: 'string' },
+      spentPercentage: { type: 'number' },
+      isOverBudget: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const alertSchema = {
+    type: 'object',
+    properties: {
+      alertId: { type: 'string', format: 'uuid' },
+      budgetId: { type: 'string' },
+      allocationId: { type: 'string', nullable: true },
+      type: { type: 'string' },
+      threshold: { type: 'number' },
+      currentAmount: { type: 'string' },
+      message: { type: 'string' },
+      isRead: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
   // Create budget
   fastify.post(
-    '/:workspaceId/budgets',
+    '/workspaces/:workspaceId/budgets',
     {
-      preValidation: [validateBody(createBudgetSchema)],
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [
+        validateBody(createBudgetSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Budget'],
         description: 'Create a new budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           required: [
@@ -58,17 +121,29 @@ export async function budgetRoutes(
           ],
           properties: {
             name: { type: 'string', minLength: 1, maxLength: 255 },
-            description: { type: 'string' },
-            totalAmount: { type: 'number', minimum: 0.01 },
+            description: { type: 'string', nullable: true },
+            totalAmount: { type: 'number', minimum: 0 },
             currency: { type: 'string', minLength: 3, maxLength: 3 },
             periodType: {
               type: 'string',
               enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'],
             },
             startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            isRecurring: { type: 'boolean' },
-            rolloverUnused: { type: 'boolean' },
+            endDate: { type: 'string', format: 'date-time', nullable: true },
+            isRecurring: { type: 'boolean', default: false },
+            rolloverUnused: { type: 'boolean', default: false },
+          },
+        },
+        response: {
+          201: {
+            description: 'Budget created successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: budgetSchema,
+            },
           },
         },
       },
@@ -79,31 +154,41 @@ export async function budgetRoutes(
 
   // List budgets
   fastify.get(
-    '/:workspaceId/budgets',
+    '/workspaces/:workspaceId/budgets',
     {
-      preValidation: [validateQuery(listBudgetsSchema)],
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [
+        validateQuery(budgetQuerySchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
+      ],
       schema: {
         tags: ['Budget'],
         description: 'List all budgets in workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              enum: ['DRAFT', 'ACTIVE', 'ARCHIVED', 'EXCEEDED'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Budgets retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: budgetSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
             },
-            isActive: { type: 'string', enum: ['true', 'false'] },
-            createdBy: { type: 'string', format: 'uuid' },
-            currency: { type: 'string' },
-            limit: { type: 'string' },
-            offset: { type: 'string' },
           },
         },
       },
@@ -114,17 +199,24 @@ export async function budgetRoutes(
 
   // Get budget by ID
   fastify.get(
-    '/:workspaceId/budgets/:budgetId',
+    '/workspaces/:workspaceId/budgets/:budgetId',
     {
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Budget'],
         description: 'Get budget by ID',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Budget retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: budgetSchema,
+            },
           },
         },
       },
@@ -135,26 +227,40 @@ export async function budgetRoutes(
 
   // Update budget
   fastify.patch(
-    '/:workspaceId/budgets/:budgetId',
+    '/workspaces/:workspaceId/budgets/:budgetId',
     {
-      preValidation: [validateBody(updateBudgetSchema)],
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [
+        validateBody(updateBudgetSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Budget'],
         description: 'Update budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           properties: {
             name: { type: 'string', minLength: 1, maxLength: 255 },
-            description: { type: ['string', 'null'] },
-            totalAmount: { type: 'number', minimum: 0.01 },
+            description: { type: 'string', nullable: true },
+            totalAmount: { type: 'number', minimum: 0 },
+            startDate: { type: 'string', format: 'date-time' },
+            endDate: { type: 'string', format: 'date-time', nullable: true },
+            status: { type: 'string', enum: ['DRAFT', 'ACTIVE', 'ARCHIVED'] },
+            isRecurring: { type: 'boolean' },
+            rolloverUnused: { type: 'boolean' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Budget updated successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: budgetSchema,
+            },
           },
         },
       },
@@ -165,17 +271,24 @@ export async function budgetRoutes(
 
   // Activate budget
   fastify.post(
-    '/:workspaceId/budgets/:budgetId/activate',
+    '/workspaces/:workspaceId/budgets/:budgetId/activate',
     {
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Budget'],
         description: 'Activate budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Budget activated successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: budgetSchema,
+            },
           },
         },
       },
@@ -186,17 +299,24 @@ export async function budgetRoutes(
 
   // Archive budget
   fastify.post(
-    '/:workspaceId/budgets/:budgetId/archive',
+    '/workspaces/:workspaceId/budgets/:budgetId/archive',
     {
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Budget'],
         description: 'Archive budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Budget archived successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: budgetSchema,
+            },
           },
         },
       },
@@ -207,17 +327,18 @@ export async function budgetRoutes(
 
   // Delete budget
   fastify.delete(
-    '/:workspaceId/budgets/:budgetId',
+    '/workspaces/:workspaceId/budgets/:budgetId',
     {
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget'],
         description: 'Delete budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          204: {
+            description: 'Budget deleted successfully',
+            type: 'null',
           },
         },
       },
@@ -228,27 +349,36 @@ export async function budgetRoutes(
 
   // Add allocation
   fastify.post(
-    '/:workspaceId/budgets/:budgetId/allocations',
+    '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
-      preValidation: [validateBody(addAllocationSchema)],
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [
+        validateBody(addAllocationSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Add allocation to budget',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           required: ['allocatedAmount'],
           properties: {
-            categoryId: { type: 'string', format: 'uuid' },
-            allocatedAmount: { type: 'number', minimum: 0.01 },
-            description: { type: 'string' },
+            categoryId: { type: 'string', format: 'uuid', nullable: true },
+            allocatedAmount: { type: 'number', minimum: 0 },
+            description: { type: 'string', nullable: true },
+          },
+        },
+        response: {
+          201: {
+            description: 'Allocation added successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: allocationSchema,
+            },
           },
         },
       },
@@ -259,17 +389,38 @@ export async function budgetRoutes(
 
   // Get allocations
   fastify.get(
-    '/:workspaceId/budgets/:budgetId/allocations',
+    '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
+      preValidation: [validateParams(budgetParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Get budget allocations',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Allocations retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: allocationSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -280,26 +431,35 @@ export async function budgetRoutes(
 
   // Update allocation
   fastify.patch(
-    '/:workspaceId/budgets/:budgetId/allocations/:allocationId',
+    '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
-      preValidation: [validateBody(updateAllocationSchema)],
+      preValidation: [validateParams(allocationParamsSchema)],
+      preHandler: [
+        validateBody(updateAllocationSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Update allocation',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId', 'allocationId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
-            allocationId: { type: 'string', format: 'uuid' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           properties: {
-            allocatedAmount: { type: 'number', minimum: 0.01 },
-            description: { type: ['string', 'null'] },
+            categoryId: { type: 'string', format: 'uuid', nullable: true },
+            allocatedAmount: { type: 'number', minimum: 0 },
+            description: { type: 'string', nullable: true },
+          },
+        },
+        response: {
+          200: {
+            description: 'Allocation updated successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: allocationSchema,
+            },
           },
         },
       },
@@ -310,18 +470,18 @@ export async function budgetRoutes(
 
   // Delete allocation
   fastify.delete(
-    '/:workspaceId/budgets/:budgetId/allocations/:allocationId',
+    '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
+      preValidation: [validateParams(allocationParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Delete allocation',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'budgetId', 'allocationId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            budgetId: { type: 'string', format: 'uuid' },
-            allocationId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          204: {
+            description: 'Allocation deleted successfully',
+            type: 'null',
           },
         },
       },
@@ -332,16 +492,24 @@ export async function budgetRoutes(
 
   // Get unread alerts
   fastify.get(
-    '/:workspaceId/budgets/alerts/unread',
+    '/workspaces/:workspaceId/budgets/alerts/unread',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Budget Alert'],
         description: 'Get unread budget alerts',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: 'Alerts retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: alertSchema,
+            },
           },
         },
       },

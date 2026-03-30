@@ -19,7 +19,6 @@ import { ExpenseId } from '../../../expense-ledger';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
-import { ConcurrencyConflictError } from '../../domain/errors/approval-workflow.errors';
 
 export class PrismaExpenseWorkflowRepository
   extends PrismaRepository<ExpenseWorkflow>
@@ -30,43 +29,28 @@ export class PrismaExpenseWorkflowRepository
   }
 
   async save(workflow: ExpenseWorkflow): Promise<void> {
-    const id = workflow.getId().getValue();
-    const isNew = workflow.isNewRecord();
-
     await this.prisma.$transaction(async (tx) => {
-      if (isNew) {
-        await tx.expenseWorkflow.create({
-          data: {
-            id,
-            expenseId: workflow.getExpenseId().getValue(),
-            workspaceId: workflow.getWorkspaceId().getValue(),
-            userId: workflow.getUserId().getValue(),
-            chainId: workflow.getChainId().getValue(),
-            status: toDbWorkflowStatus(workflow.getStatus()),
-            currentStepNumber: workflow.getCurrentStepNumber(),
-            version: 1,
-            createdAt: workflow.getCreatedAt(),
-            updatedAt: workflow.getUpdatedAt(),
-            completedAt: workflow.getCompletedAt(),
-          },
-        });
-      } else {
-        const currentVersion = workflow.getVersion();
-        const result = await tx.expenseWorkflow.updateMany({
-          where: { id, version: currentVersion },
-          data: {
-            status: toDbWorkflowStatus(workflow.getStatus()),
-            currentStepNumber: workflow.getCurrentStepNumber(),
-            version: currentVersion + 1,
-            updatedAt: workflow.getUpdatedAt(),
-            completedAt: workflow.getCompletedAt(),
-          },
-        });
-
-        if (result.count === 0) {
-          throw new ConcurrencyConflictError(id);
-        }
-      }
+      await tx.expenseWorkflow.upsert({
+        where: { id: workflow.getId().getValue() },
+        create: {
+          id: workflow.getId().getValue(),
+          expenseId: workflow.getExpenseId().getValue(),
+          workspaceId: workflow.getWorkspaceId().getValue(),
+          userId: workflow.getUserId().getValue(),
+          chainId: workflow.getChainId().getValue(),
+          status: toDbWorkflowStatus(workflow.getStatus()),
+          currentStepNumber: workflow.getCurrentStepNumber(),
+          createdAt: workflow.getCreatedAt(),
+          updatedAt: workflow.getUpdatedAt(),
+          completedAt: workflow.getCompletedAt(),
+        },
+        update: {
+          status: toDbWorkflowStatus(workflow.getStatus()),
+          currentStepNumber: workflow.getCurrentStepNumber(),
+          updatedAt: workflow.getUpdatedAt(),
+          completedAt: workflow.getCompletedAt(),
+        },
+      });
 
       // Save steps
       for (const step of workflow.getSteps()) {
@@ -94,13 +78,6 @@ export class PrismaExpenseWorkflowRepository
         });
       }
     });
-
-    // Mark as persisted after a successful DB commit so subsequent saves
-    // on the same instance (within the same request) use the update path
-    if (isNew) {
-      workflow.markAsPersisted();
-    }
-
     await this.dispatchEvents(workflow);
   }
 
@@ -240,7 +217,6 @@ export class PrismaExpenseWorkflowRepository
       chainId: ApprovalChainId.fromString(row.chainId),
       status: fromDbWorkflowStatus(row.status),
       currentStepNumber: row.currentStepNumber,
-      version: row.version,
       steps,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

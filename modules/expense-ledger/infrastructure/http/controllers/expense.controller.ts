@@ -71,22 +71,12 @@ export class ExpenseController {
         tagIds: body.tagIds,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to create expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Failed to create expense');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'Expense created successfully',
-        expense.toJSON()
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -134,22 +124,10 @@ export class ExpenseController {
         isReimbursable: body.isReimbursable,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to update expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
-        'Expense updated successfully',
-        expense.toJSON()
+        result,
+        'Expense updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -176,14 +154,11 @@ export class ExpenseController {
         userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to delete expense'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Expense deleted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -203,22 +178,11 @@ export class ExpenseController {
         workspaceId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to get expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Expense retrieved successfully',
-        expense.toJSON()
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -247,27 +211,24 @@ export class ExpenseController {
         offset: offset ? parseInt(offset) : undefined,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve expenses'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'No expenses found');
-      }
-
-      const data = result.data;
-
-      return ResponseHelper.ok(reply, 'Expenses retrieved successfully', {
-        items: data.items.map((expense: Expense) => expense.toJSON()),
-        pagination: {
-          total: data.total,
-          limit: data.limit,
-          offset: data.offset,
-          hasMore: data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expenses retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((expense: Expense) =>
+                expense.toJSON()
+              ),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -315,27 +276,24 @@ export class ExpenseController {
         offset: query.offset ? parseInt(query.offset) : undefined,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to filter expenses'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'No expenses found');
-      }
-
-      const data = result.data;
-
-      return ResponseHelper.ok(reply, 'Expenses filtered successfully', {
-        items: data.items.map((expense: Expense) => expense.toJSON()),
-        pagination: {
-          total: data.total,
-          limit: data.limit,
-          offset: data.offset,
-          hasMore: data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Expenses filtered successfully',
+        result.data
+          ? {
+              items: result.data.items.map((expense: Expense) =>
+                expense.toJSON()
+              ),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -358,18 +316,9 @@ export class ExpenseController {
         currency,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to get expense statistics'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense statistics not found');
-      }
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Expense statistics retrieved successfully',
         result.data
       );
@@ -398,23 +347,11 @@ export class ExpenseController {
         userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to submit expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(reply, 'Expense submitted successfully', {
-        expenseId: expense.id.getValue(),
-        status: expense.status,
-        updatedAt: expense.updatedAt.toISOString(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense submitted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -440,23 +377,11 @@ export class ExpenseController {
         approverId: userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to approve expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(reply, 'Expense approved successfully', {
-        expenseId: expense.id.getValue(),
-        status: expense.status,
-        updatedAt: expense.updatedAt.toISOString(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense approved successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -485,23 +410,11 @@ export class ExpenseController {
         reason,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to reject expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(reply, 'Expense rejected successfully', {
-        expenseId: expense.id.getValue(),
-        status: expense.status,
-        updatedAt: expense.updatedAt.toISOString(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expense rejected successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -527,26 +440,10 @@ export class ExpenseController {
         processedBy: userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to reimburse expense'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Expense not found');
-      }
-
-      const expense = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
-        'Expense marked as reimbursed successfully',
-        {
-          expenseId: expense.id.getValue(),
-          status: expense.status,
-          updatedAt: expense.updatedAt.toISOString(),
-        }
+        result,
+        'Expense marked as reimbursed successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

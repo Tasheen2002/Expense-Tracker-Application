@@ -1,8 +1,8 @@
-import { OutboxEventId } from "../value-objects/outbox-event-id";
-import { AggregateId } from "../value-objects/aggregate-id";
-import { OutboxEventStatus } from "../enums/outbox-event-status.enum";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { InvalidOutboxEventError } from "../errors/outbox-event.errors";
+import { OutboxEventId } from '../value-objects/outbox-event-id';
+import { AggregateId } from '../value-objects/aggregate-id';
+import { OutboxEventStatus } from '../enums/outbox-event-status.enum';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { InvalidOutboxEventError } from '../errors/outbox-event.errors';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -18,7 +18,7 @@ export class OutboxDomainEvent extends DomainEvent {
     aggregateType: string,
     private readonly _eventType: string,
     private readonly payload: Record<string, unknown>,
-    private readonly _occurredAt?: Date,
+    private readonly _occurredAt?: Date
   ) {
     super(aggregateId, aggregateType);
     if (_occurredAt) {
@@ -123,7 +123,7 @@ export class OutboxEvent {
   markAsProcessing(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
       throw new InvalidOutboxEventError(
-        "Cannot mark processed event as processing",
+        'Cannot mark processed event as processing'
       );
     }
     this.props.status = OutboxEventStatus.PROCESSING;
@@ -144,7 +144,7 @@ export class OutboxEvent {
   resetToPending(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
       throw new InvalidOutboxEventError(
-        "Cannot reset processed event to pending",
+        'Cannot reset processed event to pending'
       );
     }
     this.props.status = OutboxEventStatus.PENDING;

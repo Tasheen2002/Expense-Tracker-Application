@@ -23,17 +23,11 @@ export class ListUserSplitsHandler implements IQueryHandler<
   async handle(
     query: ListUserSplitsQuery
   ): Promise<QueryResult<PaginatedResult<ExpenseSplit>>> {
-    try {
-      const result = await this.splitService.listUserSplits(
-        query.userId,
-        query.workspaceId,
-        { limit: query.limit, offset: query.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to list user splits'
-      );
-    }
+    const result = await this.splitService.listUserSplits(
+      query.userId,
+      query.workspaceId,
+      { limit: query.limit, offset: query.offset }
+    );
+    return QueryResult.success(result);
   }
 }

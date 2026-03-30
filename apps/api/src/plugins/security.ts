@@ -15,7 +15,10 @@ const securityPlugin: FastifyPluginAsync = async (fastify) => {
    * Allow frontend origins to access the API
    */
   await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL?.split(',') || ['http://localhost:3000'],
+    origin: process.env.FRONTEND_URL?.split(',') || [
+      'http://localhost:3000',
+      `http://localhost:${fastify.config.PORT}`,
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

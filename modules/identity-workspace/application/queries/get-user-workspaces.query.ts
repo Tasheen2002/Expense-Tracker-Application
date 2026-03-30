@@ -26,18 +26,12 @@ export class GetUserWorkspacesHandler implements IQueryHandler<
   async handle(
     query: GetUserWorkspacesQuery
   ): Promise<QueryResult<PaginatedResult<Workspace>>> {
-    try {
-      // FIXED: Get ALL workspaces user is a member of, not just owned workspaces
-      const workspaces =
-        await this.workspaceManagementService.getWorkspacesByMembership(
-          query.userId,
-          query.options
-        );
-      return QueryResult.success(workspaces);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to get workspaces'
+    // FIXED: Get ALL workspaces user is a member of, not just owned workspaces
+    const workspaces =
+      await this.workspaceManagementService.getWorkspacesByMembership(
+        query.userId,
+        query.options
       );
-    }
+    return QueryResult.success(workspaces);
   }
 }

@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+﻿import { FastifyInstance } from 'fastify';
 import { SpendingLimitController } from '../controllers/spending-limit.controller';
 import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import {
@@ -15,6 +15,34 @@ import {
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
+});
+
+const spendingLimitDataSchema = {
+  type: 'object',
+  properties: {
+    limitId: { type: 'string' },
+    workspaceId: { type: 'string' },
+    userId: { type: 'string' },
+    categoryId: { type: 'string' },
+    limitAmount: { type: 'string' },
+    currency: { type: 'string' },
+    periodType: { type: 'string' },
+    isActive: { type: 'boolean' },
+    createdAt: { type: 'string' },
+    updatedAt: { type: 'string' },
+  },
+};
+
+const singleResponse = (statusCode: number, dataSchema?: object) => ({
+  [statusCode]: {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean' },
+      statusCode: { type: 'number' },
+      message: { type: 'string' },
+      ...(dataSchema ? { data: dataSchema } : {}),
+    },
+  },
 });
 
 export async function spendingLimitRoutes(
@@ -56,6 +84,7 @@ export async function spendingLimitRoutes(
             },
           },
         },
+        response: singleResponse(201, spendingLimitDataSchema),
       },
     },
     (request, reply) =>
@@ -90,6 +119,31 @@ export async function spendingLimitRoutes(
             offset: { type: 'string', pattern: '^[0-9]+$' },
           },
         },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: spendingLimitDataSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -118,6 +172,7 @@ export async function spendingLimitRoutes(
             limitAmount: { type: 'number', minimum: 0.01 },
           },
         },
+        response: singleResponse(200, spendingLimitDataSchema),
       },
     },
     (request, reply) =>
@@ -139,6 +194,7 @@ export async function spendingLimitRoutes(
             limitId: { type: 'string', format: 'uuid' },
           },
         },
+        response: singleResponse(200),
       },
     },
     (request, reply) =>

@@ -1,19 +1,19 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
+import { PrismaClient, Prisma } from "@prisma/client";
+import { IWorkspaceMembershipRepository } from "../../domain/repositories/workspace-membership.repository";
 import {
   WorkspaceMembership,
   WorkspaceMembershipRow,
-} from '../../domain/entities/workspace-membership.entity';
-import { MembershipId } from '../../domain/value-objects/membership-id.vo';
-import { UserId } from '../../domain/value-objects/user-id.vo';
-import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from "../../domain/entities/workspace-membership.entity";
+import { MembershipId } from "../../domain/value-objects/membership-id.vo";
+import { UserId } from "../../domain/value-objects/user-id.vo";
+import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
+import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
 
 export class WorkspaceMembershipRepositoryImpl
   extends PrismaRepository<WorkspaceMembership>
@@ -25,7 +25,7 @@ export class WorkspaceMembershipRepositoryImpl
 
   // Helper to convert Prisma result (camelCase) to WorkspaceMembershipRow (snake_case)
   private toDatabaseRow(
-    prismaRow: Prisma.WorkspaceMembershipGetPayload<{}>
+    prismaRow: Prisma.WorkspaceMembershipGetPayload<{}>,
   ): WorkspaceMembershipRow {
     return {
       id: prismaRow.id,
@@ -58,19 +58,6 @@ export class WorkspaceMembershipRepositoryImpl
     await this.dispatchEvents(membership);
   }
 
-  async update(membership: WorkspaceMembership): Promise<void> {
-    const data = membership.toDatabaseRow();
-
-    await this.prisma.workspaceMembership.update({
-      where: { id: data.id },
-      data: {
-        role: data.role,
-        updatedAt: data.updated_at,
-      },
-    });
-    await this.dispatchEvents(membership);
-  }
-
   async findById(id: MembershipId): Promise<WorkspaceMembership | null> {
     const row = await this.prisma.workspaceMembership.findUnique({
       where: { id: id.getValue() },
@@ -83,7 +70,7 @@ export class WorkspaceMembershipRepositoryImpl
 
   async findByUserAndWorkspace(
     userId: UserId,
-    workspaceId: WorkspaceId
+    workspaceId: WorkspaceId,
   ): Promise<WorkspaceMembership | null> {
     const row = await this.prisma.workspaceMembership.findUnique({
       where: {
@@ -101,31 +88,31 @@ export class WorkspaceMembershipRepositoryImpl
 
   async findByUserId(
     userId: UserId,
-    options?: PaginationOptions
+    options?: PaginationOptions,
   ): Promise<PaginatedResult<WorkspaceMembership>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.workspaceMembership,
       {
         where: { userId: userId.getValue() },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       },
       (row) => WorkspaceMembership.fromDatabaseRow(this.toDatabaseRow(row)),
-      options
+      options,
     );
   }
 
   async findByWorkspaceId(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions
+    options?: PaginationOptions,
   ): Promise<PaginatedResult<WorkspaceMembership>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.workspaceMembership,
       {
         where: { workspaceId: workspaceId.getValue() },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       },
       (row) => WorkspaceMembership.fromDatabaseRow(this.toDatabaseRow(row)),
-      options
+      options,
     );
   }
 

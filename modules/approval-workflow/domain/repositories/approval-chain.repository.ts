@@ -22,5 +22,5 @@ export interface IApprovalChainRepository {
     categoryId?: string;
     hasReceipt: boolean;
   }): Promise<ApprovalChain | null>;
-  delete(chain: ApprovalChain): Promise<void>;
+  delete(chainId: ApprovalChainId): Promise<void>;
 }

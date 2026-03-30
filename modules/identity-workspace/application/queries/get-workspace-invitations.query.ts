@@ -25,9 +25,7 @@ export class GetWorkspaceInvitationsHandler implements IQueryHandler<
       );
       return QueryResult.success(invitations);
     } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to get invitations'
-      );
+      return QueryResult.fromError(error);
     }
   }
 }

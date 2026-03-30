@@ -35,25 +35,13 @@ export class TagController {
         color: request.body.color,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to create tag'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Failed to create tag');
-      }
-
-      const tag = result.data;
-
-      return ResponseHelper.created(reply, 'Tag created successfully', {
-        tagId: tag.id.getValue(),
-        workspaceId: tag.workspaceId,
-        name: tag.name,
-        color: tag.color,
-        createdAt: tag.createdAt.toISOString(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Tag created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -79,19 +67,11 @@ export class TagController {
         color: request.body.color,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to update tag'
-        );
-      }
-      if (!result.data) {
-        return ResponseHelper.notFound(reply, 'Tag not found');
-      }
-
-      const tag = result.data;
-
-      return ResponseHelper.ok(reply, 'Tag updated successfully', tag.toJSON());
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Tag updated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -111,14 +91,11 @@ export class TagController {
         workspaceId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to delete tag'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Tag deleted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Tag deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -138,14 +115,11 @@ export class TagController {
         workspaceId,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.notFound(reply, result.error ?? 'Tag not found');
-      }
-      const tag = result.data;
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Tag retrieved successfully',
-        tag.toJSON()
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -169,26 +143,22 @@ export class TagController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve tags'
-        );
-      }
-
-      if (!result.data) {
-        return ResponseHelper.badRequest(reply, 'Tags data unavailable');
-      }
-
-      return ResponseHelper.ok(reply, 'Tags retrieved successfully', {
-        items: result.data.items.map((tag) => tag.toJSON()),
-        pagination: {
-          total: result.data.total,
-          limit: result.data.limit,
-          offset: result.data.offset,
-          hasMore: result.data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Tags retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((tag) => tag.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

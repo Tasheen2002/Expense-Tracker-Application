@@ -1,4 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
+import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
 import {
   ICommand,
   ICommandHandler,
@@ -11,42 +12,25 @@ export interface DeleteWorkspaceCommand extends ICommand {
 
 export class DeleteWorkspaceHandler implements ICommandHandler<
   DeleteWorkspaceCommand,
-  CommandResult<boolean>
+  CommandResult<void>
 > {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService
   ) {}
 
-  async handle(
-    command: DeleteWorkspaceCommand
-  ): Promise<CommandResult<boolean>> {
+  async handle(command: DeleteWorkspaceCommand): Promise<CommandResult<void>> {
     try {
-      // Validate workspaceId
-      if (!command.workspaceId || typeof command.workspaceId !== 'string') {
-        return CommandResult.failure<boolean>('Workspace ID is required', [
-          'workspaceId',
-        ]);
-      }
-
       const deleted = await this.workspaceManagementService.deleteWorkspace(
         command.workspaceId
       );
 
       if (!deleted) {
-        return CommandResult.failure<boolean>('Workspace not found', [
-          'workspaceId',
-        ]);
+        throw new WorkspaceNotFoundError(command.workspaceId);
       }
 
-      return CommandResult.success<boolean>(deleted);
+      return CommandResult.success();
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<boolean>(error.message, [error.message]);
-      }
-
-      return CommandResult.failure<boolean>(
-        'An unexpected error occurred during workspace deletion'
-      );
+      return CommandResult.fromError(error);
     }
   }
 }

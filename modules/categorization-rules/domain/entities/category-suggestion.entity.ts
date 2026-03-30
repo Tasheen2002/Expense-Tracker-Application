@@ -1,11 +1,11 @@
-import { SuggestionId } from "../value-objects/suggestion-id";
-import { ConfidenceScore } from "../value-objects/confidence-score";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { InvalidSuggestionError } from "../errors/categorization-rules.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { SuggestionId } from '../value-objects/suggestion-id';
+import { ConfidenceScore } from '../value-objects/confidence-score';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { InvalidSuggestionError } from '../errors/categorization-rules.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -17,13 +17,13 @@ export class CategorySuggestionCreatedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly expenseId: string,
     public readonly suggestedCategoryId: string,
-    public readonly confidence: number,
+    public readonly confidence: number
   ) {
-    super(suggestionId, "CategorySuggestion");
+    super(suggestionId, 'CategorySuggestion');
   }
 
   get eventType(): string {
-    return "CategorySuggestionCreated";
+    return 'CategorySuggestionCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -41,13 +41,13 @@ export class CategorySuggestionAcceptedEvent extends DomainEvent {
   constructor(
     public readonly suggestionId: string,
     public readonly expenseId: string,
-    public readonly categoryId: string,
+    public readonly categoryId: string
   ) {
-    super(suggestionId, "CategorySuggestion");
+    super(suggestionId, 'CategorySuggestion');
   }
 
   get eventType(): string {
-    return "CategorySuggestionAccepted";
+    return 'CategorySuggestionAccepted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -62,13 +62,13 @@ export class CategorySuggestionAcceptedEvent extends DomainEvent {
 export class CategorySuggestionRejectedEvent extends DomainEvent {
   constructor(
     public readonly suggestionId: string,
-    public readonly expenseId: string,
+    public readonly expenseId: string
   ) {
-    super(suggestionId, "CategorySuggestion");
+    super(suggestionId, 'CategorySuggestion');
   }
 
   get eventType(): string {
-    return "CategorySuggestionRejected";
+    return 'CategorySuggestionRejected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -126,7 +126,7 @@ export class CategorySuggestion extends AggregateRoot {
   }): CategorySuggestion {
     if (props.reason && props.reason.length > 500) {
       throw new InvalidSuggestionError(
-        "Suggestion reason cannot exceed 500 characters",
+        'Suggestion reason cannot exceed 500 characters'
       );
     }
 
@@ -148,8 +148,8 @@ export class CategorySuggestion extends AggregateRoot {
         props.workspaceId.getValue(),
         props.expenseId.getValue(),
         props.suggestedCategoryId.getValue(),
-        props.confidence.getValue(),
-      ),
+        props.confidence.getValue()
+      )
     );
 
     return suggestion;
@@ -173,7 +173,7 @@ export class CategorySuggestion extends AggregateRoot {
   accept(): void {
     if (this.isAccepted !== null) {
       throw new InvalidSuggestionError(
-        "Suggestion has already been responded to",
+        'Suggestion has already been responded to'
       );
     }
     this.isAccepted = true;
@@ -182,15 +182,15 @@ export class CategorySuggestion extends AggregateRoot {
       new CategorySuggestionAcceptedEvent(
         this.id.getValue(),
         this.expenseId.getValue(),
-        this.suggestedCategoryId.getValue(),
-      ),
+        this.suggestedCategoryId.getValue()
+      )
     );
   }
 
   reject(): void {
     if (this.isAccepted !== null) {
       throw new InvalidSuggestionError(
-        "Suggestion has already been responded to",
+        'Suggestion has already been responded to'
       );
     }
     this.isAccepted = false;
@@ -198,8 +198,8 @@ export class CategorySuggestion extends AggregateRoot {
     this.addDomainEvent(
       new CategorySuggestionRejectedEvent(
         this.id.getValue(),
-        this.expenseId.getValue(),
-      ),
+        this.expenseId.getValue()
+      )
     );
   }
 
@@ -251,5 +251,19 @@ export class CategorySuggestion extends AggregateRoot {
 
   getRespondedAt(): Date | null {
     return this.respondedAt;
+  }
+
+  toJSON() {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      expenseId: this.getExpenseId().getValue(),
+      suggestedCategoryId: this.getSuggestedCategoryId().getValue(),
+      confidence: this.getConfidence().getValue(),
+      reason: this.getReason(),
+      isAccepted: this.getIsAccepted(),
+      createdAt: this.getCreatedAt(),
+      respondedAt: this.getRespondedAt(),
+    };
   }
 }

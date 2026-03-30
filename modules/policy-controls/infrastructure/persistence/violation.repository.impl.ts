@@ -1,22 +1,29 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   ViolationRepository,
   ViolationFilters,
-} from "../../domain/repositories/violation.repository";
-import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
-import { ViolationId } from "../../domain/value-objects/violation-id";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ViolationStatus } from "../../domain/enums/violation-status.enum";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+} from '../../domain/repositories/violation.repository';
+import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { ViolationId } from '../../domain/value-objects/violation-id';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ViolationStatus } from '../../domain/enums/violation-status.enum';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaViolationRepository implements ViolationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaViolationRepository
+  extends PrismaRepository<PolicyViolation>
+  implements ViolationRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(violation: PolicyViolation): Promise<void> {
     await this.prisma.policyViolation.upsert({
@@ -67,6 +74,7 @@ export class PrismaViolationRepository implements ViolationRepository {
         }),
       },
     });
+    await this.dispatchEvents(violation);
   }
 
   async findById(id: ViolationId): Promise<PolicyViolation | null> {
@@ -80,7 +88,7 @@ export class PrismaViolationRepository implements ViolationRepository {
   async findByWorkspace(
     workspaceId: string,
     filters?: ViolationFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyViolation>> {
     const where: Prisma.PolicyViolationWhereInput = { workspaceId };
 
@@ -104,17 +112,17 @@ export class PrismaViolationRepository implements ViolationRepository {
       this.prisma.policyViolation,
       {
         where,
-        orderBy: { detectedAt: "desc" },
+        orderBy: { detectedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findByExpense(expenseId: string): Promise<PolicyViolation[]> {
     const rows = await this.prisma.policyViolation.findMany({
       where: { expenseId },
-      orderBy: { detectedAt: "desc" },
+      orderBy: { detectedAt: 'desc' },
     });
 
     return rows.map((row) => this.toDomain(row));
@@ -123,22 +131,22 @@ export class PrismaViolationRepository implements ViolationRepository {
   async findByUser(
     workspaceId: string,
     userId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyViolation>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.policyViolation,
       {
         where: { workspaceId, userId },
-        orderBy: { detectedAt: "desc" },
+        orderBy: { detectedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async findPendingByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyViolation>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.policyViolation,
@@ -147,16 +155,16 @@ export class PrismaViolationRepository implements ViolationRepository {
           workspaceId,
           status: ViolationStatus.PENDING,
         },
-        orderBy: { detectedAt: "desc" },
+        orderBy: { detectedAt: 'desc' },
       },
       (row) => this.toDomain(row),
-      options,
+      options
     );
   }
 
   async countByWorkspace(
     workspaceId: string,
-    filters?: ViolationFilters,
+    filters?: ViolationFilters
   ): Promise<number> {
     const where: Prisma.PolicyViolationWhereInput = { workspaceId };
 
@@ -183,7 +191,7 @@ export class PrismaViolationRepository implements ViolationRepository {
   }
 
   private toDomain(
-    row: Prisma.PolicyViolationGetPayload<object>,
+    row: Prisma.PolicyViolationGetPayload<object>
   ): PolicyViolation {
     return PolicyViolation.reconstitute({
       violationId: ViolationId.fromString(row.id),

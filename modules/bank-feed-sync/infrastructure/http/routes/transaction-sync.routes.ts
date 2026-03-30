@@ -1,28 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { TransactionSyncController } from "../controllers/transaction-sync.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  endpointKeyGenerator,
-} from "../../../../../apps/api/src/shared/middleware/rate-limiter.middleware";
-
-const syncRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: endpointKeyGenerator,
-});
 
 export async function transactionSyncRoutes(
   fastify: FastifyInstance,
   controller: TransactionSyncController,
 ) {
-  fastify.addHook("preHandler", async (request, reply) => {
-    if (request.method !== "GET") {
-      await syncRateLimiter(request, reply);
-    }
-  });
   // Trigger sync for a connection
-  fastify.post("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync",
+  fastify.post(
+    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync",
     {
       schema: {
         params: {
@@ -42,11 +27,12 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.syncTransactions(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.syncTransactions(request as any, reply),
   );
 
   // Get sync history for a connection
-  fastify.get("/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history",
+  fastify.get(
+    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history",
     {
       schema: {
         params: {
@@ -66,11 +52,12 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getSyncHistory(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getSyncHistory(request as any, reply),
   );
 
   // Get specific sync session
-  fastify.get("/workspaces/:workspaceId/bank-feed-sync/sync/:sessionId",
+  fastify.get(
+    "/:workspaceId/bank-feed-sync/sync/:sessionId",
     {
       schema: {
         params: {
@@ -83,11 +70,12 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getSyncSession(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getSyncSession(request as any, reply),
   );
 
   // Get all active syncs
-  fastify.get("/workspaces/:workspaceId/bank-feed-sync/sync/active",
+  fastify.get(
+    "/:workspaceId/bank-feed-sync/sync/active",
     {
       schema: {
         params: {
@@ -106,6 +94,6 @@ export async function transactionSyncRoutes(
         },
       },
     },
-    (request, reply) => controller.getActiveSyncs(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getActiveSyncs(request as any, reply),
   );
 }

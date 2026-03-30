@@ -1,4 +1,4 @@
-import {
+﻿import {
   IQuery,
   IQueryHandler,
   QueryResult,
@@ -58,12 +58,8 @@ export class GetExpenseStatisticsHandler implements IQueryHandler<
         },
         totalCount,
       });
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error
-          ? error.message
-          : 'Failed to get expense statistics'
-      );
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
   }
 }

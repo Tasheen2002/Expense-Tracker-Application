@@ -39,10 +39,7 @@ export class AcceptInvitationHandler implements ICommandHandler<
         role: membership.getRole(),
       });
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure(error.message, [error.message]);
-      }
-      return CommandResult.failure('Failed to accept invitation');
+      return CommandResult.fromError(error);
     }
   }
 }

@@ -1,29 +1,55 @@
-import { RuleExecutionService } from '../services/rule-execution.service'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id'
+import { RuleExecutionService } from '../services/rule-execution.service';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface EvaluateRulesCommand {
-  workspaceId: string
-  expenseId: string
+export interface EvaluateRulesCommand extends ICommand {
+  workspaceId: string;
+  expenseId: string;
   expenseData: {
-    merchant?: string
-    description?: string
-    amount: number
-    paymentMethod?: string
-  }
+    merchant?: string;
+    description?: string;
+    amount: number;
+    paymentMethod?: string;
+  };
 }
 
-export class EvaluateRulesHandler {
+interface EvaluationResult {
+  appliedRule: {
+    id: string;
+    name: string;
+    priority: number;
+  } | null;
+  suggestedCategoryId: string | null;
+  execution: {
+    id: string;
+    ruleId: string;
+    expenseId: string;
+    appliedCategoryId: string;
+    executedAt: Date;
+  } | null;
+}
+
+export class EvaluateRulesHandler implements ICommandHandler<
+  EvaluateRulesCommand,
+  CommandResult<EvaluationResult>
+> {
   constructor(private readonly executionService: RuleExecutionService) {}
 
-  async execute(command: EvaluateRulesCommand) {
+  async handle(
+    command: EvaluateRulesCommand
+  ): Promise<CommandResult<EvaluationResult>> {
     const result = await this.executionService.evaluateAndApplyRules({
       workspaceId: WorkspaceId.fromString(command.workspaceId),
       expenseId: ExpenseId.fromString(command.expenseId),
       expenseData: command.expenseData,
-    })
+    });
 
-    return {
+    const evaluationResult: EvaluationResult = {
       appliedRule: result.appliedRule
         ? {
             id: result.appliedRule.getId().getValue(),
@@ -37,10 +63,14 @@ export class EvaluateRulesHandler {
             id: result.execution.getId().getValue(),
             ruleId: result.execution.getRuleId().getValue(),
             expenseId: result.execution.getExpenseId().getValue(),
-            appliedCategoryId: result.execution.getAppliedCategoryId().getValue(),
+            appliedCategoryId: result.execution
+              .getAppliedCategoryId()
+              .getValue(),
             executedAt: result.execution.getExecutedAt(),
           }
         : null,
-    }
+    };
+
+    return CommandResult.success(evaluationResult);
   }
 }

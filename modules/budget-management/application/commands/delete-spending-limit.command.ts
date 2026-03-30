@@ -21,17 +21,11 @@ export class DeleteSpendingLimitHandler implements ICommandHandler<
   async handle(
     command: DeleteSpendingLimitCommand
   ): Promise<CommandResult<void>> {
-    try {
-      
-          await this.limitService.deleteSpendingLimit(
-            command.limitId,
-            command.workspaceId,
-            command.userId
-          );
-          return CommandResult.success(undefined);
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.limitService.deleteSpendingLimit(
+      command.limitId,
+      command.workspaceId,
+      command.userId
+    );
+    return CommandResult.success(undefined);
   }
 }

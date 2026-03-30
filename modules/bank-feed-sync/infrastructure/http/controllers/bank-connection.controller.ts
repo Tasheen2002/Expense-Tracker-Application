@@ -57,7 +57,7 @@ export class BankConnectionController {
         result.data,
         201
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -96,7 +96,7 @@ export class BankConnectionController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -119,7 +119,7 @@ export class BankConnectionController {
         'Bank connection retrieved successfully',
         result.data?.toJSON()
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -153,7 +153,7 @@ export class BankConnectionController {
         'Connection token updated successfully',
         undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -177,7 +177,7 @@ export class BankConnectionController {
         undefined,
         204
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -201,7 +201,7 @@ export class BankConnectionController {
         undefined,
         204
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }

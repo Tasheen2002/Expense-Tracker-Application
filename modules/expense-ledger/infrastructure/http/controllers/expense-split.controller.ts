@@ -4,9 +4,10 @@ import { CreateSplitHandler } from '../../../application/commands/create-split.c
 import { DeleteSplitHandler } from '../../../application/commands/delete-split.command';
 import { RecordPaymentHandler } from '../../../application/commands/record-payment.command';
 import { GetSplitHandler } from '../../../application/queries/get-split.query';
+import { GetSplitByExpenseHandler } from '../../../application/queries/get-split-by-expense.query';
 import { ListUserSplitsHandler } from '../../../application/queries/list-user-splits.query';
 import { ListUserSettlementsHandler } from '../../../application/queries/list-user-settlements.query';
-import { ExpenseSplitService } from '../../../application/services/expense-split.service';
+import { GetSplitSettlementsHandler } from '../../../application/queries/get-split-settlements.query';
 import { SplitType } from '../../../domain/enums/split-type';
 import { SettlementStatus } from '../../../domain/enums/settlement-status';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
@@ -17,9 +18,10 @@ export class ExpenseSplitController {
     private readonly deleteSplitHandler: DeleteSplitHandler,
     private readonly recordPaymentHandler: RecordPaymentHandler,
     private readonly getSplitHandler: GetSplitHandler,
+    private readonly getSplitByExpenseHandler: GetSplitByExpenseHandler,
     private readonly listUserSplitsHandler: ListUserSplitsHandler,
     private readonly listUserSettlementsHandler: ListUserSettlementsHandler,
-    private readonly splitService: ExpenseSplitService
+    private readonly getSplitSettlementsHandler: GetSplitSettlementsHandler
   ) {}
 
   async createSplit(
@@ -49,19 +51,12 @@ export class ExpenseSplitController {
         participants,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to create split'
-        );
-      }
-
-      const split = result.data;
-
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'Split created successfully',
-        split.toJSON()
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -84,19 +79,11 @@ export class ExpenseSplitController {
         userId,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.notFound(
-          reply,
-          result.error ?? 'Split not found'
-        );
-      }
-
-      const split = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         'Split retrieved successfully',
-        split.toJSON()
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -113,20 +100,17 @@ export class ExpenseSplitController {
     const userId = request.user.userId;
 
     try {
-      const split = await this.splitService.getSplitByExpenseId(
+      const result = await this.getSplitByExpenseHandler.handle({
         expenseId,
         workspaceId,
-        userId
-      );
+        userId,
+      });
 
-      if (!split) {
-        return ResponseHelper.notFound(reply, 'Split not found');
-      }
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
         'Split retrieved successfully',
-        split.toJSON()
+        result,
+        result.data?.toJSON()
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -152,22 +136,22 @@ export class ExpenseSplitController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve splits'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Splits retrieved successfully', {
-        items: result.data.items.map((split) => split.toJSON()),
-        pagination: {
-          total: result.data.total,
-          limit: result.data.limit,
-          offset: result.data.offset,
-          hasMore: result.data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Splits retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((split) => split.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -189,14 +173,11 @@ export class ExpenseSplitController {
         userId,
       });
 
-      if (!result.success) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to delete split'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Split deleted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Split deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -221,19 +202,10 @@ export class ExpenseSplitController {
         amount,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to record payment'
-        );
-      }
-
-      const settlement = result.data;
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
-        'Payment recorded successfully',
-        settlement.toJSON()
+        result,
+        'Payment recorded successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -264,22 +236,22 @@ export class ExpenseSplitController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      if (!result.success || !result.data) {
-        return ResponseHelper.badRequest(
-          reply,
-          result.error ?? 'Failed to retrieve settlements'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Settlements retrieved successfully', {
-        items: result.data.items.map((s) => s.toJSON()),
-        pagination: {
-          total: result.data.total,
-          limit: result.data.limit,
-          offset: result.data.offset,
-          hasMore: result.data.hasMore,
-        },
-      });
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Settlements retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items.map((s) => s.toJSON()),
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -295,18 +267,21 @@ export class ExpenseSplitController {
     const userId = request.user.userId;
 
     try {
-      const settlements = await this.splitService.getSplitSettlements(
+      const result = await this.getSplitSettlementsHandler.handle({
         splitId,
         workspaceId,
-        userId
-      );
+        userId,
+      });
 
-      return ResponseHelper.ok(
+      return ResponseHelper.fromQuery(
         reply,
         'Split settlements retrieved successfully',
-        {
-          items: settlements.items.map((s) => s.toJSON()),
-        }
+        result,
+        result.data
+          ? {
+              items: result.data.items.map((s) => s.toJSON()),
+            }
+          : undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

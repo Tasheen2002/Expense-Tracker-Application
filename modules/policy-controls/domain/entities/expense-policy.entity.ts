@@ -1,16 +1,16 @@
-import { PolicyId } from "../value-objects/policy-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { PolicyType } from "../enums/policy-type.enum";
-import { ViolationSeverity } from "../enums/violation-severity.enum";
+import { PolicyId } from '../value-objects/policy-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { PolicyType } from '../enums/policy-type.enum';
+import { ViolationSeverity } from '../enums/violation-severity.enum';
 import {
   PolicyNameRequiredError,
   PolicyNameTooLongError,
   PolicyDescriptionTooLongError,
   InvalidThresholdError,
   InvalidPolicyConfigurationError,
-} from "../errors/policy-controls.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+} from '../errors/policy-controls.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // Domain Events
@@ -26,13 +26,13 @@ export class PolicyCreatedEvent extends DomainEvent {
     public readonly name: string,
     public readonly policyType: PolicyType,
     public readonly severity: ViolationSeverity,
-    public readonly createdBy: string,
+    public readonly createdBy: string
   ) {
-    super(policyId, "ExpensePolicy");
+    super(policyId, 'ExpensePolicy');
   }
 
   get eventType(): string {
-    return "policy.created";
+    return 'policy.created';
   }
 
   getPayload(): Record<string, unknown> {
@@ -54,13 +54,13 @@ export class PolicyActivatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
     public readonly workspaceId: string,
-    public readonly name: string,
+    public readonly name: string
   ) {
-    super(policyId, "ExpensePolicy");
+    super(policyId, 'ExpensePolicy');
   }
 
   get eventType(): string {
-    return "policy.activated";
+    return 'policy.activated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -79,13 +79,13 @@ export class PolicyDeactivatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
     public readonly workspaceId: string,
-    public readonly name: string,
+    public readonly name: string
   ) {
-    super(policyId, "ExpensePolicy");
+    super(policyId, 'ExpensePolicy');
   }
 
   get eventType(): string {
-    return "policy.deactivated";
+    return 'policy.deactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -105,13 +105,13 @@ export class PolicyUpdatedEvent extends DomainEvent {
     public readonly policyId: string,
     public readonly workspaceId: string,
     public readonly name: string,
-    public readonly updatedFields: string[],
+    public readonly updatedFields: string[]
   ) {
-    super(policyId, "ExpensePolicy");
+    super(policyId, 'ExpensePolicy');
   }
 
   get eventType(): string {
-    return "policy.updated";
+    return 'policy.updated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -216,7 +216,7 @@ export class ExpensePolicy extends AggregateRoot {
     // Validate configuration based on policy type
     ExpensePolicy.validateConfiguration(
       params.policyType,
-      params.configuration,
+      params.configuration
     );
 
     const policy = new ExpensePolicy({
@@ -242,8 +242,8 @@ export class ExpensePolicy extends AggregateRoot {
         params.name.trim(),
         params.policyType,
         params.severity,
-        params.createdBy,
-      ),
+        params.createdBy
+      )
     );
 
     return policy;
@@ -255,7 +255,7 @@ export class ExpensePolicy extends AggregateRoot {
 
   private static validateConfiguration(
     policyType: PolicyType,
-    config: PolicyConfiguration,
+    config: PolicyConfiguration
   ): void {
     switch (policyType) {
       case PolicyType.SPENDING_LIMIT:
@@ -264,7 +264,7 @@ export class ExpensePolicy extends AggregateRoot {
       case PolicyType.MONTHLY_LIMIT:
         if (!config.threshold || config.threshold <= 0) {
           throw new InvalidThresholdError(
-            "Threshold must be a positive number",
+            'Threshold must be a positive number'
           );
         }
         break;
@@ -275,7 +275,7 @@ export class ExpensePolicy extends AggregateRoot {
           !config.allowedCategoryIds?.length
         ) {
           throw new InvalidPolicyConfigurationError(
-            "Category restriction requires either restricted or allowed categories",
+            'Category restriction requires either restricted or allowed categories'
           );
         }
         break;
@@ -283,7 +283,7 @@ export class ExpensePolicy extends AggregateRoot {
       case PolicyType.MERCHANT_BLACKLIST:
         if (!config.blacklistedMerchants?.length) {
           throw new InvalidPolicyConfigurationError(
-            "Merchant blacklist requires at least one blacklisted merchant",
+            'Merchant blacklist requires at least one blacklisted merchant'
           );
         }
         break;
@@ -295,7 +295,7 @@ export class ExpensePolicy extends AggregateRoot {
             config.blockedHoursEnd === undefined)
         ) {
           throw new InvalidPolicyConfigurationError(
-            "Time restriction requires blocked days or blocked hours",
+            'Time restriction requires blocked days or blocked hours'
           );
         }
         break;
@@ -308,7 +308,7 @@ export class ExpensePolicy extends AggregateRoot {
           config.requirementThreshold < 0
         ) {
           throw new InvalidThresholdError(
-            "Requirement threshold cannot be negative",
+            'Requirement threshold cannot be negative'
           );
         }
         break;
@@ -409,8 +409,8 @@ export class ExpensePolicy extends AggregateRoot {
       new PolicyActivatedEvent(
         this.props.policyId.getValue(),
         this.props.workspaceId.getValue(),
-        this.props.name,
-      ),
+        this.props.name
+      )
     );
   }
 
@@ -423,8 +423,8 @@ export class ExpensePolicy extends AggregateRoot {
       new PolicyDeactivatedEvent(
         this.props.policyId.getValue(),
         this.props.workspaceId.getValue(),
-        this.props.name,
-      ),
+        this.props.name
+      )
     );
   }
 
@@ -460,4 +460,36 @@ export class ExpensePolicy extends AggregateRoot {
 
     return true;
   }
+
+  toJSON(): ExpensePolicyDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      description: this.getDescription(),
+      policyType: this.getPolicyType(),
+      severity: this.getSeverity(),
+      configuration: this.getConfiguration(),
+      priority: this.getPriority(),
+      isActive: this.isActive(),
+      createdBy: this.getCreatedBy(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface ExpensePolicyDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  policyType: PolicyType;
+  severity: ViolationSeverity;
+  configuration: PolicyConfiguration;
+  priority: number;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

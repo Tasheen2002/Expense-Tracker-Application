@@ -1,9 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
-import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects/uuid-id.base";
 
-export class OutboxEventId extends UuidId {
-  constructor(value: string) {
-    super(value, "OutboxEventId");
+export class OutboxEventId {
+  private constructor(private readonly value: string) {
+    if (!value || value.trim() === "") {
+      throw new Error("OutboxEventId cannot be empty");
+    }
   }
 
   static create(): OutboxEventId {
@@ -12,5 +13,17 @@ export class OutboxEventId extends UuidId {
 
   static fromString(id: string): OutboxEventId {
     return new OutboxEventId(id);
+  }
+
+  getValue(): string {
+    return this.value;
+  }
+
+  equals(other: OutboxEventId): boolean {
+    return this.value === other.value;
+  }
+
+  toString(): string {
+    return this.value;
   }
 }

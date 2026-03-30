@@ -8,7 +8,6 @@ import {
 export interface CancelWorkflowInput extends ICommand {
   expenseId: string;
   workspaceId: string;
-  cancelledBy: string;
 }
 
 export class CancelWorkflowHandler implements ICommandHandler<
@@ -17,18 +16,26 @@ export class CancelWorkflowHandler implements ICommandHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(input: CancelWorkflowInput): Promise<CommandResult<void>> {
     try {
       await this.workflowService.cancelWorkflow(
         input.expenseId,
-        input.workspaceId,
-        input.cancelledBy
+        input.workspaceId
       );
       return CommandResult.success();
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type CancelWorkflowCommand = CancelWorkflowInput;

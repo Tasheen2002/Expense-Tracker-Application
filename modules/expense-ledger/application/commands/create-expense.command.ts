@@ -32,7 +32,7 @@ export interface CreateExpenseCommand extends ICommand {
 
 export class CreateExpenseHandler implements ICommandHandler<
   CreateExpenseCommand,
-  CommandResult<Expense>
+  CommandResult<{ expenseId: string }>
 > {
   constructor(
     private readonly expenseService: ExpenseService,
@@ -40,52 +40,48 @@ export class CreateExpenseHandler implements ICommandHandler<
     private readonly tagRepository: TagRepository
   ) {}
 
-  async handle(command: CreateExpenseCommand): Promise<CommandResult<Expense>> {
-    try {
-      if (command.categoryId) {
-        const categoryExists = await this.categoryRepository.exists(
-          CategoryId.fromString(command.categoryId),
-          command.workspaceId
-        );
-        if (!categoryExists) {
-          throw new CategoryNotFoundError(
-            command.categoryId,
-            command.workspaceId
-          );
-        }
-      }
-
-      if (command.tagIds && command.tagIds.length > 0) {
-        const uniqueTagIds = Array.from(new Set(command.tagIds));
-        const tagIdObjects = uniqueTagIds.map((id) => TagId.fromString(id));
-        const foundTags = await this.tagRepository.findByIds(
-          tagIdObjects,
-          command.workspaceId
-        );
-        if (foundTags.length !== uniqueTagIds.length) {
-          throw new TagNotFoundError('one_or_more', command.workspaceId);
-        }
-      }
-
-      const expense = await this.expenseService.createExpense({
-        workspaceId: command.workspaceId,
-        userId: command.userId,
-        title: command.title,
-        description: command.description,
-        amount: command.amount,
-        currency: command.currency,
-        expenseDate: command.expenseDate,
-        categoryId: command.categoryId,
-        merchant: command.merchant,
-        paymentMethod: command.paymentMethod,
-        isReimbursable: command.isReimbursable,
-        tagIds: command.tagIds,
-      });
-      return CommandResult.success(expense);
-    } catch (error) {
-      return CommandResult.failure<Expense>(
-        error instanceof Error ? error.message : 'Failed to create expense'
+  async handle(
+    command: CreateExpenseCommand
+  ): Promise<CommandResult<{ expenseId: string }>> {
+    if (command.categoryId) {
+      const categoryExists = await this.categoryRepository.exists(
+        CategoryId.fromString(command.categoryId),
+        command.workspaceId
       );
+      if (!categoryExists) {
+        throw new CategoryNotFoundError(
+          command.categoryId,
+          command.workspaceId
+        );
+      }
     }
+
+    if (command.tagIds && command.tagIds.length > 0) {
+      const uniqueTagIds = Array.from(new Set(command.tagIds));
+      const tagIdObjects = uniqueTagIds.map((id) => TagId.fromString(id));
+      const foundTags = await this.tagRepository.findByIds(
+        tagIdObjects,
+        command.workspaceId
+      );
+      if (foundTags.length !== uniqueTagIds.length) {
+        throw new TagNotFoundError('one_or_more', command.workspaceId);
+      }
+    }
+
+    const expense = await this.expenseService.createExpense({
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      title: command.title,
+      description: command.description,
+      amount: command.amount,
+      currency: command.currency,
+      expenseDate: command.expenseDate,
+      categoryId: command.categoryId,
+      merchant: command.merchant,
+      paymentMethod: command.paymentMethod,
+      isReimbursable: command.isReimbursable,
+      tagIds: command.tagIds,
+    });
+    return CommandResult.success({ expenseId: expense.id.getValue() });
   }
 }

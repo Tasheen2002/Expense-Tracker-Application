@@ -1,21 +1,14 @@
-// Notification Dispatch Module - Main Entry Point
-// Re-export core services for external consumption
+// Notification Dispatch Module - Public API
+// Only exposes what other modules and the app container need
 
-// Domain
-export * from "./domain/entities";
-export * from "./domain/enums";
-export * from "./domain/value-objects";
-export * from "./domain/errors/notification.errors";
+// Domain Enums (used by other modules, e.g. for NotificationType)
+export * from './domain/enums';
 
-// Application Services
-export * from "./application/services";
-export * from "./application/providers";
+// Domain Errors (public — ResponseHelper maps statusCode for HTTP responses)
+export * from './domain/errors/notification.errors';
 
-// Infrastructure - Controllers
-export * from "./infrastructure/http/controllers";
+// Infrastructure — Route Registration
+export { registerNotificationDispatchRoutes } from './infrastructure/http/routes';
 
-// Infrastructure - Route Registration
-export { registerNotificationDispatchRoutes } from "./infrastructure/http/routes";
-
-// Validation Schemas
-export * from "./infrastructure/http/validation";
+// Application — Domain Event Handler (wired up by app container)
+export { NotificationEventHandler } from './application/handlers/notification.handler';

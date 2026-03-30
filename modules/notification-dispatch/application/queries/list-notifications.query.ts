@@ -1,22 +1,37 @@
-import { NotificationService } from "../services/notification.service";
+import { NotificationService } from '../services/notification.service';
+import { Notification } from '../../domain/entities/notification.entity';
+import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class ListNotificationsQuery {
-  constructor(
-    public readonly recipientId: string,
-    public readonly workspaceId: string,
-    public readonly limit?: number,
-    public readonly offset?: number,
-  ) {}
+export interface ListNotificationsQuery extends IQuery {
+  recipientId: string;
+  workspaceId: string;
+  limit?: number;
+  offset?: number;
 }
 
-export class ListNotificationsHandler {
+export class ListNotificationsHandler implements IQueryHandler<
+  ListNotificationsQuery,
+  QueryResult<PaginatedResult<Notification>>
+> {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(query: ListNotificationsQuery) {
-    return await this.notificationService.getNotifications(
-      query.recipientId,
-      query.workspaceId,
-      { limit: query.limit, offset: query.offset },
-    );
+  async handle(
+    input: ListNotificationsQuery
+  ): Promise<QueryResult<PaginatedResult<Notification>>> {
+    try {
+      const result = await this.notificationService.getNotifications(
+        input.recipientId,
+        input.workspaceId,
+        { limit: input.limit, offset: input.offset }
+      );
+      return QueryResult.success(result);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

@@ -29,9 +29,13 @@ export class CreateApprovalChainHandler implements ICommandHandler<
       const chain = await this.approvalChainService.createChain(input);
       return CommandResult.success({ chainId: chain.getId().getValue() });
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        error && typeof error === 'object' && 'statusCode' in error
+          ? (error as { statusCode: number }).statusCode
+          : 500
+      );
     }
   }
 }
-
-export type CreateApprovalChainCommand = CreateApprovalChainInput;

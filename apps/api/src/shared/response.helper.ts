@@ -48,6 +48,10 @@ export class ResponseHelper {
     message: string,
     data?: T
   ): FastifyReply {
+    if (statusCode === 204) {
+      return reply.status(204).send();
+    }
+
     const response: SuccessResponse<T> = {
       success: true,
       statusCode,

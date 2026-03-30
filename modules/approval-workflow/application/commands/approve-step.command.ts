@@ -18,14 +18,23 @@ export class ApproveStepHandler implements ICommandHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(input: ApproveStepInput): Promise<CommandResult<void>> {
     try {
       await this.workflowService.approveStep(input);
       return CommandResult.success();
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type ApproveStepCommand = ApproveStepInput;

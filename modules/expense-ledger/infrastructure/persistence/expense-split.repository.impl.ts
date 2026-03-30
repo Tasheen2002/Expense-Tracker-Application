@@ -2,26 +2,26 @@ import {
   PrismaClient,
   Prisma,
   SplitType as PrismaSplitType,
-} from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
-import { ExpenseSplitRepository } from "../../domain/repositories/expense-split.repository";
-import { ExpenseSplit } from "../../domain/entities/expense-split.entity";
-import { SplitParticipant } from "../../domain/entities/split-participant.entity";
-import { SplitId } from "../../domain/value-objects/split-id";
-import { ExpenseId } from "../../domain/value-objects/expense-id";
-import { SplitParticipantId } from "../../domain/value-objects/split-participant-id";
-import { Money } from "../../domain/value-objects/money";
-import { SplitType } from "../../domain/enums/split-type";
+} from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
+import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
+import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { SplitParticipant } from '../../domain/entities/split-participant.entity';
+import { SplitId } from '../../domain/value-objects/split-id';
+import { ExpenseId } from '../../domain/value-objects/expense-id';
+import { SplitParticipantId } from '../../domain/value-objects/split-participant-id';
+import { Money } from '../../domain/value-objects/money';
+import { SplitType } from '../../domain/enums/split-type';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly eventBus: IEventBus,
+    private readonly eventBus: IEventBus
   ) {}
 
   async save(split: ExpenseSplit): Promise<void> {
@@ -58,7 +58,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
             splitId: p.getSplitId().getValue(),
             userId: p.getUserId(),
             shareAmount: p.getShareAmount().getAmount(),
-            sharePercentage: p.getSharePercentage()?.toNumber(),
+            sharePercentage: p.getSharePercentage(),
             isPaid: p.isPaidStatus(),
             paidAt: p.getPaidAt(),
             createdAt: p.getCreatedAt(),
@@ -73,7 +73,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
 
   async findById(
     id: SplitId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ExpenseSplit | null> {
     const split = await this.prisma.expenseSplit.findUnique({
       where: {
@@ -92,7 +92,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
 
   async findByExpenseId(
     expenseId: ExpenseId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<ExpenseSplit | null> {
     const split = await this.prisma.expenseSplit.findUnique({
       where: {
@@ -111,7 +111,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplit>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -120,7 +120,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
       this.prisma.expenseSplit.findMany({
         where: { workspaceId },
         include: { participants: true },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -139,7 +139,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   async findByUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplit>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -155,7 +155,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
       this.prisma.expenseSplit.findMany({
         where,
         include: { participants: true },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -174,7 +174,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   async findByPaidBy(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplit>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -188,7 +188,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
       this.prisma.expenseSplit.findMany({
         where,
         include: { participants: true },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -224,7 +224,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   }
 
   private toDomain(
-    data: Prisma.ExpenseSplitGetPayload<{ include: { participants: true } }>,
+    data: Prisma.ExpenseSplitGetPayload<{ include: { participants: true } }>
   ): ExpenseSplit {
     const participants = data.participants.map((p) =>
       SplitParticipant.reconstitute({
@@ -233,13 +233,13 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
         userId: p.userId,
         shareAmount: Money.create(Number(p.shareAmount), data.currency),
         sharePercentage: p.sharePercentage
-          ? new Decimal(p.sharePercentage)
+          ? new Decimal(p.sharePercentage).toNumber()
           : undefined,
         isPaid: p.isPaid,
         paidAt: p.paidAt ?? undefined,
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
-      }),
+      })
     );
 
     return ExpenseSplit.reconstitute({

@@ -79,6 +79,14 @@ export class BudgetRepositoryImpl
     return this.toDomain(row);
   }
 
+  async findByIdInternal(id: BudgetId): Promise<Budget | null> {
+    const row = await this.prisma.budget.findUnique({
+      where: { id: id.getValue() },
+    });
+    if (!row) return null;
+    return this.toDomain(row);
+  }
+
   async findByWorkspace(
     workspaceId: string,
     options?: PaginationOptions

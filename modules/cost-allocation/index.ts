@@ -1,23 +1,22 @@
-// Domain Layer
-export * from "./domain/entities/cost-center.entity";
-export * from "./domain/entities/department.entity";
-export * from "./domain/entities/expense-allocation.entity";
-export * from "./domain/entities/project.entity";
+export { registerCostAllocationRoutes } from './infrastructure/http/routes';
 
-export * from "./domain/value-objects/allocation-amount";
-export * from "./domain/value-objects/cost-center-id";
-export * from "./domain/value-objects/department-id";
-export * from "./domain/value-objects/project-id";
+// Domain error types (used by cross-cutting error handlers)
+export {
+  CostAllocationDomainError,
+  DepartmentNotFoundError,
+  CostCenterNotFoundError,
+  ProjectNotFoundError,
+  AllocationNotFoundError,
+  InvalidAllocationDataError,
+  DuplicateDepartmentNameError,
+  DuplicateCostCenterCodeError,
+  DuplicateProjectCodeError,
+  UnauthorizedAllocationAccessError,
+  InvalidTotalAllocationError,
+  InvalidAllocationAmountError,
+  InvalidAllocationTargetError,
+  ExpenseNotFoundError,
+  ExpenseWorkspaceMismatchError,
+} from './domain/errors/cost-allocation.errors';
 
-export * from "./domain/repositories/cost-center.repository";
-export * from "./domain/repositories/department.repository";
-export * from "./domain/repositories/expense-allocation.repository";
-export * from "./domain/repositories/project.repository";
-
-export * from "./domain/errors/cost-allocation.errors";
-
-// Application Layer
-export * from "./application/services";
-
-// Infrastructure Layer
-export * from "./infrastructure";
+// Domain enums (None found in previous research, but if any exist, they should be here)

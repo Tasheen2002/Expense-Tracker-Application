@@ -1,50 +1,37 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import {
-  CreateCategoryRuleBody,
-  UpdateCategoryRuleBody,
-} from "../validation/category-rule.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+
+interface CreateCategoryRuleBody {
+  name: string;
+  description?: string;
+  priority?: number;
+  conditionType: string;
+  conditionValue: string;
+  targetCategoryId: string;
+}
+
+interface UpdateCategoryRuleBody {
+  name?: string;
+  description?: string | null;
+  priority?: number;
+  conditionType?: string;
+  conditionValue?: string;
+  targetCategoryId?: string;
+}
 
 // Command Handlers
-import {
-  CreateCategoryRuleCommand,
-  CreateCategoryRuleHandler,
-} from "../../../application/commands/create-category-rule.command";
-import {
-  UpdateCategoryRuleCommand,
-  UpdateCategoryRuleHandler,
-} from "../../../application/commands/update-category-rule.command";
-import {
-  DeleteCategoryRuleCommand,
-  DeleteCategoryRuleHandler,
-} from "../../../application/commands/delete-category-rule.command";
-import {
-  ActivateCategoryRuleCommand,
-  ActivateCategoryRuleHandler,
-} from "../../../application/commands/activate-category-rule.command";
-import {
-  DeactivateCategoryRuleCommand,
-  DeactivateCategoryRuleHandler,
-} from "../../../application/commands/deactivate-category-rule.command";
+import { CreateCategoryRuleHandler } from '../../../application/commands/create-category-rule.command';
+import { UpdateCategoryRuleHandler } from '../../../application/commands/update-category-rule.command';
+import { DeleteCategoryRuleHandler } from '../../../application/commands/delete-category-rule.command';
+import { ActivateCategoryRuleHandler } from '../../../application/commands/activate-category-rule.command';
+import { DeactivateCategoryRuleHandler } from '../../../application/commands/deactivate-category-rule.command';
 
 // Query Handlers
-import {
-  GetRuleByIdQuery,
-  GetRuleByIdHandler,
-} from "../../../application/queries/get-rule-by-id.query";
-import {
-  GetRulesByWorkspaceQuery,
-  GetRulesByWorkspaceHandler,
-} from "../../../application/queries/get-rules-by-workspace.query";
-import {
-  GetActiveRulesByWorkspaceQuery,
-  GetActiveRulesByWorkspaceHandler,
-} from "../../../application/queries/get-active-rules-by-workspace.query";
-import {
-  GetExecutionsByRuleQuery,
-  GetExecutionsByRuleHandler,
-} from "../../../application/queries/get-executions-by-rule.query";
+import { GetRuleByIdHandler } from '../../../application/queries/get-rule-by-id.query';
+import { GetRulesByWorkspaceHandler } from '../../../application/queries/get-rules-by-workspace.query';
+import { GetActiveRulesByWorkspaceHandler } from '../../../application/queries/get-active-rules-by-workspace.query';
+import { GetExecutionsByRuleHandler } from '../../../application/queries/get-executions-by-rule.query';
 
 export class CategoryRuleController {
   constructor(
@@ -56,7 +43,7 @@ export class CategoryRuleController {
     private readonly getRuleByIdHandler: GetRuleByIdHandler,
     private readonly getRulesByWorkspaceHandler: GetRulesByWorkspaceHandler,
     private readonly getActiveRulesByWorkspaceHandler: GetActiveRulesByWorkspaceHandler,
-    private readonly getExecutionsByRuleHandler: GetExecutionsByRuleHandler,
+    private readonly getExecutionsByRuleHandler: GetExecutionsByRuleHandler
   ) {}
 
   async createRule(
@@ -64,19 +51,19 @@ export class CategoryRuleController {
       Params: { workspaceId: string };
       Body: CreateCategoryRuleBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const command: CreateCategoryRuleCommand = {
+      const result = await this.createRuleHandler.handle({
         workspaceId,
         name: request.body.name,
         description: request.body.description,
@@ -85,15 +72,14 @@ export class CategoryRuleController {
         conditionValue: request.body.conditionValue,
         targetCategoryId: request.body.targetCategoryId,
         createdBy: userId,
-      };
+      });
 
-      const rule = await this.createRuleHandler.execute(command);
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Category rule created successfully",
-        rule,
+        result,
+        'Category rule created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -105,19 +91,19 @@ export class CategoryRuleController {
       Params: { workspaceId: string; ruleId: string };
       Body: UpdateCategoryRuleBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const command: UpdateCategoryRuleCommand = {
+      const result = await this.updateRuleHandler.handle({
         ruleId,
         userId,
         name: request.body.name,
@@ -126,15 +112,12 @@ export class CategoryRuleController {
         conditionType: request.body.conditionType,
         conditionValue: request.body.conditionValue,
         targetCategoryId: request.body.targetCategoryId,
-      };
+      });
 
-      const rule = await this.updateRuleHandler.execute(command);
-
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category rule updated successfully",
-        rule,
+        result,
+        'Category rule updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -145,7 +128,7 @@ export class CategoryRuleController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
@@ -153,18 +136,17 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const command: DeleteCategoryRuleCommand = { ruleId, userId };
-      await this.deleteRuleHandler.execute(command);
+      const result = await this.deleteRuleHandler.handle({ ruleId, userId });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category rule deleted successfully",
+        result,
+        'Category rule deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -175,7 +157,7 @@ export class CategoryRuleController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
@@ -183,19 +165,17 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const command: ActivateCategoryRuleCommand = { ruleId, userId };
-      const rule = await this.activateRuleHandler.execute(command);
+      const result = await this.activateRuleHandler.handle({ ruleId, userId });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category rule activated successfully",
-        rule,
+        result,
+        'Category rule activated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -206,7 +186,7 @@ export class CategoryRuleController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
@@ -214,19 +194,20 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const command: DeactivateCategoryRuleCommand = { ruleId, userId };
-      const rule = await this.deactivateRuleHandler.execute(command);
+      const result = await this.deactivateRuleHandler.handle({
+        ruleId,
+        userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Category rule deactivated successfully",
-        rule,
+        result,
+        'Category rule deactivated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -237,7 +218,7 @@ export class CategoryRuleController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; ruleId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
@@ -245,19 +226,18 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const query: GetRuleByIdQuery = { ruleId, userId };
-      const rule = await this.getRuleByIdHandler.execute(query);
+      const result = await this.getRuleByIdHandler.handle({ ruleId, userId });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Category rule retrieved successfully",
-        rule,
+        result,
+        'Category rule retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -269,7 +249,7 @@ export class CategoryRuleController {
       Params: { workspaceId: string };
       Querystring: { activeOnly?: string; limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
@@ -278,55 +258,52 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      if (activeOnly === "true") {
-        const query: GetActiveRulesByWorkspaceQuery = {
+      if (activeOnly === 'true') {
+        const result = await this.getActiveRulesByWorkspaceHandler.handle({
           workspaceId,
           userId,
           limit: limit ? parseInt(limit) : undefined,
           offset: offset ? parseInt(offset) : undefined,
-        };
-        const result =
-          await this.getActiveRulesByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
+        });
+        return ResponseHelper.fromQuery(
           reply,
-          200,
-          "Active category rules retrieved successfully",
+          result,
+          'Active category rules retrieved successfully',
           {
-            items: result.items,
+            items: result.data?.items.map((rule) => rule.toJSON()) || [],
             pagination: {
-              total: result.total,
-              limit: result.limit,
-              offset: result.offset,
-              hasMore: result.hasMore,
+              total: result.data?.total || 0,
+              limit: result.data?.limit || 10,
+              offset: result.data?.offset || 0,
+              hasMore: result.data?.hasMore || false,
             },
-          },
+          }
         );
       } else {
-        const query: GetRulesByWorkspaceQuery = {
+        const result = await this.getRulesByWorkspaceHandler.handle({
           workspaceId,
           userId,
           limit: limit ? parseInt(limit) : undefined,
           offset: offset ? parseInt(offset) : undefined,
-        };
-        const result = await this.getRulesByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
+        });
+        return ResponseHelper.fromQuery(
           reply,
-          200,
-          "Category rules retrieved successfully",
+          result,
+          'Category rules retrieved successfully',
           {
-            items: result.items,
+            items: result.data?.items.map((rule) => rule.toJSON()) || [],
             pagination: {
-              total: result.total,
-              limit: result.limit,
-              offset: result.offset,
-              hasMore: result.hasMore,
+              total: result.data?.total || 0,
+              limit: result.data?.limit || 10,
+              offset: result.data?.offset || 0,
+              hasMore: result.data?.hasMore || false,
             },
-          },
+          }
         );
       }
     } catch (error) {
@@ -339,7 +316,7 @@ export class CategoryRuleController {
       Params: { workspaceId: string; ruleId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { ruleId } = request.params;
@@ -347,33 +324,33 @@ export class CategoryRuleController {
       const userId = request.user.userId;
       if (!userId) {
         return ResponseHelper.error(reply, {
-          message: "User not authenticated",
+          message: 'User not authenticated',
           statusCode: 401,
         });
       }
 
-      const query: GetExecutionsByRuleQuery = {
+      const result = await this.getExecutionsByRuleHandler.handle({
         ruleId,
         limit: request.query.limit ? parseInt(request.query.limit) : undefined,
         offset: request.query.offset
           ? parseInt(request.query.offset)
           : undefined,
-      };
-      const result = await this.getExecutionsByRuleHandler.execute(query);
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Rule executions retrieved successfully",
+        result,
+        'Rule executions retrieved successfully',
         {
-          items: result.items,
+          items:
+            result.data?.items.map((execution) => execution.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 10,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

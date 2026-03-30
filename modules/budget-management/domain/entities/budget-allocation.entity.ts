@@ -429,7 +429,7 @@ export class BudgetAllocation extends AggregateRoot {
         allocatedAmount: this.getAllocatedAmount(),
       });
       return [alert];
-    } catch (error: unknown) {
+    } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       // InvalidAlertThresholdError can be safely ignored; any other error re-throws
       if (!msg.includes('threshold')) throw error;

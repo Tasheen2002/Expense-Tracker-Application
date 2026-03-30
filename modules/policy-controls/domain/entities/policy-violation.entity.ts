@@ -1,11 +1,11 @@
-import { ViolationId } from "../value-objects/violation-id";
-import { PolicyId } from "../value-objects/policy-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ViolationSeverity } from "../enums/violation-severity.enum";
-import { ViolationStatus } from "../enums/violation-status.enum";
-import { ViolationAlreadyResolvedError } from "../errors/policy-controls.errors";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { ViolationId } from '../value-objects/violation-id';
+import { PolicyId } from '../value-objects/policy-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ViolationSeverity } from '../enums/violation-severity.enum';
+import { ViolationStatus } from '../enums/violation-status.enum';
+import { ViolationAlreadyResolvedError } from '../errors/policy-controls.errors';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================
 // Domain Events
@@ -24,13 +24,13 @@ export class PolicyViolationDetectedEvent extends DomainEvent {
     public readonly severity: ViolationSeverity,
     public readonly violationDetails: string,
     public readonly expenseAmount?: number,
-    public readonly currency?: string,
+    public readonly currency?: string
   ) {
-    super(violationId, "PolicyViolation");
+    super(violationId, 'PolicyViolation');
   }
 
   get eventType(): string {
-    return "violation.detected";
+    return 'violation.detected';
   }
 
   getPayload(): Record<string, unknown> {
@@ -55,13 +55,13 @@ export class ViolationAcknowledgedEvent extends DomainEvent {
   constructor(
     public readonly violationId: string,
     public readonly workspaceId: string,
-    public readonly acknowledgedBy: string,
+    public readonly acknowledgedBy: string
   ) {
-    super(violationId, "PolicyViolation");
+    super(violationId, 'PolicyViolation');
   }
 
   get eventType(): string {
-    return "violation.acknowledged";
+    return 'violation.acknowledged';
   }
 
   getPayload(): Record<string, unknown> {
@@ -81,14 +81,14 @@ export class ViolationResolvedEvent extends DomainEvent {
     public readonly violationId: string,
     public readonly workspaceId: string,
     public readonly resolvedBy: string,
-    public readonly resolutionType: "resolved" | "exempted" | "overridden",
-    public readonly notes?: string,
+    public readonly resolutionType: 'resolved' | 'exempted' | 'overridden',
+    public readonly notes?: string
   ) {
-    super(violationId, "PolicyViolation");
+    super(violationId, 'PolicyViolation');
   }
 
   get eventType(): string {
-    return "violation.resolved";
+    return 'violation.resolved';
   }
 
   getPayload(): Record<string, unknown> {
@@ -173,8 +173,8 @@ export class PolicyViolation extends AggregateRoot {
         params.severity,
         params.violationDetails,
         params.expenseAmount,
-        params.currency,
-      ),
+        params.currency
+      )
     );
 
     return violation;
@@ -270,7 +270,7 @@ export class PolicyViolation extends AggregateRoot {
   acknowledge(userId: string): void {
     if (this.isResolved()) {
       throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue(),
+        this.props.violationId.getValue()
       );
     }
 
@@ -278,12 +278,20 @@ export class PolicyViolation extends AggregateRoot {
     this.props.acknowledgedBy = userId;
     this.props.acknowledgedAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ViolationAcknowledgedEvent(
+        this.props.violationId.getValue(),
+        this.props.workspaceId.getValue(),
+        userId
+      )
+    );
   }
 
   resolve(userId: string, notes?: string): void {
     if (this.isResolved()) {
       throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue(),
+        this.props.violationId.getValue()
       );
     }
 
@@ -292,12 +300,22 @@ export class PolicyViolation extends AggregateRoot {
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ViolationResolvedEvent(
+        this.props.violationId.getValue(),
+        this.props.workspaceId.getValue(),
+        userId,
+        'resolved',
+        notes
+      )
+    );
   }
 
   exempt(userId: string, notes?: string): void {
     if (this.isResolved()) {
       throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue(),
+        this.props.violationId.getValue()
       );
     }
 
@@ -306,12 +324,22 @@ export class PolicyViolation extends AggregateRoot {
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ViolationResolvedEvent(
+        this.props.violationId.getValue(),
+        this.props.workspaceId.getValue(),
+        userId,
+        'exempted',
+        notes
+      )
+    );
   }
 
   override(userId: string, notes?: string): void {
     if (this.isResolved()) {
       throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue(),
+        this.props.violationId.getValue()
       );
     }
 
@@ -320,5 +348,57 @@ export class PolicyViolation extends AggregateRoot {
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ViolationResolvedEvent(
+        this.props.violationId.getValue(),
+        this.props.workspaceId.getValue(),
+        userId,
+        'overridden',
+        notes
+      )
+    );
   }
+
+  toJSON(): PolicyViolationDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      policyId: this.getPolicyId().getValue(),
+      expenseId: this.getExpenseId(),
+      userId: this.getUserId(),
+      status: this.getStatus(),
+      severity: this.getSeverity(),
+      violationDetails: this.getViolationDetails(),
+      expenseAmount: this.getExpenseAmount(),
+      currency: this.getCurrency(),
+      acknowledgedAt: this.getAcknowledgedAt()?.toISOString(),
+      acknowledgedBy: this.getAcknowledgedBy(),
+      resolvedAt: this.getResolvedAt()?.toISOString(),
+      resolvedBy: this.getResolvedBy(),
+      resolutionNotes: this.getResolutionNotes(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface PolicyViolationDTO {
+  id: string;
+  workspaceId: string;
+  policyId: string;
+  expenseId: string;
+  userId: string;
+  status: ViolationStatus;
+  severity: ViolationSeverity;
+  violationDetails: string;
+  expenseAmount?: number;
+  currency?: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNotes?: string;
+  createdAt: string;
+  updatedAt: string;
 }

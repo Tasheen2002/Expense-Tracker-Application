@@ -1,27 +1,34 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
-import { Project } from "../../domain/entities/project.entity";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class CreateProjectCommand {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly actorId: string,
-    public readonly name: string,
-    public readonly code: string,
-    public readonly startDate: string | Date,
-    public readonly description?: string,
-    public readonly endDate?: string | Date,
-    public readonly managerId?: string,
-    public readonly budget?: number,
-  ) {}
+export interface CreateProjectCommand extends ICommand {
+  workspaceId: string;
+  actorId: string;
+  name: string;
+  code: string;
+  startDate: string | Date;
+  description?: string;
+  endDate?: string | Date;
+  managerId?: string;
+  budget?: number;
 }
 
-export class CreateProjectHandler {
+export class CreateProjectHandler implements ICommandHandler<
+  CreateProjectCommand,
+  CommandResult<{ projectId: string }>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: CreateProjectCommand): Promise<Project> {
-    return await this.allocationManagementService.createProject({
+  async handle(
+    command: CreateProjectCommand
+  ): Promise<CommandResult<{ projectId: string }>> {
+    const project = await this.allocationManagementService.createProject({
       workspaceId: command.workspaceId,
       actorId: command.actorId,
       name: command.name,
@@ -32,5 +39,6 @@ export class CreateProjectHandler {
       managerId: command.managerId,
       budget: command.budget,
     });
+    return CommandResult.success({ projectId: project.getId().getValue() });
   }
 }

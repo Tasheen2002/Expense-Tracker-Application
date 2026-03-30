@@ -23,22 +23,16 @@ export class DeleteAttachmentHandler implements ICommandHandler<
   ) {}
 
   async handle(command: DeleteAttachmentCommand): Promise<CommandResult<void>> {
-    try {
-      await this.expenseService.removeAttachmentRecord(
-        command.expenseId,
-        command.workspaceId,
-        AttachmentId.fromString(command.attachmentId)
-      );
+    await this.expenseService.removeAttachmentRecord(
+      command.expenseId,
+      command.workspaceId,
+      AttachmentId.fromString(command.attachmentId)
+    );
 
-      await this.attachmentService.deleteAttachment(
-        command.attachmentId,
-        command.expenseId
-      );
-      return CommandResult.success();
-    } catch (error) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Failed to delete attachment'
-      );
-    }
+    await this.attachmentService.deleteAttachment(
+      command.attachmentId,
+      command.expenseId
+    );
+    return CommandResult.success();
   }
 }

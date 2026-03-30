@@ -3,13 +3,14 @@ import { BankTransactionId } from '../../domain/value-objects/bank-transaction-i
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { BankTransactionNotFoundError } from '../../domain/errors';
-import { IQuery, IQueryHandler, QueryResult } from '../../../../apps/api/src/shared/application';
-export interface GetBankTransactionQuery extends IQuery {
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+
+export interface GetBankTransactionQuery {
   workspaceId: string;
   transactionId: string;
 }
 
-export class GetBankTransactionHandler implements IQueryHandler<GetBankTransactionQuery, QueryResult<BankTransaction>> {
+export class GetBankTransactionHandler {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
   ) {}
@@ -17,24 +18,18 @@ export class GetBankTransactionHandler implements IQueryHandler<GetBankTransacti
   async handle(
     query: GetBankTransactionQuery
   ): Promise<QueryResult<BankTransaction>> {
-    try {
-      
-          const workspaceId = WorkspaceId.fromString(query.workspaceId);
-          const transactionId = BankTransactionId.fromString(query.transactionId);
-      
-          const transaction = await this.transactionRepository.findById(
-            transactionId,
-            workspaceId
-          );
-      
-          if (!transaction) {
-            throw new BankTransactionNotFoundError(query.transactionId);
-          }
-      
-          return QueryResult.success(transaction);
-        
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
+    const workspaceId = WorkspaceId.fromString(query.workspaceId);
+    const transactionId = BankTransactionId.fromString(query.transactionId);
+
+    const transaction = await this.transactionRepository.findById(
+      transactionId,
+      workspaceId
+    );
+
+    if (!transaction) {
+      throw new BankTransactionNotFoundError(query.transactionId);
     }
+
+    return QueryResult.success(transaction);
   }
 }

@@ -1,13 +1,14 @@
-import { TransactionSyncService, SyncTransactionsInput } from '../services/transaction-sync.service';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../apps/api/src/shared/application';
-export interface SyncTransactionsCommand extends ICommand {
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+
+export interface SyncTransactionsCommand {
   workspaceId: string;
   connectionId: string;
   fromDate?: Date;
   toDate?: Date;
 }
 
-export class SyncTransactionsHandler implements ICommandHandler<SyncTransactionsCommand, CommandResult<{ sessionId: string }>> {
+export class SyncTransactionsHandler {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
   ) {}
@@ -15,17 +16,7 @@ export class SyncTransactionsHandler implements ICommandHandler<SyncTransactions
   async handle(
     command: SyncTransactionsCommand
   ): Promise<CommandResult<{ sessionId: string }>> {
-    try {
-      const input: SyncTransactionsInput = {
-        workspaceId: command.workspaceId,
-        connectionId: command.connectionId,
-        fromDate: command.fromDate,
-        toDate: command.toDate,
-      };
-      const session = await this.transactionSyncService.syncTransactions(input);
-      return CommandResult.success({ sessionId: session.getId().getValue() });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const session = await this.transactionSyncService.syncTransactions(command);
+    return CommandResult.success({ sessionId: session.getId().getValue() });
   }
 }

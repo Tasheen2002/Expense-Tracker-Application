@@ -19,17 +19,11 @@ export class ActivateBudgetHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: ActivateBudgetCommand): Promise<CommandResult<void>> {
-    try {
-      
-          await this.budgetService.activateBudget(
-            command.budgetId,
-            command.workspaceId,
-            command.userId
-          );
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.budgetService.activateBudget(
+      command.budgetId,
+      command.workspaceId,
+      command.userId
+    );
+    return CommandResult.success();
   }
 }

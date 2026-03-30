@@ -1,4 +1,4 @@
-import {
+﻿import {
   IQuery,
   IQueryHandler,
   QueryResult,
@@ -59,10 +59,8 @@ export class FilterExpensesHandler implements IQueryHandler<
         pagination: { limit: query.limit, offset: query.offset },
       });
       return QueryResult.success(result);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to filter expenses'
-      );
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
   }
 }

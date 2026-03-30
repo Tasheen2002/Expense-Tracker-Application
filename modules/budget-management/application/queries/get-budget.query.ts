@@ -19,19 +19,13 @@ export class GetBudgetHandler implements IQueryHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(query: GetBudgetQuery): Promise<QueryResult<Budget>> {
-    try {
-      
-          const budget = await this.budgetService.getBudgetById(
-            query.budgetId,
-            query.workspaceId
-          );
-          if (!budget) {
-            throw new BudgetNotFoundError(query.budgetId, query.workspaceId);
-          }
-          return QueryResult.success(budget);
-        
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
+    const budget = await this.budgetService.getBudgetById(
+      query.budgetId,
+      query.workspaceId
+    );
+    if (!budget) {
+      throw new BudgetNotFoundError(query.budgetId, query.workspaceId);
     }
+    return QueryResult.success(budget);
   }
 }

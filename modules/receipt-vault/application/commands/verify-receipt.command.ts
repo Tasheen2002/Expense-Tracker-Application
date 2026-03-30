@@ -1,20 +1,29 @@
-import { ReceiptService } from "../services/receipt.service";
-import { Receipt } from "../../domain/entities/receipt.entity";
+import { ReceiptService } from '../services/receipt.service';
+import { Receipt } from '../../domain/entities/receipt.entity';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface VerifyReceiptDto {
+export interface VerifyReceiptCommand extends ICommand {
   receiptId: string;
   workspaceId: string;
   userId: string;
 }
 
-export class VerifyReceiptHandler {
+export class VerifyReceiptHandler implements ICommandHandler<
+  VerifyReceiptCommand,
+  CommandResult<void>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: VerifyReceiptDto): Promise<Receipt> {
-    return await this.receiptService.verifyReceipt(
-      dto.receiptId,
-      dto.workspaceId,
-      dto.userId,
+  async handle(command: VerifyReceiptCommand): Promise<CommandResult<void>> {
+    await this.receiptService.verifyReceipt(
+      command.receiptId,
+      command.workspaceId,
+      command.userId
     );
+    return CommandResult.success();
   }
 }

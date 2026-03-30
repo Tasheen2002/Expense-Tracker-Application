@@ -1,94 +1,76 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import {
-  CreateDepartmentBody,
-  UpdateDepartmentBody,
-} from "../validation/department.schema";
-import {
-  CreateCostCenterBody,
-  UpdateCostCenterBody,
-} from "../validation/cost-center.schema";
-import {
-  CreateProjectBody,
-  UpdateProjectBody,
-} from "../validation/project.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+
+interface CreateDepartmentBody {
+  name: string;
+  code: string;
+  description?: string;
+  managerId?: string;
+  parentDepartmentId?: string;
+}
+
+interface UpdateDepartmentBody {
+  name?: string;
+  code?: string;
+  description?: string | null;
+  managerId?: string | null;
+  parentDepartmentId?: string | null;
+}
+
+interface CreateCostCenterBody {
+  name: string;
+  code: string;
+  description?: string;
+}
+
+interface UpdateCostCenterBody {
+  name?: string;
+  code?: string;
+  description?: string | null;
+}
+
+interface CreateProjectBody {
+  name: string;
+  code: string;
+  startDate: string | Date;
+  description?: string;
+  endDate?: string | Date;
+  managerId?: string;
+  budget?: number;
+}
+
+interface UpdateProjectBody {
+  name?: string;
+  code?: string;
+  description?: string | null;
+  startDate?: Date;
+  endDate?: Date | null;
+  managerId?: string | null;
+  budget?: number | null;
+}
 
 // Command Handlers
-import {
-  CreateDepartmentCommand,
-  CreateDepartmentHandler,
-} from "../../../application/commands/create-department.command";
-import {
-  UpdateDepartmentCommand,
-  UpdateDepartmentHandler,
-} from "../../../application/commands/update-department.command";
-import {
-  DeleteDepartmentCommand,
-  DeleteDepartmentHandler,
-} from "../../../application/commands/delete-department.command";
-import {
-  ActivateDepartmentCommand,
-  ActivateDepartmentHandler,
-} from "../../../application/commands/activate-department.command";
-import {
-  CreateCostCenterCommand,
-  CreateCostCenterHandler,
-} from "../../../application/commands/create-cost-center.command";
-import {
-  UpdateCostCenterCommand,
-  UpdateCostCenterHandler,
-} from "../../../application/commands/update-cost-center.command";
-import {
-  DeleteCostCenterCommand,
-  DeleteCostCenterHandler,
-} from "../../../application/commands/delete-cost-center.command";
-import {
-  ActivateCostCenterCommand,
-  ActivateCostCenterHandler,
-} from "../../../application/commands/activate-cost-center.command";
-import {
-  CreateProjectCommand,
-  CreateProjectHandler,
-} from "../../../application/commands/create-project.command";
-import {
-  UpdateProjectCommand,
-  UpdateProjectHandler,
-} from "../../../application/commands/update-project.command";
-import {
-  DeleteProjectCommand,
-  DeleteProjectHandler,
-} from "../../../application/commands/delete-project.command";
-import {
-  ActivateProjectCommand,
-  ActivateProjectHandler,
-} from "../../../application/commands/activate-project.command";
+import { CreateDepartmentHandler } from '../../../application/commands/create-department.command';
+import { UpdateDepartmentHandler } from '../../../application/commands/update-department.command';
+import { DeleteDepartmentHandler } from '../../../application/commands/delete-department.command';
+import { ActivateDepartmentHandler } from '../../../application/commands/activate-department.command';
+import { CreateCostCenterHandler } from '../../../application/commands/create-cost-center.command';
+import { UpdateCostCenterHandler } from '../../../application/commands/update-cost-center.command';
+import { DeleteCostCenterHandler } from '../../../application/commands/delete-cost-center.command';
+import { ActivateCostCenterHandler } from '../../../application/commands/activate-cost-center.command';
+import { CreateProjectHandler } from '../../../application/commands/create-project.command';
+import { UpdateProjectHandler } from '../../../application/commands/update-project.command';
+import { DeleteProjectHandler } from '../../../application/commands/delete-project.command';
+import { ActivateProjectHandler } from '../../../application/commands/activate-project.command';
 
 // Query Handlers
-import {
-  GetDepartmentQuery,
-  GetDepartmentHandler,
-} from "../../../application/queries/get-department.query";
-import {
-  ListDepartmentsQuery,
-  ListDepartmentsHandler,
-} from "../../../application/queries/list-departments.query";
-import {
-  GetCostCenterQuery,
-  GetCostCenterHandler,
-} from "../../../application/queries/get-cost-center.query";
-import {
-  ListCostCentersQuery,
-  ListCostCentersHandler,
-} from "../../../application/queries/list-cost-centers.query";
-import {
-  GetProjectQuery,
-  GetProjectHandler,
-} from "../../../application/queries/get-project.query";
-import {
-  ListProjectsQuery,
-  ListProjectsHandler,
-} from "../../../application/queries/list-projects.query";
+import { GetDepartmentHandler } from '../../../application/queries/get-department.query';
+import { ListDepartmentsHandler } from '../../../application/queries/list-departments.query';
+import { GetCostCenterHandler } from '../../../application/queries/get-cost-center.query';
+import { ListCostCentersHandler } from '../../../application/queries/list-cost-centers.query';
+import { GetProjectHandler } from '../../../application/queries/get-project.query';
+import { ListProjectsHandler } from '../../../application/queries/list-projects.query';
 
 export class AllocationManagementController {
   constructor(
@@ -109,7 +91,7 @@ export class AllocationManagementController {
     private readonly deleteProjectHandler: DeleteProjectHandler,
     private readonly activateProjectHandler: ActivateProjectHandler,
     private readonly getProjectHandler: GetProjectHandler,
-    private readonly listProjectsHandler: ListProjectsHandler,
+    private readonly listProjectsHandler: ListProjectsHandler
   ) {}
 
   // ==========================================
@@ -128,27 +110,22 @@ export class AllocationManagementController {
         managerId?: string;
         parentDepartmentId?: string;
       };
-      const command = new CreateDepartmentCommand(
+      const result = await this.createDepartmentHandler.handle({
         workspaceId,
-        userId,
-        body.name,
-        body.code,
-        body.description,
-        body.managerId,
-        body.parentDepartmentId,
-      );
-      const department = await this.createDepartmentHandler.handle(command);
+        actorId: userId,
+        name: body.name,
+        code: body.code,
+        description: body.description,
+        managerId: body.managerId,
+        parentDepartmentId: body.parentDepartmentId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Department created successfully",
-        {
-          id: department.getId().getValue(),
-          name: department.getName(),
-          code: department.getCode(),
-          description: department.getDescription(),
-        },
+        result,
+        'Department created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -164,34 +141,25 @@ export class AllocationManagementController {
         limit?: string;
         offset?: string;
       };
-      const query = new ListDepartmentsQuery(
+      const result = await this.listDepartmentsHandler.handle({
         workspaceId,
-        limit ? parseInt(limit, 10) : undefined,
-        offset ? parseInt(offset, 10) : undefined,
-      );
-      const result = await this.listDepartmentsHandler.handle(query);
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Departments retrieved successfully",
+        result,
+        'Departments retrieved successfully',
         {
-          items: result.items.map((d) => ({
-            id: d.getId().getValue(),
-            name: d.getName(),
-            code: d.getCode(),
-            description: d.getDescription(),
-            managerId: d.getManagerId()?.getValue(),
-            parentDepartmentId: d.getParentDepartmentId()?.getValue(),
-            isActive: d.getIsActive(),
-          })),
+          items: result.data?.items.map((d) => d.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 50,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -202,30 +170,21 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { departmentId } = request.params;
-      const query = new GetDepartmentQuery(departmentId);
-      const department = await this.getDepartmentHandler.handle(query);
+      const result = await this.getDepartmentHandler.handle({
+        id: departmentId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Department retrieved successfully",
-        {
-          id: department.getId().getValue(),
-          name: department.getName(),
-          code: department.getCode(),
-          description: department.getDescription(),
-          managerId: department.getManagerId()?.getValue(),
-          parentDepartmentId: department.getParentDepartmentId()?.getValue(),
-          isActive: department.getIsActive(),
-          createdAt: department.getCreatedAt(),
-          updatedAt: department.getUpdatedAt(),
-        },
+        result,
+        'Department retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -237,38 +196,27 @@ export class AllocationManagementController {
       Params: { workspaceId: string; departmentId: string };
       Body: UpdateDepartmentBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
-      const command = new UpdateDepartmentCommand(
-        departmentId,
+      const result = await this.updateDepartmentHandler.handle({
+        id: departmentId,
         workspaceId,
-        userId,
-        request.body.name,
-        request.body.code,
-        request.body.description,
-        request.body.managerId,
-        request.body.parentDepartmentId,
-      );
-      const department = await this.updateDepartmentHandler.handle(command);
+        actorId: userId,
+        name: request.body.name,
+        code: request.body.code,
+        description: request.body.description,
+        managerId: request.body.managerId,
+        parentDepartmentId: request.body.parentDepartmentId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Department updated successfully",
-        {
-          id: department.getId().getValue(),
-          name: department.getName(),
-          code: department.getCode(),
-          description: department.getDescription(),
-          managerId: department.getManagerId()?.getValue(),
-          parentDepartmentId: department.getParentDepartmentId()?.getValue(),
-          isActive: department.getIsActive(),
-          updatedAt: department.getUpdatedAt(),
-        },
+        result,
+        'Department updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -279,24 +227,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
-      const command = new DeleteDepartmentCommand(
-        departmentId,
+      const result = await this.deleteDepartmentHandler.handle({
+        id: departmentId,
         workspaceId,
-        userId,
-      );
-      await this.deleteDepartmentHandler.handle(command);
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Department deleted successfully",
-        null,
+        result,
+        'Department deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -307,35 +253,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; departmentId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, departmentId } = request.params;
-      const command = new ActivateDepartmentCommand(
-        departmentId,
+      const result = await this.activateDepartmentHandler.handle({
+        id: departmentId,
         workspaceId,
-        userId,
-      );
-      const department = await this.activateDepartmentHandler.handle(command);
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Department activated successfully",
-        {
-          id: department.getId().getValue(),
-          name: department.getName(),
-          code: department.getCode(),
-          description: department.getDescription(),
-          workspaceId: department.getWorkspaceId().getValue(),
-          managerId: department.getManagerId()?.getValue(),
-          parentDepartmentId: department.getParentDepartmentId()?.getValue(),
-          isActive: department.getIsActive(),
-          createdAt: department.getCreatedAt(),
-          updatedAt: department.getUpdatedAt(),
-        },
+        result,
+        'Department activated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -351,31 +284,26 @@ export class AllocationManagementController {
       Params: { workspaceId: string };
       Body: CreateCostCenterBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
-      const command = new CreateCostCenterCommand(
+      const result = await this.createCostCenterHandler.handle({
         workspaceId,
-        userId,
-        request.body.name,
-        request.body.code,
-        request.body.description,
-      );
-      const costCenter = await this.createCostCenterHandler.handle(command);
+        actorId: userId,
+        name: request.body.name,
+        code: request.body.code,
+        description: request.body.description,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Cost Center created successfully",
-        {
-          id: costCenter.getId().getValue(),
-          name: costCenter.getName(),
-          code: costCenter.getCode(),
-          description: costCenter.getDescription(),
-        },
+        result,
+        'Cost Center created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -387,39 +315,32 @@ export class AllocationManagementController {
       Params: { workspaceId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
-      const query = new ListCostCentersQuery(
+      const result = await this.listCostCentersHandler.handle({
         workspaceId,
-        limit ? parseInt(limit, 10) : undefined,
-        offset ? parseInt(offset, 10) : undefined,
-      );
-      const result = await this.listCostCentersHandler.handle(query);
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Cost Centers retrieved successfully",
+        result,
+        'Cost Centers retrieved successfully',
         {
-          items: result.items.map((c) => ({
-            id: c.getId().getValue(),
-            name: c.getName(),
-            code: c.getCode(),
-            description: c.getDescription(),
-            isActive: c.getIsActive(),
-          })),
+          items: result.data?.items.map((c) => c.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 50,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -430,28 +351,21 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { costCenterId } = request.params;
-      const query = new GetCostCenterQuery(costCenterId);
-      const costCenter = await this.getCostCenterHandler.handle(query);
+      const result = await this.getCostCenterHandler.handle({
+        id: costCenterId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Cost Center retrieved successfully",
-        {
-          id: costCenter.getId().getValue(),
-          name: costCenter.getName(),
-          code: costCenter.getCode(),
-          description: costCenter.getDescription(),
-          isActive: costCenter.getIsActive(),
-          createdAt: costCenter.getCreatedAt(),
-          updatedAt: costCenter.getUpdatedAt(),
-        },
+        result,
+        'Cost Center retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -463,34 +377,25 @@ export class AllocationManagementController {
       Params: { workspaceId: string; costCenterId: string };
       Body: UpdateCostCenterBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
-      const command = new UpdateCostCenterCommand(
-        costCenterId,
+      const result = await this.updateCostCenterHandler.handle({
+        id: costCenterId,
         workspaceId,
-        userId,
-        request.body.name,
-        request.body.code,
-        request.body.description,
-      );
-      const costCenter = await this.updateCostCenterHandler.handle(command);
+        actorId: userId,
+        name: request.body.name,
+        code: request.body.code,
+        description: request.body.description,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Cost Center updated successfully",
-        {
-          id: costCenter.getId().getValue(),
-          name: costCenter.getName(),
-          code: costCenter.getCode(),
-          description: costCenter.getDescription(),
-          isActive: costCenter.getIsActive(),
-          updatedAt: costCenter.getUpdatedAt(),
-        },
+        result,
+        'Cost Center updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -501,24 +406,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
-      const command = new DeleteCostCenterCommand(
-        costCenterId,
+      const result = await this.deleteCostCenterHandler.handle({
+        id: costCenterId,
         workspaceId,
-        userId,
-      );
-      await this.deleteCostCenterHandler.handle(command);
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Cost Center deleted successfully",
-        null,
+        result,
+        'Cost Center deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -529,31 +432,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; costCenterId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, costCenterId } = request.params;
-      const command = new ActivateCostCenterCommand(
-        costCenterId,
+      const result = await this.activateCostCenterHandler.handle({
+        id: costCenterId,
         workspaceId,
-        userId,
-      );
-      const costCenter = await this.activateCostCenterHandler.handle(command);
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Cost Center activated successfully",
-        {
-          id: costCenter.getId().getValue(),
-          name: costCenter.getName(),
-          code: costCenter.getCode(),
-          description: costCenter.getDescription(),
-          isActive: costCenter.getIsActive(),
-          updatedAt: costCenter.getUpdatedAt(),
-        },
+        result,
+        'Cost Center activated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -569,7 +463,7 @@ export class AllocationManagementController {
       Params: { workspaceId: string };
       Body: CreateProjectBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
@@ -582,29 +476,24 @@ export class AllocationManagementController {
         ? new Date(request.body.endDate)
         : undefined;
 
-      const command = new CreateProjectCommand(
+      const result = await this.createProjectHandler.handle({
         workspaceId,
-        userId,
-        request.body.name,
-        request.body.code,
+        actorId: userId,
+        name: request.body.name,
+        code: request.body.code,
         startDate,
-        request.body.description,
+        description: request.body.description,
         endDate,
-        request.body.managerId,
-        request.body.budget,
-      );
-      const project = await this.createProjectHandler.handle(command);
+        managerId: request.body.managerId,
+        budget: request.body.budget,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Project created successfully",
-        {
-          id: project.getId().getValue(),
-          name: project.getName(),
-          code: project.getCode(),
-          description: project.getDescription(),
-        },
+        result,
+        'Project created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -616,43 +505,32 @@ export class AllocationManagementController {
       Params: { workspaceId: string };
       Querystring: { limit?: string; offset?: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
-      const query = new ListProjectsQuery(
+      const result = await this.listProjectsHandler.handle({
         workspaceId,
-        limit ? parseInt(limit, 10) : undefined,
-        offset ? parseInt(offset, 10) : undefined,
-      );
-      const result = await this.listProjectsHandler.handle(query);
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Projects retrieved successfully",
+        result,
+        'Projects retrieved successfully',
         {
-          items: result.items.map((p) => ({
-            id: p.getId().getValue(),
-            name: p.getName(),
-            code: p.getCode(),
-            description: p.getDescription(),
-            startDate: p.getStartDate(),
-            endDate: p.getEndDate(),
-            managerId: p.getManagerId()?.getValue(),
-            budget: p.getBudget(),
-            isActive: p.getIsActive(),
-          })),
+          items: result.data?.items.map((p) => p.toJSON()) || [],
           pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
+            total: result.data?.total || 0,
+            limit: result.data?.limit || 50,
+            offset: result.data?.offset || 0,
+            hasMore: result.data?.hasMore || false,
           },
-        },
+        }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -663,32 +541,19 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { projectId } = request.params;
-      const query = new GetProjectQuery(projectId);
-      const project = await this.getProjectHandler.handle(query);
+      const result = await this.getProjectHandler.handle({ id: projectId });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Project retrieved successfully",
-        {
-          id: project.getId().getValue(),
-          name: project.getName(),
-          code: project.getCode(),
-          description: project.getDescription(),
-          startDate: project.getStartDate(),
-          endDate: project.getEndDate(),
-          managerId: project.getManagerId()?.getValue(),
-          budget: project.getBudget()?.toNumber(),
-          isActive: project.getIsActive(),
-          createdAt: project.getCreatedAt(),
-          updatedAt: project.getUpdatedAt(),
-        },
+        result,
+        'Project retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -700,42 +565,29 @@ export class AllocationManagementController {
       Params: { workspaceId: string; projectId: string };
       Body: UpdateProjectBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
-      const command = new UpdateProjectCommand(
-        projectId,
+      const result = await this.updateProjectHandler.handle({
+        id: projectId,
         workspaceId,
-        userId,
-        request.body.name,
-        request.body.code,
-        request.body.description,
-        request.body.startDate,
-        request.body.endDate,
-        request.body.managerId,
-        request.body.budget,
-      );
-      const project = await this.updateProjectHandler.handle(command);
+        actorId: userId,
+        name: request.body.name,
+        code: request.body.code,
+        description: request.body.description,
+        startDate: request.body.startDate,
+        endDate: request.body.endDate,
+        managerId: request.body.managerId,
+        budget: request.body.budget,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Project updated successfully",
-        {
-          id: project.getId().getValue(),
-          name: project.getName(),
-          code: project.getCode(),
-          description: project.getDescription(),
-          startDate: project.getStartDate(),
-          endDate: project.getEndDate(),
-          managerId: project.getManagerId()?.getValue(),
-          budget: project.getBudget()?.toNumber(),
-          isActive: project.getIsActive(),
-          updatedAt: project.getUpdatedAt(),
-        },
+        result,
+        'Project updated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -746,20 +598,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
-      const command = new DeleteProjectCommand(projectId, workspaceId, userId);
-      await this.deleteProjectHandler.handle(command);
+      const result = await this.deleteProjectHandler.handle({
+        id: projectId,
+        workspaceId,
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Project deleted successfully",
-        null,
+        result,
+        'Project deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -770,37 +624,22 @@ export class AllocationManagementController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; projectId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, projectId } = request.params;
-      const command = new ActivateProjectCommand(
-        projectId,
+      const result = await this.activateProjectHandler.handle({
+        id: projectId,
         workspaceId,
-        userId,
-      );
-      const project = await this.activateProjectHandler.handle(command);
+        actorId: userId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Project activated successfully",
-        {
-          id: project.getId().getValue(),
-          name: project.getName(),
-          code: project.getCode(),
-          description: project.getDescription(),
-          workspaceId: project.getWorkspaceId().getValue(),
-          startDate: project.getStartDate(),
-          endDate: project.getEndDate(),
-          managerId: project.getManagerId()?.getValue(),
-          budget: project.getBudget()?.toNumber(),
-          isActive: project.getIsActive(),
-          createdAt: project.getCreatedAt(),
-          updatedAt: project.getUpdatedAt(),
-        },
+        result,
+        'Project activated successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

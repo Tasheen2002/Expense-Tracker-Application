@@ -1,32 +1,42 @@
-import { NotificationType } from "../../domain/enums/notification-type.enum";
-import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
+import { NotificationType } from '../../domain/enums/notification-type.enum';
+import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
+import { TemplateService } from '../services/template.service';
 import {
-  TemplateService,
-  CreateTemplateParams,
-} from "../services/template.service";
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class CreateTemplateCommand {
-  constructor(
-    public readonly workspaceId: string | undefined,
-    public readonly name: string,
-    public readonly type: NotificationType,
-    public readonly channel: NotificationChannel,
-    public readonly subjectTemplate: string,
-    public readonly bodyTemplate: string,
-  ) {}
+export interface CreateTemplateCommand extends ICommand {
+  workspaceId: string | undefined;
+  name: string;
+  type: NotificationType;
+  channel: NotificationChannel;
+  subjectTemplate: string;
+  bodyTemplate: string;
 }
 
-export class CreateTemplateHandler {
+export class CreateTemplateHandler implements ICommandHandler<
+  CreateTemplateCommand,
+  CommandResult<{ templateId: string }>
+> {
   constructor(private readonly templateService: TemplateService) {}
 
-  async handle(command: CreateTemplateCommand) {
-    return await this.templateService.createTemplate({
-      workspaceId: command.workspaceId,
-      name: command.name,
-      type: command.type,
-      channel: command.channel,
-      subjectTemplate: command.subjectTemplate,
-      bodyTemplate: command.bodyTemplate,
-    });
+  async handle(
+    input: CreateTemplateCommand
+  ): Promise<CommandResult<{ templateId: string }>> {
+    try {
+      const template = await this.templateService.createTemplate({
+        workspaceId: input.workspaceId,
+        name: input.name,
+        type: input.type,
+        channel: input.channel,
+        subjectTemplate: input.subjectTemplate,
+        bodyTemplate: input.bodyTemplate,
+      });
+      return CommandResult.success({ templateId: template.getId().getValue() });
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

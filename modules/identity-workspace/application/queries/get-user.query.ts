@@ -1,5 +1,9 @@
 import { UserManagementService } from '../services/user-management.service';
 import {
+  UserLookupCriteriaRequiredError,
+  UserNotFoundError,
+} from '../../domain/errors/identity.errors';
+import {
   IQuery,
   IQueryHandler,
   QueryResult,
@@ -30,9 +34,7 @@ export class GetUserHandler implements IQueryHandler<
     try {
       // Validate that either userId or email is provided
       if (!query.userId && !query.email) {
-        return QueryResult.failure<UserResult>(
-          'Either userId or email is required'
-        );
+        throw new UserLookupCriteriaRequiredError();
       }
 
       // Get user by ID or email
@@ -44,7 +46,7 @@ export class GetUserHandler implements IQueryHandler<
       }
 
       if (!user) {
-        return QueryResult.failure<UserResult>('User not found');
+        throw new UserNotFoundError(query.userId ?? query.email!);
       }
 
       const result: UserResult = {
@@ -59,15 +61,7 @@ export class GetUserHandler implements IQueryHandler<
 
       return QueryResult.success<UserResult>(result);
     } catch (error) {
-      if (error instanceof Error) {
-        return QueryResult.failure<UserResult>(
-          'Failed to retrieve user: ' + error.message
-        );
-      }
-
-      return QueryResult.failure<UserResult>(
-        'An unexpected error occurred while retrieving user'
-      );
+      return QueryResult.fromError(error);
     }
   }
 }

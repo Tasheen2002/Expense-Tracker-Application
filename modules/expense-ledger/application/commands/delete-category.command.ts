@@ -6,7 +6,6 @@ import {
 import { CategoryService } from '../services/category.service';
 import { ExpenseRepository } from '../../domain/repositories/expense.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
-import { CategoryInUseError } from '../../domain/errors/expense.errors';
 
 export interface DeleteCategoryCommand extends ICommand {
   readonly categoryId: string;
@@ -23,23 +22,23 @@ export class DeleteCategoryHandler implements ICommandHandler<
   ) {}
 
   async handle(command: DeleteCategoryCommand): Promise<CommandResult<void>> {
-    try {
-      const expenseCount = await this.expenseRepository.getCountByCategory(
-        CategoryId.fromString(command.categoryId),
-        command.workspaceId
-      );
-      if (expenseCount > 0) {
-        throw new CategoryInUseError(command.categoryId, expenseCount);
-      }
-      await this.categoryService.deleteCategory(
-        command.categoryId,
-        command.workspaceId
-      );
-      return CommandResult.success();
-    } catch (error) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Failed to delete category'
-      );
+    const categoryId = CategoryId.fromString(command.categoryId);
+
+    // Nullify categoryId on all expenses that reference this category
+    const expensesResult = await this.expenseRepository.findByCategory(
+      categoryId,
+      command.workspaceId,
+      { limit: 1000, offset: 0 }
+    );
+    for (const expense of expensesResult.items) {
+      expense.updateCategory(undefined);
+      await this.expenseRepository.update(expense);
     }
+
+    await this.categoryService.deleteCategory(
+      command.categoryId,
+      command.workspaceId
+    );
+    return CommandResult.success();
   }
 }

@@ -6,34 +6,29 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { IQuery, IQueryHandler, QueryResult } from '../../../../apps/api/src/shared/application';
-export interface GetSyncHistoryQuery extends IQuery {
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+
+export interface GetSyncHistoryQuery {
   workspaceId: string;
   connectionId: string;
   options?: PaginationOptions;
 }
 
-export class GetSyncHistoryHandler implements IQueryHandler<GetSyncHistoryQuery, QueryResult<PaginatedResult<SyncSession>>> {
+export class GetSyncHistoryHandler {
   constructor(private readonly sessionRepository: ISyncSessionRepository) {}
 
   async handle(
     query: GetSyncHistoryQuery
   ): Promise<QueryResult<PaginatedResult<SyncSession>>> {
-    try {
-      
-          const workspaceId = WorkspaceId.fromString(query.workspaceId);
-          const connectionId = BankConnectionId.fromString(query.connectionId);
-      
-          const result = await this.sessionRepository.findByConnection(
-            workspaceId,
-            connectionId,
-            query.options
-          );
-      
-          return QueryResult.success(result);
-        
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const workspaceId = WorkspaceId.fromString(query.workspaceId);
+    const connectionId = BankConnectionId.fromString(query.connectionId);
+
+    const result = await this.sessionRepository.findByConnection(
+      workspaceId,
+      connectionId,
+      query.options
+    );
+
+    return QueryResult.success(result);
   }
 }

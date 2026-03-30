@@ -127,7 +127,7 @@ export class AuditLogController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -159,7 +159,7 @@ export class AuditLogController {
         'Audit log retrieved successfully',
         result.data?.toJSON()
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -209,7 +209,7 @@ export class AuditLogController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -244,7 +244,7 @@ export class AuditLogController {
         result,
         'Audit summary retrieved successfully'
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -298,7 +298,7 @@ export class AuditLogController {
         undefined,
         201
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -325,7 +325,7 @@ export class AuditLogController {
         result,
         'Audit logs purged successfully'
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }

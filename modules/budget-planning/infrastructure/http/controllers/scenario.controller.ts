@@ -1,49 +1,44 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import {
-  CreateScenarioHandler,
-  CreateScenarioCommand,
-} from "../../../application/commands/create-scenario.command";
-import { ScenarioService } from "../../../application/services/scenario.service";
-import { validateRequest } from "../validation/validator";
-import { createScenarioSchema } from "../validation/scenario.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { CreateScenarioHandler } from '../../../application/commands/create-scenario.command';
+import { DeleteScenarioHandler } from '../../../application/commands/delete-scenario.command';
+import { GetScenarioHandler } from '../../../application/queries/get-scenario.query';
+import { ListScenariosHandler } from '../../../application/queries/list-scenarios.query';
 
 export class ScenarioController {
   constructor(
     private readonly createScenarioHandler: CreateScenarioHandler,
-    private readonly scenarioService: ScenarioService,
+    private readonly deleteScenarioHandler: DeleteScenarioHandler,
+    private readonly getScenarioHandler: GetScenarioHandler,
+    private readonly listScenariosHandler: ListScenariosHandler
   ) {}
 
   async create(req: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
-      const body = await validateRequest(req, createScenarioSchema);
-      const command = new CreateScenarioCommand(
-        body.planId,
-        body.name,
-        userId,
-        body.description,
-        body.assumptions,
-      );
-      const result = await this.createScenarioHandler.handle(command);
-      return ResponseHelper.success(
+      const { planId } = req.params as { planId: string };
+      const body = req.body as {
+        name: string;
+        description?: string;
+        assumptions?: Record<string, any>;
+      };
+      const result = await this.createScenarioHandler.handle({
+        name: body.name,
+        planId: planId,
+        createdBy: userId,
+        description: body.description,
+        assumptions: body.assumptions,
+      });
+      return ResponseHelper.fromCommand(
         reply,
-        201,
-        "Scenario created successfully",
-        {
-          id: result.getId().getValue(),
-          planId: result.getPlanId().getValue(),
-          name: result.getName(),
-          description: result.getDescription(),
-          assumptions: result.getAssumptions(),
-          createdBy: result.getCreatedBy().getValue(),
-          createdAt: result.getCreatedAt().toISOString(),
-          updatedAt: result.getUpdatedAt().toISOString(),
-        },
+        result,
+        'Scenario created successfully',
+        result.data,
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -52,29 +47,20 @@ export class ScenarioController {
 
   async get(
     req: AuthenticatedRequest<{ Params: { id: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { id } = req.params;
-      const result = await this.scenarioService.getScenario(id, userId);
-      return ResponseHelper.success(
+      const result = await this.getScenarioHandler.handle({ id, userId });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Scenario retrieved successfully",
-        {
-          id: result.getId().getValue(),
-          planId: result.getPlanId().getValue(),
-          name: result.getName(),
-          description: result.getDescription(),
-          assumptions: result.getAssumptions(),
-          createdBy: result.getCreatedBy().getValue(),
-          createdAt: result.getCreatedAt().toISOString(),
-          updatedAt: result.getUpdatedAt().toISOString(),
-        },
+        result,
+        'Scenario retrieved successfully',
+        result.data?.toJSON()
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -83,29 +69,20 @@ export class ScenarioController {
 
   async list(
     req: AuthenticatedRequest<{ Params: { planId: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { planId } = req.params;
-      const result = await this.scenarioService.listScenarios(planId, userId);
-      return ResponseHelper.success(
+      const result = await this.listScenariosHandler.handle({ planId, userId });
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Scenarios retrieved successfully",
-        result.items.map((s) => ({
-          id: s.getId().getValue(),
-          planId: s.getPlanId().getValue(),
-          name: s.getName(),
-          description: s.getDescription(),
-          assumptions: s.getAssumptions(),
-          createdBy: s.getCreatedBy().getValue(),
-          createdAt: s.getCreatedAt().toISOString(),
-          updatedAt: s.getUpdatedAt().toISOString(),
-        })),
+        result,
+        'Scenarios retrieved successfully',
+        result.data?.items.map((s) => s.toJSON())
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -114,19 +91,19 @@ export class ScenarioController {
 
   async delete(
     req: AuthenticatedRequest<{ Params: { id: string } }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
-        return reply.status(401).send({ message: "User not authenticated" });
+        return ResponseHelper.unauthorized(reply);
       }
       const { id } = req.params;
-      await this.scenarioService.deleteScenario(id, userId);
-      return ResponseHelper.success(
+      const result = await this.deleteScenarioHandler.handle({ id, userId });
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Scenario deleted successfully",
+        result,
+        'Scenario deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

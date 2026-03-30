@@ -31,8 +31,10 @@ describe('Authorization Security Tests', () => {
   describe('BudgetPlanController', () => {
     it('should allow request with valid userId', async () => {
       const req = createMockRequest({
-        body: {
+        params: {
           workspaceId: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        body: {
           name: 'Test Budget',
           startDate: '2024-01-01T00:00:00Z',
           endDate: '2024-12-31T23:59:59Z',
@@ -45,7 +47,7 @@ describe('Authorization Security Tests', () => {
 
       mockCreateHandler.handle.mockResolvedValue({
         success: true,
-        data: { budgetPlanId: 'plan-1' },
+        data: { budgetPlanId: 'plan-1', toJSON: () => ({ id: 'plan-1' }) },
       });
 
       await controller.create(req as any, reply);

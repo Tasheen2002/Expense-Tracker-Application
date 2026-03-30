@@ -17,6 +17,13 @@ export class GetApprovalChainHandler implements IQueryHandler<
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(
     input: GetApprovalChainInput
   ): Promise<QueryResult<ApprovalChain>> {
@@ -27,9 +34,10 @@ export class GetApprovalChainHandler implements IQueryHandler<
       );
       return QueryResult.success(chain);
     } catch (error: unknown) {
-      return QueryResult.fromError(error);
+      return QueryResult.failure(
+        error instanceof Error ? error.message : 'Query failed',
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type GetApprovalChainQuery = GetApprovalChainInput;

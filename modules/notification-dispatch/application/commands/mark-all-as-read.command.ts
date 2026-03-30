@@ -1,19 +1,30 @@
-import { NotificationService } from "../services/notification.service";
+import { NotificationService } from '../services/notification.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class MarkAllAsReadCommand {
-  constructor(
-    public readonly recipientId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface MarkAllAsReadCommand extends ICommand {
+  recipientId: string;
+  workspaceId: string;
 }
 
-export class MarkAllAsReadHandler {
+export class MarkAllAsReadHandler implements ICommandHandler<
+  MarkAllAsReadCommand,
+  CommandResult<void>
+> {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(command: MarkAllAsReadCommand) {
-    return await this.notificationService.markAllAsRead(
-      command.recipientId,
-      command.workspaceId,
-    );
+  async handle(input: MarkAllAsReadCommand): Promise<CommandResult<void>> {
+    try {
+      await this.notificationService.markAllAsRead(
+        input.recipientId,
+        input.workspaceId
+      );
+      return CommandResult.success();
+    } catch (error: unknown) {
+      return CommandResult.fromError(error);
+    }
   }
 }

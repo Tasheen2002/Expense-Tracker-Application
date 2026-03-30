@@ -61,7 +61,7 @@ export class BankTransactionController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -84,7 +84,7 @@ export class BankTransactionController {
         'Bank transaction retrieved successfully',
         result.data?.toJSON()
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -113,7 +113,7 @@ export class BankTransactionController {
         'Transaction processed successfully',
         undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -167,7 +167,7 @@ export class BankTransactionController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }

@@ -1,14 +1,19 @@
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
 import {
   ExpensePolicy,
   PolicyConfiguration,
-} from "../../domain/entities/expense-policy.entity";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { PolicyNotFoundError } from "../../domain/errors/policy-controls.errors";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
+} from '../../domain/entities/expense-policy.entity';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import {
+  PolicyNotFoundError,
+  PolicyNameAlreadyExistsError,
+} from '../../domain/errors/policy-controls.errors';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface UpdatePolicyInput {
   policyId: string;
+  workspaceId: string;
   name?: string;
   description?: string;
   severity?: ViolationSeverity;
@@ -19,17 +24,28 @@ export interface UpdatePolicyInput {
 export class UpdatePolicyHandler {
   constructor(private readonly policyRepository: PolicyRepository) {}
 
-  async handle(input: UpdatePolicyInput): Promise<ExpensePolicy> {
+  async handle(input: UpdatePolicyInput): Promise<CommandResult<void>> {
     const policy = await this.policyRepository.findById(
-      PolicyId.fromString(input.policyId),
+      PolicyId.fromString(input.policyId)
     );
-    if (!policy) {
+    if (!policy || policy.getWorkspaceId().getValue() !== input.workspaceId) {
       throw new PolicyNotFoundError(input.policyId);
     }
 
-    if (input.name) {
+    if (input.name && input.name !== policy.getName()) {
+      const existingPolicy = await this.policyRepository.findByNameInWorkspace(
+        input.workspaceId,
+        input.name
+      );
+      if (
+        existingPolicy &&
+        existingPolicy.getId().getValue() !== input.policyId
+      ) {
+        throw new PolicyNameAlreadyExistsError(input.name, input.workspaceId);
+      }
       policy.updateName(input.name);
     }
+
     if (input.description !== undefined) {
       policy.updateDescription(input.description);
     }
@@ -45,6 +61,6 @@ export class UpdatePolicyHandler {
 
     await this.policyRepository.save(policy);
 
-    return policy;
+    return CommandResult.success();
   }
 }

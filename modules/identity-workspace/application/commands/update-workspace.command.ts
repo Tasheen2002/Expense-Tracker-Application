@@ -1,5 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { Workspace } from '../../domain/entities/workspace.entity';
+import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
 import {
   ICommand,
   ICommandHandler,
@@ -13,34 +13,14 @@ export interface UpdateWorkspaceCommand extends ICommand {
 
 export class UpdateWorkspaceHandler implements ICommandHandler<
   UpdateWorkspaceCommand,
-  CommandResult<Workspace>
+  CommandResult<void>
 > {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService
   ) {}
 
-  async handle(
-    command: UpdateWorkspaceCommand
-  ): Promise<CommandResult<Workspace>> {
+  async handle(command: UpdateWorkspaceCommand): Promise<CommandResult<void>> {
     try {
-      // Validate workspaceId
-      if (!command.workspaceId || typeof command.workspaceId !== 'string') {
-        return CommandResult.failure<Workspace>('Workspace ID is required', [
-          'workspaceId',
-        ]);
-      }
-
-      // Validate name if provided
-      if (
-        command.name !== undefined &&
-        (!command.name || typeof command.name !== 'string')
-      ) {
-        return CommandResult.failure<Workspace>(
-          'Workspace name must be a valid string',
-          ['name']
-        );
-      }
-
       const updateData: { name?: string } = {};
       if (command.name !== undefined) {
         updateData.name = command.name;
@@ -52,20 +32,12 @@ export class UpdateWorkspaceHandler implements ICommandHandler<
       );
 
       if (!workspace) {
-        return CommandResult.failure<Workspace>('Workspace not found', [
-          'workspaceId',
-        ]);
+        throw new WorkspaceNotFoundError(command.workspaceId);
       }
 
-      return CommandResult.success<Workspace>(workspace);
+      return CommandResult.success();
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<Workspace>(error.message, [error.message]);
-      }
-
-      return CommandResult.failure<Workspace>(
-        'An unexpected error occurred during workspace update'
-      );
+      return CommandResult.fromError(error);
     }
   }
 }

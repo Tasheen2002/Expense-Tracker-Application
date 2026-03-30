@@ -23,22 +23,16 @@ export class GetAllocationsHandler implements IQueryHandler<
   async handle(
     query: GetAllocationsQuery
   ): Promise<QueryResult<PaginatedResult<BudgetAllocation>>> {
-    try {
-      
-          const options = {
-            limit: query.limit,
-            offset: query.offset,
-          };
-      
-          const result = await this.budgetService.getAllocationsByBudget(
-            query.budgetId,
-            query.workspaceId,
-            options
-          );
-          return QueryResult.success(result);
-        
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const options = {
+      limit: query.limit,
+      offset: query.offset,
+    };
+
+    const result = await this.budgetService.getAllocationsByBudget(
+      query.budgetId,
+      query.workspaceId,
+      options
+    );
+    return QueryResult.success(result);
   }
 }

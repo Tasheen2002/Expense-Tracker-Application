@@ -20,10 +20,7 @@ export class CancelInvitationHandler implements ICommandHandler<
       await this.invitationService.cancelInvitation(command.invitationId);
       return CommandResult.success<void>(undefined);
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<void>(error.message, [error.message]);
-      }
-      return CommandResult.failure<void>('Failed to cancel invitation');
+      return CommandResult.fromError(error);
     }
   }
 }

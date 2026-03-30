@@ -21,14 +21,23 @@ export class UpdateApprovalChainHandler implements ICommandHandler<
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
+  private getStatusCode(error: unknown): number {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      return (error as { statusCode: number }).statusCode;
+    }
+    return 500;
+  }
+
   async handle(input: UpdateApprovalChainInput): Promise<CommandResult<void>> {
     try {
       await this.approvalChainService.updateChain(input);
       return CommandResult.success();
     } catch (error: unknown) {
-      return CommandResult.fromError(error);
+      return CommandResult.failure(
+        error instanceof Error ? error.message : 'Command failed',
+        undefined,
+        this.getStatusCode(error)
+      );
     }
   }
 }
-
-export type UpdateApprovalChainCommand = UpdateApprovalChainInput;

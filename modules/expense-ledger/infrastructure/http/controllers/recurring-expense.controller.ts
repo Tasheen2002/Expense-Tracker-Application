@@ -1,13 +1,21 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { RecurringExpenseService } from '../../../application/services/recurring-expense.service';
+import { CreateRecurringExpenseHandler } from '../../../application/commands/create-recurring-expense.command';
+import { PauseRecurringExpenseHandler } from '../../../application/commands/pause-recurring-expense.command';
+import { ResumeRecurringExpenseHandler } from '../../../application/commands/resume-recurring-expense.command';
+import { StopRecurringExpenseHandler } from '../../../application/commands/stop-recurring-expense.command';
+import { ProcessRecurringExpensesHandler } from '../../../application/commands/process-recurring-expenses.command';
 import { RecurrenceFrequency } from '../../../domain/enums/recurrence-frequency';
 import { ExpenseTemplate } from '../../../domain/entities/recurring-expense.entity';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
 export class RecurringExpenseController {
   constructor(
-    private readonly recurringExpenseService: RecurringExpenseService
+    private readonly createRecurringExpenseHandler: CreateRecurringExpenseHandler,
+    private readonly pauseRecurringExpenseHandler: PauseRecurringExpenseHandler,
+    private readonly resumeRecurringExpenseHandler: ResumeRecurringExpenseHandler,
+    private readonly stopRecurringExpenseHandler: StopRecurringExpenseHandler,
+    private readonly processRecurringExpensesHandler: ProcessRecurringExpensesHandler
   ) {}
 
   async create(
@@ -31,22 +39,22 @@ export class RecurringExpenseController {
     const body = request.body;
 
     try {
-      const expense = await this.recurringExpenseService.createRecurringExpense(
-        {
-          workspaceId,
-          userId,
-          frequency: body.frequency,
-          interval: body.interval,
-          startDate: new Date(body.startDate),
-          endDate: body.endDate ? new Date(body.endDate) : undefined,
-          template: body.template,
-        }
-      );
+      const result = await this.createRecurringExpenseHandler.handle({
+        workspaceId,
+        userId,
+        frequency: body.frequency,
+        interval: body.interval,
+        startDate: new Date(body.startDate),
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+        template: body.template,
+      });
 
-      return ResponseHelper.created(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         'Recurring expense created successfully',
-        expense.toJSON()
+        result.data?.toJSON(),
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -62,8 +70,12 @@ export class RecurringExpenseController {
     const { id } = request.params;
 
     try {
-      await this.recurringExpenseService.pauseRecurringExpense(id);
-      return ResponseHelper.ok(reply, 'Recurring expense paused');
+      const result = await this.pauseRecurringExpenseHandler.handle({ id });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Recurring expense paused'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -78,8 +90,12 @@ export class RecurringExpenseController {
     const { id } = request.params;
 
     try {
-      await this.recurringExpenseService.resumeRecurringExpense(id);
-      return ResponseHelper.ok(reply, 'Recurring expense resumed');
+      const result = await this.resumeRecurringExpenseHandler.handle({ id });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Recurring expense resumed'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -94,8 +110,12 @@ export class RecurringExpenseController {
     const { id } = request.params;
 
     try {
-      await this.recurringExpenseService.stopRecurringExpense(id);
-      return ResponseHelper.ok(reply, 'Recurring expense stopped');
+      const result = await this.stopRecurringExpenseHandler.handle({ id });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Recurring expense stopped'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -113,12 +133,12 @@ export class RecurringExpenseController {
       );
     }
     try {
-      const processedCount =
-        await this.recurringExpenseService.processDueExpenses();
-      return ResponseHelper.ok(
+      const result = await this.processRecurringExpensesHandler.handle({});
+      return ResponseHelper.fromCommand(
         reply,
-        `Processed ${processedCount} recurring expenses`,
-        { count: processedCount }
+        result,
+        `Processed ${result.data?.count ?? 0} recurring expenses`,
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -40,7 +40,7 @@ export class TransactionSyncController {
         result.data,
         202
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -79,7 +79,7 @@ export class TransactionSyncController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -102,7 +102,7 @@ export class TransactionSyncController {
         'Sync session retrieved successfully',
         result.data?.toJSON()
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -137,7 +137,7 @@ export class TransactionSyncController {
             }
           : undefined
       );
-    } catch (error: unknown) {
+    } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }

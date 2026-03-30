@@ -1,15 +1,33 @@
-import { ReceiptService } from '../services/receipt.service'
-import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity'
+import { ReceiptService } from '../services/receipt.service';
+import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import { ReceiptMetadataNotFoundError } from '../../domain/errors/receipt.errors';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetReceiptMetadataDto {
-  receiptId: string
-  workspaceId: string
+export interface GetReceiptMetadataQuery extends IQuery {
+  receiptId: string;
+  workspaceId: string;
 }
 
-export class GetReceiptMetadataHandler {
+export class GetReceiptMetadataHandler implements IQueryHandler<
+  GetReceiptMetadataQuery,
+  QueryResult<ReceiptMetadata>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: GetReceiptMetadataDto): Promise<ReceiptMetadata | null> {
-    return await this.receiptService.getMetadata(dto.receiptId, dto.workspaceId)
+  async handle(
+    query: GetReceiptMetadataQuery
+  ): Promise<QueryResult<ReceiptMetadata>> {
+    const metadata = await this.receiptService.getMetadata(
+      query.receiptId,
+      query.workspaceId
+    );
+    if (!metadata) {
+      throw new ReceiptMetadataNotFoundError(query.receiptId);
+    }
+    return QueryResult.success(metadata);
   }
 }

@@ -1,13 +1,26 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { PolicyService } from "../../../application/services/policy.service";
-import { ExpensePolicy } from "../../../domain/entities/expense-policy.entity";
-import { PolicyType } from "../../../domain/enums/policy-type.enum";
-import { ViolationSeverity } from "../../../domain/enums/violation-severity.enum";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { CreatePolicyHandler } from '../../../application/commands/create-policy.command';
+import { UpdatePolicyHandler } from '../../../application/commands/update-policy.command';
+import { ActivatePolicyHandler } from '../../../application/commands/activate-policy.command';
+import { DeactivatePolicyHandler } from '../../../application/commands/deactivate-policy.command';
+import { DeletePolicyHandler } from '../../../application/commands/delete-policy.command';
+import { GetPolicyHandler } from '../../../application/queries/get-policy.query';
+import { ListPoliciesHandler } from '../../../application/queries/list-policies.query';
+import { PolicyType } from '../../../domain/enums/policy-type.enum';
+import { ViolationSeverity } from '../../../domain/enums/violation-severity.enum';
 
 export class PolicyController {
-  constructor(private readonly policyService: PolicyService) {}
+  constructor(
+    private readonly createPolicyHandler: CreatePolicyHandler,
+    private readonly updatePolicyHandler: UpdatePolicyHandler,
+    private readonly activatePolicyHandler: ActivatePolicyHandler,
+    private readonly deactivatePolicyHandler: DeactivatePolicyHandler,
+    private readonly deletePolicyHandler: DeletePolicyHandler,
+    private readonly getPolicyHandler: GetPolicyHandler,
+    private readonly listPoliciesHandler: ListPoliciesHandler
+  ) {}
 
   async createPolicy(
     request: AuthenticatedRequest<{
@@ -21,33 +34,25 @@ export class PolicyController {
         priority?: number;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
-      const userId = request.user?.userId;
+      const userId = request.user!.userId;
 
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const policy = await this.policyService.createPolicy({
+      const result = await this.createPolicyHandler.handle({
         workspaceId,
         createdBy: userId,
         ...request.body,
       });
 
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Policy created successfully",
-        data: this.serializePolicy(policy),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Policy created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -64,23 +69,22 @@ export class PolicyController {
         priority?: number;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const policy = await this.policyService.updatePolicy({
+      const result = await this.updatePolicyHandler.handle({
         policyId,
         workspaceId,
         ...request.body,
       });
 
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policy updated successfully",
-        data: this.serializePolicy(policy),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Policy updated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -90,19 +94,22 @@ export class PolicyController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; policyId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const policy = await this.policyService.getPolicy(policyId, workspaceId);
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policy retrieved successfully",
-        data: this.serializePolicy(policy),
+      const result = await this.getPolicyHandler.handle({
+        policyId,
+        workspaceId,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Policy retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -118,36 +125,39 @@ export class PolicyController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { activeOnly, limit, offset } = request.query;
-      const activeOnlyBool = activeOnly === "true";
 
-      const result = await this.policyService.listPolicies(
+      const result = await this.listPoliciesHandler.handle({
         workspaceId,
-        activeOnlyBool,
-        {
+        activeOnly: activeOnly === 'true',
+        pagination: {
           limit: limit ? parseInt(limit, 10) : 50,
           offset: offset ? parseInt(offset, 10) : 0,
         },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policies retrieved successfully",
-        data: {
-          items: result.items.map((policy) => this.serializePolicy(policy)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
       });
+
+      const data = result.data
+        ? {
+            items: result.data.items.map((policy) => policy.toJSON()),
+            pagination: {
+              total: result.data.total,
+              limit: result.data.limit,
+              offset: result.data.offset,
+              hasMore: result.data.hasMore,
+            },
+          }
+        : undefined;
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Policies retrieved successfully',
+        data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -157,18 +167,21 @@ export class PolicyController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; policyId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, policyId } = request.params;
 
-      await this.policyService.deletePolicy(policyId, workspaceId);
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policy deleted successfully",
+      const result = await this.deletePolicyHandler.handle({
+        policyId,
+        workspaceId,
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Policy deleted successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -178,22 +191,21 @@ export class PolicyController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; policyId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const policy = await this.policyService.activatePolicy(
+      const result = await this.activatePolicyHandler.handle({
         policyId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policy activated successfully",
-        data: this.serializePolicy(policy),
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Policy activated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -203,41 +215,23 @@ export class PolicyController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; policyId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const policy = await this.policyService.deactivatePolicy(
+      const result = await this.deactivatePolicyHandler.handle({
         policyId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Policy deactivated successfully",
-        data: this.serializePolicy(policy),
       });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Policy deactivated successfully'
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
-  }
-
-  private serializePolicy(policy: ExpensePolicy) {
-    return {
-      id: policy.getId().getValue(),
-      workspaceId: policy.getWorkspaceId().getValue(),
-      name: policy.getName(),
-      description: policy.getDescription(),
-      policyType: policy.getPolicyType(),
-      severity: policy.getSeverity(),
-      configuration: policy.getConfiguration(),
-      priority: policy.getPriority(),
-      isActive: policy.isActive(),
-      createdBy: policy.getCreatedBy(),
-      createdAt: policy.getCreatedAt().toISOString(),
-      updatedAt: policy.getUpdatedAt().toISOString(),
-    };
   }
 }

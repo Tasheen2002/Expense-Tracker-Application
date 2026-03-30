@@ -13,7 +13,7 @@ export default fp(
         },
         servers: [
           {
-            url: "http://localhost:3000",
+            url: `http://localhost:${fastify.config.PORT}`,
             description: "Local Development",
           },
         ],

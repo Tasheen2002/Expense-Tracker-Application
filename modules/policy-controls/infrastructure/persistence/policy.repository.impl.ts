@@ -1,21 +1,28 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
 import {
   ExpensePolicy,
   PolicyConfiguration,
-} from "../../domain/entities/expense-policy.entity";
-import { PolicyId } from "../../domain/value-objects/policy-id";
-import { PolicyType } from "../../domain/enums/policy-type.enum";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+} from '../../domain/entities/expense-policy.entity';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import { PolicyType } from '../../domain/enums/policy-type.enum';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
-export class PrismaPolicyRepository implements PolicyRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PrismaPolicyRepository
+  extends PrismaRepository<ExpensePolicy>
+  implements PolicyRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(policy: ExpensePolicy): Promise<void> {
     await this.prisma.expensePolicy.upsert({
@@ -44,6 +51,7 @@ export class PrismaPolicyRepository implements PolicyRepository {
         updatedAt: policy.getUpdatedAt(),
       },
     });
+    await this.dispatchEvents(policy);
   }
 
   async findById(id: PolicyId): Promise<ExpensePolicy | null> {
@@ -56,22 +64,22 @@ export class PrismaPolicyRepository implements PolicyRepository {
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.expensePolicy,
       {
         where: { workspaceId },
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       },
       (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
-      options,
+      options
     );
   }
 
   async findActiveByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.expensePolicy,
@@ -80,17 +88,17 @@ export class PrismaPolicyRepository implements PolicyRepository {
           workspaceId,
           isActive: true,
         },
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       },
       (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
-      options,
+      options
     );
   }
 
   async findByType(
     workspaceId: string,
     policyType: PolicyType,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpensePolicy>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.expensePolicy,
@@ -99,16 +107,16 @@ export class PrismaPolicyRepository implements PolicyRepository {
           workspaceId,
           policyType,
         },
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       },
       (row) => this.toDomain(row as Prisma.ExpensePolicyGetPayload<object>),
-      options,
+      options
     );
   }
 
   async findByNameInWorkspace(
     workspaceId: string,
-    name: string,
+    name: string
   ): Promise<ExpensePolicy | null> {
     const row = await this.prisma.expensePolicy.findFirst({
       where: {

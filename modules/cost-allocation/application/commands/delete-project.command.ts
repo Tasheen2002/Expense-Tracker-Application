@@ -1,23 +1,30 @@
-import { AllocationManagementService } from "../services/allocation-management.service";
+import { AllocationManagementService } from '../services/allocation-management.service';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class DeleteProjectCommand {
-  constructor(
-    public readonly id: string,
-    public readonly workspaceId: string,
-    public readonly actorId: string,
-  ) {}
+export interface DeleteProjectCommand extends ICommand {
+  id: string;
+  workspaceId: string;
+  actorId: string;
 }
 
-export class DeleteProjectHandler {
+export class DeleteProjectHandler implements ICommandHandler<
+  DeleteProjectCommand,
+  CommandResult<void>
+> {
   constructor(
-    private readonly allocationManagementService: AllocationManagementService,
+    private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: DeleteProjectCommand): Promise<void> {
+  async handle(command: DeleteProjectCommand): Promise<CommandResult<void>> {
     await this.allocationManagementService.deleteProject(
       command.id,
       command.workspaceId,
-      command.actorId,
+      command.actorId
     );
+    return CommandResult.success(undefined);
   }
 }

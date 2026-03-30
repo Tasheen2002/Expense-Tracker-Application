@@ -3,6 +3,7 @@ import {
   ExpenseFilters,
   PaginatedResult,
 } from '../../domain/repositories/expense.repository';
+import { TagRepository } from '../../domain/repositories/tag.repository';
 import { Expense } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { CategoryId } from '../../domain/value-objects/category-id';
@@ -19,7 +20,10 @@ import {
 } from '../../domain/errors/expense.errors';
 
 export class ExpenseService {
-  constructor(private readonly expenseRepository: ExpenseRepository) {}
+  constructor(
+    private readonly expenseRepository: ExpenseRepository,
+    private readonly tagRepository?: TagRepository
+  ) {}
 
   async createExpense(params: {
     workspaceId: string;
@@ -39,6 +43,14 @@ export class ExpenseService {
     const uniqueTagIds = params.tagIds
       ? Array.from(new Set(params.tagIds))
       : [];
+
+    // Validate tags exist via repository when available
+    if (this.tagRepository && uniqueTagIds.length > 0) {
+      await this.tagRepository.findByIds(
+        uniqueTagIds.map((id) => TagId.fromString(id)),
+        params.workspaceId
+      );
+    }
 
     const expense = Expense.create({
       workspaceId: params.workspaceId,

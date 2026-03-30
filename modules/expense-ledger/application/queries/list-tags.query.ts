@@ -22,16 +22,10 @@ export class ListTagsHandler implements IQueryHandler<
   async handle(
     query: ListTagsQuery
   ): Promise<QueryResult<PaginatedResult<Tag>>> {
-    try {
-      const result = await this.tagService.getTagsByWorkspace(
-        query.workspaceId,
-        { limit: query.limit, offset: query.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to list tags'
-      );
-    }
+    const result = await this.tagService.getTagsByWorkspace(query.workspaceId, {
+      limit: query.limit,
+      offset: query.offset,
+    });
+    return QueryResult.success(result);
   }
 }

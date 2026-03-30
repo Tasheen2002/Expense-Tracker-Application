@@ -1,22 +1,21 @@
-import { IOutboxEventRepository } from "../../domain/repositories/outbox-event.repository";
+import { IOutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
 import {
   OutboxEvent,
   OutboxDomainEvent,
-} from "../../domain/entities/outbox-event.entity";
-import { OutboxEventId } from "../../domain/value-objects/outbox-event-id";
+} from '../../domain/entities/outbox-event.entity';
+import { OutboxEventId } from '../../domain/value-objects/outbox-event-id';
 import {
   OutboxEventNotFoundError,
   OutboxEventProcessingError,
-} from "../../domain/errors/outbox-event.errors";
-import { OutboxEventStatus } from "../../domain/enums/outbox-event-status.enum";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events";
-
-const MAX_RETRIES = 3;
+} from '../../domain/errors/outbox-event.errors';
+import { OutboxEventStatus } from '../../domain/enums/outbox-event-status.enum';
+import { IEventBus } from '../../../../apps/api/src/shared/domain/events';
+import { MAX_RETRY_COUNT } from '../../domain/constants/outbox.constants';
 
 export class OutboxEventService {
   constructor(
     private readonly repository: IOutboxEventRepository,
-    private readonly eventBus: IEventBus,
+    private readonly eventBus: IEventBus
   ) {}
 
   async processEvent(event: OutboxEvent): Promise<void> {
@@ -30,7 +29,7 @@ export class OutboxEventService {
         event.aggregateType,
         event.eventType,
         event.payload,
-        event.createdAt,
+        event.createdAt
       );
 
       // Publish the event to the event bus
@@ -40,7 +39,7 @@ export class OutboxEventService {
       await this.repository.save(event);
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+        error instanceof Error ? error.message : 'Unknown error';
       // Truncate error message to prevent oversized storage
       const truncatedError = errorMessage.substring(0, 1000);
       event.markAsFailed(truncatedError);
@@ -56,10 +55,10 @@ export class OutboxEventService {
       throw new OutboxEventNotFoundError(eventId.getValue());
     }
 
-    if (!event.canRetry(MAX_RETRIES)) {
+    if (!event.canRetry(MAX_RETRY_COUNT)) {
       throw new OutboxEventProcessingError(
         eventId.getValue(),
-        `Exceeded max retry attempts (${MAX_RETRIES})`,
+        `Exceeded max retry attempts (${MAX_RETRY_COUNT})`
       );
     }
 
@@ -76,14 +75,14 @@ export class OutboxEventService {
     deadLettered: number;
   }> {
     const failedEvents =
-      await this.repository.findFailedEventsForRetry(MAX_RETRIES);
+      await this.repository.findFailedEventsForRetry(MAX_RETRY_COUNT);
 
     let retried = 0;
     let deadLettered = 0;
 
     const eventsToRetry: OutboxEvent[] = [];
     for (const event of failedEvents.items) {
-      if (event.canRetry(MAX_RETRIES)) {
+      if (event.canRetry(MAX_RETRY_COUNT)) {
         event.resetToPending();
         eventsToRetry.push(event);
         retried++;

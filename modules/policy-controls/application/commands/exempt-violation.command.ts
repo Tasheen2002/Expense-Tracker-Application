@@ -1,32 +1,32 @@
-import { ViolationRepository } from "../../domain/repositories/violation.repository";
-import { ExemptionRepository } from "../../domain/repositories/exemption.repository";
-import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
-import { ViolationId } from "../../domain/value-objects/violation-id";
-import { ExemptionId } from "../../domain/value-objects/exemption-id";
-import {
-  ViolationNotFoundError,
-  ExemptionNotFoundError,
-} from "../../domain/errors/policy-controls.errors";
+import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { ViolationId } from '../../domain/value-objects/violation-id';
+import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface ExemptViolationInput {
   violationId: string;
+  workspaceId: string;
   exemptedBy: string;
 }
 
 export class ExemptViolationHandler {
   constructor(private readonly violationRepository: ViolationRepository) {}
 
-  async handle(input: ExemptViolationInput): Promise<PolicyViolation> {
+  async handle(input: ExemptViolationInput): Promise<CommandResult<void>> {
     const violation = await this.violationRepository.findById(
-      ViolationId.fromString(input.violationId),
+      ViolationId.fromString(input.violationId)
     );
-    if (!violation) {
+    if (
+      !violation ||
+      violation.getWorkspaceId().getValue() !== input.workspaceId
+    ) {
       throw new ViolationNotFoundError(input.violationId);
     }
 
     violation.exempt(input.exemptedBy);
     await this.violationRepository.save(violation);
 
-    return violation;
+    return CommandResult.success();
   }
 }

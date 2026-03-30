@@ -1,28 +1,26 @@
-import { CategorySuggestionService } from '../services/category-suggestion.service'
-import { SuggestionId } from '../../domain/value-objects/suggestion-id'
+import { CategorySuggestionService } from '../services/category-suggestion.service';
+import { SuggestionId } from '../../domain/value-objects/suggestion-id';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface AcceptSuggestionCommand {
-  suggestionId: string
+export interface AcceptSuggestionCommand extends ICommand {
+  suggestionId: string;
 }
 
-export class AcceptSuggestionHandler {
+export class AcceptSuggestionHandler implements ICommandHandler<
+  AcceptSuggestionCommand,
+  CommandResult<void>
+> {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async execute(command: AcceptSuggestionCommand) {
-    const suggestion = await this.suggestionService.acceptSuggestion(
+  async handle(command: AcceptSuggestionCommand): Promise<CommandResult<void>> {
+    await this.suggestionService.acceptSuggestion(
       SuggestionId.fromString(command.suggestionId)
-    )
+    );
 
-    return {
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
-    }
+    return CommandResult.success();
   }
 }

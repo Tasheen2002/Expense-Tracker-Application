@@ -45,10 +45,7 @@ export class CreateInvitationHandler implements ICommandHandler<
         expiresAt: invitation.getExpiresAt(),
       });
     } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure(error.message, [error.message]);
-      }
-      return CommandResult.failure('Failed to create invitation');
+      return CommandResult.fromError(error);
     }
   }
 }

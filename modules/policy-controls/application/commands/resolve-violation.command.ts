@@ -1,10 +1,12 @@
-import { ViolationRepository } from "../../domain/repositories/violation.repository";
-import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
-import { ViolationId } from "../../domain/value-objects/violation-id";
-import { ViolationNotFoundError } from "../../domain/errors/policy-controls.errors";
+import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { ViolationId } from '../../domain/value-objects/violation-id';
+import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface ResolveViolationInput {
   violationId: string;
+  workspaceId: string;
   resolvedBy: string;
   resolutionNote?: string;
 }
@@ -12,17 +14,20 @@ export interface ResolveViolationInput {
 export class ResolveViolationHandler {
   constructor(private readonly violationRepository: ViolationRepository) {}
 
-  async handle(input: ResolveViolationInput): Promise<PolicyViolation> {
+  async handle(input: ResolveViolationInput): Promise<CommandResult<void>> {
     const violation = await this.violationRepository.findById(
-      ViolationId.fromString(input.violationId),
+      ViolationId.fromString(input.violationId)
     );
-    if (!violation) {
+    if (
+      !violation ||
+      violation.getWorkspaceId().getValue() !== input.workspaceId
+    ) {
       throw new ViolationNotFoundError(input.violationId);
     }
 
     violation.resolve(input.resolvedBy, input.resolutionNote);
     await this.violationRepository.save(violation);
 
-    return violation;
+    return CommandResult.success();
   }
 }

@@ -1,7 +1,7 @@
-import { CostCenterId } from "../value-objects/cost-center-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { CostCenterId } from '../value-objects/cost-center-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -12,13 +12,13 @@ export class CostCenterCreatedEvent extends DomainEvent {
     public readonly costCenterId: string,
     public readonly workspaceId: string,
     public readonly name: string,
-    public readonly code: string,
+    public readonly code: string
   ) {
-    super(costCenterId, "CostCenter");
+    super(costCenterId, 'CostCenter');
   }
 
   get eventType(): string {
-    return "CostCenterCreated";
+    return 'CostCenterCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -34,13 +34,13 @@ export class CostCenterCreatedEvent extends DomainEvent {
 export class CostCenterUpdatedEvent extends DomainEvent {
   constructor(
     public readonly costCenterId: string,
-    public readonly changes: Record<string, unknown>,
+    public readonly changes: Record<string, unknown>
   ) {
-    super(costCenterId, "CostCenter");
+    super(costCenterId, 'CostCenter');
   }
 
   get eventType(): string {
-    return "CostCenterUpdated";
+    return 'CostCenterUpdated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -53,11 +53,11 @@ export class CostCenterUpdatedEvent extends DomainEvent {
 
 export class CostCenterActivatedEvent extends DomainEvent {
   constructor(public readonly costCenterId: string) {
-    super(costCenterId, "CostCenter");
+    super(costCenterId, 'CostCenter');
   }
 
   get eventType(): string {
-    return "CostCenterActivated";
+    return 'CostCenterActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -67,11 +67,11 @@ export class CostCenterActivatedEvent extends DomainEvent {
 
 export class CostCenterDeactivatedEvent extends DomainEvent {
   constructor(public readonly costCenterId: string) {
-    super(costCenterId, "CostCenter");
+    super(costCenterId, 'CostCenter');
   }
 
   get eventType(): string {
-    return "CostCenterDeactivated";
+    return 'CostCenterDeactivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -92,7 +92,7 @@ export class CostCenter extends AggregateRoot {
     private description: string | null,
     private isActive: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date,
+    private updatedAt: Date
   ) {
     super();
   }
@@ -111,7 +111,7 @@ export class CostCenter extends AggregateRoot {
       params.description || null,
       true,
       new Date(),
-      new Date(),
+      new Date()
     );
 
     costCenter.addDomainEvent(
@@ -119,8 +119,8 @@ export class CostCenter extends AggregateRoot {
         costCenter.id.getValue(),
         params.workspaceId.getValue(),
         params.name,
-        params.code,
-      ),
+        params.code
+      )
     );
 
     return costCenter;
@@ -144,7 +144,7 @@ export class CostCenter extends AggregateRoot {
       params.description,
       params.isActive,
       params.createdAt,
-      params.updatedAt,
+      params.updatedAt
     );
   }
 
@@ -202,7 +202,7 @@ export class CostCenter extends AggregateRoot {
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new CostCenterUpdatedEvent(this.id.getValue(), changes),
+        new CostCenterUpdatedEvent(this.id.getValue(), changes)
       );
     }
   }
@@ -220,4 +220,28 @@ export class CostCenter extends AggregateRoot {
     this.updatedAt = new Date();
     this.addDomainEvent(new CostCenterActivatedEvent(this.id.getValue()));
   }
+
+  toJSON(): CostCenterDTO {
+    return {
+      id: this.getId().getValue(),
+      workspaceId: this.getWorkspaceId().getValue(),
+      name: this.getName(),
+      code: this.getCode(),
+      description: this.getDescription(),
+      isActive: this.getIsActive(),
+      createdAt: this.getCreatedAt().toISOString(),
+      updatedAt: this.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+export interface CostCenterDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

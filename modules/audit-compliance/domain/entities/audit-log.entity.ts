@@ -1,8 +1,8 @@
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AuditLogId } from '../value-objects/audit-log-id.vo';
-import { AuditAction } from '../value-objects/audit-action.vo';
-import { AuditResource } from '../value-objects/audit-resource.vo';
+import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
+import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { AuditLogId } from "../value-objects/audit-log-id.vo";
+import { AuditAction } from "../value-objects/audit-action.vo";
+import { AuditResource } from "../value-objects/audit-resource.vo";
 
 // ============================================================================
 // Domain Events
@@ -18,16 +18,16 @@ export class AuditLogCreatedEvent extends DomainEvent {
     public readonly userId: string | null,
     public readonly action: string,
     public readonly entityType: string,
-    public readonly entityId: string
+    public readonly entityId: string,
   ) {
-    super(auditLogId, 'AuditLog');
+    super(auditLogId, "AuditLog");
   }
 
   get eventType(): string {
-    return 'audit.log_created';
+    return "audit.log_created";
   }
 
-  getPayload(): Record<string, unknown> {
+  protected getPayload(): Record<string, unknown> {
     return {
       auditLogId: this.auditLogId,
       workspaceId: this.workspaceId,
@@ -39,23 +39,63 @@ export class AuditLogCreatedEvent extends DomainEvent {
   }
 }
 
+/**
+ * Emitted when audit logs are queried/exported (for meta-auditing).
+ */
+export class AuditLogsQueriedEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly queriedBy: string,
+    public readonly filterCriteria: Record<string, unknown>,
+    public readonly resultCount: number,
+  ) {
+    super(workspaceId, "AuditLog");
+  }
+
+  get eventType(): string {
+    return "audit.logs_queried";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      queriedBy: this.queriedBy,
+      filterCriteria: this.filterCriteria,
+      resultCount: this.resultCount,
+    };
+  }
+}
+
+/**
+ * Emitted when audit log retention policy is applied.
+ */
+export class AuditRetentionAppliedEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly retentionDays: number,
+    public readonly logsDeleted: number,
+    public readonly appliedAt: Date,
+  ) {
+    super(workspaceId, "AuditLog");
+  }
+
+  get eventType(): string {
+    return "audit.retention_applied";
+  }
+
+  protected getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      retentionDays: this.retentionDays,
+      logsDeleted: this.logsDeleted,
+      appliedAt: this.appliedAt.toISOString(),
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
-
-export interface AuditLogDTO {
-  id: string;
-  workspaceId: string;
-  userId: string | null;
-  action: string;
-  entityType: string;
-  entityId: string;
-  details: Record<string, unknown> | null;
-  metadata: Record<string, unknown> | null;
-  ipAddress: string | null;
-  userAgent: string | null;
-  createdAt: string;
-}
 
 export interface AuditLogProps {
   id: AuditLogId;
@@ -78,7 +118,7 @@ export class AuditLog extends AggregateRoot {
     this.props = props;
   }
 
-  static create(props: Omit<AuditLogProps, 'id' | 'createdAt'>): AuditLog {
+  static create(props: Omit<AuditLogProps, "id" | "createdAt">): AuditLog {
     const auditLogId = AuditLogId.create();
 
     const auditLog = new AuditLog({
@@ -96,8 +136,8 @@ export class AuditLog extends AggregateRoot {
         props.userId,
         props.action.getValue(),
         props.resource.entityType,
-        props.resource.entityId
-      )
+        props.resource.entityId,
+      ),
     );
 
     return auditLog;
@@ -146,21 +186,5 @@ export class AuditLog extends AggregateRoot {
 
   get createdAt(): Date {
     return this.props.createdAt;
-  }
-
-  toJSON(): AuditLogDTO {
-    return {
-      id: this.id.getValue(),
-      workspaceId: this.workspaceId,
-      userId: this.userId,
-      action: this.action.getValue(),
-      entityType: this.resource.entityType,
-      entityId: this.resource.entityId,
-      details: this.details,
-      metadata: this.metadata,
-      ipAddress: this.ipAddress,
-      userAgent: this.userAgent,
-      createdAt: this.createdAt.toISOString(),
-    };
   }
 }

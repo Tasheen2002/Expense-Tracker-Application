@@ -19,17 +19,11 @@ export class GetSplitHandler implements IQueryHandler<
   constructor(private readonly splitService: ExpenseSplitService) {}
 
   async handle(query: GetSplitQuery): Promise<QueryResult<ExpenseSplit>> {
-    try {
-      const split = await this.splitService.getSplitById(
-        query.splitId,
-        query.workspaceId,
-        query.userId
-      );
-      return QueryResult.success(split);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to get split'
-      );
-    }
+    const split = await this.splitService.getSplitById(
+      query.splitId,
+      query.workspaceId,
+      query.userId
+    );
+    return QueryResult.success(split);
   }
 }

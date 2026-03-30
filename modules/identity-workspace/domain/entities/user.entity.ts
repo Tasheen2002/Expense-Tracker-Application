@@ -255,7 +255,7 @@ export class User extends AggregateRoot {
 
   toJSON(): UserDTO {
     return {
-      id: this.id.getValue(),
+      userId: this.id.getValue(),
       email: this.email.getValue(),
       fullName: this.fullName,
       isActive: this.isActive,
@@ -296,7 +296,7 @@ export interface UserRow {
 }
 
 export interface UserDTO {
-  id: string;
+  userId: string;
   email: string;
   fullName: string | null;
   isActive: boolean;

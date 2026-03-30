@@ -1,19 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemberController } from '../infrastructure/http/controllers/member.controller';
-import { WorkspaceMembershipService } from '../application/services/workspace-membership.service';
+import { ListWorkspaceMembersHandler } from '../application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../application/commands/change-member-role.command';
 import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace-auth.helper';
 import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { CommandResult } from '../../../apps/api/src/shared/application/command-result';
 
-// Mock dependencies
-const mockMembershipService = {
-  getUserMembership: vi.fn(),
-  removeMember: vi.fn(),
-  updateMemberRole: vi.fn(), // If this is the method name in the service
-  changeMemberRole: vi.fn(), // Current service method name
-  getWorkspaceMembers: vi.fn(),
-} as unknown as WorkspaceMembershipService;
+// Mock CQRS handlers
+const mockListMembersHandler = {
+  handle: vi.fn(),
+} as unknown as ListWorkspaceMembersHandler;
+
+const mockRemoveMemberHandler = {
+  handle: vi.fn(),
+} as unknown as RemoveMemberHandler;
+
+const mockChangeMemberRoleHandler = {
+  handle: vi.fn(),
+} as unknown as ChangeMemberRoleHandler;
 
 const mockAuthHelper = {
   getUserFromRequest: vi.fn(),
@@ -33,7 +40,12 @@ describe('MemberController (Unit)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new MemberController(mockMembershipService, mockAuthHelper);
+    controller = new MemberController(
+      mockListMembersHandler,
+      mockRemoveMemberHandler,
+      mockChangeMemberRoleHandler,
+      mockAuthHelper
+    );
   });
 
   describe('removeMember', () => {
@@ -53,24 +65,20 @@ describe('MemberController (Unit)', () => {
       // Mock Auth
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
 
-      // Mock Lookup
-      const mockMembership = { getId: () => ({ getValue: () => 'mem-123' }) };
-      vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(
-        mockMembership as any
+      // Mock handler returning success
+      vi.mocked(mockRemoveMemberHandler.handle).mockResolvedValue(
+        CommandResult.success(undefined)
       );
 
       // Execute
       await controller.removeMember(req, mockReply);
 
-      // Verify Logic
-      expect(mockMembershipService.getUserMembership).toHaveBeenCalledWith(
-        'user-2',
-        'ws-1'
-      );
-      expect(mockMembershipService.removeMember).toHaveBeenCalledWith(
-        'mem-123'
-      );
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      // Verify handler was called with correct CQRS command
+      expect(mockRemoveMemberHandler.handle).toHaveBeenCalledWith({
+        workspaceId: 'ws-1',
+        userId: 'user-2',
+      });
+      expect(mockReply.status).toHaveBeenCalledWith(204);
     });
 
     it('should fail if member not found', async () => {
@@ -87,14 +95,20 @@ describe('MemberController (Unit)', () => {
       }>;
 
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
-      vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(
-        null
+
+      // Handler returns failure when member not found
+      vi.mocked(mockRemoveMemberHandler.handle).mockResolvedValue(
+        CommandResult.failure('Member not found in this workspace')
       );
 
       await controller.removeMember(req, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockMembershipService.removeMember).not.toHaveBeenCalled();
+      expect(mockRemoveMemberHandler.handle).toHaveBeenCalledWith({
+        workspaceId: 'ws-1',
+        userId: 'user-unknown',
+      });
+      // fromCommand maps failure to 400
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
   });
 });

@@ -1,19 +1,33 @@
-import { PreferenceService } from "../services/preference.service";
+import { PreferenceService } from '../services/preference.service';
+import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export class GetPreferencesQuery {
-  constructor(
-    public readonly userId: string,
-    public readonly workspaceId: string,
-  ) {}
+export interface GetPreferencesQuery extends IQuery {
+  userId: string;
+  workspaceId: string;
 }
 
-export class GetPreferencesHandler {
+export class GetPreferencesHandler implements IQueryHandler<
+  GetPreferencesQuery,
+  QueryResult<NotificationPreference | null>
+> {
   constructor(private readonly preferenceService: PreferenceService) {}
 
-  async handle(query: GetPreferencesQuery) {
-    return await this.preferenceService.getPreferences(
-      query.userId,
-      query.workspaceId,
-    );
+  async handle(
+    input: GetPreferencesQuery
+  ): Promise<QueryResult<NotificationPreference | null>> {
+    try {
+      const preferences = await this.preferenceService.getPreferences(
+        input.userId,
+        input.workspaceId
+      );
+      return QueryResult.success(preferences);
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
+    }
   }
 }

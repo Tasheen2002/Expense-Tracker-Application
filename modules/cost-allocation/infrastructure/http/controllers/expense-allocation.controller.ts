@@ -1,34 +1,32 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { AllocateExpenseBody } from "../validation/allocation.schema";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+
+interface AllocateExpenseBody {
+  allocations: Array<{
+    amount: number;
+    percentage?: number;
+    departmentId?: string;
+    costCenterId?: string;
+    projectId?: string;
+    notes?: string;
+  }>;
+}
 
 // Command Handlers
-import {
-  AllocateExpenseCommand,
-  AllocateExpenseHandler,
-} from "../../../application/commands/allocate-expense.command";
-import {
-  DeleteAllocationsCommand,
-  DeleteAllocationsHandler,
-} from "../../../application/commands/delete-allocations.command";
+import { AllocateExpenseHandler } from '../../../application/commands/allocate-expense.command';
+import { DeleteAllocationsHandler } from '../../../application/commands/delete-allocations.command';
 
 // Query Handlers
-import {
-  GetExpenseAllocationsQuery,
-  GetExpenseAllocationsHandler,
-} from "../../../application/queries/get-expense-allocations.query";
-import {
-  GetAllocationSummaryQuery,
-  GetAllocationSummaryHandler,
-} from "../../../application/queries/get-allocation-summary.query";
+import { GetExpenseAllocationsHandler } from '../../../application/queries/get-expense-allocations.query';
+import { GetAllocationSummaryHandler } from '../../../application/queries/get-allocation-summary.query';
 
 export class ExpenseAllocationController {
   constructor(
     private readonly allocateExpenseHandler: AllocateExpenseHandler,
     private readonly deleteAllocationsHandler: DeleteAllocationsHandler,
     private readonly getExpenseAllocationsHandler: GetExpenseAllocationsHandler,
-    private readonly getAllocationSummaryHandler: GetAllocationSummaryHandler,
+    private readonly getAllocationSummaryHandler: GetAllocationSummaryHandler
   ) {}
 
   async allocateExpense(
@@ -36,7 +34,7 @@ export class ExpenseAllocationController {
       Params: { workspaceId: string; expenseId: string };
       Body: AllocateExpenseBody;
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, expenseId } = request.params;
@@ -45,18 +43,19 @@ export class ExpenseAllocationController {
       // Extract userId from authenticated user context
       const userId = request.user.userId;
 
-      const command = new AllocateExpenseCommand(
+      const result = await this.allocateExpenseHandler.handle({
         workspaceId,
         expenseId,
-        userId,
+        createdBy: userId,
         allocations,
-      );
-      await this.allocateExpenseHandler.handle(command);
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Expense allocated successfully",
+        result,
+        'Expense allocated successfully',
+        undefined,
+        200
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -67,30 +66,22 @@ export class ExpenseAllocationController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, expenseId } = request.params;
-      const query = new GetExpenseAllocationsQuery(expenseId, workspaceId);
-      const allocations = await this.getExpenseAllocationsHandler.handle(query);
+      const result = await this.getExpenseAllocationsHandler.handle({
+        expenseId,
+        workspaceId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Allocations retrieved successfully",
-        allocations.map((a) => ({
-          id: a.getId(),
-          amount: a.getAmount().getValue(),
-          percentage: a.getPercentage(),
-          departmentId: a.getDepartmentId()?.getValue(),
-          costCenterId: a.getCostCenterId()?.getValue(),
-          projectId: a.getProjectId()?.getValue(),
-          notes: a.getNotes(),
-          createdBy: a.getCreatedBy().getValue(),
-          createdAt: a.getCreatedAt(),
-        })),
+        result,
+        'Allocations retrieved successfully',
+        result.data?.map((a) => a.toJSON()) || []
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -101,24 +92,22 @@ export class ExpenseAllocationController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId, expenseId } = request.params;
-      const command = new DeleteAllocationsCommand(
+      const result = await this.deleteAllocationsHandler.handle({
         expenseId,
         workspaceId,
         userId,
-      );
-      await this.deleteAllocationsHandler.handle(command);
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromCommand(
         reply,
-        200,
-        "Allocations deleted successfully",
-        null,
+        result,
+        'Allocations deleted successfully'
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -129,20 +118,21 @@ export class ExpenseAllocationController {
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
 
       const { workspaceId } = request.params;
-      const query = new GetAllocationSummaryQuery(workspaceId);
-      const summary = await this.getAllocationSummaryHandler.handle(query);
+      const result = await this.getAllocationSummaryHandler.handle({
+        workspaceId,
+      });
 
-      return ResponseHelper.success(
+      return ResponseHelper.fromQuery(
         reply,
-        200,
-        "Allocation summary retrieved successfully",
-        summary,
+        result,
+        'Allocation summary retrieved successfully',
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

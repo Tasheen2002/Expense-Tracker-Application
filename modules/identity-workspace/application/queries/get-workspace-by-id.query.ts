@@ -27,9 +27,7 @@ export class GetWorkspaceByIdHandler implements IQueryHandler<
       );
       return QueryResult.success(workspace);
     } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to get workspace'
-      );
+      return QueryResult.fromError(error);
     }
   }
 }

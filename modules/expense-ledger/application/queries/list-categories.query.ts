@@ -23,22 +23,16 @@ export class ListCategoriesHandler implements IQueryHandler<
   async handle(
     query: ListCategoriesQuery
   ): Promise<QueryResult<PaginatedResult<Category>>> {
-    try {
-      const pagination = { limit: query.limit, offset: query.offset };
-      const result = query.activeOnly
-        ? await this.categoryService.getActiveCategoriesByWorkspace(
-            query.workspaceId,
-            pagination
-          )
-        : await this.categoryService.getCategoriesByWorkspace(
-            query.workspaceId,
-            pagination
-          );
-      return QueryResult.success(result);
-    } catch (error) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Failed to list categories'
-      );
-    }
+    const pagination = { limit: query.limit, offset: query.offset };
+    const result = query.activeOnly
+      ? await this.categoryService.getActiveCategoriesByWorkspace(
+          query.workspaceId,
+          pagination
+        )
+      : await this.categoryService.getCategoriesByWorkspace(
+          query.workspaceId,
+          pagination
+        );
+    return QueryResult.success(result);
   }
 }

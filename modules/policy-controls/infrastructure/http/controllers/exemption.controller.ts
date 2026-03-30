@@ -1,80 +1,44 @@
-import { FastifyReply } from "fastify";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
-import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
-import { ExemptionService } from "../../../application/services/exemption.service";
-import { PolicyExemption } from "../../../domain/entities/policy-exemption.entity";
-import { ExemptionStatus } from "../../../domain/enums/exemption-status.enum";
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { GetExemptionHandler } from '../../../application/queries/get-exemption.query';
+import { ListExemptionsHandler } from '../../../application/queries/list-exemptions.query';
+import { CheckActiveExemptionHandler } from '../../../application/queries/check-active-exemption.query';
+import { RequestExemptionHandler } from '../../../application/commands/request-exemption.command';
+import { ApproveExemptionHandler } from '../../../application/commands/approve-exemption.command';
+import { RejectExemptionHandler } from '../../../application/commands/reject-exemption.command';
+import { ExemptionStatus } from '../../../domain/enums/exemption-status.enum';
 
 export class ExemptionController {
-  constructor(private readonly exemptionService: ExemptionService) {}
-
-  async requestExemption(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        policyId: string;
-        userId: string;
-        reason: string;
-        startDate: string;
-        endDate: string;
-      };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const requestedBy = request.user?.userId;
-
-      if (!requestedBy) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const exemption = await this.exemptionService.requestExemption({
-        workspaceId,
-        policyId: request.body.policyId,
-        userId: request.body.userId,
-        requestedBy,
-        reason: request.body.reason,
-        startDate: new Date(request.body.startDate),
-        endDate: new Date(request.body.endDate),
-      });
-
-      return reply.status(201).send({
-        success: true,
-        statusCode: 201,
-        message: "Exemption request created successfully",
-        data: this.serializeExemption(exemption),
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  constructor(
+    private readonly getExemptionHandler: GetExemptionHandler,
+    private readonly listExemptionsHandler: ListExemptionsHandler,
+    private readonly checkActiveExemptionHandler: CheckActiveExemptionHandler,
+    private readonly requestExemptionHandler: RequestExemptionHandler,
+    private readonly approveExemptionHandler: ApproveExemptionHandler,
+    private readonly rejectExemptionHandler: RejectExemptionHandler
+  ) {}
 
   async getExemption(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; exemptionId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
 
-      const exemption = await this.exemptionService.getExemption(
+      const result = await this.getExemptionHandler.handle({
         exemptionId,
         workspaceId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Exemption retrieved successfully",
-        data: this.serializeExemption(exemption),
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Exemption retrieved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -91,113 +55,41 @@ export class ExemptionController {
         offset?: string;
       };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { status, userId, policyId, limit, offset } = request.query;
 
-      const result = await this.exemptionService.listExemptions(
+      const result = await this.listExemptionsHandler.handle({
         workspaceId,
-        {
-          status,
-          userId,
-          policyId,
-        },
-        {
+        status,
+        userId,
+        policyId,
+        pagination: {
           limit: limit ? parseInt(limit, 10) : 50,
           offset: offset ? parseInt(offset, 10) : 0,
         },
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Exemptions retrieved successfully",
-        data: {
-          items: result.items.map((e) => this.serializeExemption(e)),
-          pagination: {
-            total: result.total,
-            limit: result.limit,
-            offset: result.offset,
-            hasMore: result.hasMore,
-          },
-        },
       });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
 
-  async approveExemption(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; exemptionId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId, exemptionId } = request.params;
-      const approvedBy = request.user?.userId;
+      const data = result.data
+        ? {
+            items: result.data.items.map((e) => e.toJSON()),
+            pagination: {
+              total: result.data.total,
+              limit: result.data.limit,
+              offset: result.data.offset,
+              hasMore: result.data.hasMore,
+            },
+          }
+        : undefined;
 
-      if (!approvedBy) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const exemption = await this.exemptionService.approveExemption(
-        exemptionId,
-        workspaceId,
-        approvedBy,
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Exemptions retrieved successfully',
+        data
       );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Exemption approved successfully",
-        data: this.serializeExemption(exemption),
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async rejectExemption(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; exemptionId: string };
-      Body: { rejectionReason?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { workspaceId, exemptionId } = request.params;
-      const userId = request.user?.userId;
-
-      if (!userId) {
-        return reply.status(401).send({
-          success: false,
-          statusCode: 401,
-          error: "Unauthorized",
-          message: "User not authenticated",
-        });
-      }
-
-      const exemption = await this.exemptionService.rejectExemption(
-        exemptionId,
-        workspaceId,
-        userId,
-        request.body.rejectionReason,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: "Exemption rejected successfully",
-        data: this.serializeExemption(exemption),
-      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -208,48 +100,121 @@ export class ExemptionController {
       Params: { workspaceId: string };
       Querystring: { userId: string; policyId: string };
     }>,
-    reply: FastifyReply,
+    reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { userId, policyId } = request.query;
 
-      const exemption = await this.exemptionService.checkActiveExemption(
+      const result = await this.checkActiveExemptionHandler.handle({
         workspaceId,
         userId,
         policyId,
-      );
-
-      return reply.status(200).send({
-        success: true,
-        statusCode: 200,
-        message: exemption ? "Active exemption found" : "No active exemption",
-        data: exemption ? this.serializeExemption(exemption) : null,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Exemption status checked successfully',
+        result.data ? result.data.toJSON() : null
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  private serializeExemption(exemption: PolicyExemption) {
-    return {
-      id: exemption.getId().getValue(),
-      workspaceId: exemption.getWorkspaceId().getValue(),
-      policyId: exemption.getPolicyId().getValue(),
-      userId: exemption.getUserId(),
-      status: exemption.getStatus(),
-      reason: exemption.getReason(),
-      requestedBy: exemption.getRequestedBy(),
-      approvedBy: exemption.getApprovedBy(),
-      approvedAt: exemption.getApprovedAt()?.toISOString(),
-      rejectedBy: exemption.getRejectedBy(),
-      rejectedAt: exemption.getRejectedAt()?.toISOString(),
-      rejectionReason: exemption.getRejectionReason(),
-      startDate: exemption.getStartDate().toISOString(),
-      endDate: exemption.getEndDate().toISOString(),
-      isActive: exemption.isActive(),
-      createdAt: exemption.getCreatedAt().toISOString(),
-      updatedAt: exemption.getUpdatedAt().toISOString(),
-    };
+  async requestExemption(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
+        policyId: string;
+        userId: string;
+        reason: string;
+        startDate: string;
+        endDate: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const requestedBy = request.user!.userId;
+
+      const result = await this.requestExemptionHandler.handle({
+        workspaceId,
+        requestedBy,
+        ...request.body,
+        startDate: new Date(request.body.startDate),
+        endDate: new Date(request.body.endDate),
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Exemption requested successfully',
+        result.data ? result.data.toJSON() : undefined,
+        201
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async approveExemption(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; exemptionId: string };
+      Body: { approvalNote?: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, exemptionId } = request.params;
+      const approvedBy = request.user!.userId;
+
+      const result = await this.approveExemptionHandler.handle({
+        exemptionId,
+        workspaceId,
+        approvedBy,
+        approvalNote: request.body.approvalNote,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Exemption approved successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async rejectExemption(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; exemptionId: string };
+      Body: { rejectionReason: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, exemptionId } = request.params;
+      const rejectedBy = request.user!.userId;
+
+      const result = await this.rejectExemptionHandler.handle({
+        exemptionId,
+        workspaceId,
+        rejectedBy,
+        rejectionReason: request.body.rejectionReason,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Exemption rejected successfully',
+        result.data ? result.data.toJSON() : undefined
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

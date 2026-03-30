@@ -19,17 +19,11 @@ export class ArchiveBudgetHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: ArchiveBudgetCommand): Promise<CommandResult<void>> {
-    try {
-      
-          await this.budgetService.archiveBudget(
-            command.budgetId,
-            command.workspaceId,
-            command.userId
-          );
-          return CommandResult.success();
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.budgetService.archiveBudget(
+      command.budgetId,
+      command.workspaceId,
+      command.userId
+    );
+    return CommandResult.success();
   }
 }

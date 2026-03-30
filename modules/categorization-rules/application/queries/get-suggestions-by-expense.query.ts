@@ -1,31 +1,31 @@
-import { CategorySuggestionService } from '../services/category-suggestion.service'
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id'
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo'
+import { CategorySuggestionService } from '../services/category-suggestion.service';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../apps/api/src/shared/application';
 
-export interface GetSuggestionsByExpenseQuery {
-  expenseId: string
-  workspaceId: string
+export interface GetSuggestionsByExpenseQuery extends IQuery {
+  expenseId: string;
+  workspaceId: string;
 }
 
-export class GetSuggestionsByExpenseHandler {
+export class GetSuggestionsByExpenseHandler implements IQueryHandler<
+  GetSuggestionsByExpenseQuery,
+  QueryResult<CategorySuggestion[]>
+> {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async execute(query: GetSuggestionsByExpenseQuery) {
+  async handle(
+    query: GetSuggestionsByExpenseQuery
+  ): Promise<QueryResult<CategorySuggestion[]>> {
     const suggestions = await this.suggestionService.getSuggestionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
-    )
+    );
 
-    return suggestions.items.map((suggestion) => ({
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
-    }))
+    return QueryResult.success(suggestions.items);
   }
 }

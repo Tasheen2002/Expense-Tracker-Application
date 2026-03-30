@@ -1,15 +1,15 @@
+import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
+
 /**
  * Base error class for Identity-Workspace module
  */
-export class IdentityWorkspaceError extends Error {
+export class IdentityWorkspaceError extends DomainError {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly statusCode: number = 400
+    statusCode: number = 400
   ) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    super(message, statusCode);
   }
 }
 
@@ -193,6 +193,16 @@ export class InvalidPasswordHashError extends IdentityWorkspaceError {
 export class InvalidWorkspaceNameError extends IdentityWorkspaceError {
   constructor() {
     super('Workspace name cannot be empty', 'INVALID_WORKSPACE_NAME', 400);
+  }
+}
+
+export class UserLookupCriteriaRequiredError extends IdentityWorkspaceError {
+  constructor() {
+    super(
+      'Either userId or email is required',
+      'USER_LOOKUP_CRITERIA_REQUIRED',
+      400
+    );
   }
 }
 
