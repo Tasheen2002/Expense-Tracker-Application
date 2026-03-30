@@ -1,4 +1,5 @@
 import { WorkflowService } from '../services/workflow.service';
+import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -14,27 +15,18 @@ export interface ApproveStepInput extends ICommand {
 
 export class ApproveStepHandler implements ICommandHandler<
   ApproveStepInput,
-  CommandResult<void>
+  CommandResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  private getStatusCode(error: unknown): number {
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      return (error as { statusCode: number }).statusCode;
-    }
-    return 500;
-  }
-
-  async handle(input: ApproveStepInput): Promise<CommandResult<void>> {
+  async handle(
+    input: ApproveStepInput
+  ): Promise<CommandResult<ExpenseWorkflowDTO>> {
     try {
-      await this.workflowService.approveStep(input);
-      return CommandResult.success();
+      const workflow = await this.workflowService.approveStep(input);
+      return CommandResult.success(workflow.toJSON());
     } catch (error: unknown) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Command failed',
-        undefined,
-        this.getStatusCode(error)
-      );
+      return CommandResult.fromError(error);
     }
   }
 }

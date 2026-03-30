@@ -1,4 +1,5 @@
 import { ApprovalChainService } from '../services/approval-chain.service';
+import { ApprovalChainDTO } from '../../domain/entities/approval-chain.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -18,24 +19,18 @@ export interface CreateApprovalChainInput extends ICommand {
 
 export class CreateApprovalChainHandler implements ICommandHandler<
   CreateApprovalChainInput,
-  CommandResult<{ chainId: string }>
+  CommandResult<ApprovalChainDTO>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async handle(
     input: CreateApprovalChainInput
-  ): Promise<CommandResult<{ chainId: string }>> {
+  ): Promise<CommandResult<ApprovalChainDTO>> {
     try {
       const chain = await this.approvalChainService.createChain(input);
-      return CommandResult.success({ chainId: chain.getId().getValue() });
+      return CommandResult.success(chain.toJSON());
     } catch (error: unknown) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Command failed',
-        undefined,
-        error && typeof error === 'object' && 'statusCode' in error
-          ? (error as { statusCode: number }).statusCode
-          : 500
-      );
+      return CommandResult.fromError(error);
     }
   }
 }
