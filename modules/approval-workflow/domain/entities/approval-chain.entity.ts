@@ -40,6 +40,8 @@ export class ApprovalChainUpdatedEvent extends DomainEvent {
       description?: string;
       minAmount?: number;
       maxAmount?: number;
+      categoryIds?: string[];
+      requiresReceipt?: boolean;
     }
   ) {
     super(chainId, 'ApprovalChain');
@@ -294,6 +296,35 @@ export class ApprovalChain extends AggregateRoot {
           this.getId().getValue(),
           this.getWorkspaceId().getValue(),
           { description }
+        )
+      );
+    }
+  }
+
+  updateCategoryIds(categoryIds?: string[]): void {
+    this.props.categoryIds = categoryIds?.map((id) => CategoryId.fromString(id));
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ApprovalChainUpdatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        { categoryIds }
+      )
+    );
+  }
+
+  updateRequiresReceipt(requiresReceipt: boolean): void {
+    const oldRequiresReceipt = this.props.requiresReceipt;
+    this.props.requiresReceipt = requiresReceipt;
+    this.props.updatedAt = new Date();
+
+    if (oldRequiresReceipt !== requiresReceipt) {
+      this.addDomainEvent(
+        new ApprovalChainUpdatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+          { requiresReceipt }
         )
       );
     }
