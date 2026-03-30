@@ -84,7 +84,6 @@ function createMockWorkflow(
     steps: [],
     status: status as any,
     currentStepNumber: 1,
-    version: 1,
     createdAt: new Date('2024-01-15T10:30:00Z'),
     updatedAt: new Date('2024-01-15T10:30:00Z'),
   });
@@ -237,7 +236,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: validPayload,
       });
 
@@ -255,7 +254,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for missing required fields', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: { name: 'Test' },
       });
 
@@ -265,7 +264,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for empty approver sequence', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: { ...validPayload, approverSequence: [] },
       });
 
@@ -275,7 +274,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid workspaceId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/invalid-uuid/approval-chains`,
+        url: `/workspaces/invalid-uuid/approval-chains`,
         payload: validPayload,
       });
 
@@ -285,7 +284,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid approver UUID', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: { ...validPayload, approverSequence: ['not-a-uuid'] },
       });
 
@@ -295,7 +294,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for negative minAmount', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: { ...validPayload, minAmount: -100 },
       });
 
@@ -305,7 +304,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for name exceeding max length', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: { ...validPayload, name: 'A'.repeat(101) },
       });
 
@@ -317,7 +316,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         payload: validPayload,
       });
 
@@ -348,7 +347,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -376,7 +375,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains?activeOnly=true`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains?activeOnly=true`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -400,7 +399,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -411,7 +410,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/invalid-uuid/approval-chains`,
+        url: `/workspaces/invalid-uuid/approval-chains`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -428,7 +427,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -448,7 +447,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -457,7 +456,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid chainId format', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/approval-chains/invalid-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/invalid-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -474,7 +473,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
         payload: { name: 'Updated Chain Name' },
       });
 
@@ -482,6 +481,8 @@ describe('Approval Chain Routes', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.message).toBe('Approval chain updated successfully');
+      expect(body.data).toBeDefined();
+      expect(body.data.chainId).toBe(mockChainId);
     });
 
     it('should update approval chain amount range', async () => {
@@ -490,7 +491,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
         payload: { minAmount: 500, maxAmount: 25000 },
       });
 
@@ -510,7 +511,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
         payload: { approverSequence: newSequence },
       });
 
@@ -524,7 +525,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
         payload: { name: 'Updated' },
       });
 
@@ -534,7 +535,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for empty name', async () => {
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
         payload: { name: '' },
       });
 
@@ -552,7 +553,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}/activate`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}/activate`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -568,7 +569,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}/activate`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}/activate`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -577,7 +578,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid chainId', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains/invalid-uuid/activate`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/invalid-uuid/activate`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -594,7 +595,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}/deactivate`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}/deactivate`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -610,7 +611,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}/deactivate`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}/deactivate`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -626,12 +627,10 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.success).toBe(true);
+      expect(response.statusCode).toBe(204);
     });
 
     it('should return 404 for non-existent chain', async () => {
@@ -641,7 +640,7 @@ describe('Approval Chain Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -650,7 +649,7 @@ describe('Approval Chain Routes', () => {
     it('should return 400 for invalid chainId format', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/approval-chains/not-a-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/not-a-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -698,7 +697,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: validPayload,
       });
 
@@ -706,6 +705,8 @@ describe('Workflow Routes', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.message).toBe('Workflow initiated successfully');
+      expect(body.data).toBeDefined();
+      expect(body.data.expenseId).toBe(mockExpenseId);
       expect(mockWorkflowService.initiateWorkflow).toHaveBeenCalledWith({
         ...validPayload,
         userId: mockUserId,
@@ -716,7 +717,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for missing expenseId', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: { amount: 500, hasReceipt: true },
       });
 
@@ -726,7 +727,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for missing amount', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: { expenseId: mockExpenseId, hasReceipt: true },
       });
 
@@ -736,7 +737,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for zero amount', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: { ...validPayload, amount: 0 },
       });
 
@@ -746,7 +747,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: { ...validPayload, expenseId: 'invalid-uuid' },
       });
 
@@ -760,7 +761,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: validPayload,
       });
 
@@ -774,7 +775,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows`,
         payload: validPayload,
       });
 
@@ -792,7 +793,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -808,7 +809,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -817,7 +818,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/not-a-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/not-a-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -834,7 +835,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
         payload: { comments: 'Looks good' },
       });
 
@@ -842,6 +843,7 @@ describe('Workflow Routes', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.message).toBe('Step approved successfully');
+      expect(body.data).toBeDefined();
       expect(mockWorkflowService.approveStep).toHaveBeenCalledWith({
         expenseId: mockExpenseId,
         workspaceId: mockWorkspaceId,
@@ -856,7 +858,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
         payload: {},
       });
 
@@ -870,7 +872,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
         payload: {},
       });
 
@@ -884,7 +886,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
         payload: {},
       });
 
@@ -902,7 +904,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
         payload: { comments: 'Missing documentation' },
       });
 
@@ -910,12 +912,13 @@ describe('Workflow Routes', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.message).toBe('Step rejected successfully');
+      expect(body.data).toBeDefined();
     });
 
     it('should return 400 for missing comments', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
         payload: {},
       });
 
@@ -925,7 +928,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for empty comments', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
         payload: { comments: '' },
       });
 
@@ -939,7 +942,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
         payload: { comments: 'Rejected' },
       });
 
@@ -957,7 +960,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
         payload: { toUserId: mockApproverId2 },
       });
 
@@ -969,7 +972,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for missing toUserId', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
         payload: {},
       });
 
@@ -979,7 +982,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid toUserId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
         payload: { toUserId: 'invalid-uuid' },
       });
 
@@ -993,7 +996,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
         payload: { toUserId: mockApproverId2 },
       });
 
@@ -1011,7 +1014,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1026,7 +1029,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -1035,7 +1038,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/workflows/not-a-uuid/cancel`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/not-a-uuid/cancel`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1058,7 +1061,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/pending-approvals`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/pending-approvals`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1078,7 +1081,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/pending-approvals`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/pending-approvals`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1089,7 +1092,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/invalid-uuid/workflows/pending-approvals`,
+        url: `/workspaces/invalid-uuid/workflows/pending-approvals`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1112,7 +1115,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/user-workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/user-workflows`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1132,7 +1135,7 @@ describe('Workflow Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/workflows/user-workflows`,
+        url: `/workspaces/${mockWorkspaceId}/workflows/user-workflows`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1143,7 +1146,7 @@ describe('Workflow Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/bad-uuid/workflows/user-workflows`,
+        url: `/workspaces/bad-uuid/workflows/user-workflows`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1180,7 +1183,7 @@ describe('Approval Workflow Security', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows`,
+      url: `/workspaces/${mockWorkspaceId}/workflows`,
       payload: {
         expenseId: mockExpenseId,
         amount: 500,
@@ -1201,7 +1204,7 @@ describe('Approval Workflow Security', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+      url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
       payload: {},
     });
 
@@ -1218,7 +1221,7 @@ describe('Approval Workflow Security', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+      url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
       payload: { comments: 'Rejected' },
     });
 
@@ -1235,7 +1238,7 @@ describe('Approval Workflow Security', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
+      url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/delegate`,
       payload: { toUserId: mockApproverId2 },
     });
 
@@ -1276,7 +1279,7 @@ describe('Approval Workflow Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows`,
+      url: `/workspaces/${mockWorkspaceId}/workflows`,
       payload: {
         expenseId: mockExpenseId,
         amount: 999999999.99,
@@ -1293,7 +1296,7 @@ describe('Approval Workflow Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows`,
+      url: `/workspaces/${mockWorkspaceId}/workflows`,
       payload: {
         expenseId: mockExpenseId,
         amount: 123.45,
@@ -1310,7 +1313,7 @@ describe('Approval Workflow Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/approval-chains`,
+      url: `/workspaces/${mockWorkspaceId}/approval-chains`,
       payload: {
         name: '审批链 Approval チェーン',
         requiresReceipt: true,
@@ -1327,7 +1330,7 @@ describe('Approval Workflow Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
+      url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/reject`,
       payload: { comments: "Rejected: <script>alert('xss')</script> & more" },
     });
 
@@ -1349,7 +1352,7 @@ describe('Approval Workflow Edge Cases', () => {
       .map(() =>
         app.inject({
           method: 'GET',
-          url: `/${mockWorkspaceId}/approval-chains`,
+          url: `/workspaces/${mockWorkspaceId}/approval-chains`,
         })
       );
 
@@ -1365,7 +1368,7 @@ describe('Approval Workflow Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/workflows`,
+      url: `/workspaces/${mockWorkspaceId}/workflows`,
       payload: {
         expenseId: mockExpenseId,
         amount: 0.01,

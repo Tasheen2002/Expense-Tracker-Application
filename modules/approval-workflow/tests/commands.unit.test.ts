@@ -59,6 +59,16 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('No applicable approval chain found');
       expect(result.statusCode).toBe(400);
     });
+
+    it('should return success result on successful initiation', async () => {
+      const mockResult = { workflowId: 'wf-1', expenseId: 'exp-1' };
+      mockWorkflowService.initiateWorkflow.mockResolvedValueOnce({
+        toJSON: () => mockResult,
+      } as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockResult);
+    });
   });
 
   describe('ApproveStepHandler', () => {
@@ -98,6 +108,16 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('not authorized');
       expect(result.statusCode).toBe(403);
     });
+
+    it('should return success result on successful approve', async () => {
+      const mockResult = { workflowId: 'wf-1', status: 'APPROVED' };
+      mockWorkflowService.approveStep.mockResolvedValueOnce({
+        toJSON: () => mockResult,
+      } as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockResult);
+    });
   });
 
   describe('RejectStepHandler', () => {
@@ -119,6 +139,16 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('Rejection reason is required');
       expect(result.statusCode).toBe(400);
     });
+
+    it('should return success result on successful reject', async () => {
+      const mockResult = { workflowId: 'wf-1', status: 'REJECTED' };
+      mockWorkflowService.rejectStep.mockResolvedValueOnce({
+        toJSON: () => mockResult,
+      } as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockResult);
+    });
   });
 
   describe('DelegateStepHandler', () => {
@@ -139,6 +169,16 @@ describe('Approval Workflow Commands', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('Self delegation');
       expect(result.statusCode).toBe(400);
+    });
+
+    it('should return success result on successful delegation', async () => {
+      const mockResult = { workflowId: 'wf-1', currentApproverId: 'user-3' };
+      mockWorkflowService.delegateStep.mockResolvedValueOnce({
+        toJSON: () => mockResult,
+      } as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual(mockResult);
     });
   });
 });
