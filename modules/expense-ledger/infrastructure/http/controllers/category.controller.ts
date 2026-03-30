@@ -78,7 +78,8 @@ export class CategoryController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Category updated successfully'
+        'Category updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -102,7 +103,9 @@ export class CategoryController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Category deleted successfully'
+        'Category deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -137,7 +140,7 @@ export class CategoryController {
   async listCategories(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { activeOnly?: string; limit?: string; offset?: string };
+      Querystring: { activeOnly?: boolean; limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -147,9 +150,9 @@ export class CategoryController {
 
       const result = await this.listCategoriesHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === 'true',
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        activeOnly,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(

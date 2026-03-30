@@ -48,7 +48,7 @@ export class WorkflowController {
         reply,
         result,
         'Workflow initiated successfully',
-        result.data ? { workflowId: result.data.workflowId } : undefined,
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -105,7 +105,8 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Step approved successfully'
+        'Step approved successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -136,7 +137,8 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Step rejected successfully'
+        'Step rejected successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -167,7 +169,8 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Step delegated successfully'
+        'Step delegated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -191,7 +194,8 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Workflow cancelled successfully'
+        'Workflow cancelled successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -201,7 +205,7 @@ export class WorkflowController {
   async listPendingApprovals(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -214,8 +218,8 @@ export class WorkflowController {
       const result = await this.listPendingApprovalsHandler.handle({
         approverId,
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : 50,
-        offset: offset ? parseInt(offset, 10) : 0,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
       });
 
       return ResponseHelper.fromQuery(
@@ -242,10 +246,7 @@ export class WorkflowController {
   async listUserWorkflows(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: {
-        limit?: string;
-        offset?: string;
-      };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -257,8 +258,8 @@ export class WorkflowController {
       const result = await this.listUserWorkflowsHandler.handle({
         userId,
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : 50,
-        offset: offset ? parseInt(offset, 10) : 0,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
       });
 
       return ResponseHelper.fromQuery(

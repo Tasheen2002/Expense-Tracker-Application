@@ -47,7 +47,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain created successfully',
-        result.data ? { chainId: result.data.chainId } : undefined,
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -80,7 +80,8 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain updated successfully'
+        'Approval chain updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -114,16 +115,16 @@ export class ApprovalChainController {
     try {
       const { workspaceId } = request.params as { workspaceId: string };
       const { activeOnly, limit, offset } = request.query as {
-        activeOnly?: string;
-        limit?: string;
-        offset?: string;
+        activeOnly?: boolean;
+        limit?: number;
+        offset?: number;
       };
 
       const result = await this.listChainsHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === 'true',
-        limit: limit ? parseInt(limit, 10) : 50,
-        offset: offset ? parseInt(offset, 10) : 0,
+        activeOnly: activeOnly ?? false,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
       });
 
       return ResponseHelper.fromQuery(
@@ -163,7 +164,8 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain activated successfully'
+        'Approval chain activated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -186,7 +188,8 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain deactivated successfully'
+        'Approval chain deactivated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -209,7 +212,9 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain deleted successfully'
+        'Approval chain deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

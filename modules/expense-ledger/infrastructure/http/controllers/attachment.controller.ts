@@ -74,7 +74,9 @@ export class AttachmentController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Attachment deleted successfully'
+        'Attachment deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

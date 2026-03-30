@@ -70,7 +70,8 @@ export class TagController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Tag updated successfully'
+        'Tag updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -94,7 +95,9 @@ export class TagController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Tag deleted successfully'
+        'Tag deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -129,7 +132,7 @@ export class TagController {
   async listTags(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -139,8 +142,8 @@ export class TagController {
 
       const result = await this.listTagsHandler.handle({
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(

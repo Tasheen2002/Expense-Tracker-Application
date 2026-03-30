@@ -74,7 +74,8 @@ export class RecurringExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Recurring expense paused'
+        'Recurring expense paused',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -94,7 +95,8 @@ export class RecurringExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Recurring expense resumed'
+        'Recurring expense resumed',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -114,7 +116,8 @@ export class RecurringExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Recurring expense stopped'
+        'Recurring expense stopped',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

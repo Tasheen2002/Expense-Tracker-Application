@@ -108,8 +108,8 @@ export class ExpenseSplitController {
 
       return ResponseHelper.fromQuery(
         reply,
-        'Split retrieved successfully',
         result,
+        'Split retrieved successfully',
         result.data?.toJSON()
       );
     } catch (error: unknown) {
@@ -120,7 +120,7 @@ export class ExpenseSplitController {
   async listUserSplits(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -132,8 +132,8 @@ export class ExpenseSplitController {
       const result = await this.listUserSplitsHandler.handle({
         userId,
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -176,7 +176,9 @@ export class ExpenseSplitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Split deleted successfully'
+        'Split deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -205,7 +207,8 @@ export class ExpenseSplitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Payment recorded successfully'
+        'Payment recorded successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -217,8 +220,8 @@ export class ExpenseSplitController {
       Params: { workspaceId: string };
       Querystring: {
         status?: SettlementStatus;
-        limit?: string;
-        offset?: string;
+        limit?: number;
+        offset?: number;
       };
     }>,
     reply: FastifyReply
@@ -232,8 +235,8 @@ export class ExpenseSplitController {
         userId,
         workspaceId,
         status,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -275,8 +278,8 @@ export class ExpenseSplitController {
 
       return ResponseHelper.fromQuery(
         reply,
-        'Split settlements retrieved successfully',
         result,
+        'Split settlements retrieved successfully',
         result.data
           ? {
               items: result.data.items.map((s) => s.toJSON()),
