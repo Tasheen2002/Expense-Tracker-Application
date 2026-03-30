@@ -19,7 +19,7 @@ export const updateChainSchema = z.object({
   maxAmount: z.number().min(0).optional(),
   categoryIds: z.array(z.string().uuid()).optional(),
   requiresReceipt: z.boolean().optional(),
-  isActive: z.boolean().optional(),
+  approverSequence: z.array(z.string().uuid()).min(1).optional(),
 });
 
 export const paginationSchema = z.object({
