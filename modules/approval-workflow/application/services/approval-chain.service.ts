@@ -43,6 +43,8 @@ export class ApprovalChainService {
     description?: string;
     minAmount?: number;
     maxAmount?: number;
+    categoryIds?: string[];
+    requiresReceipt?: boolean;
     approverSequence?: string[];
   }): Promise<ApprovalChain> {
     const chainId = ApprovalChainId.fromString(params.chainId);
@@ -62,6 +64,14 @@ export class ApprovalChainService {
 
     if (params.minAmount !== undefined || params.maxAmount !== undefined) {
       chain.updateAmountRange(params.minAmount, params.maxAmount);
+    }
+
+    if (params.categoryIds !== undefined) {
+      chain.updateCategoryIds(params.categoryIds);
+    }
+
+    if (params.requiresReceipt !== undefined) {
+      chain.updateRequiresReceipt(params.requiresReceipt);
     }
 
     if (params.approverSequence) {
