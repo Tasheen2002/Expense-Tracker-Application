@@ -1,4 +1,4 @@
-import { FastifyReply } from 'fastify';
+﻿import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import { CreateBudgetPlanHandler } from '../../../application/commands/create-budget-plan.command';
 import { UpdateBudgetPlanHandler } from '../../../application/commands/update-budget-plan.command';
@@ -12,7 +12,7 @@ import {
   createBudgetPlanSchema,
   updateBudgetPlanSchema,
   listBudgetPlansSchema,
-} from '../validation/budget-plan.schema';
+} from '../validation/budget-planning.schema';
 import { PlanStatus } from '../../../domain/enums/plan-status.enum';
 
 export class BudgetPlanController {
@@ -188,3 +188,4 @@ export class BudgetPlanController {
     }
   }
 }
+

@@ -1,22 +1,19 @@
-// Domain
-export * from "./domain/value-objects";
-export * from "./domain/enums";
-export * from "./domain/entities";
-export * from "./domain/errors";
-export * from "./domain/repositories";
-export * from "./domain/constants";
+export { registerBankFeedSyncRoutes } from './infrastructure/http/routes/index';
 
-// Application
-export * from "./application/services";
-export * from "./application/commands";
-export * from "./application/queries";
+// Domain error types (used by cross-cutting error handlers)
+export {
+  BankFeedSyncDomainError,
+  BankConnectionNotFoundError,
+  SyncSessionNotFoundError,
+  BankTransactionNotFoundError,
+  SyncAlreadyInProgressError,
+  BankConnectionAlreadyExistsError,
+  BankConnectionExpiredError,
+  BankAPIError,
+} from './domain/errors/bank-feed-sync.errors';
 
-// Infrastructure
-export * from "./infrastructure/persistence";
-export { BankConnectionController } from "./infrastructure/http/controllers/bank-connection.controller";
-export { TransactionSyncController } from "./infrastructure/http/controllers/transaction-sync.controller";
-export { BankTransactionController } from "./infrastructure/http/controllers/bank-transaction.controller";
-export { registerBankFeedSyncRoutes } from "./infrastructure/http/routes";
+// Domain enums (safe to share — value objects, not entities)
+export { ConnectionStatus } from './domain/enums/connection-status.enum';
+export { SyncStatus } from './domain/enums/sync-status.enum';
+export { TransactionStatus } from './domain/enums/transaction-status.enum';
 
-// Validation Schemas
-export * from "./infrastructure/http/validation";

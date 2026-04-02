@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuditService } from "../application/services/audit.service";
 import { DomainEvent } from "../../../apps/api/src/shared/domain/events";
-import { AuditLogRepository } from "../domain/repositories/audit-log.repository";
+import { IAuditLogRepository } from "../domain/repositories/audit-log.repository";
 import { AuditLog } from "../domain/entities/audit-log.entity";
 import { AuditLogId } from "../domain/value-objects/audit-log-id.vo";
 import { AuditAction } from "../domain/value-objects/audit-action.vo";
@@ -15,7 +15,7 @@ class MockEvent extends DomainEvent {
   get eventType() {
     return "mock.event";
   }
-  protected getPayload() {
+  public getPayload() {
     return {
       workspaceId: "123e4567-e89b-12d3-a456-426614174000",
       userId: "123e4567-e89b-12d3-a456-426614174001",
@@ -31,7 +31,7 @@ function createMockAuditLog(
   id: string = "123e4567-e89b-12d3-a456-426614174010",
   workspaceId: string = "123e4567-e89b-12d3-a456-426614174000",
 ): AuditLog {
-  return AuditLog.fromPersistence({
+  return AuditLog.reconstitute({
     id: AuditLogId.fromString(id),
     workspaceId,
     userId: "123e4567-e89b-12d3-a456-426614174001",
@@ -47,7 +47,7 @@ function createMockAuditLog(
 
 describe("AuditService", () => {
   let service: AuditService;
-  let mockRepo: AuditLogRepository;
+  let mockRepo: IAuditLogRepository;
 
   beforeEach(() => {
     mockRepo = {
@@ -59,7 +59,8 @@ describe("AuditService", () => {
       countByWorkspace: vi.fn(),
       countByAction: vi.fn(),
       getActionSummary: vi.fn(),
-    } as unknown as AuditLogRepository;
+      deleteOlderThan: vi.fn(),
+    } as unknown as IAuditLogRepository;
     service = new AuditService(mockRepo);
   });
 
@@ -118,7 +119,7 @@ describe("AuditService", () => {
         "123e4567-e89b-12d3-a456-426614174010",
       );
 
-      expect(result).toBe(mockLog);
+      expect(result).toEqual(mockLog.toJSON());
     });
 
     it("should return null when audit log belongs to different workspace", async () => {
@@ -178,8 +179,14 @@ describe("AuditService", () => {
 
   describe("getEntityAuditHistory", () => {
     it("should return audit history for an entity", async () => {
-      const mockLogs = [createMockAuditLog()];
-      (mockRepo.findByEntityId as any).mockResolvedValue(mockLogs);
+      const mockResult = {
+        items: [createMockAuditLog()],
+        total: 1,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
+      };
+      (mockRepo.findByEntityId as any).mockResolvedValue(mockResult);
 
       const result = await service.getEntityAuditHistory(
         "123e4567-e89b-12d3-a456-426614174000",
@@ -187,11 +194,12 @@ describe("AuditService", () => {
         "expense-123",
       );
 
-      expect(result).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(mockRepo.findByEntityId).toHaveBeenCalledWith(
         "123e4567-e89b-12d3-a456-426614174000",
         "EXPENSE",
         "expense-123",
+        undefined
       );
     });
   });
@@ -217,6 +225,31 @@ describe("AuditService", () => {
       expect(result.actionBreakdown).toHaveLength(2);
       expect(result.period.startDate).toEqual(startDate);
       expect(result.period.endDate).toEqual(endDate);
+    });
+  });
+
+  describe("purgeOldLogs", () => {
+    it("should purge old audit logs and return count", async () => {
+      (mockRepo.deleteOlderThan as any).mockResolvedValue(50);
+
+      const result = await service.purgeOldLogs(
+        "123e4567-e89b-12d3-a456-426614174000",
+        30,
+      );
+
+      expect(result).toBe(50);
+      expect(mockRepo.deleteOlderThan).toHaveBeenCalledWith(
+        "123e4567-e89b-12d3-a456-426614174000",
+        expect.any(Date),
+      );
+    });
+
+    it("should throw error when repository fails", async () => {
+      (mockRepo.deleteOlderThan as any).mockRejectedValue(new Error("DB Error"));
+
+      await expect(
+        service.purgeOldLogs("123e4567-e89b-12d3-a456-426614174000", 30),
+      ).rejects.toThrow("DB Error");
     });
   });
 });

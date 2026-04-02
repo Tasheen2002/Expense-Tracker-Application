@@ -1,10 +1,10 @@
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { BankTransactionId } from '../value-objects/bank-transaction-id';
 import { SyncSessionId } from '../value-objects/sync-session-id';
 import { TransactionStatus } from '../enums/transaction-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -174,7 +174,7 @@ export class BankTransaction extends AggregateRoot {
     return transaction;
   }
 
-  static fromPersistence(props: BankTransactionProps): BankTransaction {
+  static reconstitute(props: BankTransactionProps): BankTransaction {
     return new BankTransaction(props);
   }
 
@@ -361,50 +361,4 @@ export class BankTransaction extends AggregateRoot {
     this.props.status = TransactionStatus.DUPLICATE;
     this.props.updatedAt = new Date();
   }
-
-  toJSON(): BankTransactionDTO {
-    return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      connectionId: this.getConnectionId().getValue(),
-      sessionId: this.getSessionId().getValue(),
-      externalId: this.externalId,
-      amount: this.amount,
-      currency: this.currency,
-      description: this.description,
-      merchantName: this.merchantName,
-      categoryName: this.categoryName,
-      transactionDate: this.transactionDate,
-      postedDate: this.postedDate,
-      status: this.status,
-      expenseId: this.expenseId,
-      metadata: this.metadata,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toPersistence(): BankTransactionProps {
-    return { ...this.props };
-  }
-}
-
-export interface BankTransactionDTO {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  sessionId: string;
-  externalId: string;
-  amount: number;
-  currency: string;
-  description: string;
-  merchantName?: string;
-  categoryName?: string;
-  transactionDate: Date;
-  postedDate?: Date;
-  status: TransactionStatus;
-  expenseId?: string;
-  metadata?: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
 }

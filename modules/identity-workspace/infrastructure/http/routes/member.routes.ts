@@ -1,12 +1,12 @@
 import { FastifyInstance } from 'fastify';
-import { MemberController } from '../controllers/member.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { MemberController } from '../controllers/member.controller.js';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface.js';
 import {
   createRateLimiter,
   RateLimitPresets,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
-import { validateBody } from '../validation/validator';
-import { updateMemberRoleSchema as updateMemberRoleZodSchema } from '../validation/workspace.schema';
+} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware.js';
+import { validateBody } from '../validation/validator.js';
+import { updateMemberRoleSchema as updateMemberRoleZodSchema } from '../validation/workspace.schema.js';
 
 const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 

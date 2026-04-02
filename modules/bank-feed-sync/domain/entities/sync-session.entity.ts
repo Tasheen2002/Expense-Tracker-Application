@@ -1,9 +1,9 @@
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { SyncSessionId } from '../value-objects/sync-session-id';
 import { SyncStatus } from '../enums/sync-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -124,7 +124,7 @@ export class SyncSession extends AggregateRoot {
     });
   }
 
-  static fromPersistence(props: SyncSessionProps): SyncSession {
+  static reconstitute(props: SyncSessionProps): SyncSession {
     return new SyncSession(props);
   }
 
@@ -302,42 +302,4 @@ export class SyncSession extends AggregateRoot {
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
   }
-
-  toJSON(): SyncSessionDTO {
-    return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      connectionId: this.getConnectionId().getValue(),
-      status: this.status,
-      startedAt: this.startedAt,
-      completedAt: this.completedAt,
-      transactionsFetched: this.transactionsFetched,
-      transactionsImported: this.transactionsImported,
-      transactionsDuplicate: this.transactionsDuplicate,
-      errorMessage: this.errorMessage,
-      metadata: this.metadata,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toPersistence(): SyncSessionProps {
-    return { ...this.props };
-  }
-}
-
-export interface SyncSessionDTO {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  status: SyncStatus;
-  startedAt: Date;
-  completedAt?: Date;
-  transactionsFetched: number;
-  transactionsImported: number;
-  transactionsDuplicate: number;
-  errorMessage?: string;
-  metadata?: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
 }

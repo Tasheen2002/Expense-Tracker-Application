@@ -17,12 +17,12 @@ export class PurgeAuditLogsHandler implements ICommandHandler<
   constructor(private readonly auditService: AuditService) {}
 
   async handle(
-    input: PurgeAuditLogsCommand
+    input: PurgeAuditLogsCommand,
   ): Promise<CommandResult<{ deletedCount: number }>> {
     try {
       const deletedCount = await this.auditService.purgeOldLogs(
         input.workspaceId,
-        input.olderThanDays
+        input.olderThanDays,
       );
       return CommandResult.success({ deletedCount });
     } catch (error: unknown) {

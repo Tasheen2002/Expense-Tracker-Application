@@ -3,30 +3,31 @@ import { PrismaClient } from '@prisma/client';
 import { bankConnectionRoutes } from './bank-connection.routes';
 import { transactionSyncRoutes } from './transaction-sync.routes';
 import { bankTransactionRoutes } from './bank-transaction.routes';
-import { BankConnectionController } from '../controllers/bank-connection.controller';
-import { TransactionSyncController } from '../controllers/transaction-sync.controller';
-import { BankTransactionController } from '../controllers/bank-transaction.controller';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
+import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware/index';
 import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
+/**
+ * Register all Bank Feed Sync routes at the module boundary
+ */
 export async function registerBankFeedSyncRoutes(
   fastify: FastifyInstance,
-  controllers: {
-    bankConnectionController: BankConnectionController;
-    transactionSyncController: TransactionSyncController;
-    bankTransactionController: BankTransactionController;
+  services: {
+    bankConnectionController: any;
+    transactionSyncController: any;
+    bankTransactionController: any;
   },
   prisma: PrismaClient
 ) {
+  // Wrap in an async plugin function
   await fastify.register(
-    async (instance) => {
-      // First authenticate the request
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
+    async function bankFeedSyncRoutesPlugin(scopes: FastifyInstance) {
+      // Authentication hook
+      scopes.addHook('onRequest', async (request) => {
+        await scopes.authenticate(request);
       });
 
-      // Then authorize workspace access
-      instance.addHook('preHandler', async (request, reply) => {
+      // Workspace authorization hook
+      scopes.addHook('preHandler', async (request, reply) => {
         await workspaceAuthorizationMiddleware(
           request as AuthenticatedRequest,
           reply,
@@ -34,24 +35,12 @@ export async function registerBankFeedSyncRoutes(
         );
       });
 
-      // Register bank connection routes
-      await bankConnectionRoutes(
-        instance,
-        controllers.bankConnectionController
-      );
-
-      // Register transaction sync routes
-      await transactionSyncRoutes(
-        instance,
-        controllers.transactionSyncController
-      );
-
-      // Register bank transaction routes
-      await bankTransactionRoutes(
-        instance,
-        controllers.bankTransactionController
-      );
+      // Register feature-specific routes
+      await bankConnectionRoutes(scopes, services.bankConnectionController);
+      await transactionSyncRoutes(scopes, services.transactionSyncController);
+      await bankTransactionRoutes(scopes, services.bankTransactionController);
     },
     { prefix: '/api/v1' }
   );
 }
+

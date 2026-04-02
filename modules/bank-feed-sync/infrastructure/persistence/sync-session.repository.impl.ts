@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { SyncSession } from '../../domain/entities/sync-session.entity';
 import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
@@ -8,10 +8,10 @@ import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaSyncSessionRepository
   extends PrismaRepository<SyncSession>
@@ -40,7 +40,21 @@ export class PrismaSyncSessionRepository
 
     await this.prisma.syncSession.upsert({
       where: { id: session.getId().getValue() },
-      create: data,
+      create: {
+        id: session.getId().getValue(),
+        workspaceId: session.getWorkspaceId().getValue(),
+        status: session.getStatus(),
+        startedAt: session.getStartedAt(),
+        completedAt: session.getCompletedAt(),
+        transactionsFetched: session.getTransactionsFetched(),
+        transactionsImported: session.getTransactionsImported(),
+        transactionsDuplicate: session.getTransactionsDuplicate(),
+        errorMessage: session.getErrorMessage(),
+        metadata: session.getMetadata() as any,
+        createdAt: session.getCreatedAt(),
+        updatedAt: session.getUpdatedAt(),
+        connection: { connect: { id: session.getConnectionId().getValue() } },
+      },
       update: data,
     });
     await this.dispatchEvents(session);
@@ -140,7 +154,7 @@ export class PrismaSyncSessionRepository
   }
 
   private toDomain(record: Prisma.SyncSessionGetPayload<object>): SyncSession {
-    return SyncSession.fromPersistence({
+    return SyncSession.reconstitute({
       id: SyncSessionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),

@@ -32,7 +32,7 @@ function createMockAuditLog(
   entityType: string = 'EXPENSE',
   entityId: string = 'expense-123'
 ): AuditLog {
-  return AuditLog.fromPersistence({
+  return AuditLog.reconstitute({
     id: AuditLogId.fromString(id),
     workspaceId: mockWorkspaceId,
     userId: mockUserId,
@@ -443,7 +443,7 @@ describe('Audit Compliance Endpoints', () => {
       const mockLog = createMockAuditLog();
       const mockResult = {
         success: true,
-        data: { auditLogId: mockLog.id.getValue() },
+        data: mockLog.toJSON(),
       };
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue(
         mockResult
@@ -462,7 +462,7 @@ describe('Audit Compliance Endpoints', () => {
 
       expect(response.statusCode).toBe(201);
       const body = JSON.parse(response.body);
-      expect(body.data.auditLogId).toBe(mockAuditLogId);
+      expect(body.data.id).toBe(mockAuditLogId);
     });
 
     it('should return 400 when action missing', async () => {
@@ -773,6 +773,49 @@ describe('Audit Compliance Endpoints', () => {
       });
 
       expect(response.statusCode).toBe(201);
+    });
+  });
+
+  describe('DELETE /api/v1/workspaces/:workspaceId/audit-logs', () => {
+    it('should purge audit logs successfully', async () => {
+      (mockHandlers.purgeAuditLogsHandler.handle as any).mockResolvedValue({
+        success: true,
+        statusCode: 200,
+        data: 50,
+      });
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?olderThanDays=30`,
+      });
+
+      expect(response.statusCode).toBe(204);
+      expect(mockHandlers.purgeAuditLogsHandler.handle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: mockWorkspaceId,
+          olderThanDays: 30,
+        })
+      );
+    });
+
+    it('should return 400 for invalid olderThanDays', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?olderThanDays=10`, // Min is 30
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('VALIDATION_ERROR');
+    });
+
+    it('should return 400 when olderThanDays is missing', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs`,
+      });
+
+      expect(response.statusCode).toBe(400);
     });
   });
 });

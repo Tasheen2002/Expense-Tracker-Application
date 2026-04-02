@@ -1,4 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankTransaction } from '../entities/bank-transaction.entity';
 import { BankTransactionId } from '../value-objects/bank-transaction-id';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
@@ -7,7 +7,7 @@ import { TransactionStatus } from '../enums/transaction-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface IBankTransactionRepository {
   save(transaction: BankTransaction): Promise<void>;

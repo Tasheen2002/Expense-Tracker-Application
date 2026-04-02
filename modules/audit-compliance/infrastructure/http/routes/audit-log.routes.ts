@@ -1,8 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import {
-  AuditLogController,
-  WorkspaceAuthenticatedRequest,
-} from '../controllers/audit-log.controller';
+import { AuditLogController } from '../controllers/audit-log.controller';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -20,14 +17,19 @@ import {
   auditSummaryQuerySchema,
   entityHistoryQuerySchema,
   listAuditLogsQuerySchema,
-  createAuditLogBodySchema,
-  purgeLogsQuerySchema,
-} from '../validation/audit.schema';
+  createAuditLogSchema,
+  purgeAuditLogsQuerySchema,
+  auditLogResponseSchema,
+  auditSummaryResponseSchema,
+  paginatedAuditLogsResponseSchema,
+} from '../validation/audit-log.schema';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
+
 
 export async function auditLogRoutes(
   fastify: FastifyInstance,
@@ -40,7 +42,7 @@ export async function auditLogRoutes(
     }
   });
 
-  // GET /summary — must be before /:auditLogId to avoid route conflict
+  // GET /summary
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/summary',
     {
@@ -48,6 +50,7 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(auditSummaryQuerySchema),
       ],
+      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'Get audit summary statistics for a workspace',
@@ -58,38 +61,17 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  totalLogs: { type: 'number' },
-                  actionBreakdown: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        action: { type: 'string' },
-                        count: { type: 'number' },
-                      },
-                    },
-                  },
-                  period: {
-                    type: 'object',
-                    properties: {
-                      startDate: { type: 'string', format: 'date-time' },
-                      endDate: { type: 'string', format: 'date-time' },
-                    },
-                  },
-                },
-              },
+              data: auditSummaryResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.getAuditSummary(request as any, reply)
+    (request, reply) =>
+      controller.getAuditSummary(request as AuthenticatedRequest, reply)
   );
 
-  // GET /entity-history — must be before /:auditLogId
+  // GET /entity-history
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/entity-history',
     {
@@ -97,6 +79,7 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(entityHistoryQuerySchema),
       ],
+      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'Get audit history for a specific entity',
@@ -107,60 +90,20 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        workspaceId: { type: 'string', format: 'uuid' },
-                        userId: {
-                          type: 'string',
-                          format: 'uuid',
-                          nullable: true,
-                        },
-                        action: { type: 'string' },
-                        entityType: { type: 'string' },
-                        entityId: { type: 'string' },
-                        details: {
-                          type: 'object',
-                          nullable: true,
-                          additionalProperties: true,
-                        },
-                        metadata: {
-                          type: 'object',
-                          nullable: true,
-                          additionalProperties: true,
-                        },
-                        ipAddress: { type: 'string', nullable: true },
-                        userAgent: { type: 'string', nullable: true },
-                        createdAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedAuditLogsResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.getEntityAuditHistory(request as any, reply)
+    (request, reply) =>
+      controller.getEntityAuditHistory(
+        request as AuthenticatedRequest,
+        reply
+      )
   );
 
-  // GET /
+  // GET / (List)
   fastify.get(
     '/workspaces/:workspaceId/audit-logs',
     {
@@ -168,6 +111,7 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(listAuditLogsQuerySchema),
       ],
+      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'List audit logs with optional filters',
@@ -178,57 +122,14 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        workspaceId: { type: 'string', format: 'uuid' },
-                        userId: {
-                          type: 'string',
-                          format: 'uuid',
-                          nullable: true,
-                        },
-                        action: { type: 'string' },
-                        entityType: { type: 'string' },
-                        entityId: { type: 'string' },
-                        details: {
-                          type: 'object',
-                          nullable: true,
-                          additionalProperties: true,
-                        },
-                        metadata: {
-                          type: 'object',
-                          nullable: true,
-                          additionalProperties: true,
-                        },
-                        ipAddress: { type: 'string', nullable: true },
-                        userAgent: { type: 'string', nullable: true },
-                        createdAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedAuditLogsResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.listAuditLogs(request as any, reply)
+    (request, reply) =>
+      controller.listAuditLogs(request as AuthenticatedRequest, reply)
   );
 
   // GET /:auditLogId
@@ -246,47 +147,25 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', format: 'uuid' },
-                  workspaceId: { type: 'string', format: 'uuid' },
-                  userId: { type: 'string', format: 'uuid', nullable: true },
-                  action: { type: 'string' },
-                  entityType: { type: 'string' },
-                  entityId: { type: 'string' },
-                  details: {
-                    type: 'object',
-                    nullable: true,
-                    additionalProperties: true,
-                  },
-                  metadata: {
-                    type: 'object',
-                    nullable: true,
-                    additionalProperties: true,
-                  },
-                  ipAddress: { type: 'string', nullable: true },
-                  userAgent: { type: 'string', nullable: true },
-                  createdAt: { type: 'string', format: 'date-time' },
-                },
-              },
+              data: auditLogResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.getAuditLog(request as any, reply)
+    (request, reply) =>
+      controller.getAuditLog(request as AuthenticatedRequest, reply)
   );
 
-  // POST / — admin only
+  // POST /
   fastify.post(
     '/workspaces/:workspaceId/audit-logs',
     {
-      preHandler: RolePermissions.ADMIN_LEVEL,
       preValidation: [
         validateParams(workspaceParamsSchema),
-        validateBody(createAuditLogBodySchema),
+        validateBody(createAuditLogSchema),
       ],
+      preHandler: [RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Audit'],
         description: 'Create an audit log entry (admin only)',
@@ -308,51 +187,39 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  auditLogId: { type: 'string', format: 'uuid' },
-                },
-              },
+              data: auditLogResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.createAuditLog(request as any, reply)
+    (request, reply) =>
+      controller.createAuditLog(request as AuthenticatedRequest, reply)
   );
 
-  // DELETE / — admin only — purge old audit logs
+  // DELETE / (Purge)
   fastify.delete(
     '/workspaces/:workspaceId/audit-logs',
     {
-      preHandler: RolePermissions.ADMIN_LEVEL,
       preValidation: [
         validateParams(workspaceParamsSchema),
-        validateQuery(purgeLogsQuerySchema),
+        validateQuery(purgeAuditLogsQuerySchema),
       ],
+      preHandler: [RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Audit'],
         description:
           'Purge audit logs older than a specified number of days (admin only, minimum 30 days)',
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  deletedCount: { type: 'number' },
-                },
-              },
-            },
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
     },
-    (request, reply) => controller.purgeAuditLogs(request as any, reply)
+    (request, reply) =>
+      controller.purgeAuditLogs(request as AuthenticatedRequest, reply)
   );
 }

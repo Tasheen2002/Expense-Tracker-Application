@@ -1,115 +1,125 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-// Query parameters for listing audit logs
+/**
+ * Common Parameter Schemas
+ */
+export const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspaceId format'),
+});
+
+export const auditLogParamsSchema = workspaceParamsSchema.extend({
+  auditLogId: z.string().uuid('Invalid auditLogId format'),
+});
+
+/**
+ * Input Validation Schemas (Zod)
+ * Used by preValidation/preHandler hooks for request validation.
+ */
 export const listAuditLogsQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   action: z.string().optional(),
   entityType: z.string().optional(),
   entityId: z.string().optional(),
-  startDate: z
-    .string()
-    .datetime()
-    .optional()
-    .transform((val) => (val ? new Date(val) : undefined)),
-  endDate: z
-    .string()
-    .datetime()
-    .optional()
-    .transform((val) => (val ? new Date(val) : undefined)),
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 50)),
-  offset: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 0)),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
-export type ListAuditLogsQuery = z.infer<typeof listAuditLogsQuerySchema>;
-
-// Path parameters for getting a specific audit log
-export const getAuditLogParamsSchema = z.object({
-  auditLogId: z.string().uuid(),
+export const entityHistoryQuerySchema = z.object({
+  entityType: z.string().min(1, 'entityType is required'),
+  entityId: z.string().min(1, 'entityId is required'),
+  limit: z.coerce.number().min(1).max(100).default(50),
+  offset: z.coerce.number().min(0).default(0),
 });
 
-export type GetAuditLogParams = z.infer<typeof getAuditLogParamsSchema>;
-
-// Query parameters for entity audit history
-export const entityAuditHistoryQuerySchema = z.object({
-  entityType: z.string().min(1, "Entity type is required"),
-  entityId: z.string().min(1, "Entity ID is required"),
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 50)),
-  offset: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 0)),
-});
-
-export type EntityAuditHistoryQuery = z.infer<
-  typeof entityAuditHistoryQuerySchema
->;
-
-// Query parameters for audit summary
 export const auditSummaryQuerySchema = z.object({
-  startDate: z
-    .string()
-    .datetime()
-    .transform((val) => new Date(val)),
-  endDate: z
-    .string()
-    .datetime()
-    .transform((val) => new Date(val)),
+  startDate: z.string().datetime('startDate must be a valid ISO date'),
+  endDate: z.string().datetime('endDate must be a valid ISO date'),
 });
 
-export type AuditSummaryQuery = z.infer<typeof auditSummaryQuerySchema>;
-
-// Body schema for creating an audit log (for internal/system use)
-export const createAuditLogBodySchema = z.object({
-  action: z.string().min(1, "Action is required"),
-  entityType: z.string().min(1, "Entity type is required"),
-  entityId: z.string().min(1, "Entity ID is required"),
+export const createAuditLogSchema = z.object({
+  action: z.string().min(1, 'action is required'),
+  entityType: z.string().min(1, 'entityType is required'),
+  entityId: z.string().min(1, 'entityId is required'),
   details: z.record(z.unknown()).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
-export type CreateAuditLogBody = z.infer<typeof createAuditLogBodySchema>;
-
-// Response schemas for documentation purposes
-export const auditLogResponseSchema = z.object({
-  id: z.string().uuid(),
-  workspaceId: z.string(),
-  userId: z.string().nullable(),
-  action: z.string(),
-  entityType: z.string(),
-  entityId: z.string(),
-  details: z.record(z.unknown()).nullable(),
-  metadata: z.record(z.unknown()).nullable(),
-  ipAddress: z.string().nullable(),
-  userAgent: z.string().nullable(),
-  createdAt: z.date(),
+export const purgeAuditLogsQuerySchema = z.object({
+  olderThanDays: z.coerce.number().min(30, 'Minimum retention period is 30 days'),
 });
 
-export const paginatedAuditLogsResponseSchema = z.object({
-  items: z.array(auditLogResponseSchema),
-  total: z.number(),
-  limit: z.number(),
-  offset: z.number(),
-});
+/**
+ * Response Serialization Schemas (JSON Schema / POJO)
+ * Centralized UI Response Schemas (Rule #1).
+ * These are used by Fastify for serialization and Swagger documentation.
+ */
 
-export const auditSummaryResponseSchema = z.object({
-  totalLogs: z.number(),
-  actionBreakdown: z.array(
-    z.object({
-      action: z.string(),
-      count: z.number(),
-    }),
-  ),
-  period: z.object({
-    startDate: z.date(),
-    endDate: z.date(),
-  }),
-});
+export const auditLogResponseSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    userId: { type: 'string', format: 'uuid', nullable: true },
+    action: { type: 'string' },
+    entityType: { type: 'string' },
+    entityId: { type: 'string' },
+    details: {
+      type: 'object',
+      nullable: true,
+      additionalProperties: true,
+    },
+    metadata: {
+      type: 'object',
+      nullable: true,
+      additionalProperties: true,
+    },
+    ipAddress: { type: 'string', nullable: true },
+    userAgent: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+export const paginatedAuditLogsResponseSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: auditLogResponseSchema,
+    },
+    pagination: {
+      type: 'object',
+      properties: {
+        total: { type: 'number' },
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+        hasMore: { type: 'boolean' },
+      },
+    },
+  },
+};
+
+export const auditSummaryResponseSchema = {
+  type: 'object',
+  properties: {
+    totalLogs: { type: 'number' },
+    actionBreakdown: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          action: { type: 'string' },
+          count: { type: 'number' },
+        },
+      },
+    },
+    period: {
+      type: 'object',
+      properties: {
+        startDate: { type: 'string', format: 'date-time' },
+        endDate: { type: 'string', format: 'date-time' },
+      },
+    },
+  },
+};

@@ -3,7 +3,7 @@ import {
   InvalidFormatError,
   ValueOutOfRangeError,
   CurrencyMismatchError,
-} from '../../../../apps/api/src/shared/domain/errors';
+} from '../../../../apps/api/src/shared/domain/errors/domain-validation.errors.js';
 
 /** ISO 4217 currency codes supported by the expense ledger module. */
 export const VALID_CURRENCIES: readonly string[] = [

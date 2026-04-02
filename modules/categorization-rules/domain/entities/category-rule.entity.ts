@@ -4,7 +4,7 @@ import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/wo
 import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
 import { InvalidRuleError } from '../errors/categorization-rules.errors';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
 import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
 
 // ============================================================================

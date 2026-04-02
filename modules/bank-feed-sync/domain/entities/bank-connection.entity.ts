@@ -1,8 +1,9 @@
-import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { ConnectionStatus } from '../enums/connection-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -234,7 +235,7 @@ export class BankConnection extends AggregateRoot {
     return connection;
   }
 
-  static fromPersistence(props: BankConnectionProps): BankConnection {
+  static reconstitute(props: BankConnectionProps): BankConnection {
     return new BankConnection(props);
   }
 
@@ -478,48 +479,4 @@ export class BankConnection extends AggregateRoot {
       this.props.status === ConnectionStatus.CONNECTED && !this.isExpired()
     );
   }
-
-  toJSON(): BankConnectionDTO {
-    return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      userId: this.getUserId().getValue(),
-      institutionId: this.institutionId,
-      institutionName: this.institutionName,
-      accountId: this.accountId,
-      accountName: this.accountName,
-      accountType: this.accountType,
-      accountMask: this.accountMask,
-      currency: this.currency,
-      status: this.status,
-      lastSyncAt: this.lastSyncAt,
-      tokenExpiresAt: this.tokenExpiresAt,
-      errorMessage: this.errorMessage,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toPersistence(): BankConnectionProps {
-    return { ...this.props };
-  }
-}
-
-export interface BankConnectionDTO {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  institutionId: string;
-  institutionName: string;
-  accountId: string;
-  accountName: string;
-  accountType: string;
-  accountMask?: string;
-  currency: string;
-  status: ConnectionStatus;
-  lastSyncAt?: Date;
-  tokenExpiresAt?: Date;
-  errorMessage?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }

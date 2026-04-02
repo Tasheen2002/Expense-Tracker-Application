@@ -53,7 +53,7 @@ export class BankTransactionController {
         'Pending transactions retrieved successfully',
         result.data
           ? {
-              transactions: result.data.items.map((t) => t.toJSON()),
+              transactions: result.data.items,
               total: result.data.total,
               limit: result.data.limit,
               offset: result.data.offset,
@@ -82,7 +82,7 @@ export class BankTransactionController {
         reply,
         result,
         'Bank transaction retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -159,7 +159,7 @@ export class BankTransactionController {
         'Transactions by connection retrieved successfully',
         result.data
           ? {
-              transactions: result.data.items.map((t) => t.toJSON()),
+              transactions: result.data.items,
               total: result.data.total,
               limit: result.data.limit,
               offset: result.data.offset,
@@ -172,3 +172,4 @@ export class BankTransactionController {
     }
   }
 }
+

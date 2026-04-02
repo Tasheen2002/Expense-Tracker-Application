@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../apps/api/src/shared/application';
 import { AuditService } from '../services/audit.service';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditLogNotFoundError } from '../../domain/errors/audit.errors';
 
 export interface GetAuditLogQuery extends IQuery {
@@ -14,11 +14,11 @@ export interface GetAuditLogQuery extends IQuery {
 
 export class GetAuditLogHandler implements IQueryHandler<
   GetAuditLogQuery,
-  QueryResult<AuditLog>
+  QueryResult<AuditLogDTO>
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLog>> {
+  async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLogDTO>> {
     try {
       const auditLog = await this.auditService.getAuditLogById(
         input.workspaceId,

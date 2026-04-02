@@ -8,53 +8,6 @@ import { GetEntityAuditHistoryHandler } from '../../../application/queries/get-e
 import { GetAuditSummaryHandler } from '../../../application/queries/get-audit-summary.query';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
 
-interface ListAuditLogsRequestQuery {
-  userId?: string;
-  action?: string;
-  entityType?: string;
-  entityId?: string;
-  startDate?: string;
-  endDate?: string;
-  limit?: string | number;
-  offset?: string | number;
-}
-
-interface GetAuditLogParams {
-  auditLogId: string;
-}
-
-interface EntityAuditHistoryQuery {
-  entityType: string;
-  entityId: string;
-  limit?: string | number;
-  offset?: string | number;
-}
-
-interface AuditSummaryQuery {
-  startDate: string;
-  endDate: string;
-}
-
-interface CreateAuditLogBody {
-  action: string;
-  entityType: string;
-  entityId: string;
-  details?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
-}
-
-interface PurgeAuditLogsQuery {
-  olderThanDays: string | number;
-}
-
-// Extend AuthenticatedRequest to include workspace context correctly
-export interface WorkspaceAuthenticatedRequest extends AuthenticatedRequest {
-  workspaceMembership: {
-    workspaceId: string;
-    role: string;
-  };
-}
-
 export class AuditLogController {
   constructor(
     private readonly createAuditLogHandler: CreateAuditLogHandler,
@@ -65,37 +18,29 @@ export class AuditLogController {
     private readonly getAuditSummaryHandler: GetAuditSummaryHandler
   ) {}
 
-  private validationError(reply: FastifyReply, message: string): FastifyReply {
-    return reply.status(400).send({
-      success: false,
-      statusCode: 400,
-      error: 'VALIDATION_ERROR',
-      message,
-    });
-  }
-
-  private isUuid(value: string): boolean {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value
-    );
-  }
-
   /**
    * GET /api/workspaces/:workspaceId/audit-logs
    * List audit logs with optional filters
    */
   async listAuditLogs(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: {
+        userId?: string;
+        action?: string;
+        entityType?: string;
+        entityId?: string;
+        startDate?: string;
+        endDate?: string;
+        limit?: number;
+        offset?: number;
+      };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
-      const query = request.query as ListAuditLogsRequestQuery;
-
-      const limit = query.limit !== undefined ? Number(query.limit) : 50;
-      const offset = query.offset !== undefined ? Number(query.offset) : 0;
-      const startDate = query.startDate ? new Date(query.startDate) : undefined;
-      const endDate = query.endDate ? new Date(query.endDate) : undefined;
+      const { workspaceId } = request.params;
+      const query = request.query;
 
       const result = await this.listAuditLogsHandler.handle({
         workspaceId,
@@ -104,11 +49,11 @@ export class AuditLogController {
           action: query.action,
           entityType: query.entityType,
           entityId: query.entityId,
-          startDate,
-          endDate,
+          startDate: query.startDate ? new Date(query.startDate) : undefined,
+          endDate: query.endDate ? new Date(query.endDate) : undefined,
         },
-        limit,
-        offset,
+        limit: query.limit,
+        offset: query.offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -117,7 +62,7 @@ export class AuditLogController {
         'Audit logs retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((log) => log.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -137,16 +82,13 @@ export class AuditLogController {
    * Get a specific audit log by ID
    */
   async getAuditLog(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; auditLogId: string };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
-      const { auditLogId } = request.params as GetAuditLogParams;
-
-      if (!this.isUuid(auditLogId)) {
-        return this.validationError(reply, 'Invalid auditLogId format');
-      }
+      const { workspaceId, auditLogId } = request.params;
 
       const result = await this.getAuditLogHandler.handle({
         workspaceId,
@@ -157,7 +99,7 @@ export class AuditLogController {
         reply,
         result,
         'Audit log retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -169,28 +111,27 @@ export class AuditLogController {
    * Get audit history for a specific entity
    */
   async getEntityAuditHistory(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: {
+        entityType: string;
+        entityId: string;
+        limit?: number;
+        offset?: number;
+      };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
-      const { entityType, entityId, limit, offset } =
-        request.query as EntityAuditHistoryQuery;
-
-      if (!entityType) {
-        return this.validationError(reply, 'entityType is required');
-      }
-
-      if (!entityId) {
-        return this.validationError(reply, 'entityId is required');
-      }
+      const { workspaceId } = request.params;
+      const { entityType, entityId, limit, offset } = request.query;
 
       const result = await this.getEntityAuditHistoryHandler.handle({
         workspaceId,
         entityType,
         entityId,
-        limit: limit !== undefined ? Number(limit) : 50,
-        offset: offset !== undefined ? Number(offset) : 0,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -199,7 +140,7 @@ export class AuditLogController {
         'Entity audit history retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((log) => log.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -219,19 +160,15 @@ export class AuditLogController {
    * Get audit summary statistics
    */
   async getAuditSummary(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { startDate: string; endDate: string };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
-      const { startDate, endDate } = request.query as AuditSummaryQuery;
-
-      if (!startDate || !endDate) {
-        return this.validationError(
-          reply,
-          'startDate and endDate are required'
-        );
-      }
+      const { workspaceId } = request.params;
+      const { startDate, endDate } = request.query;
 
       const result = await this.getAuditSummaryHandler.handle({
         workspaceId,
@@ -242,7 +179,8 @@ export class AuditLogController {
       return ResponseHelper.fromQuery(
         reply,
         result,
-        'Audit summary retrieved successfully'
+        'Audit summary retrieved successfully',
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -254,25 +192,22 @@ export class AuditLogController {
    * Create an audit log entry (for system/internal use)
    */
   async createAuditLog(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
+        action: string;
+        entityType: string;
+        entityId: string;
+        details?: Record<string, unknown>;
+        metadata?: Record<string, unknown>;
+      };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
+      const { workspaceId } = request.params;
       const { userId } = request.user;
-      const body = request.body as CreateAuditLogBody;
-
-      if (!body?.action) {
-        return this.validationError(reply, 'action is required');
-      }
-
-      if (!body?.entityType) {
-        return this.validationError(reply, 'entityType is required');
-      }
-
-      if (!body?.entityId) {
-        return this.validationError(reply, 'entityId is required');
-      }
+      const body = request.body;
 
       const result = await this.createAuditLogHandler.handle({
         data: {
@@ -295,7 +230,7 @@ export class AuditLogController {
         reply,
         result,
         'Audit log created successfully',
-        undefined,
+        result.data,
         201
       );
     } catch (error) {
@@ -304,26 +239,31 @@ export class AuditLogController {
   }
 
   /**
-   * DELETE /api/workspaces/:workspaceId/audit-logs?olderThanDays=N
+   * DELETE /api/workspaces/:workspaceId/audit-logs
    * Purge audit logs older than N days (admin only, minimum 30 days)
    */
   async purgeAuditLogs(
-    request: WorkspaceAuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { olderThanDays: number };
+    }>,
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const { workspaceId } = request.workspaceMembership;
-      const { olderThanDays } = request.query as PurgeAuditLogsQuery;
+      const { workspaceId } = request.params;
+      const { olderThanDays } = request.query;
 
       const result = await this.purgeAuditLogsHandler.handle({
         workspaceId,
-        olderThanDays: Number(olderThanDays),
+        olderThanDays,
       });
 
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Audit logs purged successfully'
+        'Audit logs purged successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

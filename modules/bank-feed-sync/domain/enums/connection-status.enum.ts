@@ -8,3 +8,4 @@ export enum ConnectionStatus {
   ERROR = "ERROR", // Connection error occurred
   DISCONNECTED = "DISCONNECTED", // User disconnected the account
 }
+

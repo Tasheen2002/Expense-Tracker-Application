@@ -1,8 +1,5 @@
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+import { IQuery, IQueryHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import { WorkspaceMembership } from '../../domain/entities/workspace-membership.entity';
 import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';

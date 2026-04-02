@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
 import { BankConnection } from '../../domain/entities/bank-connection.entity';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
@@ -7,10 +8,10 @@ import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaBankConnectionRepository
   extends PrismaRepository<BankConnection>
@@ -128,7 +129,7 @@ export class PrismaBankConnectionRepository
   private toDomain(
     record: Prisma.BankConnectionGetPayload<object>
   ): BankConnection {
-    return BankConnection.fromPersistence({
+    return BankConnection.reconstitute({
       id: BankConnectionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       userId: UserId.fromString(record.userId),

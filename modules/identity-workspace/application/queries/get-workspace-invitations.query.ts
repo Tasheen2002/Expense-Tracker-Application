@@ -1,10 +1,7 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
 import { WorkspaceInvitation } from '../../domain/entities/workspace-invitation.entity';
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+import { IQuery, IQueryHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
 
 export interface GetWorkspaceInvitationsQuery extends IQuery {
   workspaceId: string;

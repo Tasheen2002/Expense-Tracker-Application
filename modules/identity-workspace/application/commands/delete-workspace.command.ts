@@ -1,10 +1,7 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface DeleteWorkspaceCommand extends ICommand {
   workspaceId: string;

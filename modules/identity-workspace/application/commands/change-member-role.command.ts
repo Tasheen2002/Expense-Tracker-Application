@@ -1,8 +1,5 @@
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import {
   WorkspaceMembership,

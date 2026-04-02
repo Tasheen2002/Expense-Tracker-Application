@@ -5,7 +5,7 @@ import {
 } from '../../../../apps/api/src/shared/application';
 import { AuditService, ListAuditLogsFilters } from '../services/audit.service';
 import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 
 export interface ListAuditLogsQuery extends IQuery {
   workspaceId: string;
@@ -16,13 +16,13 @@ export interface ListAuditLogsQuery extends IQuery {
 
 export class ListAuditLogsHandler implements IQueryHandler<
   ListAuditLogsQuery,
-  QueryResult<PaginatedResult<AuditLog>>
+  QueryResult<PaginatedResult<AuditLogDTO>>
 > {
   constructor(private readonly auditService: AuditService) {}
 
   async handle(
     input: ListAuditLogsQuery
-  ): Promise<QueryResult<PaginatedResult<AuditLog>>> {
+  ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
     try {
       const result = await this.auditService.listAuditLogs(
         input.workspaceId,

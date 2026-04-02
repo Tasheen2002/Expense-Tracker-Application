@@ -198,7 +198,7 @@ export class AuditLogRepositoryImpl
   }
 
   private toDomain(data: Prisma.AuditLogGetPayload<object>): AuditLog {
-    return AuditLog.fromPersistence({
+    return AuditLog.reconstitute({
       id: AuditLogId.fromString(data.id),
       workspaceId: data.workspaceId,
       userId: data.userId,

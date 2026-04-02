@@ -1,10 +1,7 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
 import { WorkspaceRole } from '../../domain/entities/workspace-membership.entity';
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
 
 export interface CreateInvitationCommand extends ICommand {
   workspaceId: string;

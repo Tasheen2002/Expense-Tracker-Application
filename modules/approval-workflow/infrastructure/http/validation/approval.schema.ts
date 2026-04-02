@@ -64,3 +64,103 @@ export const chainParamsSchema = workspaceParamsSchema.extend({
   chainId: z.string().uuid(),
 });
 
+// ==================== API RESPONSE SCHEMAS (JSON Schema) ====================
+
+export const chainResponseSchema = {
+  type: 'object',
+  properties: {
+    chainId: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    name: { type: 'string' },
+    description: { type: 'string', nullable: true },
+    minAmount: { type: 'number', nullable: true },
+    maxAmount: { type: 'number', nullable: true },
+    categoryIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+      nullable: true,
+    },
+    requiresReceipt: { type: 'boolean' },
+    approverSequence: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+    },
+    isActive: { type: 'boolean' },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+export const paginatedChainsResponseSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: chainResponseSchema,
+    },
+    pagination: {
+      type: 'object',
+      properties: {
+        total: { type: 'number' },
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+        hasMore: { type: 'boolean' },
+      },
+    },
+  },
+};
+
+export const approvalStepSchema = {
+  type: 'object',
+  properties: {
+    stepId: { type: 'string', format: 'uuid' },
+    workflowId: { type: 'string', format: 'uuid' },
+    stepNumber: { type: 'number' },
+    approverId: { type: 'string', format: 'uuid' },
+    delegatedTo: { type: 'string', format: 'uuid', nullable: true },
+    status: { type: 'string' },
+    comments: { type: 'string', nullable: true },
+    processedAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+export const workflowSchema = {
+  type: 'object',
+  properties: {
+    workflowId: { type: 'string', format: 'uuid' },
+    expenseId: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    userId: { type: 'string', format: 'uuid' },
+    chainId: { type: 'string', format: 'uuid', nullable: true },
+    status: { type: 'string' },
+    currentStepNumber: { type: 'number' },
+    steps: {
+      type: 'array',
+      items: approvalStepSchema,
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    completedAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+export const paginatedWorkflowsResponseSchema = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      items: workflowSchema,
+    },
+    pagination: {
+      type: 'object',
+      properties: {
+        total: { type: 'number' },
+        limit: { type: 'number' },
+        offset: { type: 'number' },
+        hasMore: { type: 'boolean' },
+      },
+    },
+  },
+};

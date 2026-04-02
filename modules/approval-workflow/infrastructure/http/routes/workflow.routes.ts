@@ -14,43 +14,9 @@ import {
   paginationSchema,
   workspaceParamsSchema,
   workflowParamsSchema,
+  workflowSchema,
+  paginatedWorkflowsResponseSchema,
 } from '../validation/approval.schema';
-
-const approvalStepSchema = {
-  type: 'object',
-  properties: {
-    stepId: { type: 'string', format: 'uuid' },
-    workflowId: { type: 'string', format: 'uuid' },
-    stepNumber: { type: 'number' },
-    approverId: { type: 'string', format: 'uuid' },
-    delegatedTo: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    comments: { type: 'string', nullable: true },
-    processedAt: { type: 'string', format: 'date-time', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const workflowSchema = {
-  type: 'object',
-  properties: {
-    workflowId: { type: 'string', format: 'uuid' },
-    expenseId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    chainId: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    currentStepNumber: { type: 'number' },
-    steps: {
-      type: 'array',
-      items: approvalStepSchema,
-    },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-    completedAt: { type: 'string', format: 'date-time', nullable: true },
-  },
-};
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
@@ -317,24 +283,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: workflowSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedWorkflowsResponseSchema,
             },
           },
         },
@@ -374,24 +323,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: workflowSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedWorkflowsResponseSchema,
             },
           },
         },

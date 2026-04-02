@@ -11,6 +11,11 @@ export class AuditEventListener implements DomainEventHandler {
   readonly eventType = 'audit.universal';
 
   async handle(event: DomainEvent): Promise<void> {
+    // Prevent infinite recursion by ignoring audit-related events
+    if (event.aggregateType === 'AuditLog') {
+      return;
+    }
+
     const payload = event.getPayload();
     const workspaceId = payload.workspaceId;
 

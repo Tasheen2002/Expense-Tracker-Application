@@ -1,10 +1,11 @@
-import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
 import { BankConnection } from '../entities/bank-connection.entity';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface IBankConnectionRepository {
   save(connection: BankConnection): Promise<void>;

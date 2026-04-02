@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../apps/api/src/shared/application';
 import { AuditService } from '../services/audit.service';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
 
 export interface GetEntityAuditHistoryQuery extends IQuery {
@@ -17,13 +17,13 @@ export interface GetEntityAuditHistoryQuery extends IQuery {
 
 export class GetEntityAuditHistoryHandler implements IQueryHandler<
   GetEntityAuditHistoryQuery,
-  QueryResult<PaginatedResult<AuditLog>>
+  QueryResult<PaginatedResult<AuditLogDTO>>
 > {
   constructor(private readonly auditService: AuditService) {}
 
   async handle(
     input: GetEntityAuditHistoryQuery
-  ): Promise<QueryResult<PaginatedResult<AuditLog>>> {
+  ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
     try {
       const options = {
         limit: input.limit,

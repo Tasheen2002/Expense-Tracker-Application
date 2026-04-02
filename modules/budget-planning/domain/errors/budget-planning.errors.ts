@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../apps/api/src/shared/domain/errors';
+import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
 
 export class BudgetPlanningDomainError extends DomainError {
   public readonly errorCode: string;

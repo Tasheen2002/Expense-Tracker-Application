@@ -123,29 +123,25 @@ export class User extends AggregateRoot {
     return user;
   }
 
-  static reconstitute(data: UserData): User {
+  static reconstitute(data: {
+    id: UserId;
+    email: Email;
+    passwordHash: string;
+    fullName: string | null;
+    isActive: boolean;
+    emailVerified: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  }): User {
     return new User(
-      UserId.fromString(data.id),
-      Email.fromString(data.email),
+      data.id,
+      data.email,
       data.passwordHash,
       data.fullName,
       data.isActive,
       data.emailVerified,
       data.createdAt,
       data.updatedAt
-    );
-  }
-
-  static fromDatabaseRow(row: UserRow): User {
-    return new User(
-      UserId.fromString(row.id),
-      Email.fromString(row.email),
-      row.password_hash,
-      row.full_name,
-      row.is_active,
-      row.email_verified,
-      row.created_at,
-      row.updated_at
     );
   }
 
@@ -222,47 +218,8 @@ export class User extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
-  // Convert to data for persistence
-  toData(): UserData {
-    return {
-      id: this.id.getValue(),
-      email: this.email.getValue(),
-      passwordHash: this.passwordHash,
-      fullName: this.fullName,
-      isActive: this.isActive,
-      emailVerified: this.emailVerified,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): UserRow {
-    return {
-      id: this.id.getValue(),
-      email: this.email.getValue(),
-      password_hash: this.passwordHash,
-      full_name: this.fullName,
-      is_active: this.isActive,
-      email_verified: this.emailVerified,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
-  }
-
   equals(other: User): boolean {
     return this.id.equals(other.id);
-  }
-
-  toJSON(): UserDTO {
-    return {
-      userId: this.id.getValue(),
-      email: this.email.getValue(),
-      fullName: this.fullName,
-      isActive: this.isActive,
-      emailVerified: this.emailVerified,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
-    };
   }
 }
 
@@ -271,36 +228,4 @@ export interface CreateUserData {
   email: string;
   passwordHash: string;
   fullName?: string;
-}
-
-export interface UserData {
-  id: string;
-  email: string;
-  passwordHash: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface UserRow {
-  id: string;
-  email: string;
-  password_hash: string;
-  full_name: string | null;
-  is_active: boolean;
-  email_verified: boolean;
-  created_at: Date;
-  updated_at: Date;
-}
-
-export interface UserDTO {
-  userId: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

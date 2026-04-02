@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
@@ -10,10 +10,10 @@ import { DUPLICATE_TIME_THRESHOLD_MINUTES } from '../../domain/constants/bank-fe
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaBankTransactionRepository
   extends PrismaRepository<BankTransaction>
@@ -46,7 +46,27 @@ export class PrismaBankTransactionRepository
 
     await this.prisma.bankTransaction.upsert({
       where: { id: transaction.getId().getValue() },
-      create: data,
+      create: {
+        id: transaction.getId().getValue(),
+        workspaceId: transaction.getWorkspaceId().getValue(),
+        externalId: transaction.getExternalId(),
+        amount: transaction.getAmount(),
+        currency: transaction.getCurrency(),
+        description: transaction.getDescription(),
+        merchantName: transaction.getMerchantName(),
+        categoryName: transaction.getCategoryName(),
+        transactionDate: transaction.getTransactionDate(),
+        postedDate: transaction.getPostedDate(),
+        status: transaction.getStatus(),
+        expenseId: transaction.getExpenseId(),
+        metadata: transaction.getMetadata() as any,
+        createdAt: transaction.getCreatedAt(),
+        updatedAt: transaction.getUpdatedAt(),
+        connection: {
+          connect: { id: transaction.getConnectionId().getValue() },
+        },
+        session: { connect: { id: transaction.getSessionId().getValue() } },
+      },
       update: data,
     });
     await this.dispatchEvents(transaction);
@@ -241,7 +261,7 @@ export class PrismaBankTransactionRepository
   private toDomain(
     record: Prisma.BankTransactionGetPayload<object>
   ): BankTransaction {
-    return BankTransaction.fromPersistence({
+    return BankTransaction.reconstitute({
       id: BankTransactionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),

@@ -23,17 +23,16 @@ export class UserRepositoryImpl
   }
 
   async save(user: User): Promise<void> {
-    const data = user.toDatabaseRow();
     await this.prisma.userAccount.create({
       data: {
-        id: data.id,
-        email: data.email,
-        passwordHash: data.password_hash,
-        fullName: data.full_name,
-        isActive: data.is_active,
-        emailVerified: data.email_verified,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
+        id: user.getId().getValue(),
+        email: user.getEmail().getValue(),
+        passwordHash: user.getPasswordHash(),
+        fullName: user.getFullName(),
+        isActive: user.getIsActive(),
+        emailVerified: user.getEmailVerified(),
+        createdAt: user.getCreatedAt(),
+        updatedAt: user.getUpdatedAt(),
       },
     });
     await this.dispatchEvents(user);
@@ -48,15 +47,15 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.fromDatabaseRow({
-      id: row.id,
-      email: row.email,
-      password_hash: row.passwordHash,
-      full_name: row.fullName,
-      is_active: row.isActive,
-      email_verified: row.emailVerified,
-      created_at: row.createdAt,
-      updated_at: row.updatedAt,
+    return User.reconstitute({
+      id: UserId.fromString(row.id),
+      email: Email.create(row.email),
+      passwordHash: row.passwordHash,
+      fullName: row.fullName,
+      isActive: row.isActive,
+      emailVerified: row.emailVerified,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
@@ -69,15 +68,15 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.fromDatabaseRow({
-      id: row.id,
-      email: row.email,
-      password_hash: row.passwordHash,
-      full_name: row.fullName,
-      is_active: row.isActive,
-      email_verified: row.emailVerified,
-      created_at: row.createdAt,
-      updated_at: row.updatedAt,
+    return User.reconstitute({
+      id: UserId.fromString(row.id),
+      email: Email.create(row.email),
+      passwordHash: row.passwordHash,
+      fullName: row.fullName,
+      isActive: row.isActive,
+      emailVerified: row.emailVerified,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
@@ -110,31 +109,30 @@ export class UserRepositoryImpl
       this.prisma.userAccount,
       { where, orderBy },
       (row) =>
-        User.fromDatabaseRow({
-          id: row.id,
-          email: row.email,
-          password_hash: row.passwordHash,
-          full_name: row.fullName,
-          is_active: row.isActive,
-          email_verified: row.emailVerified,
-          created_at: row.createdAt,
-          updated_at: row.updatedAt,
+        User.reconstitute({
+          id: UserId.fromString(row.id),
+          email: Email.create(row.email),
+          passwordHash: row.passwordHash,
+          fullName: row.fullName,
+          isActive: row.isActive,
+          emailVerified: row.emailVerified,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
         }),
       options,
     );
   }
 
   async update(user: User): Promise<void> {
-    const data = user.toDatabaseRow();
     await this.prisma.userAccount.update({
-      where: { id: data.id },
+      where: { id: user.getId().getValue() },
       data: {
-        email: data.email,
-        passwordHash: data.password_hash,
-        fullName: data.full_name,
-        isActive: data.is_active,
-        emailVerified: data.email_verified,
-        updatedAt: data.updated_at,
+        email: user.getEmail().getValue(),
+        passwordHash: user.getPasswordHash(),
+        fullName: user.getFullName(),
+        isActive: user.getIsActive(),
+        emailVerified: user.getEmailVerified(),
+        updatedAt: user.getUpdatedAt(),
       },
     });
     await this.dispatchEvents(user);
@@ -144,8 +142,6 @@ export class UserRepositoryImpl
     await this.prisma.userAccount.delete({
       where: { id: id.getValue() },
     });
-    // Note: Deletion events typically require loading the entity first if we want to emit a domain event from it.
-    // For now, we assume deletion is physical.
   }
 
   async exists(id: UserId): Promise<boolean> {

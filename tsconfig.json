@@ -14,14 +14,11 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
+      "@core/*": ["packages/core/src/*"],
       "@packages/*": ["packages/*/src"],
       "@modules/*": ["modules/*"]
     }
   },
-  "include": [
-    "apps/**/*",
-    "modules/**/*",
-    "packages/**/*"
-  ],
+  "include": ["apps/**/*", "modules/**/*", "packages/**/*"],
   "exclude": ["node_modules", "dist", "coverage", "**/*.test.ts"]
 }

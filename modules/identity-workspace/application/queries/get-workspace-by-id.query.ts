@@ -1,10 +1,7 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { Workspace } from '../../domain/entities/workspace.entity';
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+import { IQuery, IQueryHandler } from '../../../../apps/api/src/shared/application/cqrs';
+import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
 
 export interface GetWorkspaceByIdQuery extends IQuery {
   workspaceId: string;

@@ -1,26 +1,32 @@
-import { FastifyReply } from "fastify";
-import { ZodSchema, ZodError } from "zod";
+﻿import { FastifyRequest, FastifyReply } from 'fastify';
+import { AnyZodObject, ZodError } from 'zod';
 
-export async function validateRequest<T>(
-  schema: ZodSchema<T>,
-  data: unknown,
-  reply: FastifyReply,
-): Promise<T | null> {
+export const validateBody = (schema: AnyZodObject) => async (request: FastifyRequest, reply: FastifyReply) => {
   try {
-    return schema.parse(data);
+    request.body = schema.parse(request.body);
   } catch (error) {
     if (error instanceof ZodError) {
-      reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        error: "Validation Error",
-        message: error.errors
-          .map((e) => `${e.path.join(".")}: ${e.message}`)
-          .join(", "),
-        details: error.errors,
-      });
-      return null;
+      reply.status(400).send({ success: false, statusCode: 400, error: 'Bad Request', message: error.errors.map(e => e.message).join(', ') });
     }
-    throw error;
   }
-}
+};
+
+export const validateParams = (schema: AnyZodObject) => async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    request.params = schema.parse(request.params);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.status(400).send({ success: false, statusCode: 400, error: 'Bad Request', message: error.errors.map(e => e.message).join(', ') });
+    }
+  }
+};
+
+export const validateQuery = (schema: AnyZodObject) => async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    request.query = schema.parse(request.query);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      reply.status(400).send({ success: false, statusCode: 400, error: 'Bad Request', message: error.errors.map(e => e.message).join(', ') });
+    }
+  }
+};

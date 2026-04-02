@@ -1,99 +1,131 @@
-import { FastifyInstance } from "fastify";
-import { TransactionSyncController } from "../controllers/transaction-sync.controller";
+import { FastifyInstance } from 'fastify';
+import { TransactionSyncController } from '../controllers/transaction-sync.controller';
+import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  connectionParamsSchema,
+  paginationQuerySchema,
+  sessionParamsSchema,
+  syncSessionResponseSchema,
+  paginatedSyncSessionsResponseSchema,
+  syncTransactionsBodySchema,
+  workspaceParamsSchema,
+  syncAcceptedResponseSchema,
+} from '../validation/bank-sync.schema';
 
 export async function transactionSyncRoutes(
   fastify: FastifyInstance,
-  controller: TransactionSyncController,
+  controller: TransactionSyncController
 ) {
   // Trigger sync for a connection
   fastify.post(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync",
+    '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync',
     {
+      preValidation: [validateParams(connectionParamsSchema)],
+      preHandler: [validateBody(syncTransactionsBodySchema)],
       schema: {
-        params: {
-          type: "object",
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            connectionId: { type: "string", format: "uuid" },
-          },
-          required: ["workspaceId", "connectionId"],
-        },
-        body: {
-          type: "object",
-          properties: {
-            fromDate: { type: "string", format: "date-time" },
-            toDate: { type: "string", format: "date-time" },
+        tags: ['Transaction Sync'],
+        description: 'Trigger sync for a bank connection',
+        security: [{ bearerAuth: [] }],
+        response: {
+          202: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: syncAcceptedResponseSchema,
+            },
           },
         },
       },
     },
-    (request, reply) => controller.syncTransactions(request as any, reply),
+    (request, reply) =>
+      controller.syncTransactions(request as AuthenticatedRequest, reply)
   );
 
   // Get sync history for a connection
   fastify.get(
-    "/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history",
+    '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history',
     {
+      preValidation: [
+        validateParams(connectionParamsSchema),
+        validateQuery(paginationQuerySchema),
+      ],
       schema: {
-        params: {
-          type: "object",
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            connectionId: { type: "string", format: "uuid" },
-          },
-          required: ["workspaceId", "connectionId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "string" },
-            offset: { type: "string" },
+        tags: ['Transaction Sync'],
+        description: 'Get sync history for a bank connection',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: paginatedSyncSessionsResponseSchema,
+            },
           },
         },
       },
     },
-    (request, reply) => controller.getSyncHistory(request as any, reply),
+    (request, reply) =>
+      controller.getSyncHistory(request as AuthenticatedRequest, reply)
   );
 
   // Get specific sync session
   fastify.get(
-    "/:workspaceId/bank-feed-sync/sync/:sessionId",
+    '/workspaces/:workspaceId/bank-feed-sync/sync/:sessionId',
     {
+      preValidation: [validateParams(sessionParamsSchema)],
       schema: {
-        params: {
-          type: "object",
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-            sessionId: { type: "string", format: "uuid" },
+        tags: ['Transaction Sync'],
+        description: 'Get specific sync session details',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: syncSessionResponseSchema,
+            },
           },
-          required: ["workspaceId", "sessionId"],
         },
       },
     },
-    (request, reply) => controller.getSyncSession(request as any, reply),
+    (request, reply) =>
+      controller.getSyncSession(request as AuthenticatedRequest, reply)
   );
 
   // Get all active syncs
   fastify.get(
-    "/:workspaceId/bank-feed-sync/sync/active",
+    '/workspaces/:workspaceId/bank-feed-sync/sync/active',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(paginationQuerySchema),
+      ],
       schema: {
-        params: {
-          type: "object",
-          required: ["workspaceId"],
-          properties: {
-            workspaceId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "string" },
-            offset: { type: "string" },
+        tags: ['Transaction Sync'],
+        description: 'Get all active sync sessions in a workspace',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+              data: paginatedSyncSessionsResponseSchema,
+            },
           },
         },
       },
     },
-    (request, reply) => controller.getActiveSyncs(request as any, reply),
+    (request, reply) =>
+      controller.getActiveSyncs(request as AuthenticatedRequest, reply)
   );
 }
+

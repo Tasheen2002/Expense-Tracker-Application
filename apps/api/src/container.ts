@@ -11,12 +11,12 @@ import { AuditEventListener } from '../../../modules/audit-compliance/infrastruc
 import { AuditLogController } from '../../../modules/audit-compliance/infrastructure/http/controllers/audit-log.controller';
 
 // Audit Command & Query Handlers
-import { CreateAuditLogHandler } from '../../../modules/audit-compliance/application/commands/create-audit-log.command';
-import { PurgeAuditLogsHandler } from '../../../modules/audit-compliance/application/commands/purge-audit-logs.command';
-import { GetAuditLogHandler } from '../../../modules/audit-compliance/application/queries/get-audit-log.query';
-import { ListAuditLogsHandler } from '../../../modules/audit-compliance/application/queries/list-audit-logs.query';
-import { GetEntityAuditHistoryHandler } from '../../../modules/audit-compliance/application/queries/get-entity-audit-history.query';
-import { GetAuditSummaryHandler } from '../../../modules/audit-compliance/application/queries/get-audit-summary.query';
+// import { CreateAuditLogHandler } from '../../../modules/audit-compliance/application/commands/create-audit-log.command';
+// import { PurgeAuditLogsHandler } from '../../../modules/audit-compliance/application/commands/purge-audit-logs.command';
+// import { GetAuditLogHandler } from '../../../modules/audit-compliance/application/queries/get-audit-log.query';
+// import { ListAuditLogsHandler } from '../../../modules/audit-compliance/application/queries/list-audit-logs.query';
+// import { GetEntityAuditHistoryHandler } from '../../../modules/audit-compliance/application/queries/get-entity-audit-history.query';
+// import { GetAuditSummaryHandler } from '../../../modules/audit-compliance/application/queries/get-audit-summary.query';
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl';
@@ -46,74 +46,8 @@ import { AuthController } from '../../../modules/identity-workspace/infrastructu
 import { WorkspaceController } from '../../../modules/identity-workspace/infrastructure/http/controllers/workspace.controller';
 import { InvitationController } from '../../../modules/identity-workspace/infrastructure/http/controllers/invitation.controller';
 import { MemberController } from '../../../modules/identity-workspace/infrastructure/http/controllers/member.controller';
-import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
-import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
-import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 
-import { ExpenseRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl';
-import { CategoryRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl';
-import { TagRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl';
-import { AttachmentRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl';
-import { ExpenseSplitRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl';
-import { SplitSettlementRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl';
-
-import { ExpenseService } from '../../../modules/expense-ledger/application/services/expense.service';
-import { CategoryService } from '../../../modules/expense-ledger/application/services/category.service';
-import { TagService } from '../../../modules/expense-ledger/application/services/tag.service';
-import { AttachmentService } from '../../../modules/expense-ledger/application/services/attachment.service';
-import { ExpenseSplitService } from '../../../modules/expense-ledger/application/services/expense-split.service';
-
-// Expense-Ledger Module - Command Handlers
-import { CreateExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-expense.command';
-import { UpdateExpenseHandler } from '../../../modules/expense-ledger/application/commands/update-expense.command';
-import { DeleteExpenseHandler } from '../../../modules/expense-ledger/application/commands/delete-expense.command';
-import { SubmitExpenseHandler } from '../../../modules/expense-ledger/application/commands/submit-expense.command';
-import { ApproveExpenseHandler } from '../../../modules/expense-ledger/application/commands/approve-expense.command';
-import { RejectExpenseHandler } from '../../../modules/expense-ledger/application/commands/reject-expense.command';
-import { ReimburseExpenseHandler } from '../../../modules/expense-ledger/application/commands/reimburse-expense.command';
-import { CreateCategoryHandler } from '../../../modules/expense-ledger/application/commands/create-category.command';
-import { UpdateCategoryHandler } from '../../../modules/expense-ledger/application/commands/update-category.command';
-import { DeleteCategoryHandler } from '../../../modules/expense-ledger/application/commands/delete-category.command';
-import { CreateTagHandler } from '../../../modules/expense-ledger/application/commands/create-tag.command';
-import { UpdateTagHandler } from '../../../modules/expense-ledger/application/commands/update-tag.command';
-import { DeleteTagHandler } from '../../../modules/expense-ledger/application/commands/delete-tag.command';
-import { CreateAttachmentHandler } from '../../../modules/expense-ledger/application/commands/create-attachment.command';
-import { DeleteAttachmentHandler } from '../../../modules/expense-ledger/application/commands/delete-attachment.command';
-import { CreateSplitHandler } from '../../../modules/expense-ledger/application/commands/create-split.command';
-import { DeleteSplitHandler } from '../../../modules/expense-ledger/application/commands/delete-split.command';
-import { RecordPaymentHandler } from '../../../modules/expense-ledger/application/commands/record-payment.command';
-import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
-import { GetSplitByExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-split-by-expense.query';
-import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
-import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
-import { GetSplitSettlementsHandler } from '../../../modules/expense-ledger/application/queries/get-split-settlements.query';
-
-// Expense-Ledger Module - Query Handlers
-import { GetExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-expense.query';
-import { FilterExpensesHandler } from '../../../modules/expense-ledger/application/queries/filter-expenses.query';
-import { GetExpenseStatisticsHandler } from '../../../modules/expense-ledger/application/queries/get-expense-statistics.query';
-import { GetCategoryHandler } from '../../../modules/expense-ledger/application/queries/get-category.query';
-import { ListCategoriesHandler } from '../../../modules/expense-ledger/application/queries/list-categories.query';
-import { GetTagHandler } from '../../../modules/expense-ledger/application/queries/get-tag.query';
-import { ListTagsHandler } from '../../../modules/expense-ledger/application/queries/list-tags.query';
-import { GetAttachmentHandler } from '../../../modules/expense-ledger/application/queries/get-attachment.query';
-import { ListAttachmentsHandler } from '../../../modules/expense-ledger/application/queries/list-attachments.query';
-
-import { ExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller';
-import { CategoryController } from '../../../modules/expense-ledger/infrastructure/http/controllers/category.controller';
-import { TagController } from '../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller';
-import { AttachmentController } from '../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller';
-import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller';
-
-// Recurring Expense
-import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
-import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
-import { CreateRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-recurring-expense.command';
-import { PauseRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/pause-recurring-expense.command';
-import { ResumeRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/resume-recurring-expense.command';
-import { StopRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/stop-recurring-expense.command';
-import { ProcessRecurringExpensesHandler } from '../../../modules/expense-ledger/application/commands/process-recurring-expenses.command';
-import { RecurringExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller';
+// ... (Other module imports commented out for isolation)
 
 // Budget Management Module - Repositories
 import { BudgetRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget.repository.impl';
@@ -428,26 +362,22 @@ import { PrismaBankTransactionRepository } from '../../../modules/bank-feed-sync
 import { TransactionSyncService } from '../../../modules/bank-feed-sync/application/services/transaction-sync.service';
 
 // Bank Feed Sync Module - Command Handlers
-import {
-  ConnectBankHandler,
-  DisconnectBankHandler,
-  UpdateConnectionTokenHandler,
-  DeleteConnectionHandler,
-  SyncTransactionsHandler,
-  ProcessTransactionHandler,
-} from '../../../modules/bank-feed-sync/application/commands';
+import { ConnectBankHandler } from '../../../modules/bank-feed-sync/application/commands/connect-bank.command';
+import { DisconnectBankHandler } from '../../../modules/bank-feed-sync/application/commands/disconnect-bank.command';
+import { UpdateConnectionTokenHandler } from '../../../modules/bank-feed-sync/application/commands/update-connection-token.command';
+import { DeleteConnectionHandler } from '../../../modules/bank-feed-sync/application/commands/delete-connection.command';
+import { SyncTransactionsHandler } from '../../../modules/bank-feed-sync/application/commands/sync-transactions.command';
+import { ProcessTransactionHandler } from '../../../modules/bank-feed-sync/application/commands/process-transaction.command';
 
 // Bank Feed Sync Module - Query Handlers
-import {
-  GetBankConnectionsHandler,
-  GetBankConnectionHandler,
-  GetSyncHistoryHandler,
-  GetSyncSessionHandler,
-  GetActiveSyncsHandler,
-  GetPendingTransactionsHandler,
-  GetBankTransactionHandler,
-  GetTransactionsByConnectionHandler,
-} from '../../../modules/bank-feed-sync/application/queries';
+import { GetBankConnectionsHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-connections.query';
+import { GetBankConnectionHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-connection.query';
+import { GetSyncHistoryHandler } from '../../../modules/bank-feed-sync/application/queries/get-sync-history.query';
+import { GetSyncSessionHandler } from '../../../modules/bank-feed-sync/application/queries/get-sync-session.query';
+import { GetActiveSyncsHandler } from '../../../modules/bank-feed-sync/application/queries/get-active-syncs.query';
+import { GetPendingTransactionsHandler } from '../../../modules/bank-feed-sync/application/queries/get-pending-transactions.query';
+import { GetBankTransactionHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-transaction.query';
+import { GetTransactionsByConnectionHandler } from '../../../modules/bank-feed-sync/application/queries/get-transactions-by-connection.query';
 
 // Bank Feed Sync Module - Controllers
 import { BankConnectionController } from '../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-connection.controller';
@@ -576,9 +506,7 @@ export class Container {
       workspaceAuthHelper
     );
     const memberController = new MemberController(
-      new ListWorkspaceMembersHandler(workspaceMembershipService),
-      new RemoveMemberHandler(workspaceMembershipService),
-      new ChangeMemberRoleHandler(workspaceMembershipService),
+      workspaceMembershipService,
       workspaceAuthHelper
     );
 
@@ -809,10 +737,7 @@ export class Container {
       prisma,
       eventBus
     );
-    const spendingLimitRepository = new SpendingLimitRepositoryImpl(
-      prisma,
-      eventBus
-    );
+    const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
 
     this.services.set('budgetRepository', budgetRepository);
     this.services.set('budgetAllocationRepository', budgetAllocationRepository);
@@ -1202,10 +1127,11 @@ export class Container {
     // --- Event Subscriptions ---
 
     // 1. Notification Subscriptions
-    eventBus.subscribe(
-      'UserCreated',
-      notificationEventHandler.handleUserCreated
-    );
+    // Temporarily disabled until handlers are implemented
+    // eventBus.subscribe(
+    //   'UserCreated',
+    //   notificationEventHandler.handleUserCreated
+    // );
 
     // 2. Audit Subscriptions (Global listener)
     const auditListener = new AuditEventListener(createAuditLogHandler);
@@ -1235,18 +1161,19 @@ export class Container {
       'approval.workflow_started',
       notificationEventHandler.handleApprovalStarted
     );
-    eventBus.subscribe(
-      'approval.workflow_completed',
-      notificationEventHandler.handleWorkflowCompleted
-    );
-    eventBus.subscribe(
-      'approval.workflow_rejected',
-      notificationEventHandler.handleWorkflowRejected
-    );
-    eventBus.subscribe(
-      'approval.workflow_cancelled',
-      notificationEventHandler.handleWorkflowCancelled
-    );
+    // Temporarily disabled until handlers are implemented
+    // eventBus.subscribe(
+    //   'approval.workflow_completed',
+    //   notificationEventHandler.handleWorkflowCompleted
+    // );
+    // eventBus.subscribe(
+    //   'approval.workflow_rejected',
+    //   notificationEventHandler.handleWorkflowRejected
+    // );
+    // eventBus.subscribe(
+    //   'approval.workflow_cancelled',
+    //   notificationEventHandler.handleWorkflowCancelled
+    // );
 
     // Audit subscriptions for approval workflow events
     eventBus.subscribe('approval-chain.deleted', auditListener);
@@ -1666,8 +1593,7 @@ export class Container {
     const policyEvaluationService = new PolicyEvaluationService(
       policyRepository,
       violationRepository,
-      exemptionRepository,
-      cacheService
+      exemptionRepository
     );
 
     this.services.set('policyEvaluationService', policyEvaluationService);

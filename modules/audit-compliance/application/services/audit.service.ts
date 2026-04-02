@@ -1,5 +1,5 @@
 import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
 import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
@@ -93,8 +93,6 @@ export class AuditService {
         `[AuditService] AUDIT_FAILURE: Failed to log event "${event.eventType}" ` +
           `(failure #${this.consecutiveFailures}): ${errorMessage}`
       );
-
-      throw error;
     }
   }
 
@@ -126,7 +124,7 @@ export class AuditService {
   async getAuditLogById(
     workspaceId: string,
     auditLogId: string
-  ): Promise<AuditLog | null> {
+  ): Promise<AuditLogDTO | null> {
     const id = AuditLogId.fromString(auditLogId);
     const auditLog = await this.auditRepository.findById(id);
 
@@ -135,7 +133,7 @@ export class AuditService {
       return null;
     }
 
-    return auditLog;
+    return auditLog ? auditLog.toJSON() : null;
   }
 
   /**
@@ -146,7 +144,7 @@ export class AuditService {
     filters?: ListAuditLogsFilters,
     limit: number = 50,
     offset: number = 0
-  ): Promise<PaginatedResult<AuditLog>> {
+  ): Promise<PaginatedResult<AuditLogDTO>> {
     const filter: AuditLogFilter = {
       workspaceId,
       limit,
@@ -154,7 +152,11 @@ export class AuditService {
       ...filters,
     };
 
-    return await this.auditRepository.findByFilter(filter);
+    const result = await this.auditRepository.findByFilter(filter);
+    return {
+      ...result,
+      items: result.items.map((log) => log.toJSON()),
+    };
   }
 
   /**
@@ -165,13 +167,17 @@ export class AuditService {
     entityType: string,
     entityId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<AuditLog>> {
-    return await this.auditRepository.findByEntityId(
+  ): Promise<PaginatedResult<AuditLogDTO>> {
+    const result = await this.auditRepository.findByEntityId(
       workspaceId,
       entityType,
       entityId,
       options
     );
+    return {
+      ...result,
+      items: result.items.map((log) => log.toJSON()),
+    };
   }
 
   /**
@@ -192,5 +198,18 @@ export class AuditService {
       actionBreakdown,
       period: { startDate, endDate },
     };
+  }
+
+  /**
+   * Purge audit logs older than a specific number of days.
+   */
+  async purgeOldLogs(
+    workspaceId: string,
+    olderThanDays: number
+  ): Promise<number> {
+    const olderThan = new Date();
+    olderThan.setDate(olderThan.getDate() - olderThanDays);
+
+    return await this.auditRepository.deleteOlderThan(workspaceId, olderThan);
   }
 }

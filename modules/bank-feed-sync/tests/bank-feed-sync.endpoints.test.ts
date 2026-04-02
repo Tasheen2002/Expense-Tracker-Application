@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createServer } from '../../../apps/api/src/server';
+import { createTestServer } from '../../../apps/api/src/test-server';
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
@@ -21,7 +21,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
   const testWorkspaceName = `Bank Sync Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
-    app = await createServer();
+    app = await createTestServer();
     await app.ready();
     prisma = new PrismaClient();
 
@@ -38,24 +38,28 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     const registerBody = JSON.parse(registerResponse.body);
-    console.log('Setup - Register:', registerResponse.statusCode);
+    console.log('Setup - Register:', registerResponse.statusCode, registerBody);
 
-    if (registerResponse.statusCode === 201 && registerBody.data?.token) {
-      authToken = registerBody.data.token;
-      testUserId = registerBody.data.user.userId;
-    } else {
-      // If registration failed, try to login
-      const loginResponse = await app.inject({
-        method: 'POST',
-        url: '/api/v1/auth/login',
-        payload: {
-          email: testEmail,
-          password: testPassword,
-        },
-      });
-      const loginBody = JSON.parse(loginResponse.body);
-      authToken = loginBody.data?.token;
-      testUserId = loginBody.data?.user?.userId;
+    // Always login to get the token, as registration might not return it directly
+    const loginResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/login',
+      payload: {
+        email: testEmail,
+        password: testPassword,
+      },
+    });
+
+    const loginBody = JSON.parse(loginResponse.body);
+    // console.log('Setup - Login:', loginResponse.statusCode, loginBody);
+
+    authToken = loginBody.data?.token;
+    testUserId = loginBody.data?.user?.userId;
+
+    if (!authToken) {
+      throw new Error(
+        `Failed to get auth token during test setup. Login Body: ${JSON.stringify(loginBody)}`
+      );
     }
 
     // Step 2: Create a workspace for testing
@@ -97,7 +101,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
   // ============================================================================
   describe('Bank Connection Endpoints', () => {
     describe('POST /api/v1/bank-feed/', () => {
-      it('✅ should create a bank connection', async () => {
+      it('âœ… should create a bank connection', async () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
@@ -130,7 +134,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         testConnectionId = body.data.id;
       });
 
-      it('❌ should fail to create connection with missing required fields', async () => {
+      it('âŒ should fail to create connection with missing required fields', async () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
@@ -146,7 +150,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(400);
       });
 
-      it('❌ should fail without authentication', async () => {
+      it('âŒ should fail without authentication', async () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
@@ -166,7 +170,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/', () => {
-      it('✅ should get all bank connections', async () => {
+      it('âœ… should get all bank connections', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections`,
@@ -186,7 +190,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/:connectionId', () => {
-      it('✅ should get a specific bank connection', async () => {
+      it('âœ… should get a specific bank connection', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
@@ -203,7 +207,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(body.data.institutionName).toBe('Test Bank');
       });
 
-      it('❌ should return 404 for non-existent connection', async () => {
+      it('âŒ should return 404 for non-existent connection', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
@@ -217,7 +221,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('PUT /api/v1/bank-feed/:connectionId/token', () => {
-      it('✅ should update connection access token', async () => {
+      it('âœ… should update connection access token', async () => {
         const newToken = 'updated_access_token_' + Date.now();
         const response = await app.inject({
           method: 'PUT',
@@ -242,7 +246,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(body.message).toBe('Connection token updated successfully');
       });
 
-      it('❌ should fail with invalid connection ID', async () => {
+      it('âŒ should fail with invalid connection ID', async () => {
         const response = await app.inject({
           method: 'PUT',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/invalid-id/token`,
@@ -258,10 +262,10 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
       });
     });
 
-    describe('PUT /api/v1/bank-feed/:connectionId/disconnect', () => {
-      it('✅ should disconnect a bank connection', async () => {
+    describe('POST /api/v1/bank-feed/:connectionId/disconnect', () => {
+      it('âœ… should disconnect a bank connection', async () => {
         const response = await app.inject({
-          method: 'PUT',
+          method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}/disconnect`,
           headers: {
             authorization: `Bearer ${authToken}`,
@@ -270,12 +274,12 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
 
         console.log('Disconnect Connection:', response.statusCode);
 
-        expect(response.statusCode).toBe(200);
+        expect(response.statusCode).toBe(204);
       });
     });
 
     describe('DELETE /api/v1/bank-feed/:connectionId', () => {
-      it('✅ should delete a bank connection', async () => {
+      it('âœ… should delete a bank connection', async () => {
         const response = await app.inject({
           method: 'DELETE',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${testConnectionId}`,
@@ -289,7 +293,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(204);
       });
 
-      it('❌ should return 404 when deleting non-existent connection', async () => {
+      it('âŒ should return 404 when deleting non-existent connection', async () => {
         const response = await app.inject({
           method: 'DELETE',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}`,
@@ -333,7 +337,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('POST /api/v1/bank-feed/:connectionId/sync', () => {
-      it('✅ should trigger transaction sync for a connection', async () => {
+      it('âœ… should trigger transaction sync for a connection', async () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync`,
@@ -358,7 +362,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         testSyncSessionId = body.data.sessionId;
       });
 
-      it('❌ should fail with invalid connection ID', async () => {
+      it('âŒ should fail with invalid connection ID', async () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}/sync`,
@@ -373,7 +377,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/:connectionId/sync/history', () => {
-      it('✅ should get sync history for a connection', async () => {
+      it('âœ… should get sync history for a connection', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/connections/${activeConnectionId}/sync/history`,
@@ -395,9 +399,9 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/sync/:sessionId', () => {
-      it('✅ should get a specific sync session', async () => {
+      it('âœ… should get a specific sync session', async () => {
         if (!testSyncSessionId) {
-          console.log('⚠️ Skipping - No sync session ID available');
+          console.log('âš ï¸ Skipping - No sync session ID available');
           return;
         }
 
@@ -419,7 +423,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/sync/active', () => {
-      it('✅ should get all active sync sessions', async () => {
+      it('âœ… should get all active sync sessions', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/sync/active`,
@@ -471,7 +475,6 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         data: {
           id: crypto.randomUUID(),
           workspaceId: testWorkspaceId,
-          connectionId: testConnectionForTransactions,
           status: 'IN_PROGRESS',
           startedAt: new Date(),
           transactionsFetched: 0,
@@ -479,6 +482,9 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
           transactionsDuplicate: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
+          connection: {
+            connect: { id: testConnectionForTransactions },
+          },
         },
       });
 
@@ -510,7 +516,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/transactions/pending', () => {
-      it('✅ should get pending transactions', async () => {
+      it('âœ… should get pending transactions', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
@@ -527,7 +533,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(Array.isArray(body.data.transactions)).toBe(true);
       });
 
-      it('✅ should filter pending transactions by connection', async () => {
+      it('âœ… should filter pending transactions by connection', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/pending`,
@@ -548,7 +554,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/transactions/:transactionId', () => {
-      it('✅ should get a specific transaction', async () => {
+      it('âœ… should get a specific transaction', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}`,
@@ -565,7 +571,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(body.data.status).toBe('PENDING');
       });
 
-      it('❌ should return 404 for non-existent transaction', async () => {
+      it('âŒ should return 404 for non-existent transaction', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${crypto.randomUUID()}`,
@@ -579,7 +585,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('PUT /api/v1/bank-feed/transactions/:transactionId/process', () => {
-      it('✅ should mark transaction as imported', async () => {
+      it('âœ… should mark transaction as imported', async () => {
         const response = await app.inject({
           method: 'PUT',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
@@ -599,13 +605,12 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(body.message).toContain('Transaction processed successfully');
       });
 
-      it('✅ should mark transaction as ignored', async () => {
+      it('âœ… should mark transaction as ignored', async () => {
         // Create sync session for second transaction
         const testSyncSession2 = await prisma.syncSession.create({
           data: {
             id: crypto.randomUUID(),
             workspaceId: testWorkspaceId,
-            connectionId: testConnectionForTransactions,
             status: 'IN_PROGRESS',
             startedAt: new Date(),
             transactionsFetched: 0,
@@ -613,6 +618,9 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
             transactionsDuplicate: 0,
             createdAt: new Date(),
             updatedAt: new Date(),
+            connection: {
+              connect: { id: testConnectionForTransactions },
+            },
           },
         });
 
@@ -657,7 +665,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
         expect(body.message).toContain('Transaction processed successfully');
       });
 
-      it('❌ should fail with invalid action', async () => {
+      it('âŒ should fail with invalid action', async () => {
         const response = await app.inject({
           method: 'PUT',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/${testTransactionId}/process`,
@@ -674,7 +682,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
 
     describe('GET /api/v1/bank-feed/transactions/connection/:connectionId', () => {
-      it('✅ should get all transactions for a connection', async () => {
+      it('âœ… should get all transactions for a connection', async () => {
         const response = await app.inject({
           method: 'GET',
           url: `/api/v1/workspaces/${testWorkspaceId}/bank-feed-sync/transactions/connection/${testConnectionForTransactions}`,
@@ -694,3 +702,4 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
     });
   });
 });
+

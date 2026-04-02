@@ -27,7 +27,7 @@ export class AuditLogCreatedEvent extends DomainEvent {
     return "audit.log_created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  public getPayload(): Record<string, unknown> {
     return {
       auditLogId: this.auditLogId,
       workspaceId: this.workspaceId,
@@ -56,7 +56,7 @@ export class AuditLogsQueriedEvent extends DomainEvent {
     return "audit.logs_queried";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  public getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       queriedBy: this.queriedBy,
@@ -83,7 +83,7 @@ export class AuditRetentionAppliedEvent extends DomainEvent {
     return "audit.retention_applied";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  public getPayload(): Record<string, unknown> {
     return {
       workspaceId: this.workspaceId,
       retentionDays: this.retentionDays,
@@ -96,6 +96,20 @@ export class AuditRetentionAppliedEvent extends DomainEvent {
 // ============================================================================
 // Entity
 // ============================================================================
+
+export interface AuditLogDTO {
+  id: string;
+  workspaceId: string;
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  details: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+}
 
 export interface AuditLogProps {
   id: AuditLogId;
@@ -124,8 +138,6 @@ export class AuditLog extends AggregateRoot {
     const auditLog = new AuditLog({
       ...props,
       id: auditLogId,
-      action: props.action,
-      resource: props.resource,
       createdAt: new Date(),
     });
 
@@ -143,8 +155,24 @@ export class AuditLog extends AggregateRoot {
     return auditLog;
   }
 
-  static fromPersistence(props: AuditLogProps): AuditLog {
+  static reconstitute(props: AuditLogProps): AuditLog {
     return new AuditLog(props);
+  }
+
+  toJSON(): AuditLogDTO {
+    return {
+      id: this.props.id.getValue(),
+      workspaceId: this.props.workspaceId,
+      userId: this.props.userId,
+      action: this.props.action.getValue(),
+      entityType: this.props.resource.entityType,
+      entityId: this.props.resource.entityId,
+      details: this.props.details,
+      metadata: this.props.metadata,
+      ipAddress: this.props.ipAddress,
+      userAgent: this.props.userAgent,
+      createdAt: this.props.createdAt.toISOString(),
+    };
   }
 
   // Getters
