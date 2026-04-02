@@ -3,8 +3,8 @@ import {
   UserLookupCriteriaRequiredError,
   UserNotFoundError,
 } from '../../domain/errors/identity.errors';
-import { IQuery, IQueryHandler } from '../../../../apps/api/src/shared/application/cqrs';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetUserQuery extends IQuery {
   userId?: string;

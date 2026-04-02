@@ -1,6 +1,6 @@
 import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
 import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface ExpireExemptionsInput {
   workspaceId: string;

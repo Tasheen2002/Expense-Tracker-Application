@@ -3,8 +3,8 @@ import { ReceiptTagDefinition } from '../../domain/entities/receipt-tag-definiti
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface UpdateTagCommand extends ICommand {
   tagId: string;

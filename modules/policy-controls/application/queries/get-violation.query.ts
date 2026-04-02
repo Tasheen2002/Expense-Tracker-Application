@@ -1,4 +1,4 @@
-﻿import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { ViolationRepository } from '../../domain/repositories/violation.repository';
 import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
 import { ViolationId } from '../../domain/value-objects/violation-id';
 import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
@@ -6,7 +6,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 export interface GetViolationInput extends IQuery {
   violationId: string;
   workspaceId: string;

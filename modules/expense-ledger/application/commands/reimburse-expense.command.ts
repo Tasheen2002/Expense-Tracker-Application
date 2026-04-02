@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 
 export interface ReimburseExpenseCommand extends ICommand {

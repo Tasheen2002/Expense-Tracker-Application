@@ -133,7 +133,7 @@ export class AuditService {
       return null;
     }
 
-    return auditLog ? auditLog.toJSON() : null;
+    return auditLog ? AuditLog.toDTO(auditLog) : null;
   }
 
   /**
@@ -155,7 +155,7 @@ export class AuditService {
     const result = await this.auditRepository.findByFilter(filter);
     return {
       ...result,
-      items: result.items.map((log) => log.toJSON()),
+      items: result.items.map((log) => AuditLog.toDTO(log)),
     };
   }
 
@@ -176,7 +176,7 @@ export class AuditService {
     );
     return {
       ...result,
-      items: result.items.map((log) => log.toJSON()),
+      items: result.items.map((log) => AuditLog.toDTO(log)),
     };
   }
 

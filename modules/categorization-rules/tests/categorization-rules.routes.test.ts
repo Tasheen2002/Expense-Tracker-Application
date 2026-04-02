@@ -9,7 +9,7 @@ import { ruleExecutionRoutes } from '../infrastructure/http/routes/rule-executio
 import {
   CommandResult,
   QueryResult,
-} from '../../../apps/api/src/shared/application';
+} from '../../../packages/core/src/application/cqrs';
 
 // Create domain errors with statusCode for testing
 class CategoryRuleNotFoundError extends Error {

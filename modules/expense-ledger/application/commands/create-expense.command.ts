@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { ExpenseService } from '../services/expense.service';
 import { CategoryRepository } from '../../domain/repositories/category.repository';

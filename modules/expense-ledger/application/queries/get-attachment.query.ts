@@ -2,7 +2,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
 import { Attachment } from '../../domain/entities/attachment.entity';
 import { AttachmentNotFoundError } from '../../domain/errors/expense.errors';

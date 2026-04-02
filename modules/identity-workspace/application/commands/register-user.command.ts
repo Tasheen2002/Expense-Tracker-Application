@@ -1,8 +1,8 @@
 import { UserManagementService } from '../services/user-management.service';
 import bcrypt from 'bcryptjs';
 
-import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 // Register User Command
 export interface RegisterUserCommand extends ICommand {

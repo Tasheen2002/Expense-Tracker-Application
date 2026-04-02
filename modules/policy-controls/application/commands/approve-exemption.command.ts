@@ -5,7 +5,7 @@ import {
   ExemptionNotFoundError,
   UnauthorizedExemptionApprovalError,
 } from '../../domain/errors/policy-controls.errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface ApproveExemptionInput {
   exemptionId: string;

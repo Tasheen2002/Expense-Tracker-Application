@@ -1,6 +1,6 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CreateWorkspaceCommand extends ICommand {
   name: string;

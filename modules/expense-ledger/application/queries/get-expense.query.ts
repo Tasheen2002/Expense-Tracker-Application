@@ -2,7 +2,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 import { Expense } from '../../domain/entities/expense.entity';
 import { ExpenseNotFoundError } from '../../domain/errors/expense.errors';

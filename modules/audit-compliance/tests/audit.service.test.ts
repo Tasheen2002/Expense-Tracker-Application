@@ -119,7 +119,7 @@ describe('AuditService', () => {
         '123e4567-e89b-12d3-a456-426614174010'
       );
 
-      expect(result).toEqual(mockLog.toJSON());
+      expect(result).toEqual(AuditLog.toDTO(mockLog));
     });
 
     it('should return null when audit log belongs to different workspace', async () => {

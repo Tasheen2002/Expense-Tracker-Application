@@ -156,18 +156,22 @@ export class ApprovalStep {
     this.props.updatedAt = new Date();
   }
 
-  toJSON(): ApprovalStepDTO {
+  /**
+   * Serialize ApprovalStep to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(step: ApprovalStep): ApprovalStepDTO {
     return {
-      stepId: this.getId().getValue(),
-      workflowId: this.getWorkflowId().getValue(),
-      stepNumber: this.getStepNumber(),
-      approverId: this.getApproverId().getValue(),
-      delegatedTo: this.getDelegatedTo()?.getValue(),
-      status: this.getStatus(),
-      comments: this.getComments(),
-      processedAt: this.getProcessedAt()?.toISOString(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      stepId: step.getId().getValue(),
+      workflowId: step.getWorkflowId().getValue(),
+      stepNumber: step.getStepNumber(),
+      approverId: step.getApproverId().getValue(),
+      delegatedTo: step.getDelegatedTo()?.getValue(),
+      status: step.getStatus(),
+      comments: step.getComments(),
+      processedAt: step.getProcessedAt()?.toISOString(),
+      createdAt: step.getCreatedAt().toISOString(),
+      updatedAt: step.getUpdatedAt().toISOString(),
     };
   }
 }

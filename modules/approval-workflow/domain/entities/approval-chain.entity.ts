@@ -443,20 +443,24 @@ export class ApprovalChain extends AggregateRoot {
     return true;
   }
 
-  toJSON(): ApprovalChainDTO {
+  /**
+   * Serialize ApprovalChain to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(chain: ApprovalChain): ApprovalChainDTO {
     return {
-      chainId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
-      minAmount: this.getMinAmount(),
-      maxAmount: this.getMaxAmount(),
-      categoryIds: this.getCategoryIds()?.map((id) => id.getValue()),
-      requiresReceipt: this.requiresReceipt(),
-      approverSequence: this.getApproverSequence().map((id) => id.getValue()),
-      isActive: this.isActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      chainId: chain.getId().getValue(),
+      workspaceId: chain.getWorkspaceId().getValue(),
+      name: chain.getName(),
+      description: chain.getDescription(),
+      minAmount: chain.getMinAmount(),
+      maxAmount: chain.getMaxAmount(),
+      categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()),
+      requiresReceipt: chain.requiresReceipt(),
+      approverSequence: chain.getApproverSequence().map((id) => id.getValue()),
+      isActive: chain.isActive(),
+      createdAt: chain.getCreatedAt().toISOString(),
+      updatedAt: chain.getUpdatedAt().toISOString(),
     };
   }
 }

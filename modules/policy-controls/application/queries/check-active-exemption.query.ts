@@ -1,6 +1,6 @@
 import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface CheckActiveExemptionInput {
   workspaceId: string;

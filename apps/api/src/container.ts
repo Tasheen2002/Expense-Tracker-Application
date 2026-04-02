@@ -11,12 +11,12 @@ import { AuditEventListener } from '../../../modules/audit-compliance/infrastruc
 import { AuditLogController } from '../../../modules/audit-compliance/infrastructure/http/controllers/audit-log.controller';
 
 // Audit Command & Query Handlers
-// import { CreateAuditLogHandler } from '../../../modules/audit-compliance/application/commands/create-audit-log.command';
-// import { PurgeAuditLogsHandler } from '../../../modules/audit-compliance/application/commands/purge-audit-logs.command';
-// import { GetAuditLogHandler } from '../../../modules/audit-compliance/application/queries/get-audit-log.query';
-// import { ListAuditLogsHandler } from '../../../modules/audit-compliance/application/queries/list-audit-logs.query';
-// import { GetEntityAuditHistoryHandler } from '../../../modules/audit-compliance/application/queries/get-entity-audit-history.query';
-// import { GetAuditSummaryHandler } from '../../../modules/audit-compliance/application/queries/get-audit-summary.query';
+import { CreateAuditLogHandler } from '../../../modules/audit-compliance/application/commands/create-audit-log.command';
+import { PurgeAuditLogsHandler } from '../../../modules/audit-compliance/application/commands/purge-audit-logs.command';
+import { GetAuditLogHandler } from '../../../modules/audit-compliance/application/queries/get-audit-log.query';
+import { ListAuditLogsHandler } from '../../../modules/audit-compliance/application/queries/list-audit-logs.query';
+import { GetEntityAuditHistoryHandler } from '../../../modules/audit-compliance/application/queries/get-entity-audit-history.query';
+import { GetAuditSummaryHandler } from '../../../modules/audit-compliance/application/queries/get-audit-summary.query';
 
 // Identity-Workspace Module
 import { UserRepositoryImpl } from '../../../modules/identity-workspace/infrastructure/persistence/user.repository.impl';
@@ -48,6 +48,72 @@ import { InvitationController } from '../../../modules/identity-workspace/infras
 import { MemberController } from '../../../modules/identity-workspace/infrastructure/http/controllers/member.controller';
 
 // ... (Other module imports commented out for isolation)
+
+// Expense-Ledger Module - Repositories
+import { ExpenseRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl';
+import { CategoryRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl';
+import { TagRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl';
+import { AttachmentRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl';
+import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
+import { ExpenseSplitRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl';
+import { SplitSettlementRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl';
+
+// Expense-Ledger Module - Services
+import { ExpenseService } from '../../../modules/expense-ledger/application/services/expense.service';
+import { CategoryService } from '../../../modules/expense-ledger/application/services/category.service';
+import { TagService } from '../../../modules/expense-ledger/application/services/tag.service';
+import { AttachmentService } from '../../../modules/expense-ledger/application/services/attachment.service';
+import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
+import { ExpenseSplitService } from '../../../modules/expense-ledger/application/services/expense-split.service';
+
+// Expense-Ledger Module - Command Handlers
+import { CreateExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-expense.command';
+import { UpdateExpenseHandler } from '../../../modules/expense-ledger/application/commands/update-expense.command';
+import { DeleteExpenseHandler } from '../../../modules/expense-ledger/application/commands/delete-expense.command';
+import { SubmitExpenseHandler } from '../../../modules/expense-ledger/application/commands/submit-expense.command';
+import { ApproveExpenseHandler } from '../../../modules/expense-ledger/application/commands/approve-expense.command';
+import { RejectExpenseHandler } from '../../../modules/expense-ledger/application/commands/reject-expense.command';
+import { ReimburseExpenseHandler } from '../../../modules/expense-ledger/application/commands/reimburse-expense.command';
+import { CreateCategoryHandler } from '../../../modules/expense-ledger/application/commands/create-category.command';
+import { UpdateCategoryHandler } from '../../../modules/expense-ledger/application/commands/update-category.command';
+import { DeleteCategoryHandler } from '../../../modules/expense-ledger/application/commands/delete-category.command';
+import { CreateTagHandler } from '../../../modules/expense-ledger/application/commands/create-tag.command';
+import { UpdateTagHandler } from '../../../modules/expense-ledger/application/commands/update-tag.command';
+import { DeleteTagHandler } from '../../../modules/expense-ledger/application/commands/delete-tag.command';
+import { CreateAttachmentHandler } from '../../../modules/expense-ledger/application/commands/create-attachment.command';
+import { DeleteAttachmentHandler } from '../../../modules/expense-ledger/application/commands/delete-attachment.command';
+import { CreateRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-recurring-expense.command';
+import { PauseRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/pause-recurring-expense.command';
+import { ResumeRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/resume-recurring-expense.command';
+import { StopRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/stop-recurring-expense.command';
+import { ProcessRecurringExpensesHandler } from '../../../modules/expense-ledger/application/commands/process-recurring-expenses.command';
+import { CreateSplitHandler } from '../../../modules/expense-ledger/application/commands/create-split.command';
+import { DeleteSplitHandler } from '../../../modules/expense-ledger/application/commands/delete-split.command';
+import { RecordPaymentHandler } from '../../../modules/expense-ledger/application/commands/record-payment.command';
+
+// Expense-Ledger Module - Query Handlers
+import { GetExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-expense.query';
+import { FilterExpensesHandler } from '../../../modules/expense-ledger/application/queries/filter-expenses.query';
+import { GetExpenseStatisticsHandler } from '../../../modules/expense-ledger/application/queries/get-expense-statistics.query';
+import { GetCategoryHandler } from '../../../modules/expense-ledger/application/queries/get-category.query';
+import { ListCategoriesHandler } from '../../../modules/expense-ledger/application/queries/list-categories.query';
+import { GetTagHandler } from '../../../modules/expense-ledger/application/queries/get-tag.query';
+import { ListTagsHandler } from '../../../modules/expense-ledger/application/queries/list-tags.query';
+import { GetAttachmentHandler } from '../../../modules/expense-ledger/application/queries/get-attachment.query';
+import { ListAttachmentsHandler } from '../../../modules/expense-ledger/application/queries/list-attachments.query';
+import { GetSplitByExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-split-by-expense.query';
+import { GetSplitSettlementsHandler } from '../../../modules/expense-ledger/application/queries/get-split-settlements.query';
+import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
+import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
+import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
+
+// Expense-Ledger Module - Controllers
+import { ExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller';
+import { CategoryController } from '../../../modules/expense-ledger/infrastructure/http/controllers/category.controller';
+import { TagController } from '../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller';
+import { AttachmentController } from '../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller';
+import { RecurringExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller';
+import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller';
 
 // Budget Management Module - Repositories
 import { BudgetRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget.repository.impl';

@@ -2,7 +2,7 @@ import { ExemptionRepository } from '../../domain/repositories/exemption.reposit
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
 import { ExemptionId } from '../../domain/value-objects/exemption-id';
 import { ExemptionNotFoundError } from '../../domain/errors/policy-controls.errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface RejectExemptionInput {
   exemptionId: string;

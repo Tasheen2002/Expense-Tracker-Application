@@ -8,7 +8,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListViolationsInput {
   workspaceId: string;

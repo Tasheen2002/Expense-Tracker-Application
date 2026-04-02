@@ -3,7 +3,7 @@ import { PolicyRepository } from '../../domain/repositories/policy.repository';
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
 import { PolicyId } from '../../domain/value-objects/policy-id';
 import { PolicyNotFoundError } from '../../domain/errors/policy-controls.errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface RequestExemptionInput {
   workspaceId: string;

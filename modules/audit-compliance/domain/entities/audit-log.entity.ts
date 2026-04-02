@@ -159,19 +159,19 @@ export class AuditLog extends AggregateRoot {
     return new AuditLog(props);
   }
 
-  toJSON(): AuditLogDTO {
+  static toDTO(auditLog: AuditLog): AuditLogDTO {
     return {
-      id: this.props.id.getValue(),
-      workspaceId: this.props.workspaceId,
-      userId: this.props.userId,
-      action: this.props.action.getValue(),
-      entityType: this.props.resource.entityType,
-      entityId: this.props.resource.entityId,
-      details: this.props.details,
-      metadata: this.props.metadata,
-      ipAddress: this.props.ipAddress,
-      userAgent: this.props.userAgent,
-      createdAt: this.props.createdAt.toISOString(),
+      id: auditLog.id.getValue(),
+      workspaceId: auditLog.workspaceId,
+      userId: auditLog.userId,
+      action: auditLog.action.getValue(),
+      entityType: auditLog.resource.entityType,
+      entityId: auditLog.resource.entityId,
+      details: auditLog.details,
+      metadata: auditLog.metadata,
+      ipAddress: auditLog.ipAddress,
+      userAgent: auditLog.userAgent,
+      createdAt: auditLog.createdAt.toISOString(),
     };
   }
 

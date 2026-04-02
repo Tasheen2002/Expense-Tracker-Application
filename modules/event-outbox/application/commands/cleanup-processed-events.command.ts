@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { OutboxEventService } from '../services/outbox-event.service';
 import { CLEANUP_RETENTION_DAYS } from '../../domain/constants/outbox.constants';
 

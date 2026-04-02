@@ -1,5 +1,5 @@
-import { ICommand, ICommandHandler } from '../../../../apps/api/src/shared/application/cqrs';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import { MembershipNotFoundError } from '../../domain/errors/identity.errors';
 

@@ -2,7 +2,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { IOutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
 import { BATCH_SIZE } from '../../domain/constants/outbox.constants';
 import { OutboxEvent } from '../../domain/entities/outbox-event.entity';

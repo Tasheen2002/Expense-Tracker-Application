@@ -7,7 +7,7 @@ import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace
 import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { CommandResult } from '../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../packages/core/src/application/command-result';
 
 // Mock CQRS handlers
 const mockListMembersHandler = {

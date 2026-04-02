@@ -4,7 +4,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ArchiveBudgetCommand extends ICommand {
   budgetId: string;
