@@ -5,10 +5,6 @@ import {
   ICommandHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface SyncTransactionsResult {
-  sessionId: string;
-}
-
 export interface SyncTransactionsCommand extends ICommand {
   workspaceId: string;
   connectionId: string;
@@ -18,7 +14,7 @@ export interface SyncTransactionsCommand extends ICommand {
 
 export class SyncTransactionsHandler implements ICommandHandler<
   SyncTransactionsCommand,
-  CommandResult<SyncTransactionsResult>
+  CommandResult<string>
 > {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
@@ -26,8 +22,8 @@ export class SyncTransactionsHandler implements ICommandHandler<
 
   async handle(
     command: SyncTransactionsCommand
-  ): Promise<CommandResult<SyncTransactionsResult>> {
+  ): Promise<CommandResult<string>> {
     const session = await this.transactionSyncService.syncTransactions(command);
-    return CommandResult.success({ sessionId: session.getId().getValue() });
+    return CommandResult.success(session.getId().getValue());
   }
 }

@@ -22,39 +22,11 @@ export class PrismaSyncSessionRepository
   }
 
   async save(session: SyncSession): Promise<void> {
-    const data = {
-      id: session.getId().getValue(),
-      workspaceId: session.getWorkspaceId().getValue(),
-      connectionId: session.getConnectionId().getValue(),
-      status: session.getStatus(),
-      startedAt: session.getStartedAt(),
-      completedAt: session.getCompletedAt(),
-      transactionsFetched: session.getTransactionsFetched(),
-      transactionsImported: session.getTransactionsImported(),
-      transactionsDuplicate: session.getTransactionsDuplicate(),
-      errorMessage: session.getErrorMessage(),
-      metadata: session.getMetadata() as any,
-      createdAt: session.getCreatedAt(),
-      updatedAt: session.getUpdatedAt(),
-    };
+    const data = this.toPersistence(session);
 
     await this.prisma.syncSession.upsert({
       where: { id: session.getId().getValue() },
-      create: {
-        id: session.getId().getValue(),
-        workspaceId: session.getWorkspaceId().getValue(),
-        status: session.getStatus(),
-        startedAt: session.getStartedAt(),
-        completedAt: session.getCompletedAt(),
-        transactionsFetched: session.getTransactionsFetched(),
-        transactionsImported: session.getTransactionsImported(),
-        transactionsDuplicate: session.getTransactionsDuplicate(),
-        errorMessage: session.getErrorMessage(),
-        metadata: session.getMetadata() as any,
-        createdAt: session.getCreatedAt(),
-        updatedAt: session.getUpdatedAt(),
-        connection: { connect: { id: session.getConnectionId().getValue() } },
-      },
+      create: data,
       update: data,
     });
     await this.dispatchEvents(session);
@@ -151,6 +123,26 @@ export class PrismaSyncSessionRepository
       (r) => this.toDomain(r),
       options
     );
+  }
+
+  private toPersistence(
+    session: SyncSession
+  ): Prisma.SyncSessionUncheckedCreateInput {
+    return {
+      id: session.getId().getValue(),
+      workspaceId: session.getWorkspaceId().getValue(),
+      connectionId: session.getConnectionId().getValue(),
+      status: session.getStatus(),
+      startedAt: session.getStartedAt(),
+      completedAt: session.getCompletedAt(),
+      transactionsFetched: session.getTransactionsFetched(),
+      transactionsImported: session.getTransactionsImported(),
+      transactionsDuplicate: session.getTransactionsDuplicate(),
+      errorMessage: session.getErrorMessage(),
+      metadata: session.getMetadata() as any,
+      createdAt: session.getCreatedAt(),
+      updatedAt: session.getUpdatedAt(),
+    };
   }
 
   private toDomain(record: Prisma.SyncSessionGetPayload<object>): SyncSession {

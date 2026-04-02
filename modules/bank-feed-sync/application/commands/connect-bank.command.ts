@@ -9,13 +9,6 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface ConnectBankResult {
-  id: string;
-  institutionName: string;
-  accountName: string;
-  status: string;
-}
-
 export interface ConnectBankCommand extends ICommand {
   workspaceId: string;
   userId: string;
@@ -32,15 +25,13 @@ export interface ConnectBankCommand extends ICommand {
 
 export class ConnectBankHandler implements ICommandHandler<
   ConnectBankCommand,
-  CommandResult<ConnectBankResult>
+  CommandResult<string>
 > {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository
   ) {}
 
-  async handle(
-    command: ConnectBankCommand
-  ): Promise<CommandResult<ConnectBankResult>> {
+  async handle(command: ConnectBankCommand): Promise<CommandResult<string>> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const userId = UserId.fromString(command.userId);
 
@@ -75,13 +66,6 @@ export class ConnectBankHandler implements ICommandHandler<
     connection.activate();
     await this.connectionRepository.save(connection);
 
-    const result: ConnectBankResult = {
-      id: connection.getId().getValue(),
-      institutionName: connection.institutionName,
-      accountName: connection.accountName,
-      status: connection.status,
-    };
-
-    return CommandResult.success(result);
+    return CommandResult.success(connection.getId().getValue());
   }
 }

@@ -37,7 +37,7 @@ export class TransactionSyncController {
         reply,
         result,
         'Sync initiated successfully',
-        result.data,
+        result.data ? { sessionId: result.data } : undefined,
         202
       );
     } catch (error) {
@@ -142,4 +142,3 @@ export class TransactionSyncController {
     }
   }
 }
-

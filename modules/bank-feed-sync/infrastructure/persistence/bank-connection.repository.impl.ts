@@ -22,25 +22,7 @@ export class PrismaBankConnectionRepository
   }
 
   async save(connection: BankConnection): Promise<void> {
-    const data = {
-      id: connection.getId().getValue(),
-      workspaceId: connection.getWorkspaceId().getValue(),
-      userId: connection.getUserId().getValue(),
-      institutionId: connection.getInstitutionId(),
-      institutionName: connection.getInstitutionName(),
-      accountId: connection.getAccountId(),
-      accountName: connection.getAccountName(),
-      accountType: connection.getAccountType(),
-      accountMask: connection.getAccountMask(),
-      currency: connection.getCurrency(),
-      accessToken: connection.getAccessTokenForSync(),
-      status: connection.getStatus(),
-      lastSyncAt: connection.getLastSyncAt(),
-      tokenExpiresAt: connection.getTokenExpiresAt(),
-      errorMessage: connection.getErrorMessage(),
-      createdAt: connection.getCreatedAt(),
-      updatedAt: connection.getUpdatedAt(),
-    };
+    const data = this.toPersistence(connection);
 
     await this.prisma.bankConnection.upsert({
       where: { id: connection.getId().getValue() },
@@ -124,6 +106,30 @@ export class PrismaBankConnectionRepository
         workspaceId: workspaceId.getValue(),
       },
     });
+  }
+
+  private toPersistence(
+    connection: BankConnection
+  ): Prisma.BankConnectionUncheckedCreateInput {
+    return {
+      id: connection.getId().getValue(),
+      workspaceId: connection.getWorkspaceId().getValue(),
+      userId: connection.getUserId().getValue(),
+      institutionId: connection.getInstitutionId(),
+      institutionName: connection.getInstitutionName(),
+      accountId: connection.getAccountId(),
+      accountName: connection.getAccountName(),
+      accountType: connection.getAccountType(),
+      accountMask: connection.getAccountMask(),
+      currency: connection.getCurrency(),
+      accessToken: connection.getAccessTokenForSync(),
+      status: connection.getStatus(),
+      lastSyncAt: connection.getLastSyncAt(),
+      tokenExpiresAt: connection.getTokenExpiresAt(),
+      errorMessage: connection.getErrorMessage(),
+      createdAt: connection.getCreatedAt(),
+      updatedAt: connection.getUpdatedAt(),
+    };
   }
 
   private toDomain(

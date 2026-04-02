@@ -24,74 +24,18 @@ export class PrismaBankTransactionRepository
   }
 
   async save(transaction: BankTransaction): Promise<void> {
-    const data = {
-      id: transaction.getId().getValue(),
-      workspaceId: transaction.getWorkspaceId().getValue(),
-      connectionId: transaction.getConnectionId().getValue(),
-      sessionId: transaction.getSessionId().getValue(),
-      externalId: transaction.getExternalId(),
-      amount: transaction.getAmount(),
-      currency: transaction.getCurrency(),
-      description: transaction.getDescription(),
-      merchantName: transaction.getMerchantName(),
-      categoryName: transaction.getCategoryName(),
-      transactionDate: transaction.getTransactionDate(),
-      postedDate: transaction.getPostedDate(),
-      status: transaction.getStatus(),
-      expenseId: transaction.getExpenseId(),
-      metadata: transaction.getMetadata() as any,
-      createdAt: transaction.getCreatedAt(),
-      updatedAt: transaction.getUpdatedAt(),
-    };
+    const data = this.toPersistence(transaction);
 
     await this.prisma.bankTransaction.upsert({
       where: { id: transaction.getId().getValue() },
-      create: {
-        id: transaction.getId().getValue(),
-        workspaceId: transaction.getWorkspaceId().getValue(),
-        externalId: transaction.getExternalId(),
-        amount: transaction.getAmount(),
-        currency: transaction.getCurrency(),
-        description: transaction.getDescription(),
-        merchantName: transaction.getMerchantName(),
-        categoryName: transaction.getCategoryName(),
-        transactionDate: transaction.getTransactionDate(),
-        postedDate: transaction.getPostedDate(),
-        status: transaction.getStatus(),
-        expenseId: transaction.getExpenseId(),
-        metadata: transaction.getMetadata() as any,
-        createdAt: transaction.getCreatedAt(),
-        updatedAt: transaction.getUpdatedAt(),
-        connection: {
-          connect: { id: transaction.getConnectionId().getValue() },
-        },
-        session: { connect: { id: transaction.getSessionId().getValue() } },
-      },
+      create: data,
       update: data,
     });
     await this.dispatchEvents(transaction);
   }
 
   async saveBatch(transactions: BankTransaction[]): Promise<void> {
-    const data = transactions.map((t) => ({
-      id: t.getId().getValue(),
-      workspaceId: t.getWorkspaceId().getValue(),
-      connectionId: t.getConnectionId().getValue(),
-      sessionId: t.getSessionId().getValue(),
-      externalId: t.getExternalId(),
-      amount: t.getAmount(),
-      currency: t.getCurrency(),
-      description: t.getDescription(),
-      merchantName: t.getMerchantName(),
-      categoryName: t.getCategoryName(),
-      transactionDate: t.getTransactionDate(),
-      postedDate: t.getPostedDate(),
-      status: t.getStatus(),
-      expenseId: t.getExpenseId(),
-      metadata: t.getMetadata() as any,
-      createdAt: t.getCreatedAt(),
-      updatedAt: t.getUpdatedAt(),
-    }));
+    const data = transactions.map((t) => this.toPersistence(t));
 
     await this.prisma.bankTransaction.createMany({
       data,
@@ -256,6 +200,30 @@ export class PrismaBankTransactionRepository
     });
 
     return records.map((r) => this.toDomain(r));
+  }
+
+  private toPersistence(
+    transaction: BankTransaction
+  ): Prisma.BankTransactionUncheckedCreateInput {
+    return {
+      id: transaction.getId().getValue(),
+      workspaceId: transaction.getWorkspaceId().getValue(),
+      connectionId: transaction.getConnectionId().getValue(),
+      sessionId: transaction.getSessionId().getValue(),
+      externalId: transaction.getExternalId(),
+      amount: transaction.getAmount(),
+      currency: transaction.getCurrency(),
+      description: transaction.getDescription(),
+      merchantName: transaction.getMerchantName(),
+      categoryName: transaction.getCategoryName(),
+      transactionDate: transaction.getTransactionDate(),
+      postedDate: transaction.getPostedDate(),
+      status: transaction.getStatus(),
+      expenseId: transaction.getExpenseId(),
+      metadata: transaction.getMetadata() as any,
+      createdAt: transaction.getCreatedAt(),
+      updatedAt: transaction.getUpdatedAt(),
+    };
   }
 
   private toDomain(
