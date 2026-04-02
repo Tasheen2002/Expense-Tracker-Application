@@ -1,13 +1,13 @@
 import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import { WorkspaceId } from '../value-objects';
-import { CategoryId } from '../value-objects';
-import { UserId } from '../value-objects';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
 import {
   EmptyApproverSequenceError,
   InvalidAmountRangeError,
 } from '../errors/approval-workflow.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ApprovalChainCreatedEvent extends DomainEvent {
   constructor(
@@ -302,7 +302,9 @@ export class ApprovalChain extends AggregateRoot {
   }
 
   updateCategoryIds(categoryIds?: string[]): void {
-    this.props.categoryIds = categoryIds?.map((id) => CategoryId.fromString(id));
+    this.props.categoryIds = categoryIds?.map((id) =>
+      CategoryId.fromString(id)
+    );
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(

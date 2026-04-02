@@ -48,7 +48,7 @@ export class WorkflowController {
         reply,
         result,
         'Workflow initiated successfully',
-        result.data,
+        result.data ? { expenseId: result.data } : undefined,
         201
       );
     } catch (error: unknown) {
@@ -106,7 +106,7 @@ export class WorkflowController {
         reply,
         result,
         'Step approved successfully',
-        result.data
+        { expenseId }
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -138,7 +138,7 @@ export class WorkflowController {
         reply,
         result,
         'Step rejected successfully',
-        result.data
+        { expenseId }
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -169,8 +169,7 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Step delegated successfully',
-        result.data
+        'Step delegated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -194,8 +193,7 @@ export class WorkflowController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Workflow cancelled successfully',
-        result.data
+        'Workflow cancelled successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

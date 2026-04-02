@@ -47,7 +47,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain created successfully',
-        result.data,
+        result.data ? { chainId: result.data } : undefined,
         201
       );
     } catch (error: unknown) {
@@ -81,7 +81,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain updated successfully',
-        result.data
+        { chainId }
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -164,8 +164,7 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain activated successfully',
-        result.data
+        'Approval chain activated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -188,8 +187,7 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain deactivated successfully',
-        result.data
+        'Approval chain deactivated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

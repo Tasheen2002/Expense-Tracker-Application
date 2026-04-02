@@ -3,8 +3,8 @@ import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetApprovalChainInput extends IQuery {
   chainId: string;

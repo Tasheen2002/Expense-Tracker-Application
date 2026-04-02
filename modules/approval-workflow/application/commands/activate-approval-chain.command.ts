@@ -1,10 +1,9 @@
 import { ApprovalChainService } from '../services/approval-chain.service';
-import { ApprovalChainDTO } from '../../domain/entities/approval-chain.entity';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface ActivateApprovalChainInput extends ICommand {
   chainId: string;
@@ -13,19 +12,19 @@ export interface ActivateApprovalChainInput extends ICommand {
 
 export class ActivateApprovalChainHandler implements ICommandHandler<
   ActivateApprovalChainInput,
-  CommandResult<ApprovalChainDTO>
+  CommandResult<void>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async handle(
     input: ActivateApprovalChainInput
-  ): Promise<CommandResult<ApprovalChainDTO>> {
+  ): Promise<CommandResult<void>> {
     try {
-      const chain = await this.approvalChainService.activateChain(
+      await this.approvalChainService.activateChain(
         input.chainId,
         input.workspaceId
       );
-      return CommandResult.success(chain.toJSON());
+      return CommandResult.success();
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

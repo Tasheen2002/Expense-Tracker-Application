@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
+import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 // Base class for all approval workflow-related errors
 export class ApprovalWorkflowDomainError extends DomainError {}

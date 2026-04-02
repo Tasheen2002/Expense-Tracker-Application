@@ -1,10 +1,9 @@
 import { WorkflowService } from '../services/workflow.service';
-import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface ApproveStepInput extends ICommand {
   expenseId: string;
@@ -15,16 +14,14 @@ export interface ApproveStepInput extends ICommand {
 
 export class ApproveStepHandler implements ICommandHandler<
   ApproveStepInput,
-  CommandResult<ExpenseWorkflowDTO>
+  CommandResult<void>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(
-    input: ApproveStepInput
-  ): Promise<CommandResult<ExpenseWorkflowDTO>> {
+  async handle(input: ApproveStepInput): Promise<CommandResult<void>> {
     try {
-      const workflow = await this.workflowService.approveStep(input);
-      return CommandResult.success(workflow.toJSON());
+      await this.workflowService.approveStep(input);
+      return CommandResult.success();
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

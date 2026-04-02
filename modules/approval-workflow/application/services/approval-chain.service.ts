@@ -5,7 +5,7 @@ import { ApprovalChainNotFoundError } from '../../domain/errors/approval-workflo
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class ApprovalChainService {
   constructor(private readonly chainRepository: IApprovalChainRepository) {}

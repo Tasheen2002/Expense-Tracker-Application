@@ -8,17 +8,18 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { IExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository';
 import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
 import { ApprovalStep } from '../../domain/entities/approval-step.entity';
 import { ApprovalStepId } from '../../domain/value-objects/approval-step-id';
 import { WorkflowId } from '../../domain/value-objects/workflow-id';
 import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
-import { ExpenseId } from '../../../expense-ledger';
-import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaExpenseWorkflowRepository
   extends PrismaRepository<ExpenseWorkflow>
@@ -29,52 +30,23 @@ export class PrismaExpenseWorkflowRepository
   }
 
   async save(workflow: ExpenseWorkflow): Promise<void> {
+    const workflowData = this.toPersistence(workflow);
+
     await this.prisma.$transaction(async (tx) => {
       await tx.expenseWorkflow.upsert({
         where: { id: workflow.getId().getValue() },
-        create: {
-          id: workflow.getId().getValue(),
-          expenseId: workflow.getExpenseId().getValue(),
-          workspaceId: workflow.getWorkspaceId().getValue(),
-          userId: workflow.getUserId().getValue(),
-          chainId: workflow.getChainId().getValue(),
-          status: toDbWorkflowStatus(workflow.getStatus()),
-          currentStepNumber: workflow.getCurrentStepNumber(),
-          createdAt: workflow.getCreatedAt(),
-          updatedAt: workflow.getUpdatedAt(),
-          completedAt: workflow.getCompletedAt(),
-        },
-        update: {
-          status: toDbWorkflowStatus(workflow.getStatus()),
-          currentStepNumber: workflow.getCurrentStepNumber(),
-          updatedAt: workflow.getUpdatedAt(),
-          completedAt: workflow.getCompletedAt(),
-        },
+        create: workflowData.create,
+        update: workflowData.update,
       });
 
       // Save steps
       for (const step of workflow.getSteps()) {
+        const stepData = this.toPersistence(step);
+
         await tx.approvalStep.upsert({
           where: { id: step.getId().getValue() },
-          create: {
-            id: step.getId().getValue(),
-            workflowId: step.getWorkflowId().getValue(),
-            stepNumber: step.getStepNumber(),
-            approverId: step.getApproverId().getValue(),
-            delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: toDbApprovalStatus(step.getStatus()),
-            comments: step.getComments(),
-            processedAt: step.getProcessedAt(),
-            createdAt: step.getCreatedAt(),
-            updatedAt: step.getUpdatedAt(),
-          },
-          update: {
-            delegatedTo: step.getDelegatedTo()?.getValue(),
-            status: toDbApprovalStatus(step.getStatus()),
-            comments: step.getComments(),
-            processedAt: step.getProcessedAt(),
-            updatedAt: step.getUpdatedAt(),
-          },
+          create: stepData.create,
+          update: stepData.update,
         });
       }
     });
@@ -186,6 +158,68 @@ export class PrismaExpenseWorkflowRepository
       limit,
       offset,
       hasMore: offset + rows.length < total,
+    };
+  }
+
+  private toPersistence(workflow: ExpenseWorkflow): {
+    create: Prisma.ExpenseWorkflowUncheckedCreateInput;
+    update: Prisma.ExpenseWorkflowUncheckedUpdateInput;
+  };
+  private toPersistence(step: ApprovalStep): {
+    create: Prisma.ApprovalStepUncheckedCreateInput;
+    update: Prisma.ApprovalStepUncheckedUpdateInput;
+  };
+  private toPersistence(entity: ExpenseWorkflow | ApprovalStep): {
+    create:
+      | Prisma.ExpenseWorkflowUncheckedCreateInput
+      | Prisma.ApprovalStepUncheckedCreateInput;
+    update:
+      | Prisma.ExpenseWorkflowUncheckedUpdateInput
+      | Prisma.ApprovalStepUncheckedUpdateInput;
+  } {
+    if (entity instanceof ExpenseWorkflow) {
+      return {
+        create: {
+          id: entity.getId().getValue(),
+          expenseId: entity.getExpenseId().getValue(),
+          workspaceId: entity.getWorkspaceId().getValue(),
+          userId: entity.getUserId().getValue(),
+          chainId: entity.getChainId().getValue(),
+          status: toDbWorkflowStatus(entity.getStatus()),
+          currentStepNumber: entity.getCurrentStepNumber(),
+          createdAt: entity.getCreatedAt(),
+          updatedAt: entity.getUpdatedAt(),
+          completedAt: entity.getCompletedAt(),
+        },
+        update: {
+          status: toDbWorkflowStatus(entity.getStatus()),
+          currentStepNumber: entity.getCurrentStepNumber(),
+          updatedAt: entity.getUpdatedAt(),
+          completedAt: entity.getCompletedAt(),
+        },
+      };
+    }
+
+    return {
+      create: {
+        id: entity.getId().getValue(),
+        workflowId: entity.getWorkflowId().getValue(),
+        stepNumber: entity.getStepNumber(),
+        approverId: entity.getApproverId().getValue(),
+        delegatedTo: entity.getDelegatedTo()?.getValue(),
+        status: toDbApprovalStatus(entity.getStatus()),
+        comments: entity.getComments(),
+        processedAt: entity.getProcessedAt(),
+        createdAt: entity.getCreatedAt(),
+        updatedAt: entity.getUpdatedAt(),
+      },
+      update: {
+        delegatedTo: entity.getDelegatedTo()?.getValue(),
+        status: toDbApprovalStatus(entity.getStatus()),
+        comments: entity.getComments(),
+        processedAt: entity.getProcessedAt(),
+        updatedAt: entity.getUpdatedAt(),
+      },
     };
   }
 

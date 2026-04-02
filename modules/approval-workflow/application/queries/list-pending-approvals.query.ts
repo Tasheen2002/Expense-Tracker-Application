@@ -1,11 +1,11 @@
 import { WorkflowService } from '../services/workflow.service';
 import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListPendingApprovalsInput extends IQuery {
   approverId: string;

@@ -1,10 +1,9 @@
 import { WorkflowService } from '../services/workflow.service';
-import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface InitiateWorkflowInput extends ICommand {
   expenseId: string;
@@ -17,16 +16,14 @@ export interface InitiateWorkflowInput extends ICommand {
 
 export class InitiateWorkflowHandler implements ICommandHandler<
   InitiateWorkflowInput,
-  CommandResult<ExpenseWorkflowDTO>
+  CommandResult<string>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(
-    input: InitiateWorkflowInput
-  ): Promise<CommandResult<ExpenseWorkflowDTO>> {
+  async handle(input: InitiateWorkflowInput): Promise<CommandResult<string>> {
     try {
       const workflow = await this.workflowService.initiateWorkflow(input);
-      return CommandResult.success(workflow.toJSON());
+      return CommandResult.success(workflow.getExpenseId().getValue());
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }
