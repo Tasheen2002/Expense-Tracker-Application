@@ -1,9 +1,8 @@
 import {
   DomainEvent,
   DomainEventHandler,
-} from '../../../../apps/api/src/shared/domain/events';
+} from '../../../../packages/core/src/domain/events/domain-event';
 import { CreateAuditLogHandler } from '../../application/commands/create-audit-log.command';
-
 
 export class AuditEventListener implements DomainEventHandler {
   constructor(private readonly createAuditLogHandler: CreateAuditLogHandler) {}

@@ -47,7 +47,9 @@ export const createAuditLogSchema = z.object({
 });
 
 export const purgeAuditLogsQuerySchema = z.object({
-  olderThanDays: z.coerce.number().min(30, 'Minimum retention period is 30 days'),
+  olderThanDays: z.coerce
+    .number()
+    .min(30, 'Minimum retention period is 30 days'),
 });
 
 /**
@@ -78,6 +80,13 @@ export const auditLogResponseSchema = {
     ipAddress: { type: 'string', nullable: true },
     userAgent: { type: 'string', nullable: true },
     createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+export const createAuditLogResponseSchema = {
+  type: 'object',
+  properties: {
+    auditLogId: { type: 'string', format: 'uuid' },
   },
 };
 

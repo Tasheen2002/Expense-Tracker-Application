@@ -1,8 +1,8 @@
-import { AggregateRoot } from "../../../../apps/api/src/shared/domain/aggregate-root";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
-import { AuditLogId } from "../value-objects/audit-log-id.vo";
-import { AuditAction } from "../value-objects/audit-action.vo";
-import { AuditResource } from "../value-objects/audit-resource.vo";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AuditLogId } from '../value-objects/audit-log-id.vo';
+import { AuditAction } from '../value-objects/audit-action.vo';
+import { AuditResource } from '../value-objects/audit-resource.vo';
 
 // ============================================================================
 // Domain Events
@@ -18,13 +18,13 @@ export class AuditLogCreatedEvent extends DomainEvent {
     public readonly userId: string | null,
     public readonly action: string,
     public readonly entityType: string,
-    public readonly entityId: string,
+    public readonly entityId: string
   ) {
-    super(auditLogId, "AuditLog");
+    super(auditLogId, 'AuditLog');
   }
 
   get eventType(): string {
-    return "audit.log_created";
+    return 'audit.log_created';
   }
 
   public getPayload(): Record<string, unknown> {
@@ -40,20 +40,20 @@ export class AuditLogCreatedEvent extends DomainEvent {
 }
 
 /**
- * Emitted when audit logs are queried/exported (for meta-auditing).
+ * Emitted when audit logs are queried/exported.
  */
 export class AuditLogsQueriedEvent extends DomainEvent {
   constructor(
     public readonly workspaceId: string,
     public readonly queriedBy: string,
     public readonly filterCriteria: Record<string, unknown>,
-    public readonly resultCount: number,
+    public readonly resultCount: number
   ) {
-    super(workspaceId, "AuditLog");
+    super(workspaceId, 'AuditLog');
   }
 
   get eventType(): string {
-    return "audit.logs_queried";
+    return 'audit.logs_queried';
   }
 
   public getPayload(): Record<string, unknown> {
@@ -74,13 +74,13 @@ export class AuditRetentionAppliedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly retentionDays: number,
     public readonly logsDeleted: number,
-    public readonly appliedAt: Date,
+    public readonly appliedAt: Date
   ) {
-    super(workspaceId, "AuditLog");
+    super(workspaceId, 'AuditLog');
   }
 
   get eventType(): string {
-    return "audit.retention_applied";
+    return 'audit.retention_applied';
   }
 
   public getPayload(): Record<string, unknown> {
@@ -132,7 +132,7 @@ export class AuditLog extends AggregateRoot {
     this.props = props;
   }
 
-  static create(props: Omit<AuditLogProps, "id" | "createdAt">): AuditLog {
+  static create(props: Omit<AuditLogProps, 'id' | 'createdAt'>): AuditLog {
     const auditLogId = AuditLogId.create();
 
     const auditLog = new AuditLog({
@@ -148,8 +148,8 @@ export class AuditLog extends AggregateRoot {
         props.userId,
         props.action.getValue(),
         props.resource.entityType,
-        props.resource.entityId,
-      ),
+        props.resource.entityId
+      )
     );
 
     return auditLog;

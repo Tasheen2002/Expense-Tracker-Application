@@ -230,7 +230,7 @@ export class AuditLogController {
         reply,
         result,
         'Audit log created successfully',
-        result.data,
+        result.data ? { auditLogId: result.data } : undefined,
         201
       );
     } catch (error) {

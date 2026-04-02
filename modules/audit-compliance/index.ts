@@ -14,4 +14,7 @@ export {
 } from './domain/errors/audit.errors';
 
 // Domain enums (safe to share — value objects, not entities)
-export { AuditActionType, AuditEntityType } from './domain/enums';
+export {
+  AuditActionType,
+  AuditEntityType,
+} from './domain/enums/audit-action-type.enum';

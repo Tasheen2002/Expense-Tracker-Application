@@ -2,7 +2,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AuditService, AuditSummary } from '../services/audit.service';
 
 export interface GetAuditSummaryQuery extends IQuery {

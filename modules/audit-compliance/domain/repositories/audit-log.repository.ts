@@ -3,7 +3,7 @@ import { AuditLogId } from '../value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface AuditLogFilter {
   workspaceId: string;

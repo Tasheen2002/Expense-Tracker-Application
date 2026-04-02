@@ -2,7 +2,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AuditService } from '../services/audit.service';
 import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditLogNotFoundError } from '../../domain/errors/audit.errors';

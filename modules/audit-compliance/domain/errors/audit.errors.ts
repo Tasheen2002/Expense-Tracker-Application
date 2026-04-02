@@ -1,9 +1,9 @@
-import { DomainError } from "../../../../apps/api/src/shared/domain/domain-error";
+import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 export class InvalidAuditActionError extends DomainError {
   constructor(action: string) {
     super(
-      `Action cannot be empty and must be less than 100 characters. Received: ${action}`,
+      `Action cannot be empty and must be less than 100 characters. Received: ${action}`
     );
   }
 }
@@ -23,7 +23,7 @@ export class AuditLogNotFoundError extends DomainError {
 export class UnauthorizedAuditAccessError extends DomainError {
   constructor(userId: string, workspaceId: string) {
     super(
-      `User '${userId}' is not authorized to access audit logs in workspace '${workspaceId}'.`,
+      `User '${userId}' is not authorized to access audit logs in workspace '${workspaceId}'.`
     );
   }
 }
@@ -31,7 +31,7 @@ export class UnauthorizedAuditAccessError extends DomainError {
 export class InvalidAuditDateRangeError extends DomainError {
   constructor(startDate: Date, endDate: Date) {
     super(
-      `Invalid date range: start date '${startDate.toISOString()}' must be before end date '${endDate.toISOString()}'.`,
+      `Invalid date range: start date '${startDate.toISOString()}' must be before end date '${endDate.toISOString()}'.`
     );
   }
 }
@@ -39,7 +39,7 @@ export class InvalidAuditDateRangeError extends DomainError {
 export class AuditRetentionViolationError extends DomainError {
   constructor(retentionDays: number, requestedDays: number) {
     super(
-      `Cannot access audit logs older than ${retentionDays} days. Requested data is ${requestedDays} days old.`,
+      `Cannot access audit logs older than ${retentionDays} days. Requested data is ${requestedDays} days old.`
     );
   }
 }
@@ -53,7 +53,7 @@ export class InvalidAuditFilterError extends DomainError {
 export class AuditLogImmutableError extends DomainError {
   constructor(auditLogId: string) {
     super(
-      `Audit log '${auditLogId}' cannot be modified. Audit logs are immutable.`,
+      `Audit log '${auditLogId}' cannot be modified. Audit logs are immutable.`
     );
   }
 }
@@ -61,7 +61,7 @@ export class AuditLogImmutableError extends DomainError {
 export class AuditLogExportLimitExceededError extends DomainError {
   constructor(requestedCount: number, maxLimit: number) {
     super(
-      `Cannot export ${requestedCount} audit logs. Maximum export limit is ${maxLimit}.`,
+      `Cannot export ${requestedCount} audit logs. Maximum export limit is ${maxLimit}.`
     );
   }
 }

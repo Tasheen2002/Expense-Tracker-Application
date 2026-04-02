@@ -1,4 +1,4 @@
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
@@ -10,7 +10,7 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface CreateAuditLogDTO {
   workspaceId: string;

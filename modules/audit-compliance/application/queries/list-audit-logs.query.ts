@@ -2,9 +2,9 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AuditService, ListAuditLogsFilters } from '../services/audit.service';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 
 export interface ListAuditLogsQuery extends IQuery {

@@ -20,6 +20,7 @@ import {
   createAuditLogSchema,
   purgeAuditLogsQuerySchema,
   auditLogResponseSchema,
+  createAuditLogResponseSchema,
   auditSummaryResponseSchema,
   paginatedAuditLogsResponseSchema,
 } from '../validation/audit-log.schema';
@@ -29,7 +30,6 @@ const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
-
 
 export async function auditLogRoutes(
   fastify: FastifyInstance,
@@ -97,10 +97,7 @@ export async function auditLogRoutes(
       },
     },
     (request, reply) =>
-      controller.getEntityAuditHistory(
-        request as AuthenticatedRequest,
-        reply
-      )
+      controller.getEntityAuditHistory(request as AuthenticatedRequest, reply)
   );
 
   // GET / (List)
@@ -187,7 +184,7 @@ export async function auditLogRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: auditLogResponseSchema,
+              data: createAuditLogResponseSchema,
             },
           },
         },
