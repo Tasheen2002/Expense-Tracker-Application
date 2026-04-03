@@ -7,7 +7,7 @@ import { PaymentMethod } from '../enums/payment-method';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 export { PaginatedResult, PaginationOptions };
 
 export interface ExpenseFilters {

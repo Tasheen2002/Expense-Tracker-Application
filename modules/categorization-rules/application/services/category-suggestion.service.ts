@@ -6,7 +6,7 @@ import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-
 import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id'
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score'
 import { SuggestionNotFoundError } from '../../domain/errors/categorization-rules.errors'
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface'
 
 export class CategorySuggestionService {
   constructor(

@@ -2,12 +2,12 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { TagRepository } from "../../domain/repositories/tag.repository";
 import { Tag } from "../../domain/entities/tag.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class TagRepositoryImpl implements TagRepository {
   constructor(

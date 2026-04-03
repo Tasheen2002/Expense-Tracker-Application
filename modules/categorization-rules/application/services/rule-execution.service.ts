@@ -10,7 +10,7 @@ import { RuleExecutionId } from "../../domain/value-objects/rule-execution-id";
 import { CategoryRuleNotFoundError } from "../../domain/errors/categorization-rules.errors";
 import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
 import { ConfidenceScore } from "../../domain/value-objects/confidence-score";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class RuleExecutionService {
   constructor(

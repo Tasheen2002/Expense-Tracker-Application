@@ -1,8 +1,8 @@
 import { ScenarioId } from '../value-objects/scenario-id';
 import { PlanId } from '../value-objects/plan-id';
 import { UserId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events

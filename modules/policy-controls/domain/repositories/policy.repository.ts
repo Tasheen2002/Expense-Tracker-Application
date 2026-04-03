@@ -1,7 +1,7 @@
 import { ExpensePolicy } from "../entities/expense-policy.entity";
 import { PolicyId } from "../value-objects/policy-id";
 import { PolicyType } from "../enums/policy-type.enum";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export interface PolicyRepository {

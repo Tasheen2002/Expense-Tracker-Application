@@ -15,8 +15,8 @@ import { SplitType } from '../../domain/enums/split-type';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
   constructor(

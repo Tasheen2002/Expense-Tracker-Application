@@ -2,12 +2,12 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { AttachmentRepository } from "../../domain/repositories/attachment.repository";
 import { Attachment } from "../../domain/entities/attachment.entity";
 import { AttachmentId } from "../../domain/value-objects/attachment-id";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class AttachmentRepositoryImpl implements AttachmentRepository {
   constructor(

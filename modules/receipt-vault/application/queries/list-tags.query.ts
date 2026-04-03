@@ -4,7 +4,7 @@ import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definiti
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListTagsDto {
   workspaceId: string;

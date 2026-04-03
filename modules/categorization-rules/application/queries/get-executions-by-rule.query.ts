@@ -1,6 +1,6 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
 import { RuleId } from '../../domain/value-objects/rule-id';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { RuleExecution } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,

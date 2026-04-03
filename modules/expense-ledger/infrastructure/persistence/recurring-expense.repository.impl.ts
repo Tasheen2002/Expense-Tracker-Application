@@ -6,12 +6,12 @@ import {
 } from "../../domain/entities/recurring-expense.entity";
 import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
 import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 export class PrismaRecurringExpenseRepository implements RecurringExpenseRepository {
   constructor(

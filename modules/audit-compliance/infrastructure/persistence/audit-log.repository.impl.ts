@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   IAuditLogRepository,
@@ -13,7 +13,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
-import { PrismaRepositoryHelper } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 export class AuditLogRepositoryImpl
   extends PrismaRepository<AuditLog>

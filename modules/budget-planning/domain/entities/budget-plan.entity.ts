@@ -4,7 +4,7 @@ import { UserId } from '../../../identity-workspace';
 import { PlanPeriod } from '../value-objects/plan-period';
 import { PlanStatus } from '../enums/plan-status.enum';
 import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events

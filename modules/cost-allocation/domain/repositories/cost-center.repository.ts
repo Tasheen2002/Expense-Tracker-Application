@@ -4,7 +4,7 @@ import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/wo
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface CostCenterRepository {
   save(costCenter: CostCenter): Promise<void>;

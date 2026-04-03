@@ -14,7 +14,7 @@ import {
   MAX_OCR_CONFIDENCE,
 } from '../constants/receipt.constants';
 import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events

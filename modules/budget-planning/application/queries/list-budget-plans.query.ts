@@ -1,6 +1,6 @@
 import { BudgetPlanService } from '../services/budget-plan.service';
 import { BudgetPlan } from '../../domain/entities/budget-plan.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PlanStatus } from '../../domain/enums/plan-status.enum';
 import {
   IQuery,

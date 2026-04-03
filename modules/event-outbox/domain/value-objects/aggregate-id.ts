@@ -1,4 +1,4 @@
-import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects/uuid-id.base";
+import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
 import { v4 as uuidv4 } from "uuid";
 
 export class AggregateId extends UuidId {

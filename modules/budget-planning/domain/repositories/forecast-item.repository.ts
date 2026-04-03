@@ -5,7 +5,7 @@ import { CategoryId } from "../../../expense-ledger/domain/value-objects/categor
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ForecastItemRepository {
   save(item: ForecastItem): Promise<void>;

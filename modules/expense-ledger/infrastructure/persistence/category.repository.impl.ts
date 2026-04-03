@@ -2,12 +2,12 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { CategoryRepository } from "../../domain/repositories/category.repository";
 import { Category } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class CategoryRepositoryImpl implements CategoryRepository {
   constructor(

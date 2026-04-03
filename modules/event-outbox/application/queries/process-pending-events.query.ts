@@ -1,7 +1,7 @@
 import { IOutboxEventRepository } from "../../domain/repositories/outbox-event.repository";
 import { BATCH_SIZE } from "../../domain/constants/outbox.constants";
 import { OutboxEvent } from "../../domain/entities/outbox-event.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ProcessPendingEventsQuery {
   limit?: number;

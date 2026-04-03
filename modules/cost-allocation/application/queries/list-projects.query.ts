@@ -1,6 +1,6 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { Project } from '../../domain/entities/project.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,

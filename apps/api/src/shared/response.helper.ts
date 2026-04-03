@@ -1,7 +1,7 @@
 import { FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
-import { CommandResult } from './application/command-result';
-import { QueryResult } from './application/query-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 /**
  * Standard success response format

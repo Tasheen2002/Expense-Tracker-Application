@@ -8,7 +8,7 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
 
 export class CategoryService {

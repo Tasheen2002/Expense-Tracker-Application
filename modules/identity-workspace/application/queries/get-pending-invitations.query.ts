@@ -5,7 +5,7 @@ import { QueryResult } from '../../../../packages/core/src/application/query-res
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetPendingInvitationsQuery extends IQuery {
   workspaceId: string;

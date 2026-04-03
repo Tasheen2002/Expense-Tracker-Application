@@ -1,8 +1,8 @@
 import { ForecastId } from '../value-objects/forecast-id';
 import { PlanId } from '../value-objects/plan-id';
 import { ForecastType } from '../enums/forecast-type.enum';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events

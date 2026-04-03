@@ -1,4 +1,4 @@
-import { DomainEventHandler } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { DomainEventHandler } from '../../../../packages/core/src/domain/events/domain-event';
 import { ExpenseStatusChangedEvent } from "../../../expense-ledger/domain/entities/expense.entity";
 import { BudgetThresholdExceededEvent } from "../../../budget-management/domain/entities/budget.entity";
 import { ApprovalWorkflowStartedEvent } from "../../../approval-workflow/domain/entities/expense-workflow.entity";

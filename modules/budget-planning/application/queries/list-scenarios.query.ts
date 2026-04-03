@@ -1,6 +1,6 @@
 import { ScenarioService } from '../services/scenario.service';
 import { Scenario } from '../../domain/entities/scenario.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,

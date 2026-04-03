@@ -5,7 +5,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
 import { Tag } from '../../domain/entities/tag.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListTagsQuery extends IQuery {
   readonly workspaceId: string;

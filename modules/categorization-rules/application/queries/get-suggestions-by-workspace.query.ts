@@ -1,6 +1,6 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,

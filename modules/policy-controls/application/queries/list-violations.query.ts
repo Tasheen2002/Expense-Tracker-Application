@@ -7,7 +7,7 @@ import { ViolationStatus } from '../../domain/enums/violation-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListViolationsInput {

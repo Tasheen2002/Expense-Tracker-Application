@@ -5,7 +5,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
 import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { SettlementStatus } from '../../domain/enums/settlement-status';
 
 export interface ListUserSettlementsQuery extends IQuery {

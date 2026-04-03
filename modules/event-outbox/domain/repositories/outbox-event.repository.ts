@@ -4,7 +4,7 @@ import { OutboxEventStatus } from "../enums/outbox-event-status.enum";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface IOutboxEventRepository {
   save(event: OutboxEvent): Promise<void>;

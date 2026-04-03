@@ -4,7 +4,7 @@ import { WorkspaceId } from '../../../identity-workspace';
 import { ViolationSeverity } from '../enums/violation-severity.enum';
 import { ViolationStatus } from '../enums/violation-status.enum';
 import { ViolationAlreadyResolvedError } from '../errors/policy-controls.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 // ============================================================================

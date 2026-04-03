@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "lib": ["ESNext"],
     "strict": true,
     "esModuleInterop": true,
@@ -13,10 +13,12 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@core/*": ["packages/core/src/*"],
       "@packages/*": ["packages/*/src"],
-      "@modules/*": ["modules/*"]
+      "@modules/*": ["modules/*"],
+      "@shared/*": ["apps/api/src/shared/*"]
     }
   },
   "include": ["apps/**/*", "modules/**/*", "packages/**/*"],

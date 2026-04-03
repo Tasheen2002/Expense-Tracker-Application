@@ -6,8 +6,8 @@ import {
 import { MetadataId } from '../../domain/value-objects/metadata-id';
 import { ReceiptId } from '../../domain/value-objects/receipt-id';
 import { IReceiptMetadataRepository } from '../../domain/repositories/receipt-metadata.repository';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ReceiptMetadataRepositoryImpl
   extends PrismaRepository<ReceiptMetadata>

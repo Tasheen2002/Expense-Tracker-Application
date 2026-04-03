@@ -1,6 +1,6 @@
 import { ForecastService } from '../services/forecast.service';
 import { Forecast } from '../../domain/entities/forecast.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,

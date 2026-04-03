@@ -4,7 +4,7 @@ import { PlanId } from "../value-objects/plan-id";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ScenarioRepository {
   save(scenario: Scenario): Promise<void>;

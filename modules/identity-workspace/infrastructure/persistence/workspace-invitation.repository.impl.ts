@@ -7,13 +7,13 @@ import {
 import { WorkspaceMembership } from "../../domain/entities/workspace-membership.entity";
 import { InvitationId } from "../../domain/value-objects/invitation-id.vo";
 import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
 
 export class WorkspaceInvitationRepositoryImpl
   extends PrismaRepository<WorkspaceInvitation>

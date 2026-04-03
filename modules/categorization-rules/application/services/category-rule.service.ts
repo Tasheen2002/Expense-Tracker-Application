@@ -10,7 +10,7 @@ import {
   DuplicateRuleNameError,
   UnauthorizedRuleAccessError,
 } from "../../domain/errors/categorization-rules.errors";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class CategoryRuleService {

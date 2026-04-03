@@ -5,7 +5,7 @@ import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface CategorySuggestionRepository {
   save(suggestion: CategorySuggestion): Promise<void>;
