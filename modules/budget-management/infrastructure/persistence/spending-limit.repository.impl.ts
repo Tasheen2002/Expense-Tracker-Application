@@ -11,9 +11,16 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '../../../../packages/core/src/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
-export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class SpendingLimitRepositoryImpl
+  extends PrismaRepository<SpendingLimit>
+  implements ISpendingLimitRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(limit: SpendingLimit): Promise<void> {
     await this.prisma.spendingLimit.upsert({
@@ -37,6 +44,8 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
         updatedAt: limit.getUpdatedAt(),
       },
     });
+
+    await this.dispatchEvents(limit);
   }
 
   async findById(
@@ -183,12 +192,21 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
   }
 
   async delete(id: SpendingLimitId, workspaceId: string): Promise<void> {
+    const limit = await this.findById(id, workspaceId);
+    if (limit) {
+      limit.markAsDeleted();
+    }
+
     await this.prisma.spendingLimit.delete({
       where: {
         id: id.getValue(),
         workspaceId,
       },
     });
+
+    if (limit) {
+      await this.dispatchEvents(limit);
+    }
   }
 
   private toDomain(row: Prisma.SpendingLimitGetPayload<object>): SpendingLimit {

@@ -53,32 +53,36 @@ export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 /**
  * Update Budget Schema
  */
-export const updateBudgetSchema = z.object({
-  name: z
-    .string()
-    .min(BUDGET_NAME_MIN_LENGTH)
-    .max(BUDGET_NAME_MAX_LENGTH)
-    .optional(),
-  description: z
-    .string()
-    .max(BUDGET_DESCRIPTION_MAX_LENGTH)
-    .optional()
-    .nullable(),
-  totalAmount: z
-    .number()
-    .min(MIN_BUDGET_AMOUNT)
-    .max(MAX_BUDGET_AMOUNT)
-    .optional(),
-  currency: z
-    .string()
-    .length(3)
-    .refine((val) => SUPPORTED_CURRENCIES.includes(val))
-    .optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  isRecurring: z.boolean().optional(),
-  rolloverUnused: z.boolean().optional(),
-});
+export const updateBudgetSchema = z
+  .object({
+    name: z
+      .string()
+      .min(BUDGET_NAME_MIN_LENGTH)
+      .max(BUDGET_NAME_MAX_LENGTH)
+      .optional(),
+    description: z
+      .string()
+      .max(BUDGET_DESCRIPTION_MAX_LENGTH)
+      .optional()
+      .nullable(),
+    totalAmount: z
+      .number()
+      .min(MIN_BUDGET_AMOUNT)
+      .max(MAX_BUDGET_AMOUNT)
+      .optional(),
+    currency: z
+      .string()
+      .length(3)
+      .refine((val) => SUPPORTED_CURRENCIES.includes(val))
+      .optional(),
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    isRecurring: z.boolean().optional(),
+    rolloverUnused: z.boolean().optional(),
+  })
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'At least one budget field must be provided',
+  });
 
 export type UpdateBudgetInput = z.infer<typeof updateBudgetSchema>;
 
@@ -124,18 +128,22 @@ export const addAllocationSchema = z.object({
     .optional(),
 });
 
-export const updateAllocationSchema = z.object({
-  allocatedAmount: z
-    .number()
-    .min(MIN_BUDGET_AMOUNT)
-    .max(MAX_BUDGET_AMOUNT)
-    .optional(),
-  description: z
-    .string()
-    .max(BUDGET_DESCRIPTION_MAX_LENGTH)
-    .optional()
-    .nullable(),
-});
+export const updateAllocationSchema = z
+  .object({
+    allocatedAmount: z
+      .number()
+      .min(MIN_BUDGET_AMOUNT)
+      .max(MAX_BUDGET_AMOUNT)
+      .optional(),
+    description: z
+      .string()
+      .max(BUDGET_DESCRIPTION_MAX_LENGTH)
+      .optional()
+      .nullable(),
+  })
+  .refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'At least one allocation field must be provided',
+  });
 
 /**
  * List Budgets Query Schema

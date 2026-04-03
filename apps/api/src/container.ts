@@ -143,6 +143,7 @@ import { GetBudgetHandler } from '../../../modules/budget-management/application
 import { ListBudgetsHandler } from '../../../modules/budget-management/application/queries/list-budgets.query';
 import { GetAllocationsHandler } from '../../../modules/budget-management/application/queries/get-allocations.query';
 import { GetUnreadAlertsHandler } from '../../../modules/budget-management/application/queries/get-unread-alerts.query';
+import { GetSpendingLimitHandler } from '../../../modules/budget-management/application/queries/get-spending-limit.query';
 import { ListSpendingLimitsHandler } from '../../../modules/budget-management/application/queries/list-spending-limits.query';
 
 // Budget Management Module - Controllers
@@ -803,7 +804,10 @@ export class Container {
       prisma,
       eventBus
     );
-    const spendingLimitRepository = new SpendingLimitRepositoryImpl(prisma);
+    const spendingLimitRepository = new SpendingLimitRepositoryImpl(
+      prisma,
+      eventBus
+    );
 
     this.services.set('budgetRepository', budgetRepository);
     this.services.set('budgetAllocationRepository', budgetAllocationRepository);
@@ -847,6 +851,9 @@ export class Container {
     const listBudgetsHandler = new ListBudgetsHandler(budgetService);
     const getAllocationsHandler = new GetAllocationsHandler(budgetService);
     const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
+    const getSpendingLimitHandler = new GetSpendingLimitHandler(
+      spendingLimitService
+    );
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
       spendingLimitService
     );
@@ -871,6 +878,7 @@ export class Container {
       createSpendingLimitHandler,
       updateSpendingLimitHandler,
       deleteSpendingLimitHandler,
+      getSpendingLimitHandler,
       listSpendingLimitsHandler
     );
 

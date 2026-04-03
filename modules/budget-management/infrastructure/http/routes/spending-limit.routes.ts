@@ -150,6 +150,28 @@ export async function spendingLimitRoutes(
       controller.listLimits(request as AuthenticatedRequest, reply)
   );
 
+  // Get spending limit by ID
+  fastify.get(
+    '/:workspaceId/spending-limits/:limitId',
+    {
+      schema: {
+        tags: ['Spending Limit'],
+        description: 'Get spending limit by ID',
+        params: {
+          type: 'object',
+          required: ['workspaceId', 'limitId'],
+          properties: {
+            workspaceId: { type: 'string', format: 'uuid' },
+            limitId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: singleResponse(200, spendingLimitDataSchema),
+      },
+    },
+    (request, reply) =>
+      controller.getLimit(request as AuthenticatedRequest, reply)
+  );
+
   // Update spending limit
   fastify.patch(
     '/:workspaceId/spending-limits/:limitId',

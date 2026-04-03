@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfa
 import { CreateSpendingLimitHandler } from '../../../application/commands/create-spending-limit.command';
 import { UpdateSpendingLimitHandler } from '../../../application/commands/update-spending-limit.command';
 import { DeleteSpendingLimitHandler } from '../../../application/commands/delete-spending-limit.command';
+import { GetSpendingLimitHandler } from '../../../application/queries/get-spending-limit.query';
 import { ListSpendingLimitsHandler } from '../../../application/queries/list-spending-limits.query';
 import { SpendingLimit } from '../../../domain/entities/spending-limit.entity';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
@@ -13,8 +14,34 @@ export class SpendingLimitController {
     private readonly createLimitHandler: CreateSpendingLimitHandler,
     private readonly updateLimitHandler: UpdateSpendingLimitHandler,
     private readonly deleteLimitHandler: DeleteSpendingLimitHandler,
+    private readonly getLimitHandler: GetSpendingLimitHandler,
     private readonly listLimitsHandler: ListSpendingLimitsHandler
   ) {}
+
+  async getLimit(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; limitId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, limitId } = request.params;
+
+      const result = await this.getLimitHandler.handle({
+        limitId,
+        workspaceId,
+      });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Spending limit retrieved successfully',
+        result.data ? SpendingLimit.toDTO(result.data) : undefined
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
 
   async createLimit(
     request: AuthenticatedRequest<{

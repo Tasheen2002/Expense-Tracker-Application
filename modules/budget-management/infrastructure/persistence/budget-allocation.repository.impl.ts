@@ -193,9 +193,18 @@ export class BudgetAllocationRepositoryImpl
   }
 
   async delete(id: AllocationId): Promise<void> {
+    const allocation = await this.findById(id);
+    if (allocation) {
+      allocation.markAsDeleted();
+    }
+
     await this.prisma.budgetAllocation.delete({
       where: { id: id.getValue() },
     });
+
+    if (allocation) {
+      await this.dispatchEvents(allocation);
+    }
   }
 
   async deleteByBudget(budgetId: BudgetId): Promise<void> {

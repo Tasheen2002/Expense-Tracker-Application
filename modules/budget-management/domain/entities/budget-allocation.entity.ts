@@ -3,6 +3,7 @@ import { BudgetId } from '../value-objects/budget-id';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidAmountError,
+  InvalidAlertThresholdError,
   NegativeAmountError,
 } from '../errors/budget.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
@@ -430,9 +431,9 @@ export class BudgetAllocation extends AggregateRoot {
       });
       return [alert];
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      // InvalidAlertThresholdError can be safely ignored; any other error re-throws
-      if (!msg.includes('threshold')) throw error;
+      if (!(error instanceof InvalidAlertThresholdError)) {
+        throw error;
+      }
       return [];
     }
   }
