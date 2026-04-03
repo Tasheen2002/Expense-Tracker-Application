@@ -9,7 +9,7 @@ import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class SpendingLimitService {
   constructor(private readonly limitRepository: ISpendingLimitRepository) {}
@@ -52,7 +52,7 @@ export class SpendingLimitService {
       throw new SpendingLimitNotFoundError(limitId);
     }
 
-    if (updates.limitAmount) {
+    if (updates.limitAmount !== undefined) {
       limit.updateLimitAmount(updates.limitAmount);
     }
 

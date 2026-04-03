@@ -5,8 +5,8 @@ import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CreateSpendingLimitCommand extends ICommand {
   workspaceId: string;

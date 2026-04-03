@@ -1,9 +1,9 @@
-import { randomUUID } from "crypto";
-import { UuidId } from "../../../../apps/api/src/shared/domain/value-objects";
+import { randomUUID } from 'crypto';
+import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
 
 export class AllocationId extends UuidId {
   private constructor(value: string) {
-    super(value, "AllocationId");
+    super(value, 'AllocationId');
   }
 
   static create(): AllocationId {

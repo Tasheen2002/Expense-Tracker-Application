@@ -14,7 +14,7 @@ import {
 import {
   createBudgetSchema,
   updateBudgetSchema,
-  budgetQuerySchema,
+  listBudgetsSchema,
   addAllocationSchema,
   updateAllocationSchema,
   workspaceParamsSchema,
@@ -158,7 +158,7 @@ export async function budgetRoutes(
     {
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateQuery(budgetQuerySchema),
+        validateQuery(listBudgetsSchema),
         requireRole(['owner', 'admin', 'manager', 'viewer']),
       ],
       schema: {

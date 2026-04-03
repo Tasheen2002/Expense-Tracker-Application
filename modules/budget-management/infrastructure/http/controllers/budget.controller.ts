@@ -219,7 +219,7 @@ export class BudgetController {
         reply,
         result,
         'Budget retrieved successfully',
-        result.data?.toJSON()
+        result.data ? Budget.toDTO(result.data) : undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -261,7 +261,7 @@ export class BudgetController {
         result,
         'Budgets retrieved successfully',
         {
-          items: result.data?.items.map((budget) => budget.toJSON()) || [],
+          items: result.data?.items.map((budget) => Budget.toDTO(budget)) || [],
           pagination: {
             total: result.data?.total || 0,
             limit: result.data?.limit || 0,
@@ -393,7 +393,7 @@ export class BudgetController {
         {
           items:
             result.data?.items.map((allocation: BudgetAllocation) =>
-              allocation.toJSON()
+              BudgetAllocation.toDTO(allocation)
             ) || [],
           pagination: {
             total: result.data?.total || 0,
@@ -427,8 +427,9 @@ export class BudgetController {
         'Alerts retrieved successfully',
         {
           items:
-            result.data?.items.map((alert: BudgetAlert) => alert.toJSON()) ||
-            [],
+            result.data?.items.map((alert: BudgetAlert) =>
+              BudgetAlert.toDTO(alert)
+            ) || [],
           pagination: {
             total: result.data?.total || 0,
             limit: result.data?.limit || 0,

@@ -142,7 +142,8 @@ export class SpendingLimitController {
         result,
         'Spending limits retrieved successfully',
         {
-          items: result.data?.items.map((limit) => limit.toJSON()) || [],
+          items:
+            result.data?.items.map((limit) => SpendingLimit.toDTO(limit)) || [],
           pagination: {
             total: result.data?.total || 0,
             limit: result.data?.limit || 0,

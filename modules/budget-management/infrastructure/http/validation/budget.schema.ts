@@ -83,19 +83,78 @@ export const updateBudgetSchema = z.object({
 export type UpdateBudgetInput = z.infer<typeof updateBudgetSchema>;
 
 /**
+ * Route Params Schemas
+ */
+export const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+});
+
+export const budgetParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  budgetId: z.string().uuid('Invalid budget ID format'),
+});
+
+export const allocationParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  budgetId: z.string().uuid('Invalid budget ID format').optional(),
+  allocationId: z.string().uuid('Invalid allocation ID format'),
+});
+
+/**
+ * Allocation Body Schemas
+ */
+export const addAllocationSchema = z.object({
+  categoryId: z.string().uuid('Invalid category ID format').optional(),
+  allocatedAmount: z
+    .number()
+    .min(
+      MIN_BUDGET_AMOUNT,
+      `Allocated amount must be at least ${MIN_BUDGET_AMOUNT}`
+    )
+    .max(
+      MAX_BUDGET_AMOUNT,
+      `Allocated amount cannot exceed ${MAX_BUDGET_AMOUNT}`
+    ),
+  description: z
+    .string()
+    .max(
+      BUDGET_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${BUDGET_DESCRIPTION_MAX_LENGTH} characters`
+    )
+    .optional(),
+});
+
+export const updateAllocationSchema = z.object({
+  allocatedAmount: z
+    .number()
+    .min(MIN_BUDGET_AMOUNT)
+    .max(MAX_BUDGET_AMOUNT)
+    .optional(),
+  description: z
+    .string()
+    .max(BUDGET_DESCRIPTION_MAX_LENGTH)
+    .optional()
+    .nullable(),
+});
+
+/**
  * List Budgets Query Schema
  */
 export const listBudgetsSchema = z.object({
   status: z.nativeEnum(BudgetStatus).optional(),
-  periodType: z.nativeEnum(BudgetPeriodType).optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  page: z.string().transform(Number).pipe(z.number().min(1)).optional(),
-  pageSize: z
+  isActive: z.enum(['true', 'false']).optional(),
+  createdBy: z.string().uuid().optional(),
+  currency: z
+    .string()
+    .length(3)
+    .refine((val) => SUPPORTED_CURRENCIES.includes(val))
+    .optional(),
+  limit: z
     .string()
     .transform(Number)
     .pipe(z.number().min(1).max(100))
     .optional(),
+  offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 });
 
 export type ListBudgetsQuery = z.infer<typeof listBudgetsSchema>;

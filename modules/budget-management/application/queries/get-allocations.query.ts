@@ -1,11 +1,11 @@
 import { BudgetService } from '../services/budget.service';
 import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetAllocationsQuery extends IQuery {
   budgetId: string;

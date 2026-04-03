@@ -1,11 +1,11 @@
 import { BudgetService } from '../services/budget.service';
 import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetUnreadAlertsQuery extends IQuery {
   workspaceId: string;
@@ -23,18 +23,16 @@ export class GetUnreadAlertsHandler implements IQueryHandler<
     query: GetUnreadAlertsQuery
   ): Promise<QueryResult<PaginatedResult<BudgetAlert>>> {
     try {
-      
-          const options = {
-            limit: query.limit,
-            offset: query.offset,
-          };
-      
-          const result = await this.budgetService.getUnreadAlerts(
-            query.workspaceId,
-            options
-          );
-          return QueryResult.success(result);
-        
+      const options = {
+        limit: query.limit,
+        offset: query.offset,
+      };
+
+      const result = await this.budgetService.getUnreadAlerts(
+        query.workspaceId,
+        options
+      );
+      return QueryResult.success(result);
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

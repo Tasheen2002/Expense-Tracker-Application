@@ -11,8 +11,8 @@ import {
 } from '../errors/budget.errors';
 import { BudgetPeriodType } from '../enums/budget-period-type';
 import { Decimal } from '@prisma/client/runtime/library';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -538,25 +538,29 @@ export class Budget extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
-  toJSON(): BudgetDTO {
+  static toDTO(budget: Budget): BudgetDTO {
     return {
-      budgetId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      name: this.getName(),
-      description: this.getDescription(),
-      totalAmount: this.getTotalAmount().toString(),
-      currency: this.getCurrency(),
+      budgetId: budget.getId().getValue(),
+      workspaceId: budget.getWorkspaceId(),
+      name: budget.getName(),
+      description: budget.getDescription(),
+      totalAmount: budget.getTotalAmount().toString(),
+      currency: budget.getCurrency(),
       period: {
-        startDate: this.getPeriod().getStartDate().toISOString(),
-        endDate: this.getPeriod().getEndDate().toISOString(),
-        type: this.getPeriod().getPeriodType(),
+        startDate: budget.getPeriod().getStartDate().toISOString(),
+        endDate: budget.getPeriod().getEndDate().toISOString(),
+        type: budget.getPeriod().getPeriodType(),
       },
-      status: this.getStatus(),
-      createdBy: this.getCreatedBy(),
-      isRecurring: this.isRecurring(),
-      rolloverUnused: this.shouldRolloverUnused(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      status: budget.getStatus(),
+      createdBy: budget.getCreatedBy(),
+      isRecurring: budget.isRecurring(),
+      rolloverUnused: budget.shouldRolloverUnused(),
+      createdAt: budget.getCreatedAt().toISOString(),
+      updatedAt: budget.getUpdatedAt().toISOString(),
     };
+  }
+
+  toJSON(): BudgetDTO {
+    return Budget.toDTO(this);
   }
 }

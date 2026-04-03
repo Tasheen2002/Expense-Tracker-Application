@@ -15,7 +15,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 import {
   BudgetNotFoundError,
@@ -106,7 +106,7 @@ export class BudgetService {
       budget.updateDescription(updates.description);
     }
 
-    if (updates.totalAmount) {
+    if (updates.totalAmount !== undefined) {
       const newTotal = new Decimal(updates.totalAmount);
       const currentAllocated =
         await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
@@ -304,7 +304,7 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError('update allocation in');
     }
 
-    if (updates.allocatedAmount) {
+    if (updates.allocatedAmount !== undefined) {
       allocation.updateAllocatedAmount(updates.allocatedAmount);
     }
 
@@ -312,7 +312,7 @@ export class BudgetService {
       allocation.updateDescription(updates.description);
     }
 
-    if (updates.allocatedAmount) {
+    if (updates.allocatedAmount !== undefined) {
       // Use transactional validation to prevent TOCTOU race conditions
       // Exclude this allocation's old amount from the total check
       await this.allocationRepository.saveWithBudgetValidation(

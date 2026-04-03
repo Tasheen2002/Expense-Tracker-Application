@@ -5,8 +5,8 @@ import {
   InvalidAmountError,
   NegativeAmountError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { BudgetAlert } from './budget-alert.entity';
 
 // ============================================================================
@@ -437,19 +437,23 @@ export class BudgetAllocation extends AggregateRoot {
     }
   }
 
-  toJSON(): BudgetAllocationDTO {
+  static toDTO(allocation: BudgetAllocation): BudgetAllocationDTO {
     return {
-      allocationId: this.getId().getValue(),
-      budgetId: this.getBudgetId().getValue(),
-      categoryId: this.getCategoryId(),
-      allocatedAmount: this.getAllocatedAmount().toString(),
-      spentAmount: this.getSpentAmount().toString(),
-      description: this.getDescription(),
-      remainingAmount: this.getRemainingAmount().toString(),
-      spentPercentage: this.getSpentPercentage(),
-      isOverBudget: this.isOverBudget(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      allocationId: allocation.getId().getValue(),
+      budgetId: allocation.getBudgetId().getValue(),
+      categoryId: allocation.getCategoryId(),
+      allocatedAmount: allocation.getAllocatedAmount().toString(),
+      spentAmount: allocation.getSpentAmount().toString(),
+      description: allocation.getDescription(),
+      remainingAmount: allocation.getRemainingAmount().toString(),
+      spentPercentage: allocation.getSpentPercentage(),
+      isOverBudget: allocation.isOverBudget(),
+      createdAt: allocation.getCreatedAt().toISOString(),
+      updatedAt: allocation.getUpdatedAt().toISOString(),
     };
+  }
+
+  toJSON(): BudgetAllocationDTO {
+    return BudgetAllocation.toDTO(this);
   }
 }

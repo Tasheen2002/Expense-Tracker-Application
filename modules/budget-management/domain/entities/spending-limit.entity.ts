@@ -8,8 +8,8 @@ import {
   InvalidBudgetStatusError,
   SpendingLimitAlreadyInactiveError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -378,18 +378,22 @@ export class SpendingLimit extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
-  toJSON(): SpendingLimitDTO {
+  static toDTO(limit: SpendingLimit): SpendingLimitDTO {
     return {
-      limitId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      userId: this.getUserId(),
-      categoryId: this.getCategoryId(),
-      limitAmount: this.getLimitAmount().toString(),
-      currency: this.getCurrency(),
-      periodType: this.getPeriodType(),
-      isActive: this.isActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      limitId: limit.getId().getValue(),
+      workspaceId: limit.getWorkspaceId(),
+      userId: limit.getUserId(),
+      categoryId: limit.getCategoryId(),
+      limitAmount: limit.getLimitAmount().toString(),
+      currency: limit.getCurrency(),
+      periodType: limit.getPeriodType(),
+      isActive: limit.isActive(),
+      createdAt: limit.getCreatedAt().toISOString(),
+      updatedAt: limit.getUpdatedAt().toISOString(),
     };
+  }
+
+  toJSON(): SpendingLimitDTO {
+    return SpendingLimit.toDTO(this);
   }
 }

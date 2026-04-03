@@ -4,8 +4,8 @@ import { BudgetNotFoundError } from '../../domain/errors/budget.errors';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetBudgetQuery extends IQuery {
   budgetId: string;

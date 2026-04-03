@@ -8,7 +8,7 @@ import {
   InvalidAlertThresholdError,
   AlertAlreadyNotifiedError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface BudgetAlertProps {
   id: AlertId;
@@ -208,23 +208,27 @@ export class BudgetAlert extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
-  toJSON(): BudgetAlertDTO {
+  static toDTO(alert: BudgetAlert): BudgetAlertDTO {
     return {
-      id: this.getId().getValue(),
-      budgetId: this.getBudgetId().getValue(),
-      allocationId: this.getAllocationId()
-        ? this.getAllocationId()!.getValue()
+      id: alert.getId().getValue(),
+      budgetId: alert.getBudgetId().getValue(),
+      allocationId: alert.getAllocationId()
+        ? alert.getAllocationId()!.getValue()
         : null,
-      level: this.getLevel(),
-      threshold: this.getThreshold().toString(),
-      currentSpent: this.getCurrentSpent().toString(),
-      allocatedAmount: this.getAllocatedAmount().toString(),
-      message: this.getMessage(),
-      isRead: this.isRead(),
-      notifiedAt: this.getNotifiedAt()
-        ? this.getNotifiedAt()!.toISOString()
+      level: alert.getLevel(),
+      threshold: alert.getThreshold().toString(),
+      currentSpent: alert.getCurrentSpent().toString(),
+      allocatedAmount: alert.getAllocatedAmount().toString(),
+      message: alert.getMessage(),
+      isRead: alert.isRead(),
+      notifiedAt: alert.getNotifiedAt()
+        ? alert.getNotifiedAt()!.toISOString()
         : null,
-      createdAt: this.getCreatedAt().toISOString(),
+      createdAt: alert.getCreatedAt().toISOString(),
     };
+  }
+
+  toJSON(): BudgetAlertDTO {
+    return BudgetAlert.toDTO(this);
   }
 }

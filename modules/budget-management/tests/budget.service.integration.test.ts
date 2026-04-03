@@ -198,7 +198,7 @@ describe('BudgetService Integration', () => {
       url: `/api/v1/workspaces/${workspaceId}/budgets/${id}`,
       headers: { authorization: `Bearer ${token}` },
     });
-    expect(delRes.statusCode).toBe(204);
+    expect(delRes.statusCode).toBe(200);
 
     const getRes = await server.inject({
       method: 'GET',

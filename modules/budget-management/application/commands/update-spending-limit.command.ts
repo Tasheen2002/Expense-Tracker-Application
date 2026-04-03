@@ -3,8 +3,8 @@ import { SpendingLimitService } from '../services/spending-limit.service';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface UpdateSpendingLimitCommand extends ICommand {
   limitId: string;

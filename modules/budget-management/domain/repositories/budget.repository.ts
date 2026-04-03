@@ -4,7 +4,7 @@ import { BudgetStatus } from '../enums/budget-status';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface BudgetFilters {
   workspaceId: string;
