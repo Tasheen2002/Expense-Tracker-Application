@@ -1150,12 +1150,12 @@ export class Container {
     // Command & Query Handlers - Audit
     const createAuditLogHandler = new CreateAuditLogHandler(auditService);
     const purgeAuditLogsHandler = new PurgeAuditLogsHandler(auditService);
-    const getAuditLogHandler = new GetAuditLogHandler(auditService);
-    const listAuditLogsHandler = new ListAuditLogsHandler(auditService);
+    const getAuditLogHandler = new GetAuditLogHandler(auditRepository);
+    const listAuditLogsHandler = new ListAuditLogsHandler(auditRepository);
     const getEntityAuditHistoryHandler = new GetEntityAuditHistoryHandler(
-      auditService
+      auditRepository
     );
-    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditService);
+    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditRepository);
 
     // Controllers
     const notificationController = new NotificationController(

@@ -1,28 +1,16 @@
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from 'crypto';
+import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
 
-export class ApprovalChainId {
-  private readonly value: string;
-
+export class ApprovalChainId extends UuidId {
   private constructor(value: string) {
-    this.value = value;
+    super(value, 'ApprovalChainId');
   }
 
   static create(): ApprovalChainId {
-    return new ApprovalChainId(uuidv4());
+    return new ApprovalChainId(randomUUID());
   }
 
-  static fromString(value: string): ApprovalChainId {
-    if (!value || value.trim().length === 0) {
-      throw new Error("ApprovalChainId cannot be empty");
-    }
-    return new ApprovalChainId(value);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: ApprovalChainId): boolean {
-    return this.value === other.value;
+  static fromString(id: string): ApprovalChainId {
+    return new ApprovalChainId(id);
   }
 }

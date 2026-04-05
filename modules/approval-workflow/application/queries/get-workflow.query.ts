@@ -1,5 +1,8 @@
 import { WorkflowService } from '../services/workflow.service';
-import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import {
+  ExpenseWorkflow,
+  ExpenseWorkflowDTO,
+} from '../../domain/entities/expense-workflow.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -13,7 +16,7 @@ export interface GetWorkflowInput extends IQuery {
 
 export class GetWorkflowHandler implements IQueryHandler<
   GetWorkflowInput,
-  QueryResult<ExpenseWorkflow>
+  QueryResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
@@ -24,13 +27,13 @@ export class GetWorkflowHandler implements IQueryHandler<
     return 500;
   }
 
-  async handle(input: GetWorkflowInput): Promise<QueryResult<ExpenseWorkflow>> {
+  async handle(input: GetWorkflowInput): Promise<QueryResult<ExpenseWorkflowDTO>> {
     try {
       const workflow = await this.workflowService.getWorkflow(
         input.expenseId,
         input.workspaceId
       );
-      return QueryResult.success(workflow);
+      return QueryResult.success(ExpenseWorkflow.toDTO(workflow));
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

@@ -1,5 +1,8 @@
 import { WorkflowService } from '../services/workflow.service';
-import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import {
+  ExpenseWorkflow,
+  ExpenseWorkflowDTO,
+} from '../../domain/entities/expense-workflow.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -16,7 +19,7 @@ export interface ListPendingApprovalsInput extends IQuery {
 
 export class ListPendingApprovalsHandler implements IQueryHandler<
   ListPendingApprovalsInput,
-  QueryResult<PaginatedResult<ExpenseWorkflow>>
+  QueryResult<PaginatedResult<ExpenseWorkflowDTO>>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
@@ -29,14 +32,17 @@ export class ListPendingApprovalsHandler implements IQueryHandler<
 
   async handle(
     input: ListPendingApprovalsInput
-  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflow>>> {
+  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
     try {
       const result = await this.workflowService.listPendingApprovals(
         input.approverId,
         input.workspaceId,
         { limit: input.limit, offset: input.offset }
       );
-      return QueryResult.success(result);
+      return QueryResult.success({
+        ...result,
+        items: result.items.map((w) => ExpenseWorkflow.toDTO(w)),
+      });
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

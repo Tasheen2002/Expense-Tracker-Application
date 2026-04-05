@@ -39,59 +39,6 @@ export class AuditLogCreatedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when audit logs are queried/exported.
- */
-export class AuditLogsQueriedEvent extends DomainEvent {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly queriedBy: string,
-    public readonly filterCriteria: Record<string, unknown>,
-    public readonly resultCount: number
-  ) {
-    super(workspaceId, 'AuditLog');
-  }
-
-  get eventType(): string {
-    return 'audit.logs_queried';
-  }
-
-  public getPayload(): Record<string, unknown> {
-    return {
-      workspaceId: this.workspaceId,
-      queriedBy: this.queriedBy,
-      filterCriteria: this.filterCriteria,
-      resultCount: this.resultCount,
-    };
-  }
-}
-
-/**
- * Emitted when audit log retention policy is applied.
- */
-export class AuditRetentionAppliedEvent extends DomainEvent {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly retentionDays: number,
-    public readonly logsDeleted: number,
-    public readonly appliedAt: Date
-  ) {
-    super(workspaceId, 'AuditLog');
-  }
-
-  get eventType(): string {
-    return 'audit.retention_applied';
-  }
-
-  public getPayload(): Record<string, unknown> {
-    return {
-      workspaceId: this.workspaceId,
-      retentionDays: this.retentionDays,
-      logsDeleted: this.logsDeleted,
-      appliedAt: this.appliedAt.toISOString(),
-    };
-  }
-}
 
 // ============================================================================
 // Entity

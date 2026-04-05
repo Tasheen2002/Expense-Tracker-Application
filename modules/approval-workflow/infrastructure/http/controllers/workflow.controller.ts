@@ -9,7 +9,6 @@ import { GetWorkflowHandler } from '../../../application/queries/get-workflow.qu
 import { ListPendingApprovalsHandler } from '../../../application/queries/list-pending-approvals.query';
 import { ListUserWorkflowsHandler } from '../../../application/queries/list-user-workflows.query';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
-import { ExpenseWorkflow } from '../../../domain/entities/expense-workflow.entity';
 
 export class WorkflowController {
   constructor(
@@ -75,7 +74,7 @@ export class WorkflowController {
         reply,
         result,
         'Workflow retrieved successfully',
-        result.data ? ExpenseWorkflow.toDTO(result.data) : undefined
+        result.data ?? undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -227,7 +226,7 @@ export class WorkflowController {
         'Pending approvals retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((w) => ExpenseWorkflow.toDTO(w)),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -267,7 +266,7 @@ export class WorkflowController {
         'User workflows retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((w) => ExpenseWorkflow.toDTO(w)),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,

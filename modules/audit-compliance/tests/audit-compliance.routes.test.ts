@@ -256,7 +256,7 @@ describe('Audit Compliance Endpoints', () => {
       (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
         statusCode: 200,
-        data: mockLog,
+        data: AuditLog.toDTO(mockLog),
       });
 
       const response = await app.inject({
@@ -635,7 +635,7 @@ describe('Audit Compliance Endpoints', () => {
       (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
         statusCode: 200,
-        data: mockLog,
+        data: AuditLog.toDTO(mockLog),
       });
 
       const response = await app.inject({

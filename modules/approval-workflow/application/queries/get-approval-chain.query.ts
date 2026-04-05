@@ -1,5 +1,8 @@
 import { ApprovalChainService } from '../services/approval-chain.service';
-import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
+import {
+  ApprovalChain,
+  ApprovalChainDTO,
+} from '../../domain/entities/approval-chain.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -13,7 +16,7 @@ export interface GetApprovalChainInput extends IQuery {
 
 export class GetApprovalChainHandler implements IQueryHandler<
   GetApprovalChainInput,
-  QueryResult<ApprovalChain>
+  QueryResult<ApprovalChainDTO>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
@@ -26,13 +29,13 @@ export class GetApprovalChainHandler implements IQueryHandler<
 
   async handle(
     input: GetApprovalChainInput
-  ): Promise<QueryResult<ApprovalChain>> {
+  ): Promise<QueryResult<ApprovalChainDTO>> {
     try {
       const chain = await this.approvalChainService.getChain(
         input.chainId,
         input.workspaceId
       );
-      return QueryResult.success(chain);
+      return QueryResult.success(ApprovalChain.toDTO(chain));
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

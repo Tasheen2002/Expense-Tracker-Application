@@ -7,7 +7,6 @@ import { ListAuditLogsHandler } from '../../../application/queries/list-audit-lo
 import { GetEntityAuditHistoryHandler } from '../../../application/queries/get-entity-audit-history.query';
 import { GetAuditSummaryHandler } from '../../../application/queries/get-audit-summary.query';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
-import { AuditLog } from '../../../domain/entities/audit-log.entity';
 
 export class AuditLogController {
   constructor(
@@ -100,12 +99,7 @@ export class AuditLogController {
         reply,
         result,
         'Audit log retrieved successfully',
-        result.data &&
-          typeof result.data === 'object' &&
-          'id' in result.data &&
-          'action' in result.data
-          ? AuditLog.toDTO(result.data as any)
-          : result.data
+        result.data ?? undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

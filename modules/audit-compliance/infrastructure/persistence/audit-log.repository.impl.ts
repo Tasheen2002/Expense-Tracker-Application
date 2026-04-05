@@ -153,8 +153,10 @@ export class AuditLogRepositoryImpl
   }
 
   async saveMany(auditLogs: AuditLog[]): Promise<void> {
-    await this.prisma.auditLog.createMany({
-      data: auditLogs.map((auditLog) => this.toPersistence(auditLog)),
+    await this.prisma.$transaction(async (tx) => {
+      await tx.auditLog.createMany({
+        data: auditLogs.map((auditLog) => this.toPersistence(auditLog)),
+      });
     });
 
     await Promise.all(auditLogs.map((log) => this.dispatchEvents(log)));

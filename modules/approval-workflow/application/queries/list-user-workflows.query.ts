@@ -1,5 +1,8 @@
 import { WorkflowService } from '../services/workflow.service';
-import { ExpenseWorkflow } from '../../domain/entities/expense-workflow.entity';
+import {
+  ExpenseWorkflow,
+  ExpenseWorkflowDTO,
+} from '../../domain/entities/expense-workflow.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -16,7 +19,7 @@ export interface ListUserWorkflowsInput extends IQuery {
 
 export class ListUserWorkflowsHandler implements IQueryHandler<
   ListUserWorkflowsInput,
-  QueryResult<PaginatedResult<ExpenseWorkflow>>
+  QueryResult<PaginatedResult<ExpenseWorkflowDTO>>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
@@ -29,14 +32,17 @@ export class ListUserWorkflowsHandler implements IQueryHandler<
 
   async handle(
     input: ListUserWorkflowsInput
-  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflow>>> {
+  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
     try {
       const result = await this.workflowService.listUserWorkflows(
         input.userId,
         input.workspaceId,
         { limit: input.limit, offset: input.offset }
       );
-      return QueryResult.success(result);
+      return QueryResult.success({
+        ...result,
+        items: result.items.map((w) => ExpenseWorkflow.toDTO(w)),
+      });
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

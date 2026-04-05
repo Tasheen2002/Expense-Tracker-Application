@@ -8,7 +8,6 @@ import { DeactivateApprovalChainHandler } from '../../../application/commands/de
 import { GetApprovalChainHandler } from '../../../application/queries/get-approval-chain.query';
 import { ListApprovalChainsHandler } from '../../../application/queries/list-approval-chains.query';
 import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
-import { ApprovalChain } from '../../../domain/entities/approval-chain.entity';
 
 export class ApprovalChainController {
   constructor(
@@ -105,7 +104,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain retrieved successfully',
-        result.data ? ApprovalChain.toDTO(result.data) : undefined
+        result.data ?? undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -134,9 +133,7 @@ export class ApprovalChainController {
         'Approval chains retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((chain) =>
-                ApprovalChain.toDTO(chain)
-              ),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,

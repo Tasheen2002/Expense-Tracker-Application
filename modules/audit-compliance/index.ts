@@ -1,4 +1,7 @@
 export { registerAuditComplianceRoutes } from './infrastructure/http/routes';
+export { AuditService } from './application/services/audit.service';
+export type { CreateAuditLogDTO } from './application/services/audit.service';
+export { AuditEventListener } from './infrastructure/listeners/audit-event.listener';
 
 // Domain error types (used by cross-cutting error handlers)
 export {
