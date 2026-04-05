@@ -1,6 +1,7 @@
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
+import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -11,19 +12,6 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface SyncSessionResult {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  status: string;
-  startedAt: Date;
-  completedAt?: Date;
-  transactionsFetched: number;
-  transactionsImported: number;
-  transactionsDuplicate: number;
-  errorMessage?: string;
-}
-
 export interface GetSyncHistoryQuery extends IQuery {
   workspaceId: string;
   connectionId: string;
@@ -32,13 +20,13 @@ export interface GetSyncHistoryQuery extends IQuery {
 
 export class GetSyncHistoryHandler implements IQueryHandler<
   GetSyncHistoryQuery,
-  QueryResult<PaginatedResult<SyncSessionResult>>
+  QueryResult<PaginatedResult<SyncSessionDTO>>
 > {
   constructor(private readonly sessionRepository: ISyncSessionRepository) {}
 
   async handle(
     query: GetSyncHistoryQuery
-  ): Promise<QueryResult<PaginatedResult<SyncSessionResult>>> {
+  ): Promise<QueryResult<PaginatedResult<SyncSessionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const connectionId = BankConnectionId.fromString(query.connectionId);
 
@@ -48,20 +36,9 @@ export class GetSyncHistoryHandler implements IQueryHandler<
       query.options
     );
 
-    const dtoResult: PaginatedResult<SyncSessionResult> = {
+    const dtoResult: PaginatedResult<SyncSessionDTO> = {
       ...result,
-      items: result.items.map((session) => ({
-        id: session.id.getValue(),
-        workspaceId: session.workspaceId.getValue(),
-        connectionId: session.connectionId.getValue(),
-        status: session.status,
-        startedAt: session.startedAt,
-        completedAt: session.completedAt,
-        transactionsFetched: session.transactionsFetched,
-        transactionsImported: session.transactionsImported,
-        transactionsDuplicate: session.transactionsDuplicate,
-        errorMessage: session.errorMessage,
-      })),
+      items: result.items.map((session) => SyncSession.toDTO(session)),
     };
 
     return QueryResult.success(dtoResult);

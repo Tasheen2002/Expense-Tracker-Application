@@ -25,7 +25,7 @@ export class PrismaBankConnectionRepository
     const data = this.toPersistence(connection);
 
     await this.prisma.bankConnection.upsert({
-      where: { id: connection.getId().getValue() },
+      where: { id: connection.id.getValue() },
       create: data,
       update: data,
     });
@@ -112,23 +112,23 @@ export class PrismaBankConnectionRepository
     connection: BankConnection
   ): Prisma.BankConnectionUncheckedCreateInput {
     return {
-      id: connection.getId().getValue(),
-      workspaceId: connection.getWorkspaceId().getValue(),
-      userId: connection.getUserId().getValue(),
-      institutionId: connection.getInstitutionId(),
-      institutionName: connection.getInstitutionName(),
-      accountId: connection.getAccountId(),
-      accountName: connection.getAccountName(),
-      accountType: connection.getAccountType(),
-      accountMask: connection.getAccountMask(),
-      currency: connection.getCurrency(),
-      accessToken: connection.getAccessTokenForSync(),
-      status: connection.getStatus(),
-      lastSyncAt: connection.getLastSyncAt(),
-      tokenExpiresAt: connection.getTokenExpiresAt(),
-      errorMessage: connection.getErrorMessage(),
-      createdAt: connection.getCreatedAt(),
-      updatedAt: connection.getUpdatedAt(),
+      id: connection.id.getValue(),
+      workspaceId: connection.workspaceId.getValue(),
+      userId: connection.userId.getValue(),
+      institutionId: connection.institutionId,
+      institutionName: connection.institutionName,
+      accountId: connection.accountId,
+      accountName: connection.accountName,
+      accountType: connection.accountType,
+      accountMask: connection.accountMask,
+      currency: connection.currency,
+      accessToken: connection.accessTokenForSync,
+      status: connection.status,
+      lastSyncAt: connection.lastSyncAt,
+      tokenExpiresAt: connection.tokenExpiresAt,
+      errorMessage: connection.errorMessage,
+      createdAt: connection.createdAt,
+      updatedAt: connection.updatedAt,
     };
   }
 

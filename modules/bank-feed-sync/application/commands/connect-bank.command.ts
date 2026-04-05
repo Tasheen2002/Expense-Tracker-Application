@@ -66,6 +66,6 @@ export class ConnectBankHandler implements ICommandHandler<
     connection.activate();
     await this.connectionRepository.save(connection);
 
-    return CommandResult.success(connection.getId().getValue());
+    return CommandResult.success(connection.id.getValue());
   }
 }

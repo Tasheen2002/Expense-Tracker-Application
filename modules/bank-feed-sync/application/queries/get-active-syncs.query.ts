@@ -1,5 +1,6 @@
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
+import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import {
   PaginatedResult,
@@ -11,19 +12,6 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface SyncSessionResult {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  status: string;
-  startedAt: Date;
-  completedAt?: Date;
-  transactionsFetched: number;
-  transactionsImported: number;
-  transactionsDuplicate: number;
-  errorMessage?: string;
-}
-
 export interface GetActiveSyncsQuery extends IQuery {
   workspaceId: string;
   options?: PaginationOptions;
@@ -31,13 +19,13 @@ export interface GetActiveSyncsQuery extends IQuery {
 
 export class GetActiveSyncsHandler implements IQueryHandler<
   GetActiveSyncsQuery,
-  QueryResult<PaginatedResult<SyncSessionResult>>
+  QueryResult<PaginatedResult<SyncSessionDTO>>
 > {
   constructor(private readonly sessionRepository: ISyncSessionRepository) {}
 
   async handle(
     query: GetActiveSyncsQuery
-  ): Promise<QueryResult<PaginatedResult<SyncSessionResult>>> {
+  ): Promise<QueryResult<PaginatedResult<SyncSessionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
 
     const result = await this.sessionRepository.findByStatus(
@@ -46,20 +34,9 @@ export class GetActiveSyncsHandler implements IQueryHandler<
       query.options
     );
 
-    const dtoResult: PaginatedResult<SyncSessionResult> = {
+    const dtoResult: PaginatedResult<SyncSessionDTO> = {
       ...result,
-      items: result.items.map((session) => ({
-        id: session.id.getValue(),
-        workspaceId: session.workspaceId.getValue(),
-        connectionId: session.connectionId.getValue(),
-        status: session.status,
-        startedAt: session.startedAt,
-        completedAt: session.completedAt,
-        transactionsFetched: session.transactionsFetched,
-        transactionsImported: session.transactionsImported,
-        transactionsDuplicate: session.transactionsDuplicate,
-        errorMessage: session.errorMessage,
-      })),
+      items: result.items.map((session) => SyncSession.toDTO(session)),
     };
 
     return QueryResult.success(dtoResult);

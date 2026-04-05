@@ -123,7 +123,7 @@ export interface BankTransactionProps {
 }
 
 export class BankTransaction extends AggregateRoot {
-  private constructor(private readonly props: BankTransactionProps) {
+  private constructor(private props: BankTransactionProps) {
     super();
   }
 
@@ -162,9 +162,9 @@ export class BankTransaction extends AggregateRoot {
 
     transaction.addDomainEvent(
       new BankTransactionSyncedEvent(
-        transaction.getId().getValue(),
-        transaction.getWorkspaceId().getValue(),
-        transaction.getConnectionId().getValue(),
+        transaction.id.getValue(),
+        transaction.workspaceId.getValue(),
+        transaction.connectionId.getValue(),
         externalId,
         amount,
         currency
@@ -247,75 +247,6 @@ export class BankTransaction extends AggregateRoot {
     return this.props.updatedAt;
   }
 
-  // Method-style getters for repository compatibility
-  getId(): BankTransactionId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getConnectionId(): BankConnectionId {
-    return this.props.connectionId;
-  }
-
-  getSessionId(): SyncSessionId {
-    return this.props.sessionId;
-  }
-
-  getExternalId(): string {
-    return this.props.externalId;
-  }
-
-  getAmount(): number {
-    return this.props.amount;
-  }
-
-  getCurrency(): string {
-    return this.props.currency;
-  }
-
-  getDescription(): string {
-    return this.props.description;
-  }
-
-  getMerchantName(): string | undefined {
-    return this.props.merchantName;
-  }
-
-  getCategoryName(): string | undefined {
-    return this.props.categoryName;
-  }
-
-  getTransactionDate(): Date {
-    return this.props.transactionDate;
-  }
-
-  getPostedDate(): Date | undefined {
-    return this.props.postedDate;
-  }
-
-  getStatus(): TransactionStatus {
-    return this.props.status;
-  }
-
-  getExpenseId(): string | undefined {
-    return this.props.expenseId;
-  }
-
-  getMetadata(): Record<string, unknown> | undefined {
-    return this.props.metadata;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
   // Business methods
   markAsMatched(expenseId: string): void {
     this.props.status = TransactionStatus.MATCHED;
@@ -324,8 +255,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionMatchedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         expenseId
       )
     );
@@ -338,8 +269,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionImportedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         expenseId
       )
     );
@@ -351,8 +282,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionIgnoredEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -361,4 +292,46 @@ export class BankTransaction extends AggregateRoot {
     this.props.status = TransactionStatus.DUPLICATE;
     this.props.updatedAt = new Date();
   }
+
+  static toDTO(transaction: BankTransaction): BankTransactionDTO {
+    return {
+      id: transaction.id.getValue(),
+      workspaceId: transaction.workspaceId.getValue(),
+      connectionId: transaction.connectionId.getValue(),
+      sessionId: transaction.sessionId.getValue(),
+      externalId: transaction.externalId,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      description: transaction.description,
+      merchantName: transaction.merchantName,
+      categoryName: transaction.categoryName,
+      transactionDate: transaction.transactionDate,
+      postedDate: transaction.postedDate,
+      status: transaction.status,
+      expenseId: transaction.expenseId,
+      metadata: transaction.metadata,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+    };
+  }
+}
+
+export interface BankTransactionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  sessionId: string;
+  externalId: string;
+  amount: number;
+  currency: string;
+  description: string;
+  merchantName?: string;
+  categoryName?: string;
+  transactionDate: Date;
+  postedDate?: Date;
+  status: string;
+  expenseId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
 }

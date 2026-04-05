@@ -27,7 +27,7 @@ export class PrismaBankTransactionRepository
     const data = this.toPersistence(transaction);
 
     await this.prisma.bankTransaction.upsert({
-      where: { id: transaction.getId().getValue() },
+      where: { id: transaction.id.getValue() },
       create: data,
       update: data,
     });
@@ -37,10 +37,16 @@ export class PrismaBankTransactionRepository
   async saveBatch(transactions: BankTransaction[]): Promise<void> {
     const data = transactions.map((t) => this.toPersistence(t));
 
-    await this.prisma.bankTransaction.createMany({
-      data,
-      skipDuplicates: true,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.bankTransaction.createMany({
+        data,
+        skipDuplicates: true,
+      });
     });
+
+    for (const transaction of transactions) {
+      await this.dispatchEvents(transaction);
+    }
   }
 
   async findById(
@@ -206,23 +212,23 @@ export class PrismaBankTransactionRepository
     transaction: BankTransaction
   ): Prisma.BankTransactionUncheckedCreateInput {
     return {
-      id: transaction.getId().getValue(),
-      workspaceId: transaction.getWorkspaceId().getValue(),
-      connectionId: transaction.getConnectionId().getValue(),
-      sessionId: transaction.getSessionId().getValue(),
-      externalId: transaction.getExternalId(),
-      amount: transaction.getAmount(),
-      currency: transaction.getCurrency(),
-      description: transaction.getDescription(),
-      merchantName: transaction.getMerchantName(),
-      categoryName: transaction.getCategoryName(),
-      transactionDate: transaction.getTransactionDate(),
-      postedDate: transaction.getPostedDate(),
-      status: transaction.getStatus(),
-      expenseId: transaction.getExpenseId(),
-      metadata: transaction.getMetadata() as any,
-      createdAt: transaction.getCreatedAt(),
-      updatedAt: transaction.getUpdatedAt(),
+      id: transaction.id.getValue(),
+      workspaceId: transaction.workspaceId.getValue(),
+      connectionId: transaction.connectionId.getValue(),
+      sessionId: transaction.sessionId.getValue(),
+      externalId: transaction.externalId,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      description: transaction.description,
+      merchantName: transaction.merchantName,
+      categoryName: transaction.categoryName,
+      transactionDate: transaction.transactionDate,
+      postedDate: transaction.postedDate,
+      status: transaction.status,
+      expenseId: transaction.expenseId,
+      metadata: transaction.metadata as any,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
     };
   }
 

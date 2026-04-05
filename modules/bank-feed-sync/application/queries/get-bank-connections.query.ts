@@ -10,25 +10,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-
-export interface BankConnectionResult {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  institutionId: string;
-  institutionName: string;
-  accountId: string;
-  accountName: string;
-  accountType: string;
-  accountMask?: string;
-  currency: string;
-  status: string;
-  lastSyncAt?: Date;
-  tokenExpiresAt?: Date;
-  errorMessage?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 
 export interface GetBankConnectionsQuery extends IQuery {
   workspaceId: string;
@@ -39,7 +21,7 @@ export interface GetBankConnectionsQuery extends IQuery {
 
 export class GetBankConnectionsHandler implements IQueryHandler<
   GetBankConnectionsQuery,
-  QueryResult<PaginatedResult<BankConnectionResult>>
+  QueryResult<PaginatedResult<BankConnectionDTO>>
 > {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository
@@ -47,7 +29,7 @@ export class GetBankConnectionsHandler implements IQueryHandler<
 
   async handle(
     query: GetBankConnectionsQuery
-  ): Promise<QueryResult<PaginatedResult<BankConnectionResult>>> {
+  ): Promise<QueryResult<PaginatedResult<BankConnectionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const options: PaginationOptions = {
       limit: query.limit,
@@ -70,26 +52,9 @@ export class GetBankConnectionsHandler implements IQueryHandler<
       );
     }
 
-    const dtoResult: PaginatedResult<BankConnectionResult> = {
+    const dtoResult: PaginatedResult<BankConnectionDTO> = {
       ...result,
-      items: result.items.map((connection) => ({
-        id: connection.id.getValue(),
-        workspaceId: connection.workspaceId.getValue(),
-        userId: connection.userId.getValue(),
-        institutionId: connection.institutionId,
-        institutionName: connection.institutionName,
-        accountId: connection.accountId,
-        accountName: connection.accountName,
-        accountType: connection.accountType,
-        accountMask: connection.accountMask,
-        currency: connection.currency,
-        status: connection.status,
-        lastSyncAt: connection.lastSyncAt,
-        tokenExpiresAt: connection.tokenExpiresAt,
-        errorMessage: connection.errorMessage,
-        createdAt: connection.createdAt,
-        updatedAt: connection.updatedAt,
-      })),
+      items: result.items.map((connection) => BankConnection.toDTO(connection)),
     };
 
     return QueryResult.success(dtoResult);

@@ -106,7 +106,7 @@ export class TransactionSyncService {
 
       // Fetch transactions from bank API
       const apiTransactions = await this.bankAPIClient.fetchTransactions(
-        connection.getAccessTokenForSync(),
+        connection.accessTokenForSync,
         fromDate,
         toDate
       );
@@ -177,7 +177,3 @@ export class TransactionSyncService {
     }
   }
 }
-
-
-
-

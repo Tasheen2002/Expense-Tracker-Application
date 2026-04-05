@@ -17,3 +17,11 @@ export { ConnectionStatus } from './domain/enums/connection-status.enum';
 export { SyncStatus } from './domain/enums/sync-status.enum';
 export { TransactionStatus } from './domain/enums/transaction-status.enum';
 
+// DTO types (for cross-module type sharing)
+export type { BankConnectionDTO } from './domain/entities/bank-connection.entity';
+export type { SyncSessionDTO } from './domain/entities/sync-session.entity';
+export type { BankTransactionDTO } from './domain/entities/bank-transaction.entity';
+
+// Application services (for DI container wiring)
+export { TransactionSyncService } from './application/services/transaction-sync.service';
+export type { IBankAPIClient } from './application/services/transaction-sync.service';

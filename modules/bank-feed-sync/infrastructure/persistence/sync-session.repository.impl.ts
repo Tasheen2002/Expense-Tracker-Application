@@ -25,7 +25,7 @@ export class PrismaSyncSessionRepository
     const data = this.toPersistence(session);
 
     await this.prisma.syncSession.upsert({
-      where: { id: session.getId().getValue() },
+      where: { id: session.id.getValue() },
       create: data,
       update: data,
     });
@@ -129,19 +129,19 @@ export class PrismaSyncSessionRepository
     session: SyncSession
   ): Prisma.SyncSessionUncheckedCreateInput {
     return {
-      id: session.getId().getValue(),
-      workspaceId: session.getWorkspaceId().getValue(),
-      connectionId: session.getConnectionId().getValue(),
-      status: session.getStatus(),
-      startedAt: session.getStartedAt(),
-      completedAt: session.getCompletedAt(),
-      transactionsFetched: session.getTransactionsFetched(),
-      transactionsImported: session.getTransactionsImported(),
-      transactionsDuplicate: session.getTransactionsDuplicate(),
-      errorMessage: session.getErrorMessage(),
-      metadata: session.getMetadata() as any,
-      createdAt: session.getCreatedAt(),
-      updatedAt: session.getUpdatedAt(),
+      id: session.id.getValue(),
+      workspaceId: session.workspaceId.getValue(),
+      connectionId: session.connectionId.getValue(),
+      status: session.status,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      transactionsFetched: session.transactionsFetched,
+      transactionsImported: session.transactionsImported,
+      transactionsDuplicate: session.transactionsDuplicate,
+      errorMessage: session.errorMessage,
+      metadata: session.metadata as any,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
     };
   }
 

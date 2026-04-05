@@ -100,7 +100,7 @@ export interface SyncSessionProps {
 }
 
 export class SyncSession extends AggregateRoot {
-  private constructor(private readonly props: SyncSessionProps) {
+  private constructor(private props: SyncSessionProps) {
     super();
   }
 
@@ -181,59 +181,6 @@ export class SyncSession extends AggregateRoot {
     return this.props.updatedAt;
   }
 
-  // Method-style getters for repository compatibility
-  getId(): SyncSessionId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getConnectionId(): BankConnectionId {
-    return this.props.connectionId;
-  }
-
-  getStatus(): SyncStatus {
-    return this.props.status;
-  }
-
-  getStartedAt(): Date {
-    return this.props.startedAt;
-  }
-
-  getCompletedAt(): Date | undefined {
-    return this.props.completedAt;
-  }
-
-  getTransactionsFetched(): number {
-    return this.props.transactionsFetched;
-  }
-
-  getTransactionsImported(): number {
-    return this.props.transactionsImported;
-  }
-
-  getTransactionsDuplicate(): number {
-    return this.props.transactionsDuplicate;
-  }
-
-  getErrorMessage(): string | undefined {
-    return this.props.errorMessage;
-  }
-
-  getMetadata(): Record<string, unknown> | undefined {
-    return this.props.metadata;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
   // Business methods
   start(): void {
     this.props.status = SyncStatus.IN_PROGRESS;
@@ -241,9 +188,9 @@ export class SyncSession extends AggregateRoot {
 
     this.addDomainEvent(
       new SyncSessionStartedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getConnectionId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.connectionId.getValue()
       )
     );
   }
@@ -262,9 +209,9 @@ export class SyncSession extends AggregateRoot {
 
     this.addDomainEvent(
       new SyncSessionCompletedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getConnectionId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.connectionId.getValue(),
         transactionsFetched,
         transactionsImported,
         transactionsDuplicate
@@ -280,9 +227,9 @@ export class SyncSession extends AggregateRoot {
 
     this.addDomainEvent(
       new SyncSessionFailedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getConnectionId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.connectionId.getValue(),
         errorMessage
       )
     );
@@ -302,4 +249,32 @@ export class SyncSession extends AggregateRoot {
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
   }
+
+  static toDTO(session: SyncSession): SyncSessionDTO {
+    return {
+      id: session.id.getValue(),
+      workspaceId: session.workspaceId.getValue(),
+      connectionId: session.connectionId.getValue(),
+      status: session.status,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      transactionsFetched: session.transactionsFetched,
+      transactionsImported: session.transactionsImported,
+      transactionsDuplicate: session.transactionsDuplicate,
+      errorMessage: session.errorMessage,
+    };
+  }
+}
+
+export interface SyncSessionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  status: string;
+  startedAt: Date;
+  completedAt?: Date;
+  transactionsFetched: number;
+  transactionsImported: number;
+  transactionsDuplicate: number;
+  errorMessage?: string;
 }

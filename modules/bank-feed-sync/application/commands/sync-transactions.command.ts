@@ -24,6 +24,6 @@ export class SyncTransactionsHandler implements ICommandHandler<
     command: SyncTransactionsCommand
   ): Promise<CommandResult<string>> {
     const session = await this.transactionSyncService.syncTransactions(command);
-    return CommandResult.success(session.getId().getValue());
+    return CommandResult.success(session.id.getValue());
   }
 }

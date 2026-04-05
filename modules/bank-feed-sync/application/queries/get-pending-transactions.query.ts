@@ -1,6 +1,6 @@
 import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
+import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { TransactionStatus } from '../../domain/enums/transaction-status.enum';
 import {
@@ -13,26 +13,6 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface BankTransactionResult {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  sessionId: string;
-  externalId: string;
-  amount: number;
-  currency: string;
-  description: string;
-  merchantName?: string;
-  categoryName?: string;
-  transactionDate: Date;
-  postedDate?: Date;
-  status: string;
-  expenseId?: string;
-  metadata?: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface GetPendingTransactionsQuery extends IQuery {
   workspaceId: string;
   connectionId?: string;
@@ -41,7 +21,7 @@ export interface GetPendingTransactionsQuery extends IQuery {
 
 export class GetPendingTransactionsHandler implements IQueryHandler<
   GetPendingTransactionsQuery,
-  QueryResult<PaginatedResult<BankTransactionResult>>
+  QueryResult<PaginatedResult<BankTransactionDTO>>
 > {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
@@ -49,7 +29,7 @@ export class GetPendingTransactionsHandler implements IQueryHandler<
 
   async handle(
     query: GetPendingTransactionsQuery
-  ): Promise<QueryResult<PaginatedResult<BankTransactionResult>>> {
+  ): Promise<QueryResult<PaginatedResult<BankTransactionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
 
     let result: PaginatedResult<BankTransaction>;
@@ -69,27 +49,9 @@ export class GetPendingTransactionsHandler implements IQueryHandler<
       );
     }
 
-    const dtoResult: PaginatedResult<BankTransactionResult> = {
+    const dtoResult: PaginatedResult<BankTransactionDTO> = {
       ...result,
-      items: result.items.map((tx) => ({
-        id: tx.id.getValue(),
-        workspaceId: tx.workspaceId.getValue(),
-        connectionId: tx.connectionId.getValue(),
-        sessionId: tx.sessionId.getValue(),
-        externalId: tx.externalId,
-        amount: tx.amount,
-        currency: tx.currency,
-        description: tx.description,
-        merchantName: tx.merchantName,
-        categoryName: tx.categoryName,
-        transactionDate: tx.transactionDate,
-        postedDate: tx.postedDate,
-        status: tx.status,
-        expenseId: tx.expenseId,
-        metadata: tx.metadata,
-        createdAt: tx.createdAt,
-        updatedAt: tx.updatedAt,
-      })),
+      items: result.items.map((tx) => BankTransaction.toDTO(tx)),
     };
 
     return QueryResult.success(dtoResult);
