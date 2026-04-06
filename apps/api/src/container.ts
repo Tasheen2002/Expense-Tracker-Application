@@ -847,15 +847,20 @@ export class Container {
     );
 
     // Query Handlers
-    const getBudgetHandler = new GetBudgetHandler(budgetService);
-    const listBudgetsHandler = new ListBudgetsHandler(budgetService);
-    const getAllocationsHandler = new GetAllocationsHandler(budgetService);
-    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
+    const getBudgetHandler = new GetBudgetHandler(budgetRepository);
+    const listBudgetsHandler = new ListBudgetsHandler(budgetRepository);
+    const getAllocationsHandler = new GetAllocationsHandler(
+      budgetRepository,
+      budgetAllocationRepository
+    );
+    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(
+      budgetAlertRepository
+    );
     const getSpendingLimitHandler = new GetSpendingLimitHandler(
-      spendingLimitService
+      spendingLimitRepository
     );
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
-      spendingLimitService
+      spendingLimitRepository
     );
 
     // Controllers
@@ -1472,18 +1477,18 @@ export class Container {
     const createScenarioHandler = new CreateScenarioHandler(scenarioService);
     const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
-    // Query Handlers
-    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
+    // Query Handlers (depend on repositories directly per CQRS)
+    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanRepository);
     const listBudgetPlansHandler = new ListBudgetPlansHandler(
-      budgetPlanService
+      budgetPlanRepository
     );
-    const getForecastHandler = new GetForecastHandler(forecastService);
-    const listForecastsHandler = new ListForecastsHandler(forecastService);
+    const getForecastHandler = new GetForecastHandler(forecastRepository);
+    const listForecastsHandler = new ListForecastsHandler(forecastRepository);
     const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastService
+      forecastItemRepository
     );
-    const getScenarioHandler = new GetScenarioHandler(scenarioService);
-    const listScenariosHandler = new ListScenariosHandler(scenarioService);
+    const getScenarioHandler = new GetScenarioHandler(scenarioRepository);
+    const listScenariosHandler = new ListScenariosHandler(scenarioRepository);
 
     // Controllers
     const budgetPlanController = new BudgetPlanController(
