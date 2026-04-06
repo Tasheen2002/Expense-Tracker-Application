@@ -3,10 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface AddForecastItemCommand extends ICommand {
   forecastId: string;
+  workspaceId: string;
   categoryId: string;
   amount: number;
   userId: string;
@@ -24,11 +25,12 @@ export class AddForecastItemHandler implements ICommandHandler<
   ): Promise<CommandResult<{ forecastItemId: string }>> {
     const item = await this.forecastService.addForecastItem({
       forecastId: command.forecastId,
+      workspaceId: command.workspaceId,
       categoryId: command.categoryId,
       amount: command.amount,
       notes: command.notes,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastItemId: item.getId().getValue() });
+    return CommandResult.success({ forecastItemId: item.id.getValue() });
   }
 }

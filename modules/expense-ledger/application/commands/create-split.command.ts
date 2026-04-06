@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
 import { ExpenseService } from '../services/expense.service';
 import { SplitType } from '../../domain/enums/split-type';

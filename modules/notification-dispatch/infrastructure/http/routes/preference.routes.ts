@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { PreferenceController } from '../controllers/preference.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export function registerPreferenceRoutes(
   fastify: FastifyInstance,

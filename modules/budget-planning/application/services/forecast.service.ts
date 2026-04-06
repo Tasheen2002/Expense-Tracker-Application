@@ -1,18 +1,14 @@
 import { Forecast } from "../../domain/entities/forecast.entity";
-import { ForecastRepository } from "../../domain/repositories/forecast.repository";
-import { ForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
-import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
+import { IForecastRepository } from "../../domain/repositories/forecast.repository";
+import { IForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
+import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
 import { ForecastItem } from "../../domain/entities/forecast-item.entity";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 import {
   ForecastNotFoundError,
   DuplicateForecastNameError,
@@ -25,26 +21,27 @@ import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class ForecastService {
   constructor(
-    private readonly forecastRepository: ForecastRepository,
-    private readonly forecastItemRepository: ForecastItemRepository,
-    private readonly budgetPlanRepository: BudgetPlanRepository,
+    private readonly forecastRepository: IForecastRepository,
+    private readonly forecastItemRepository: IForecastItemRepository,
+    private readonly budgetPlanRepository: IBudgetPlanRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   private async checkPlanAccess(
     userId: string,
     planId: PlanId,
+    workspaceId: string,
     action: string,
   ): Promise<void> {
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.toString());
+      throw new BudgetPlanNotFoundError(planId.getValue());
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -54,6 +51,7 @@ export class ForecastService {
 
   async createForecast(params: {
     planId: string;
+    workspaceId: string;
     name: string;
     type: ForecastType;
     userId: string;
@@ -61,7 +59,7 @@ export class ForecastService {
     const planId = PlanId.fromString(params.planId);
 
     // Check access to the plan before creating forecast
-    await this.checkPlanAccess(params.userId, planId, "create forecast");
+    await this.checkPlanAccess(params.userId, planId, params.workspaceId, "create forecast");
 
     const existing = await this.forecastRepository.findByName(
       planId,
@@ -83,6 +81,7 @@ export class ForecastService {
 
   async addForecastItem(params: {
     forecastId: string;
+    workspaceId: string;
     categoryId: string;
     amount: number;
     notes?: string;
@@ -91,7 +90,7 @@ export class ForecastService {
     const forecastId = ForecastId.fromString(params.forecastId);
     const categoryId = CategoryId.fromString(params.categoryId);
 
-    const forecast = await this.forecastRepository.findById(forecastId);
+    const forecast = await this.forecastRepository.findById(forecastId, params.workspaceId);
     if (!forecast) {
       throw new ForecastNotFoundError(params.forecastId);
     }
@@ -99,7 +98,8 @@ export class ForecastService {
     // Check access to the parent plan
     await this.checkPlanAccess(
       params.userId,
-      forecast.getPlanId(),
+      forecast.planId,
+      params.workspaceId,
       "add forecast item",
     );
 
@@ -124,38 +124,30 @@ export class ForecastService {
 
   async updateForecastItem(params: {
     itemId: string;
+    workspaceId: string;
     amount?: number;
     notes?: string;
     userId: string;
   }): Promise<ForecastItem> {
     const itemId = ForecastItemId.fromString(params.itemId);
-    const item = await this.forecastItemRepository.findById(itemId);
+    const item = await this.forecastItemRepository.findById(itemId, params.workspaceId);
 
     if (!item) {
       throw new ForecastItemNotFoundError(params.itemId);
     }
 
-    // Need to find forecast then plan?
-    // Or we assume if they can get the item ID they might be authorized?
-    // No, strictly we should traverse up.
-    // Item -> Forecast -> Plan -> Check Access.
-    // This is expensive but secure.
-    // Optimization: Store WorkspaceId on Forecast/Item? No, normalization is better.
-
-    // For now, let's just implement the traversal if needed, OR
-    // we can rely on the fact that `ForecastItem` doesn't link back to `Forecast` easily without a repository call.
-    // We don't have `findByItemId` on ForecastRepo.
-
-    // We can fetch forecast by item.getForecastId()
+    // Traverse up: Item -> Forecast -> Plan -> Check Access
     const forecast = await this.forecastRepository.findById(
-      item.getForecastId(),
+      item.forecastId,
+      params.workspaceId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.getForecastId().toString()); // Should not happen
+      throw new ForecastNotFoundError(item.forecastId.getValue());
 
     await this.checkPlanAccess(
       params.userId,
-      forecast.getPlanId(),
+      forecast.planId,
+      params.workspaceId,
       "update forecast item",
     );
 
@@ -169,79 +161,38 @@ export class ForecastService {
     return item;
   }
 
-  async deleteForecastItem(itemId: string, userId: string): Promise<void> {
+  async deleteForecastItem(itemId: string, workspaceId: string, userId: string): Promise<void> {
     const id = ForecastItemId.fromString(itemId);
-    const item = await this.forecastItemRepository.findById(id);
+    const item = await this.forecastItemRepository.findById(id, workspaceId);
     if (!item) {
       throw new ForecastItemNotFoundError(itemId);
     }
 
     const forecast = await this.forecastRepository.findById(
-      item.getForecastId(),
+      item.forecastId,
+      workspaceId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.getForecastId().toString());
+      throw new ForecastNotFoundError(item.forecastId.getValue());
 
     await this.checkPlanAccess(
       userId,
-      forecast.getPlanId(),
+      forecast.planId,
+      workspaceId,
       "delete forecast item",
     );
 
     await this.forecastItemRepository.delete(id);
   }
 
-  async getForecast(id: string, userId: string): Promise<Forecast> {
+  async deleteForecast(id: string, workspaceId: string, userId: string): Promise<void> {
     const forecastId = ForecastId.fromString(id);
-    const forecast = await this.forecastRepository.findById(forecastId);
+    const forecast = await this.forecastRepository.findById(forecastId, workspaceId);
     if (!forecast) {
       throw new ForecastNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, forecast.getPlanId(), "view forecast");
-
-    return forecast;
-  }
-
-  async listForecasts(
-    planId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<Forecast>> {
-    const pId = PlanId.fromString(planId);
-    await this.checkPlanAccess(userId, pId, "list forecasts");
-
-    return this.forecastRepository.findByPlanId(pId, options);
-  }
-
-  async getForecastItems(
-    forecastId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<ForecastItem>> {
-    const fId = ForecastId.fromString(forecastId);
-    const forecast = await this.forecastRepository.findById(fId);
-    if (!forecast) {
-      throw new ForecastNotFoundError(forecastId);
-    }
-
-    await this.checkPlanAccess(
-      userId,
-      forecast.getPlanId(),
-      "view forecast items",
-    );
-
-    return this.forecastItemRepository.findByForecastId(fId, options);
-  }
-
-  async deleteForecast(id: string, userId: string): Promise<void> {
-    const forecastId = ForecastId.fromString(id);
-    const forecast = await this.forecastRepository.findById(forecastId);
-    if (!forecast) {
-      throw new ForecastNotFoundError(id);
-    }
-
-    await this.checkPlanAccess(userId, forecast.getPlanId(), "delete forecast");
+    await this.checkPlanAccess(userId, forecast.planId, workspaceId, "delete forecast");
 
     // Use transactional delete to ensure data integrity
     await this.forecastRepository.deleteWithItems(forecastId);

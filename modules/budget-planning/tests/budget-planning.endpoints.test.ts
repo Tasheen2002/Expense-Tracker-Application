@@ -1,5 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
+
+// Mock rate limiter — singleton store persists across tests and would cause 429s
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      writeOperations: { windowMs: 60000, maxRequests: 100 },
+      auth: { windowMs: 60000, maxRequests: 100 },
+    },
+    userKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    defaultKeyGenerator: () => 'test-user',
+  })
+);
+
 import { createServer } from '../../../apps/api/src/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -108,6 +124,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testBudgetPlanId =
+            data.data?.budgetPlanId ||
             data.data?.budgetPlan?.id ||
             data.budgetPlan?.id ||
             data.data?.id ||
@@ -276,6 +293,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (createRes.statusCode === 201) {
           const data = JSON.parse(createRes.payload);
           deletePlanId =
+            data.data?.budgetPlanId ||
             data.data?.budgetPlan?.id ||
             data.budgetPlan?.id ||
             data.data?.id ||
@@ -324,6 +342,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           const data = JSON.parse(res.payload);
           console.log('Create Forecast Success Data:', JSON.stringify(data));
           testForecastId =
+            data.data?.forecastId ||
             data.data?.forecast?.id ||
             data.forecast?.id ||
             data.data?.id ||
@@ -458,6 +477,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testForecastItemId =
+            data.data?.forecastItemId ||
             data.data?.item?.id || data.item?.id || data.data?.id || data.id;
         }
         expect([201, 400, 404, 500]).toContain(res.statusCode);
@@ -565,6 +585,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testScenarioId =
+            data.data?.scenarioId ||
             data.data?.scenario?.id ||
             data.scenario?.id ||
             data.data?.id ||

@@ -1,10 +1,10 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { Department } from '../../domain/entities/department.entity';
+import { Department, DepartmentDTO } from '../../domain/entities/department.entity';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface GetDepartmentQuery extends IQuery {
   id: string;
@@ -12,16 +12,16 @@ export interface GetDepartmentQuery extends IQuery {
 
 export class GetDepartmentHandler implements IQueryHandler<
   GetDepartmentQuery,
-  QueryResult<Department>
+  QueryResult<DepartmentDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(query: GetDepartmentQuery): Promise<QueryResult<Department>> {
+  async handle(query: GetDepartmentQuery): Promise<QueryResult<DepartmentDTO>> {
     const department = await this.allocationManagementService.getDepartment(
       query.id
     );
-    return QueryResult.success(department);
+    return QueryResult.success(Department.toDTO(department));
   }
 }

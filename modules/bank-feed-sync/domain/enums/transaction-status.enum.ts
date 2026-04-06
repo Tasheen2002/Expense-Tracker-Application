@@ -8,3 +8,4 @@ export enum TransactionStatus {
   IGNORED = "IGNORED", // User chose to ignore
   DUPLICATE = "DUPLICATE", // Detected as duplicate
 }
+

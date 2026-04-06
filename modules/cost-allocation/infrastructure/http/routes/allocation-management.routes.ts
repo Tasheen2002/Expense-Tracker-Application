@@ -1,22 +1,99 @@
 import { FastifyInstance } from 'fastify';
 import { AllocationManagementController } from '../controllers/allocation-management.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function allocationManagementRoutes(
   fastify: FastifyInstance,
   controller: AllocationManagementController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  const departmentSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      workspaceId: { type: 'string', format: 'uuid' },
+      name: { type: 'string' },
+      code: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      managerId: { type: 'string', nullable: true },
+      parentDepartmentId: { type: 'string', nullable: true },
+      isActive: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const costCenterSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      workspaceId: { type: 'string', format: 'uuid' },
+      name: { type: 'string' },
+      code: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      isActive: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const projectSchema = {
+    type: 'object',
+    properties: {
+      id: { type: 'string', format: 'uuid' },
+      workspaceId: { type: 'string', format: 'uuid' },
+      name: { type: 'string' },
+      code: { type: 'string' },
+      description: { type: 'string', nullable: true },
+      startDate: { type: 'string', format: 'date-time' },
+      endDate: { type: 'string', format: 'date-time', nullable: true },
+      managerId: { type: 'string', nullable: true },
+      budget: { type: 'number', nullable: true },
+      isActive: { type: 'boolean' },
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
+    },
+  };
+
+  const commandResponseSchema = {
+    type: 'object',
+    properties: {
+      success: { type: 'boolean' },
+      statusCode: { type: 'number' },
+      message: { type: 'string' },
+    },
+  };
+
   // ==========================================
   // Department Routes
   // ==========================================
 
   // Create department
   fastify.post(
-    '/departments',
+    '/workspaces/:workspaceId/departments',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Create a new department',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -35,6 +112,18 @@ export async function allocationManagementRoutes(
             parentDepartmentId: { type: 'string', format: 'uuid' },
           },
         },
+        response: {
+          201: {
+            description: 'Department created successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: departmentSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -43,11 +132,13 @@ export async function allocationManagementRoutes(
 
   // List departments
   fastify.get(
-    '/departments',
+    '/workspaces/:workspaceId/departments',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'List all departments in workspace',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -62,6 +153,32 @@ export async function allocationManagementRoutes(
             offset: { type: 'string' },
           },
         },
+        response: {
+          200: {
+            description: 'Departments retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: departmentSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -70,17 +187,31 @@ export async function allocationManagementRoutes(
 
   // Get single department
   fastify.get(
-    '/departments/:departmentId',
+    '/workspaces/:workspaceId/departments/:departmentId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Get a specific department',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'departmentId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             departmentId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Department retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: departmentSchema,
+            },
           },
         },
       },
@@ -91,11 +222,13 @@ export async function allocationManagementRoutes(
 
   // Update department
   fastify.put(
-    '/departments/:departmentId',
+    '/workspaces/:workspaceId/departments/:departmentId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Update a department',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'departmentId'],
@@ -118,6 +251,12 @@ export async function allocationManagementRoutes(
             },
           },
         },
+        response: {
+          200: {
+            description: 'Department updated successfully',
+            ...commandResponseSchema,
+          },
+        },
       },
     },
     (request, reply) =>
@@ -126,17 +265,25 @@ export async function allocationManagementRoutes(
 
   // Delete department (soft delete)
   fastify.delete(
-    '/departments/:departmentId',
+    '/workspaces/:workspaceId/departments/:departmentId',
     {
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Delete a department (soft delete)',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'departmentId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             departmentId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Department deleted successfully',
+            ...commandResponseSchema,
           },
         },
       },
@@ -147,17 +294,25 @@ export async function allocationManagementRoutes(
 
   // Activate department
   fastify.patch(
-    '/departments/:departmentId/activate',
+    '/workspaces/:workspaceId/departments/:departmentId/activate',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Activate a department',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'departmentId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             departmentId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Department activated successfully',
+            ...commandResponseSchema,
           },
         },
       },
@@ -172,11 +327,13 @@ export async function allocationManagementRoutes(
 
   // Create cost center
   fastify.post(
-    '/cost-centers',
+    '/workspaces/:workspaceId/cost-centers',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Create a new cost center',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -193,6 +350,18 @@ export async function allocationManagementRoutes(
             description: { type: 'string' },
           },
         },
+        response: {
+          201: {
+            description: 'Cost center created successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: costCenterSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -201,11 +370,13 @@ export async function allocationManagementRoutes(
 
   // List cost centers
   fastify.get(
-    '/cost-centers',
+    '/workspaces/:workspaceId/cost-centers',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'List all cost centers in workspace',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -220,6 +391,32 @@ export async function allocationManagementRoutes(
             offset: { type: 'string' },
           },
         },
+        response: {
+          200: {
+            description: 'Cost centers retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: costCenterSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -228,17 +425,31 @@ export async function allocationManagementRoutes(
 
   // Get single cost center
   fastify.get(
-    '/cost-centers/:costCenterId',
+    '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Get a specific cost center',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'costCenterId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             costCenterId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Cost center retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: costCenterSchema,
+            },
           },
         },
       },
@@ -249,11 +460,13 @@ export async function allocationManagementRoutes(
 
   // Update cost center
   fastify.put(
-    '/cost-centers/:costCenterId',
+    '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Update a cost center',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'costCenterId'],
@@ -270,6 +483,12 @@ export async function allocationManagementRoutes(
             description: { type: 'string', nullable: true },
           },
         },
+        response: {
+          200: {
+            description: 'Cost center updated successfully',
+            ...commandResponseSchema,
+          },
+        },
       },
     },
     (request, reply) =>
@@ -278,17 +497,25 @@ export async function allocationManagementRoutes(
 
   // Delete cost center (soft delete)
   fastify.delete(
-    '/cost-centers/:costCenterId',
+    '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Delete a cost center (soft delete)',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'costCenterId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             costCenterId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Cost center deleted successfully',
+            ...commandResponseSchema,
           },
         },
       },
@@ -299,17 +526,25 @@ export async function allocationManagementRoutes(
 
   // Activate cost center
   fastify.patch(
-    '/cost-centers/:costCenterId/activate',
+    '/workspaces/:workspaceId/cost-centers/:costCenterId/activate',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Activate a cost center',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'costCenterId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             costCenterId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Cost center activated successfully',
+            ...commandResponseSchema,
           },
         },
       },
@@ -324,11 +559,13 @@ export async function allocationManagementRoutes(
 
   // Create project
   fastify.post(
-    '/projects',
+    '/workspaces/:workspaceId/projects',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Create a new project',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -349,6 +586,18 @@ export async function allocationManagementRoutes(
             budget: { type: 'number', minimum: 0 },
           },
         },
+        response: {
+          201: {
+            description: 'Project created successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: projectSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -357,11 +606,13 @@ export async function allocationManagementRoutes(
 
   // List projects
   fastify.get(
-    '/projects',
+    '/workspaces/:workspaceId/projects',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'List all projects in workspace',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -376,6 +627,32 @@ export async function allocationManagementRoutes(
             offset: { type: 'string' },
           },
         },
+        response: {
+          200: {
+            description: 'Projects retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: projectSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -384,17 +661,31 @@ export async function allocationManagementRoutes(
 
   // Get single project
   fastify.get(
-    '/projects/:projectId',
+    '/workspaces/:workspaceId/projects/:projectId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Get a specific project',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'projectId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             projectId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Project retrieved successfully',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
+              data: projectSchema,
+            },
           },
         },
       },
@@ -405,11 +696,13 @@ export async function allocationManagementRoutes(
 
   // Update project
   fastify.put(
-    '/projects/:projectId',
+    '/workspaces/:workspaceId/projects/:projectId',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Update a project',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'projectId'],
@@ -430,6 +723,12 @@ export async function allocationManagementRoutes(
             budget: { type: 'number', minimum: 0, nullable: true },
           },
         },
+        response: {
+          200: {
+            description: 'Project updated successfully',
+            ...commandResponseSchema,
+          },
+        },
       },
     },
     (request, reply) =>
@@ -438,17 +737,25 @@ export async function allocationManagementRoutes(
 
   // Delete project (soft delete)
   fastify.delete(
-    '/projects/:projectId',
+    '/workspaces/:workspaceId/projects/:projectId',
     {
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Delete a project (soft delete)',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'projectId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             projectId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Project deleted successfully',
+            ...commandResponseSchema,
           },
         },
       },
@@ -459,17 +766,25 @@ export async function allocationManagementRoutes(
 
   // Activate project
   fastify.patch(
-    '/projects/:projectId/activate',
+    '/workspaces/:workspaceId/projects/:projectId/activate',
     {
+      preHandler: [requireRole(['owner', 'admin', 'manager'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Activate a project',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'projectId'],
           properties: {
             workspaceId: { type: 'string', format: 'uuid' },
             projectId: { type: 'string', format: 'uuid' },
+          },
+        },
+        response: {
+          200: {
+            description: 'Project activated successfully',
+            ...commandResponseSchema,
           },
         },
       },

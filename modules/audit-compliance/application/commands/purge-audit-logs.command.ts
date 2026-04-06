@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AuditService } from '../services/audit.service';
 
 export interface PurgeAuditLogsCommand extends ICommand {

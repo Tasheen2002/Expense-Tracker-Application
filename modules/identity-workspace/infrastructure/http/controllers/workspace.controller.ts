@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateWorkspaceHandler } from '../../../application/commands/create-workspace.command';
 import { UpdateWorkspaceHandler } from '../../../application/commands/update-workspace.command';
 import { DeleteWorkspaceHandler } from '../../../application/commands/delete-workspace.command';
@@ -7,7 +7,7 @@ import { GetWorkspaceByIdHandler } from '../../../application/queries/get-worksp
 import { GetUserWorkspacesHandler } from '../../../application/queries/get-user-workspaces.query';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { Workspace } from '../../../domain/entities/workspace.entity';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class WorkspaceController {
   constructor(

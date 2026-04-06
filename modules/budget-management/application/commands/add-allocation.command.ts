@@ -4,8 +4,8 @@ import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface AddAllocationCommand extends ICommand {
   budgetId: string;
@@ -34,7 +34,7 @@ export class AddAllocationHandler implements ICommandHandler<
       description: command.description,
     });
     return CommandResult.success({
-      allocationId: allocation.getId().getValue(),
+      allocationId: allocation.id.getValue(),
     });
   }
 }

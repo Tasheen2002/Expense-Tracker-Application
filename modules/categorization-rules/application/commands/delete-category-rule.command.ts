@@ -4,10 +4,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteCategoryRuleCommand extends ICommand {
   ruleId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -22,6 +23,7 @@ export class DeleteCategoryRuleHandler implements ICommandHandler<
   ): Promise<CommandResult<void>> {
     await this.ruleService.deleteRule(
       RuleId.fromString(command.ruleId),
+      command.workspaceId,
       command.userId
     );
 

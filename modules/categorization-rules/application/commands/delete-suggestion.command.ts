@@ -1,13 +1,15 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { SuggestionId } from '../../domain/value-objects/suggestion-id';
+import { WorkspaceId } from '../../../identity-workspace';
 import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteSuggestionCommand extends ICommand {
   suggestionId: string;
+  workspaceId: string;
 }
 
 export class DeleteSuggestionHandler implements ICommandHandler<
@@ -18,7 +20,8 @@ export class DeleteSuggestionHandler implements ICommandHandler<
 
   async handle(command: DeleteSuggestionCommand): Promise<CommandResult<void>> {
     await this.suggestionService.deleteSuggestion(
-      SuggestionId.fromString(command.suggestionId)
+      SuggestionId.fromString(command.suggestionId),
+      WorkspaceId.fromString(command.workspaceId)
     );
 
     return CommandResult.success();

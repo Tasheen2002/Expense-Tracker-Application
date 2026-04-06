@@ -2,7 +2,7 @@ import { MetadataId } from '../value-objects/metadata-id';
 import { ReceiptId } from '../value-objects/receipt-id';
 import { Decimal } from '@prisma/client/runtime/library';
 import sanitizeHtml from 'sanitize-html';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface LineItem {
   description: string;

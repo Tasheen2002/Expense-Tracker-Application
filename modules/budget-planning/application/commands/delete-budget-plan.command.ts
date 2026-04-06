@@ -3,10 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteBudgetPlanCommand extends ICommand {
   id: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -17,7 +18,7 @@ export class DeleteBudgetPlanHandler implements ICommandHandler<
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
   async handle(command: DeleteBudgetPlanCommand): Promise<CommandResult<void>> {
-    await this.budgetPlanService.deletePlan(command.id, command.userId);
+    await this.budgetPlanService.deletePlan(command.id, command.workspaceId, command.userId);
     return CommandResult.success();
   }
 }

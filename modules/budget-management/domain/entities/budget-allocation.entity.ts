@@ -3,10 +3,11 @@ import { BudgetId } from '../value-objects/budget-id';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   InvalidAmountError,
+  InvalidAlertThresholdError,
   NegativeAmountError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { BudgetAlert } from './budget-alert.entity';
 
 // ============================================================================
@@ -202,9 +203,9 @@ export class BudgetAllocation extends AggregateRoot {
 
     allocation.addDomainEvent(
       new BudgetAllocationCreatedEvent(
-        allocation.getId().getValue(),
-        allocation.getBudgetId().getValue(),
-        allocation.getCategoryId(),
+        allocation.id.getValue(),
+        allocation.budgetId.getValue(),
+        allocation.categoryId,
         allocatedAmount.toString()
       )
     );
@@ -217,35 +218,35 @@ export class BudgetAllocation extends AggregateRoot {
   }
 
   // Getters
-  getId(): AllocationId {
+  get id(): AllocationId {
     return this.props.id;
   }
 
-  getBudgetId(): BudgetId {
+  get budgetId(): BudgetId {
     return this.props.budgetId;
   }
 
-  getCategoryId(): string | null {
+  get categoryId(): string | null {
     return this.props.categoryId;
   }
 
-  getAllocatedAmount(): Decimal {
+  get allocatedAmount(): Decimal {
     return this.props.allocatedAmount;
   }
 
-  getSpentAmount(): Decimal {
+  get spentAmount(): Decimal {
     return this.props.spentAmount;
   }
 
-  getDescription(): string | null {
+  get description(): string | null {
     return this.props.description;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -275,8 +276,8 @@ export class BudgetAllocation extends AggregateRoot {
     if (!oldAmount.equals(newAmount)) {
       this.addDomainEvent(
         new BudgetAllocationUpdatedEvent(
-          this.getId().getValue(),
-          this.getBudgetId().getValue(),
+          this.id.getValue(),
+          this.budgetId.getValue(),
           { allocatedAmount: newAmount.toString() }
         )
       );
@@ -321,8 +322,8 @@ export class BudgetAllocation extends AggregateRoot {
 
     this.addDomainEvent(
       new BudgetSpentIncrementedEvent(
-        this.getId().getValue(),
-        this.getBudgetId().getValue(),
+        this.id.getValue(),
+        this.budgetId.getValue(),
         incrementAmount.toString(),
         newSpentAmount.toString()
       )
@@ -351,8 +352,8 @@ export class BudgetAllocation extends AggregateRoot {
 
     this.addDomainEvent(
       new BudgetSpentDecrementedEvent(
-        this.getId().getValue(),
-        this.getBudgetId().getValue(),
+        this.id.getValue(),
+        this.budgetId.getValue(),
         decrementAmount.toString(),
         newSpent.toString()
       )
@@ -368,8 +369,8 @@ export class BudgetAllocation extends AggregateRoot {
     if (oldDescription !== newDescription) {
       this.addDomainEvent(
         new BudgetAllocationUpdatedEvent(
-          this.getId().getValue(),
-          this.getBudgetId().getValue(),
+          this.id.getValue(),
+          this.budgetId.getValue(),
           { description: newDescription }
         )
       );
@@ -379,8 +380,8 @@ export class BudgetAllocation extends AggregateRoot {
   markAsDeleted(): void {
     this.addDomainEvent(
       new BudgetAllocationDeletedEvent(
-        this.getId().getValue(),
-        this.getBudgetId().getValue()
+        this.id.getValue(),
+        this.budgetId.getValue()
       )
     );
   }
@@ -423,33 +424,34 @@ export class BudgetAllocation extends AggregateRoot {
 
     try {
       const alert = BudgetAlert.create({
-        budgetId: this.getBudgetId().getValue(),
-        allocationId: this.getId().getValue(),
-        currentSpent: this.getSpentAmount(),
-        allocatedAmount: this.getAllocatedAmount(),
+        budgetId: this.budgetId.getValue(),
+        allocationId: this.id.getValue(),
+        currentSpent: this.spentAmount,
+        allocatedAmount: this.allocatedAmount,
       });
       return [alert];
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      // InvalidAlertThresholdError can be safely ignored; any other error re-throws
-      if (!msg.includes('threshold')) throw error;
+      if (!(error instanceof InvalidAlertThresholdError)) {
+        throw error;
+      }
       return [];
     }
   }
 
-  toJSON(): BudgetAllocationDTO {
+  static toDTO(allocation: BudgetAllocation): BudgetAllocationDTO {
     return {
-      allocationId: this.getId().getValue(),
-      budgetId: this.getBudgetId().getValue(),
-      categoryId: this.getCategoryId(),
-      allocatedAmount: this.getAllocatedAmount().toString(),
-      spentAmount: this.getSpentAmount().toString(),
-      description: this.getDescription(),
-      remainingAmount: this.getRemainingAmount().toString(),
-      spentPercentage: this.getSpentPercentage(),
-      isOverBudget: this.isOverBudget(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      allocationId: allocation.id.getValue(),
+      budgetId: allocation.budgetId.getValue(),
+      categoryId: allocation.categoryId,
+      allocatedAmount: allocation.allocatedAmount.toString(),
+      spentAmount: allocation.spentAmount.toString(),
+      description: allocation.description,
+      remainingAmount: allocation.getRemainingAmount().toString(),
+      spentPercentage: allocation.getSpentPercentage(),
+      isOverBudget: allocation.isOverBudget(),
+      createdAt: allocation.createdAt.toISOString(),
+      updatedAt: allocation.updatedAt.toISOString(),
     };
   }
+
 }

@@ -2,7 +2,7 @@ import { IOutboxEventRepository } from "../../domain/repositories/outbox-event.r
 import { BATCH_SIZE } from "../../domain/constants/outbox.constants";
 import { GetFailedEventsQuery } from "./get-failed-events.query";
 import { OutboxEvent } from "../../domain/entities/outbox-event.entity";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class GetFailedEventsHandler {
   constructor(private readonly repository: IOutboxEventRepository) {}

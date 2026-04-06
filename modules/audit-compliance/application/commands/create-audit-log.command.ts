@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { AuditService, CreateAuditLogDTO } from '../services/audit.service';
 
 export interface CreateAuditLogCommand extends ICommand {
@@ -11,16 +11,14 @@ export interface CreateAuditLogCommand extends ICommand {
 
 export class CreateAuditLogHandler implements ICommandHandler<
   CreateAuditLogCommand,
-  CommandResult<{ auditLogId: string }>
+  CommandResult<string>
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(
-    input: CreateAuditLogCommand
-  ): Promise<CommandResult<{ auditLogId: string }>> {
+  async handle(input: CreateAuditLogCommand): Promise<CommandResult<string>> {
     try {
       const auditLog = await this.auditService.createAuditLog(input.data);
-      return CommandResult.success({ auditLogId: auditLog.id.getValue() });
+      return CommandResult.success(auditLog.id.getValue());
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

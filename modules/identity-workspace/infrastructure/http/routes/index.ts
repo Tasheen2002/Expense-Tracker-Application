@@ -1,12 +1,12 @@
 import { FastifyInstance } from 'fastify';
-import { registerAuthRoutes } from './auth.routes';
-import { registerWorkspaceRoutes } from './workspace.routes';
-import { registerInvitationRoutes } from './invitation.routes';
-import { registerMemberRoutes } from './member.routes';
-import { AuthController } from '../controllers/auth.controller';
-import { WorkspaceController } from '../controllers/workspace.controller';
-import { InvitationController } from '../controllers/invitation.controller';
-import { MemberController } from '../controllers/member.controller';
+import { registerAuthRoutes } from './auth.routes.js';
+import { registerWorkspaceRoutes } from './workspace.routes.js';
+import { registerInvitationRoutes } from './invitation.routes.js';
+import { registerMemberRoutes } from './member.routes.js';
+import { AuthController } from '../controllers/auth.controller.js';
+import { WorkspaceController } from '../controllers/workspace.controller.js';
+import { InvitationController } from '../controllers/invitation.controller.js';
+import { MemberController } from '../controllers/member.controller.js';
 
 export async function registerIdentityWorkspaceRoutes(
   fastify: FastifyInstance,

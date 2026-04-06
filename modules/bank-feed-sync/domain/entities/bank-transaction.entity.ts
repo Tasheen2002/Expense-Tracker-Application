@@ -3,8 +3,8 @@ import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { BankTransactionId } from '../value-objects/bank-transaction-id';
 import { SyncSessionId } from '../value-objects/sync-session-id';
 import { TransactionStatus } from '../enums/transaction-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -123,7 +123,7 @@ export interface BankTransactionProps {
 }
 
 export class BankTransaction extends AggregateRoot {
-  private constructor(private readonly props: BankTransactionProps) {
+  private constructor(private props: BankTransactionProps) {
     super();
   }
 
@@ -162,9 +162,9 @@ export class BankTransaction extends AggregateRoot {
 
     transaction.addDomainEvent(
       new BankTransactionSyncedEvent(
-        transaction.getId().getValue(),
-        transaction.getWorkspaceId().getValue(),
-        transaction.getConnectionId().getValue(),
+        transaction.id.getValue(),
+        transaction.workspaceId.getValue(),
+        transaction.connectionId.getValue(),
         externalId,
         amount,
         currency
@@ -174,7 +174,7 @@ export class BankTransaction extends AggregateRoot {
     return transaction;
   }
 
-  static fromPersistence(props: BankTransactionProps): BankTransaction {
+  static reconstitute(props: BankTransactionProps): BankTransaction {
     return new BankTransaction(props);
   }
 
@@ -247,75 +247,6 @@ export class BankTransaction extends AggregateRoot {
     return this.props.updatedAt;
   }
 
-  // Method-style getters for repository compatibility
-  getId(): BankTransactionId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getConnectionId(): BankConnectionId {
-    return this.props.connectionId;
-  }
-
-  getSessionId(): SyncSessionId {
-    return this.props.sessionId;
-  }
-
-  getExternalId(): string {
-    return this.props.externalId;
-  }
-
-  getAmount(): number {
-    return this.props.amount;
-  }
-
-  getCurrency(): string {
-    return this.props.currency;
-  }
-
-  getDescription(): string {
-    return this.props.description;
-  }
-
-  getMerchantName(): string | undefined {
-    return this.props.merchantName;
-  }
-
-  getCategoryName(): string | undefined {
-    return this.props.categoryName;
-  }
-
-  getTransactionDate(): Date {
-    return this.props.transactionDate;
-  }
-
-  getPostedDate(): Date | undefined {
-    return this.props.postedDate;
-  }
-
-  getStatus(): TransactionStatus {
-    return this.props.status;
-  }
-
-  getExpenseId(): string | undefined {
-    return this.props.expenseId;
-  }
-
-  getMetadata(): Record<string, unknown> | undefined {
-    return this.props.metadata;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
   // Business methods
   markAsMatched(expenseId: string): void {
     this.props.status = TransactionStatus.MATCHED;
@@ -324,8 +255,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionMatchedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         expenseId
       )
     );
@@ -338,8 +269,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionImportedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         expenseId
       )
     );
@@ -351,8 +282,8 @@ export class BankTransaction extends AggregateRoot {
 
     this.addDomainEvent(
       new BankTransactionIgnoredEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -362,30 +293,26 @@ export class BankTransaction extends AggregateRoot {
     this.props.updatedAt = new Date();
   }
 
-  toJSON(): BankTransactionDTO {
+  static toDTO(transaction: BankTransaction): BankTransactionDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      connectionId: this.getConnectionId().getValue(),
-      sessionId: this.getSessionId().getValue(),
-      externalId: this.externalId,
-      amount: this.amount,
-      currency: this.currency,
-      description: this.description,
-      merchantName: this.merchantName,
-      categoryName: this.categoryName,
-      transactionDate: this.transactionDate,
-      postedDate: this.postedDate,
-      status: this.status,
-      expenseId: this.expenseId,
-      metadata: this.metadata,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      id: transaction.id.getValue(),
+      workspaceId: transaction.workspaceId.getValue(),
+      connectionId: transaction.connectionId.getValue(),
+      sessionId: transaction.sessionId.getValue(),
+      externalId: transaction.externalId,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      description: transaction.description,
+      merchantName: transaction.merchantName,
+      categoryName: transaction.categoryName,
+      transactionDate: transaction.transactionDate,
+      postedDate: transaction.postedDate,
+      status: transaction.status,
+      expenseId: transaction.expenseId,
+      metadata: transaction.metadata,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
     };
-  }
-
-  toPersistence(): BankTransactionProps {
-    return { ...this.props };
   }
 }
 
@@ -402,7 +329,7 @@ export interface BankTransactionDTO {
   categoryName?: string;
   transactionDate: Date;
   postedDate?: Date;
-  status: TransactionStatus;
+  status: string;
   expenseId?: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;

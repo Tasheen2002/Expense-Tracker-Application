@@ -1,47 +1,56 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { SpendingLimit } from "../../domain/entities/spending-limit.entity";
-import { SpendingLimitId } from "../../domain/value-objects/spending-limit-id";
-import { BudgetPeriodType } from "../../domain/enums/budget-period-type";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { SpendingLimit } from '../../domain/entities/spending-limit.entity';
+import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id';
+import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ISpendingLimitRepository,
   SpendingLimitFilters,
-} from "../../domain/repositories/spending-limit.repository";
+} from '../../domain/repositories/spending-limit.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
-export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class SpendingLimitRepositoryImpl
+  extends PrismaRepository<SpendingLimit>
+  implements ISpendingLimitRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(limit: SpendingLimit): Promise<void> {
     await this.prisma.spendingLimit.upsert({
-      where: { id: limit.getId().getValue() },
+      where: { id: limit.id.getValue() },
       create: {
-        id: limit.getId().getValue(),
-        workspaceId: limit.getWorkspaceId(),
-        userId: limit.getUserId(),
-        categoryId: limit.getCategoryId(),
-        limitAmount: limit.getLimitAmount(),
-        currency: limit.getCurrency(),
-        periodType: limit.getPeriodType(),
-        isActive: limit.isActive(),
-        createdAt: limit.getCreatedAt(),
-        updatedAt: limit.getUpdatedAt(),
+        id: limit.id.getValue(),
+        workspaceId: limit.workspaceId,
+        userId: limit.userId,
+        categoryId: limit.categoryId,
+        limitAmount: limit.limitAmount,
+        currency: limit.currency,
+        periodType: limit.periodType,
+        isActive: limit.active,
+        createdAt: limit.createdAt,
+        updatedAt: limit.updatedAt,
       },
       update: {
-        limitAmount: limit.getLimitAmount(),
-        periodType: limit.getPeriodType(),
-        isActive: limit.isActive(),
-        updatedAt: limit.getUpdatedAt(),
+        limitAmount: limit.limitAmount,
+        periodType: limit.periodType,
+        isActive: limit.active,
+        updatedAt: limit.updatedAt,
       },
     });
+
+    await this.dispatchEvents(limit);
   }
 
   async findById(
     id: SpendingLimitId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<SpendingLimit | null> {
     const row = await this.prisma.spendingLimit.findFirst({
       where: {
@@ -57,21 +66,21 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SpendingLimit>> {
     const where: Prisma.SpendingLimitWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findByFilters(
     filters: SpendingLimitFilters,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SpendingLimit>> {
     const where: Prisma.SpendingLimitWhereInput = {
       workspaceId: filters.workspaceId,
@@ -95,16 +104,16 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findActiveByUser(
     workspaceId: string,
     userId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SpendingLimit>> {
     const where: Prisma.SpendingLimitWhereInput = {
       workspaceId,
@@ -114,16 +123,16 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findActiveByCategory(
     workspaceId: string,
     categoryId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SpendingLimit>> {
     const where: Prisma.SpendingLimitWhereInput = {
       workspaceId,
@@ -133,16 +142,16 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: "desc" } },
+      { where, orderBy: { createdAt: 'desc' } },
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
-      options,
+      options
     );
   }
 
   async findApplicableLimits(
     workspaceId: string,
     userId?: string,
-    categoryId?: string,
+    categoryId?: string
   ): Promise<SpendingLimit[]> {
     const orConditions: Prisma.SpendingLimitWhereInput[] = [
       // Workspace-wide limits (applies to everyone)
@@ -153,7 +162,7 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
     if (userId) {
       orConditions.push(
         // User-specific, any category
-        { userId, categoryId: null },
+        { userId, categoryId: null }
       );
 
       if (categoryId) {
@@ -175,7 +184,7 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
 
     const rows = await this.prisma.spendingLimit.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       take: 100,
     });
 
@@ -183,12 +192,21 @@ export class SpendingLimitRepositoryImpl implements ISpendingLimitRepository {
   }
 
   async delete(id: SpendingLimitId, workspaceId: string): Promise<void> {
+    const limit = await this.findById(id, workspaceId);
+    if (limit) {
+      limit.markAsDeleted();
+    }
+
     await this.prisma.spendingLimit.delete({
       where: {
         id: id.getValue(),
         workspaceId,
       },
     });
+
+    if (limit) {
+      await this.dispatchEvents(limit);
+    }
   }
 
   private toDomain(row: Prisma.SpendingLimitGetPayload<object>): SpendingLimit {

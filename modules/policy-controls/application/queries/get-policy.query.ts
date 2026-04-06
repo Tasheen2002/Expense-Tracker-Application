@@ -1,4 +1,4 @@
-﻿import { PolicyRepository } from '../../domain/repositories/policy.repository';
+import { PolicyRepository } from '../../domain/repositories/policy.repository';
 import { ExpensePolicy } from '../../domain/entities/expense-policy.entity';
 import { PolicyId } from '../../domain/value-objects/policy-id';
 import { PolicyNotFoundError } from '../../domain/errors/policy-controls.errors';
@@ -6,7 +6,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 export interface GetPolicyInput extends IQuery {
   policyId: string;
   workspaceId: string;

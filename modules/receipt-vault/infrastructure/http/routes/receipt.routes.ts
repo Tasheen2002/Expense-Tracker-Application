@@ -1,12 +1,12 @@
 import { ZodSchema } from 'zod';
 import { FastifyInstance } from 'fastify';
 import { ReceiptController } from '../controllers/receipt.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
 import { validateBody, validateQuery } from '../validation/validator';
 import {
   uploadReceiptSchema,

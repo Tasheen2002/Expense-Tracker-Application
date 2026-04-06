@@ -1,11 +1,17 @@
-import { BudgetService } from '../services/budget.service';
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { IBudgetAlertRepository } from '../../domain/repositories/budget-alert.repository';
+import {
+  BudgetAlert,
+  BudgetAlertDTO,
+} from '../../domain/entities/budget-alert.entity';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetUnreadAlertsQuery extends IQuery {
   workspaceId: string;
@@ -13,30 +19,35 @@ export interface GetUnreadAlertsQuery extends IQuery {
   offset?: number;
 }
 
-export class GetUnreadAlertsHandler implements IQueryHandler<
-  GetUnreadAlertsQuery,
-  QueryResult<PaginatedResult<BudgetAlert>>
-> {
-  constructor(private readonly budgetService: BudgetService) {}
+export class GetUnreadAlertsHandler
+  implements
+    IQueryHandler<
+      GetUnreadAlertsQuery,
+      QueryResult<PaginatedResult<BudgetAlertDTO>>
+    >
+{
+  constructor(
+    private readonly budgetAlertRepository: IBudgetAlertRepository
+  ) {}
 
   async handle(
     query: GetUnreadAlertsQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetAlert>>> {
-    try {
-      
-          const options = {
-            limit: query.limit,
-            offset: query.offset,
-          };
-      
-          const result = await this.budgetService.getUnreadAlerts(
-            query.workspaceId,
-            options
-          );
-          return QueryResult.success(result);
-        
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<PaginatedResult<BudgetAlertDTO>>> {
+    const options: PaginationOptions = {
+      limit: query.limit,
+      offset: query.offset,
+    };
+
+    const result = await this.budgetAlertRepository.findUnreadAlerts(
+      query.workspaceId,
+      options
+    );
+
+    const dtoResult: PaginatedResult<BudgetAlertDTO> = {
+      ...result,
+      items: result.items.map((alert) => BudgetAlert.toDTO(alert)),
+    };
+
+    return QueryResult.success(dtoResult);
   }
 }

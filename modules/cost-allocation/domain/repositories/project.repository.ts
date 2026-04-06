@@ -1,10 +1,10 @@
 import { Project } from "../entities/project.entity";
 import { ProjectId } from "../value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ProjectRepository {
   save(project: Project): Promise<void>;

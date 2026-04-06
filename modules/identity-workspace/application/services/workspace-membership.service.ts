@@ -13,7 +13,7 @@ import {
   CannotRemoveOwnerError,
 } from '../../domain/errors/identity.errors';
 
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
 
 export class WorkspaceMembershipService {

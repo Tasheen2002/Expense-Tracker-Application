@@ -7,10 +7,10 @@ import { CategoryId } from '../../../expense-ledger';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaApprovalChainRepository
   extends PrismaRepository<ApprovalChain>
@@ -21,37 +21,12 @@ export class PrismaApprovalChainRepository
   }
 
   async save(chain: ApprovalChain): Promise<void> {
+    const data = this.toPersistence(chain);
+
     await this.prisma.approvalChain.upsert({
       where: { id: chain.getId().getValue() },
-      create: {
-        id: chain.getId().getValue(),
-        workspaceId: chain.getWorkspaceId().getValue(),
-        name: chain.getName(),
-        description: chain.getDescription(),
-        minAmount: chain.getMinAmount(),
-        maxAmount: chain.getMaxAmount(),
-        categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()) || [],
-        requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain
-          .getApproverSequence()
-          .map((id) => id.getValue()),
-        isActive: chain.isActive(),
-        createdAt: chain.getCreatedAt(),
-        updatedAt: chain.getUpdatedAt(),
-      },
-      update: {
-        name: chain.getName(),
-        description: chain.getDescription(),
-        minAmount: chain.getMinAmount(),
-        maxAmount: chain.getMaxAmount(),
-        categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()) || [],
-        requiresReceipt: chain.requiresReceipt(),
-        approverSequence: chain
-          .getApproverSequence()
-          .map((id) => id.getValue()),
-        isActive: chain.isActive(),
-        updatedAt: chain.getUpdatedAt(),
-      },
+      create: data.create,
+      update: data.update,
     });
     await this.dispatchEvents(chain);
   }
@@ -138,6 +113,45 @@ export class PrismaApprovalChainRepository
     await this.prisma.approvalChain.delete({
       where: { id: chainId.getValue() },
     });
+  }
+
+  private toPersistence(chain: ApprovalChain): {
+    create: Prisma.ApprovalChainUncheckedCreateInput;
+    update: Prisma.ApprovalChainUncheckedUpdateInput;
+  } {
+    const categoryIds =
+      chain.getCategoryIds()?.map((id) => id.getValue()) || [];
+    const approverSequence = chain
+      .getApproverSequence()
+      .map((id) => id.getValue());
+
+    return {
+      create: {
+        id: chain.getId().getValue(),
+        workspaceId: chain.getWorkspaceId().getValue(),
+        name: chain.getName(),
+        description: chain.getDescription(),
+        minAmount: chain.getMinAmount(),
+        maxAmount: chain.getMaxAmount(),
+        categoryIds,
+        requiresReceipt: chain.requiresReceipt(),
+        approverSequence,
+        isActive: chain.isActive(),
+        createdAt: chain.getCreatedAt(),
+        updatedAt: chain.getUpdatedAt(),
+      },
+      update: {
+        name: chain.getName(),
+        description: chain.getDescription(),
+        minAmount: chain.getMinAmount(),
+        maxAmount: chain.getMaxAmount(),
+        categoryIds,
+        requiresReceipt: chain.requiresReceipt(),
+        approverSequence,
+        isActive: chain.isActive(),
+        updatedAt: chain.getUpdatedAt(),
+      },
+    };
   }
 
   private toDomain(row: Prisma.ApprovalChainGetPayload<object>): ApprovalChain {

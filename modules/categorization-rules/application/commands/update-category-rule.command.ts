@@ -1,7 +1,7 @@
 import { CategoryRuleService } from '../services/category-rule.service';
 import { RuleId } from '../../domain/value-objects/rule-id';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { CategoryId } from '../../../expense-ledger';
 import {
   RuleConditionType,
   isValidRuleConditionType,
@@ -11,10 +11,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface UpdateCategoryRuleCommand extends ICommand {
   ruleId: string;
+  workspaceId: string;
   userId: string;
   name?: string;
   description?: string | null;
@@ -48,6 +49,7 @@ export class UpdateCategoryRuleHandler implements ICommandHandler<
 
     await this.ruleService.updateRule({
       ruleId: RuleId.fromString(command.ruleId),
+      workspaceId: command.workspaceId,
       userId: command.userId,
       name: command.name,
       description: command.description,

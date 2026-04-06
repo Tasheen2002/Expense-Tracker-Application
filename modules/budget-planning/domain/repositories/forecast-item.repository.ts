@@ -1,15 +1,15 @@
 import { ForecastItem } from "../entities/forecast-item.entity";
 import { ForecastItemId } from "../value-objects/forecast-item-id";
 import { ForecastId } from "../value-objects/forecast-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ForecastItemRepository {
+export interface IForecastItemRepository {
   save(item: ForecastItem): Promise<void>;
-  findById(id: ForecastItemId): Promise<ForecastItem | null>;
+  findById(id: ForecastItemId, workspaceId: string): Promise<ForecastItem | null>;
   findByForecastId(
     forecastId: ForecastId,
     options?: PaginationOptions,

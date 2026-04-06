@@ -1,11 +1,11 @@
-﻿import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { ViolationRepository } from '../../domain/repositories/violation.repository';
 import { ViolationStatus } from '../../domain/enums/violation-status.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 export interface GetViolationStatsInput extends IQuery {
   workspaceId: string;
   startDate?: Date;

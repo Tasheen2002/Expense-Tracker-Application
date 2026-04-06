@@ -1,9 +1,8 @@
 import {
   DomainEvent,
   DomainEventHandler,
-} from '../../../../apps/api/src/shared/domain/events';
+} from '../../../../packages/core/src/domain/events/domain-event';
 import { CreateAuditLogHandler } from '../../application/commands/create-audit-log.command';
-
 
 export class AuditEventListener implements DomainEventHandler {
   constructor(private readonly createAuditLogHandler: CreateAuditLogHandler) {}
@@ -11,6 +10,11 @@ export class AuditEventListener implements DomainEventHandler {
   readonly eventType = 'audit.universal';
 
   async handle(event: DomainEvent): Promise<void> {
+    // Prevent infinite recursion by ignoring audit-related events
+    if (event.aggregateType === 'AuditLog') {
+      return;
+    }
+
     const payload = event.getPayload();
     const workspaceId = payload.workspaceId;
 

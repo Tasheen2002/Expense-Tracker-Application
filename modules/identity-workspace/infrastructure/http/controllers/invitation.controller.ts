@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateInvitationHandler } from '../../../application/commands/create-invitation.command';
 import { AcceptInvitationHandler } from '../../../application/commands/accept-invitation.command';
 import { CancelInvitationHandler } from '../../../application/commands/cancel-invitation.command';
@@ -8,7 +8,7 @@ import { GetWorkspaceInvitationsHandler } from '../../../application/queries/get
 import { GetPendingInvitationsHandler } from '../../../application/queries/get-pending-invitations.query';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 import { WorkspaceInvitation } from '../../../domain/entities/workspace-invitation.entity';
 
 export class InvitationController {

@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { ConnectBankHandler } from '../../../application/commands/connect-bank.command';
 import { DisconnectBankHandler } from '../../../application/commands/disconnect-bank.command';
 import { UpdateConnectionTokenHandler } from '../../../application/commands/update-connection-token.command';
@@ -54,7 +54,7 @@ export class BankConnectionController {
         reply,
         result,
         'Bank connection created successfully',
-        result.data,
+        result.data ? { id: result.data } : undefined,
         201
       );
     } catch (error) {
@@ -88,7 +88,7 @@ export class BankConnectionController {
         'Bank connections retrieved successfully',
         result.data
           ? {
-              connections: result.data.items.map((c) => c.toJSON()),
+              connections: result.data.items,
               total: result.data.total,
               limit: result.data.limit,
               offset: result.data.offset,
@@ -117,7 +117,7 @@ export class BankConnectionController {
         reply,
         result,
         'Bank connection retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

@@ -1,34 +1,42 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { BankConnection } from '../../domain/entities/bank-connection.entity';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
+import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
+import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 
-export interface GetBankConnectionsQuery {
+export interface GetBankConnectionsQuery extends IQuery {
   workspaceId: string;
   userId?: string;
   limit?: number;
   offset?: number;
 }
 
-export class GetBankConnectionsHandler {
+export class GetBankConnectionsHandler implements IQueryHandler<
+  GetBankConnectionsQuery,
+  QueryResult<PaginatedResult<BankConnectionDTO>>
+> {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository
   ) {}
 
   async handle(
     query: GetBankConnectionsQuery
-  ): Promise<QueryResult<PaginatedResult<BankConnection>>> {
+  ): Promise<QueryResult<PaginatedResult<BankConnectionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const options: PaginationOptions = {
       limit: query.limit,
       offset: query.offset,
     };
 
-    let result: PaginatedResult<BankConnection>;
+    let result;
+
     if (query.userId) {
       const userId = UserId.fromString(query.userId);
       result = await this.connectionRepository.findByUser(
@@ -43,6 +51,11 @@ export class GetBankConnectionsHandler {
       );
     }
 
-    return QueryResult.success(result);
+    const dtoResult: PaginatedResult<BankConnectionDTO> = {
+      ...result,
+      items: result.items.map((connection) => BankConnection.toDTO(connection)),
+    };
+
+    return QueryResult.success(dtoResult);
   }
 }

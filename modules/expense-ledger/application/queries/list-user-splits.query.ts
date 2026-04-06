@@ -2,10 +2,10 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
 import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListUserSplitsQuery extends IQuery {
   readonly userId: string;

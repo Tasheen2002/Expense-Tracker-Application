@@ -1,12 +1,12 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { RuleExecution } from '../../domain/entities/rule-execution.entity';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId } from '../../../identity-workspace';
+import { RuleExecution, RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface GetExecutionsByExpenseQuery extends IQuery {
   expenseId: string;
@@ -15,18 +15,18 @@ export interface GetExecutionsByExpenseQuery extends IQuery {
 
 export class GetExecutionsByExpenseHandler implements IQueryHandler<
   GetExecutionsByExpenseQuery,
-  QueryResult<RuleExecution[]>
+  QueryResult<RuleExecutionDTO[]>
 > {
   constructor(private readonly executionService: RuleExecutionService) {}
 
   async handle(
     query: GetExecutionsByExpenseQuery
-  ): Promise<QueryResult<RuleExecution[]>> {
+  ): Promise<QueryResult<RuleExecutionDTO[]>> {
     const executions = await this.executionService.getExecutionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(executions.items);
+    return QueryResult.success(executions.items.map(RuleExecution.toDTO));
   }
 }

@@ -5,17 +5,24 @@ import {
   BankTransactionNotFoundError,
   MissingExpenseIdError,
   InvalidTransactionActionError,
-} from '../../domain/errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+} from '../../domain/errors/bank-feed-sync.errors';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import {
+  ICommand,
+  ICommandHandler,
+} from '../../../../packages/core/src/application/cqrs';
 
-export interface ProcessTransactionCommand {
+export interface ProcessTransactionCommand extends ICommand {
   workspaceId: string;
   transactionId: string;
   action: 'import' | 'match' | 'ignore';
   expenseId?: string;
 }
 
-export class ProcessTransactionHandler {
+export class ProcessTransactionHandler implements ICommandHandler<
+  ProcessTransactionCommand,
+  CommandResult<void>
+> {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
   ) {}

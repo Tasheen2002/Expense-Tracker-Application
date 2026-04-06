@@ -3,8 +3,9 @@ import { WorkspaceId } from '../../../identity-workspace';
 import { UserId } from '../../../identity-workspace';
 import { PlanPeriod } from '../value-objects/plan-period';
 import { PlanStatus } from '../enums/plan-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { PeriodType } from '../enums/period-type.enum';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -82,15 +83,16 @@ export class BudgetPlanUpdatedEvent extends DomainEvent {
 
 export class BudgetPlan extends AggregateRoot {
   private constructor(
-    private readonly id: PlanId,
-    private readonly workspaceId: WorkspaceId,
-    private name: string,
-    private description: string | null,
-    private readonly period: PlanPeriod,
-    private status: PlanStatus,
-    private readonly createdBy: UserId,
-    private readonly createdAt: Date,
-    private updatedAt: Date
+    private readonly _id: PlanId,
+    private readonly _workspaceId: WorkspaceId,
+    private _name: string,
+    private _description: string | null,
+    private readonly _periodType: PeriodType,
+    private readonly _period: PlanPeriod,
+    private _status: PlanStatus,
+    private readonly _createdBy: UserId,
+    private readonly _createdAt: Date,
+    private _updatedAt: Date
   ) {
     super();
   }
@@ -99,6 +101,7 @@ export class BudgetPlan extends AggregateRoot {
     workspaceId: WorkspaceId;
     name: string;
     description?: string | null;
+    periodType: PeriodType;
     period: PlanPeriod;
     createdBy: UserId;
   }): BudgetPlan {
@@ -109,6 +112,7 @@ export class BudgetPlan extends AggregateRoot {
       params.workspaceId,
       params.name,
       params.description || null,
+      params.periodType,
       params.period,
       PlanStatus.DRAFT,
       params.createdBy,
@@ -133,6 +137,7 @@ export class BudgetPlan extends AggregateRoot {
     workspaceId: string;
     name: string;
     description: string | null;
+    periodType: PeriodType;
     startDate: Date;
     endDate: Date;
     status: PlanStatus;
@@ -145,6 +150,7 @@ export class BudgetPlan extends AggregateRoot {
       WorkspaceId.fromString(params.workspaceId),
       params.name,
       params.description,
+      params.periodType,
       PlanPeriod.create(params.startDate, params.endDate),
       params.status,
       UserId.fromString(params.createdBy),
@@ -153,76 +159,81 @@ export class BudgetPlan extends AggregateRoot {
     );
   }
 
-  getId(): PlanId {
-    return this.id;
+  get id(): PlanId {
+    return this._id;
   }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
+  get workspaceId(): WorkspaceId {
+    return this._workspaceId;
   }
 
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this._name;
   }
 
-  getDescription(): string | null {
-    return this.description;
+  get description(): string | null {
+    return this._description;
   }
 
-  getPeriod(): PlanPeriod {
-    return this.period;
+  get periodType(): PeriodType {
+    return this._periodType;
   }
 
-  getStatus(): PlanStatus {
-    return this.status;
+  get period(): PlanPeriod {
+    return this._period;
   }
 
-  getCreatedBy(): UserId {
-    return this.createdBy;
+  get status(): PlanStatus {
+    return this._status;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdBy(): UserId {
+    return this._createdBy;
   }
 
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get createdAt(): Date {
+    return this._createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this._updatedAt;
   }
 
   updateDetails(name?: string, description?: string | null): void {
-    if (name) this.name = name;
-    if (description !== undefined) this.description = description;
-    this.updatedAt = new Date();
+    if (name) this._name = name;
+    if (description !== undefined) this._description = description;
+    this._updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanUpdatedEvent(this.id.getValue(), this.name)
+      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name)
     );
   }
 
   updateStatus(status: PlanStatus): void {
-    const oldStatus = this.status;
-    this.status = status;
-    this.updatedAt = new Date();
+    const oldStatus = this._status;
+    this._status = status;
+    this._updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanStatusChangedEvent(this.id.getValue(), oldStatus, status)
+      new BudgetPlanStatusChangedEvent(this._id.getValue(), oldStatus, status)
     );
   }
 
-  toJSON(): BudgetPlanDTO {
+  static toDTO(plan: BudgetPlan): BudgetPlanDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
+      id: plan.id.getValue(),
+      workspaceId: plan.workspaceId.getValue(),
+      name: plan.name,
+      description: plan.description,
+      periodType: plan.periodType,
       period: {
-        startDate: this.getPeriod().getStartDate().toISOString(),
-        endDate: this.getPeriod().getEndDate().toISOString(),
+        startDate: plan.period.startDate.toISOString(),
+        endDate: plan.period.endDate.toISOString(),
       },
-      status: this.getStatus(),
-      createdBy: this.getCreatedBy().getValue(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      status: plan.status,
+      createdBy: plan.createdBy.getValue(),
+      createdAt: plan.createdAt.toISOString(),
+      updatedAt: plan.updatedAt.toISOString(),
     };
   }
 }
@@ -232,6 +243,7 @@ export interface BudgetPlanDTO {
   workspaceId: string;
   name: string;
   description: string | null;
+  periodType: PeriodType;
   period: { startDate: string; endDate: string };
   status: PlanStatus;
   createdBy: string;

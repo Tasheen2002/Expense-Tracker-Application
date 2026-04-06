@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 
 interface CreateSuggestionBody {
   expenseId: string;
@@ -41,7 +41,6 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId } = request.params;
 
       const result = await this.createSuggestionHandler.handle({
@@ -71,11 +70,11 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-      const { suggestionId } = request.params;
+      const { workspaceId, suggestionId } = request.params;
 
       const result = await this.acceptSuggestionHandler.handle({
         suggestionId,
+        workspaceId,
       });
 
       return ResponseHelper.fromCommand(
@@ -95,11 +94,11 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-      const { suggestionId } = request.params;
+      const { workspaceId, suggestionId } = request.params;
 
       const result = await this.rejectSuggestionHandler.handle({
         suggestionId,
+        workspaceId,
       });
 
       return ResponseHelper.fromCommand(
@@ -119,11 +118,11 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-      const { suggestionId } = request.params;
+      const { workspaceId, suggestionId } = request.params;
 
       const result = await this.deleteSuggestionHandler.handle({
         suggestionId,
+        workspaceId,
       });
 
       return ResponseHelper.fromCommand(
@@ -143,18 +142,18 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-      const { suggestionId } = request.params;
+      const { workspaceId, suggestionId } = request.params;
 
       const result = await this.getSuggestionByIdHandler.handle({
         suggestionId,
+        workspaceId,
       });
 
       return ResponseHelper.fromQuery(
         reply,
         result,
         'Category suggestion retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -168,7 +167,6 @@ export class CategorySuggestionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
       const result = await this.getSuggestionsByExpenseHandler.handle({
@@ -180,7 +178,7 @@ export class CategorySuggestionController {
         reply,
         result,
         'Category suggestions retrieved successfully',
-        result.data?.map((suggestion) => suggestion.toJSON())
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -190,17 +188,16 @@ export class CategorySuggestionController {
   async listSuggestions(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { pendingOnly?: string; limit?: string };
+      Querystring: { pendingOnly?: string | boolean; limit?: string };
     }>,
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId } = request.params;
       const { pendingOnly, limit: limitStr } = request.query;
       const limit = limitStr ? parseInt(limitStr) : undefined;
 
-      if (pendingOnly === 'true') {
+      if (pendingOnly === true || pendingOnly === 'true') {
         const result =
           await this.getPendingSuggestionsByWorkspaceHandler.handle({
             workspaceId,
@@ -211,8 +208,7 @@ export class CategorySuggestionController {
           result,
           'Pending category suggestions retrieved successfully',
           {
-            items:
-              result.data?.items.map((suggestion) => suggestion.toJSON()) || [],
+            items: result.data?.items || [],
             pagination: {
               total: result.data?.total || 0,
               limit: result.data?.limit || 10,
@@ -231,8 +227,7 @@ export class CategorySuggestionController {
           result,
           'Category suggestions retrieved successfully',
           {
-            items:
-              result.data?.items.map((suggestion) => suggestion.toJSON()) || [],
+            items: result.data?.items || [],
             pagination: {
               total: result.data?.total || 0,
               limit: result.data?.limit || 10,

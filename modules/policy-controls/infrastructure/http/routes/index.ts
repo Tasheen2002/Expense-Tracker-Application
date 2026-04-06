@@ -6,8 +6,8 @@ import { exemptionRoutes } from './exemption.routes';
 import { PolicyController } from '../controllers/policy.controller';
 import { ViolationController } from '../controllers/violation.controller';
 import { ExemptionController } from '../controllers/exemption.controller';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerPolicyControlsRoutes(
   fastify: FastifyInstance,

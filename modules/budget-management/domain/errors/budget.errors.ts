@@ -1,15 +1,11 @@
-import { DomainError } from '../../../../apps/api/src/shared/domain/domain-error';
+import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 /**
  * Base error class for Budget Management module
  */
 export class BudgetManagementError extends DomainError {
-  constructor(
-    message: string,
-    public readonly code: string,
-    statusCode: number = 400
-  ) {
-    super(message, statusCode);
+  constructor(message: string, code: string, statusCode: number = 400) {
+    super(message, code, statusCode);
   }
 }
 
@@ -193,7 +189,8 @@ export class AlertAlreadyNotifiedError extends BudgetManagementError {
   constructor(alertId: string) {
     super(
       `Alert ${alertId} has already been notified`,
-      'ALERT_ALREADY_NOTIFIED'
+      'ALERT_ALREADY_NOTIFIED',
+      400
     );
   }
 }

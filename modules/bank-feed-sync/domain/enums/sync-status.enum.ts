@@ -8,3 +8,4 @@ export enum SyncStatus {
   FAILED = "FAILED", // Sync failed with errors
   PARTIAL = "PARTIAL", // Sync completed with some errors
 }
+

@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateExpenseHandler } from '../../../application/commands/create-expense.command';
 import { UpdateExpenseHandler } from '../../../application/commands/update-expense.command';
 import { DeleteExpenseHandler } from '../../../application/commands/delete-expense.command';
@@ -13,7 +13,7 @@ import { GetExpenseStatisticsHandler } from '../../../application/queries/get-ex
 import { Expense } from '../../../domain/entities/expense.entity';
 import { PaymentMethod } from '../../../domain/enums/payment-method';
 import { ExpenseStatus } from '../../../domain/enums/expense-status';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ExpenseController {
   constructor(
@@ -127,7 +127,8 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense updated successfully'
+        'Expense updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -157,7 +158,9 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense deleted successfully'
+        'Expense deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -194,8 +197,8 @@ export class ExpenseController {
       Params: { workspaceId: string };
       Querystring: {
         userId?: string;
-        limit?: string;
-        offset?: string;
+        limit?: number;
+        offset?: number;
       };
     }>,
     reply: FastifyReply
@@ -207,8 +210,8 @@ export class ExpenseController {
       const result = await this.filterExpensesHandler.handle({
         workspaceId,
         userId: userId || request.user?.userId,
-        limit: limit ? parseInt(limit) : undefined,
-        offset: offset ? parseInt(offset) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -242,15 +245,15 @@ export class ExpenseController {
         categoryId?: string;
         status?: string;
         paymentMethod?: string;
-        isReimbursable?: string;
+        isReimbursable?: boolean;
         startDate?: string;
         endDate?: string;
-        minAmount?: string;
-        maxAmount?: string;
+        minAmount?: number;
+        maxAmount?: number;
         currency?: string;
         searchText?: string;
-        limit?: string;
-        offset?: string;
+        limit?: number;
+        offset?: number;
       };
     }>,
     reply: FastifyReply
@@ -265,15 +268,15 @@ export class ExpenseController {
         categoryId: query.categoryId,
         status: query.status as ExpenseStatus | undefined,
         paymentMethod: query.paymentMethod as PaymentMethod | undefined,
-        isReimbursable: query.isReimbursable === 'true',
+        isReimbursable: query.isReimbursable,
         startDate: query.startDate ? new Date(query.startDate) : undefined,
         endDate: query.endDate ? new Date(query.endDate) : undefined,
-        minAmount: query.minAmount ? parseFloat(query.minAmount) : undefined,
-        maxAmount: query.maxAmount ? parseFloat(query.maxAmount) : undefined,
+        minAmount: query.minAmount,
+        maxAmount: query.maxAmount,
         currency: query.currency,
         searchText: query.searchText,
-        limit: query.limit ? parseInt(query.limit) : undefined,
-        offset: query.offset ? parseInt(query.offset) : undefined,
+        limit: query.limit,
+        offset: query.offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -350,7 +353,8 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense submitted successfully'
+        'Expense submitted successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -380,7 +384,8 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense approved successfully'
+        'Expense approved successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -413,7 +418,8 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense rejected successfully'
+        'Expense rejected successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -443,7 +449,8 @@ export class ExpenseController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Expense marked as reimbursed successfully'
+        'Expense marked as reimbursed successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

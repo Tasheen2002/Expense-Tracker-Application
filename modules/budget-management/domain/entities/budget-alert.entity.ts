@@ -8,7 +8,7 @@ import {
   InvalidAlertThresholdError,
   AlertAlreadyNotifiedError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface BudgetAlertProps {
   id: AlertId;
@@ -137,47 +137,47 @@ export class BudgetAlert extends AggregateRoot {
   }
 
   // Getters
-  getId(): AlertId {
+  get id(): AlertId {
     return this.props.id;
   }
 
-  getBudgetId(): BudgetId {
+  get budgetId(): BudgetId {
     return this.props.budgetId;
   }
 
-  getAllocationId(): AllocationId | null {
+  get allocationId(): AllocationId | null {
     return this.props.allocationId;
   }
 
-  getLevel(): AlertLevel {
+  get level(): AlertLevel {
     return this.props.level;
   }
 
-  getThreshold(): Decimal {
+  get threshold(): Decimal {
     return this.props.threshold;
   }
 
-  getCurrentSpent(): Decimal {
+  get currentSpent(): Decimal {
     return this.props.currentSpent;
   }
 
-  getAllocatedAmount(): Decimal {
+  get allocatedAmount(): Decimal {
     return this.props.allocatedAmount;
   }
 
-  getMessage(): string {
+  get message(): string {
     return this.props.message;
   }
 
-  isRead(): boolean {
+  get isRead(): boolean {
     return this.props.isRead;
   }
 
-  getNotifiedAt(): Date | null {
+  get notifiedAt(): Date | null {
     return this.props.notifiedAt;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
@@ -208,23 +208,24 @@ export class BudgetAlert extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
-  toJSON(): BudgetAlertDTO {
+  static toDTO(alert: BudgetAlert): BudgetAlertDTO {
     return {
-      id: this.getId().getValue(),
-      budgetId: this.getBudgetId().getValue(),
-      allocationId: this.getAllocationId()
-        ? this.getAllocationId()!.getValue()
+      id: alert.id.getValue(),
+      budgetId: alert.budgetId.getValue(),
+      allocationId: alert.allocationId
+        ? alert.allocationId.getValue()
         : null,
-      level: this.getLevel(),
-      threshold: this.getThreshold().toString(),
-      currentSpent: this.getCurrentSpent().toString(),
-      allocatedAmount: this.getAllocatedAmount().toString(),
-      message: this.getMessage(),
-      isRead: this.isRead(),
-      notifiedAt: this.getNotifiedAt()
-        ? this.getNotifiedAt()!.toISOString()
+      level: alert.level,
+      threshold: alert.threshold.toString(),
+      currentSpent: alert.currentSpent.toString(),
+      allocatedAmount: alert.allocatedAmount.toString(),
+      message: alert.message,
+      isRead: alert.isRead,
+      notifiedAt: alert.notifiedAt
+        ? alert.notifiedAt.toISOString()
         : null,
-      createdAt: this.getCreatedAt().toISOString(),
+      createdAt: alert.createdAt.toISOString(),
     };
   }
+
 }

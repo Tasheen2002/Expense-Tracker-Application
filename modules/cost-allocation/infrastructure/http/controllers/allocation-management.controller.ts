@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 
 interface CreateDepartmentBody {
   name: string;
@@ -151,15 +151,17 @@ export class AllocationManagementController {
         reply,
         result,
         'Departments retrieved successfully',
-        {
-          items: result.data?.items.map((d) => d.toJSON()) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 50,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        result.data
+          ? {
+              items: result.data.items,
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -184,7 +186,7 @@ export class AllocationManagementController {
         reply,
         result,
         'Department retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -332,15 +334,17 @@ export class AllocationManagementController {
         reply,
         result,
         'Cost Centers retrieved successfully',
-        {
-          items: result.data?.items.map((c) => c.toJSON()) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 50,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        result.data
+          ? {
+              items: result.data.items,
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -365,7 +369,7 @@ export class AllocationManagementController {
         reply,
         result,
         'Cost Center retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -522,15 +526,17 @@ export class AllocationManagementController {
         reply,
         result,
         'Projects retrieved successfully',
-        {
-          items: result.data?.items.map((p) => p.toJSON()) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 50,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        result.data
+          ? {
+              items: result.data.items,
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -553,7 +559,7 @@ export class AllocationManagementController {
         reply,
         result,
         'Project retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

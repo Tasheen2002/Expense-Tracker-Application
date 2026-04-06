@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateSplitHandler } from '../../../application/commands/create-split.command';
 import { DeleteSplitHandler } from '../../../application/commands/delete-split.command';
 import { RecordPaymentHandler } from '../../../application/commands/record-payment.command';
@@ -10,7 +10,7 @@ import { ListUserSettlementsHandler } from '../../../application/queries/list-us
 import { GetSplitSettlementsHandler } from '../../../application/queries/get-split-settlements.query';
 import { SplitType } from '../../../domain/enums/split-type';
 import { SettlementStatus } from '../../../domain/enums/settlement-status';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ExpenseSplitController {
   constructor(
@@ -108,8 +108,8 @@ export class ExpenseSplitController {
 
       return ResponseHelper.fromQuery(
         reply,
-        'Split retrieved successfully',
         result,
+        'Split retrieved successfully',
         result.data?.toJSON()
       );
     } catch (error: unknown) {
@@ -120,7 +120,7 @@ export class ExpenseSplitController {
   async listUserSplits(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: { limit?: number; offset?: number };
     }>,
     reply: FastifyReply
   ) {
@@ -132,8 +132,8 @@ export class ExpenseSplitController {
       const result = await this.listUserSplitsHandler.handle({
         userId,
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -176,7 +176,9 @@ export class ExpenseSplitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Split deleted successfully'
+        'Split deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -205,7 +207,8 @@ export class ExpenseSplitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Payment recorded successfully'
+        'Payment recorded successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -217,8 +220,8 @@ export class ExpenseSplitController {
       Params: { workspaceId: string };
       Querystring: {
         status?: SettlementStatus;
-        limit?: string;
-        offset?: string;
+        limit?: number;
+        offset?: number;
       };
     }>,
     reply: FastifyReply
@@ -232,8 +235,8 @@ export class ExpenseSplitController {
         userId,
         workspaceId,
         status,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.fromQuery(
@@ -275,8 +278,8 @@ export class ExpenseSplitController {
 
       return ResponseHelper.fromQuery(
         reply,
-        'Split settlements retrieved successfully',
         result,
+        'Split settlements retrieved successfully',
         result.data
           ? {
               items: result.data.items.map((s) => s.toJSON()),

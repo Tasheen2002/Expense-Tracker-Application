@@ -5,8 +5,8 @@ import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CreateBudgetCommand extends ICommand {
   workspaceId: string;
@@ -32,6 +32,6 @@ export class CreateBudgetHandler implements ICommandHandler<
     command: CreateBudgetCommand
   ): Promise<CommandResult<{ budgetId: string }>> {
     const budget = await this.budgetService.createBudget(command);
-    return CommandResult.success({ budgetId: budget.getId().getValue() });
+    return CommandResult.success({ budgetId: budget.id.getValue() });
   }
 }

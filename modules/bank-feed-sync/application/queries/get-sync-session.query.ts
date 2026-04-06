@@ -1,19 +1,28 @@
 import { WorkspaceId } from '../../../identity-workspace';
 import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
-import { SyncSession } from '../../domain/entities/sync-session.entity';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
-import { SyncSessionNotFoundError } from '../../domain/errors';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
+import { SyncSessionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface GetSyncSessionQuery {
+export interface GetSyncSessionQuery extends IQuery {
   workspaceId: string;
   sessionId: string;
 }
 
-export class GetSyncSessionHandler {
+export class GetSyncSessionHandler implements IQueryHandler<
+  GetSyncSessionQuery,
+  QueryResult<SyncSessionDTO>
+> {
   constructor(private readonly sessionRepository: ISyncSessionRepository) {}
 
-  async handle(query: GetSyncSessionQuery): Promise<QueryResult<SyncSession>> {
+  async handle(
+    query: GetSyncSessionQuery
+  ): Promise<QueryResult<SyncSessionDTO>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const sessionId = SyncSessionId.fromString(query.sessionId);
 
@@ -26,6 +35,6 @@ export class GetSyncSessionHandler {
       throw new SyncSessionNotFoundError(query.sessionId);
     }
 
-    return QueryResult.success(session);
+    return QueryResult.success(SyncSession.toDTO(session));
   }
 }

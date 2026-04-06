@@ -1,54 +1,53 @@
 import { FastifyInstance } from 'fastify';
 import { WorkflowController } from '../controllers/workflow.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import {
+  validateBody,
+  validateQuery,
+  validateParams,
+} from '../validation/validator';
+import {
+  initiateWorkflowSchema,
+  approveStepSchema,
+  rejectStepSchema,
+  delegateStepSchema,
+  paginationSchema,
+  workspaceParamsSchema,
+  workflowParamsSchema,
+  workflowSchema,
+  paginatedWorkflowsResponseSchema,
+} from '../validation/approval.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
 
-const approvalStepSchema = {
-  type: 'object',
-  properties: {
-    stepId: { type: 'string', format: 'uuid' },
-    workflowId: { type: 'string', format: 'uuid' },
-    stepNumber: { type: 'number' },
-    approverId: { type: 'string', format: 'uuid' },
-    delegatedTo: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    comments: { type: 'string', nullable: true },
-    processedAt: { type: 'string', format: 'date-time', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const workflowSchema = {
-  type: 'object',
-  properties: {
-    workflowId: { type: 'string', format: 'uuid' },
-    expenseId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    chainId: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    currentStepNumber: { type: 'number' },
-    steps: {
-      type: 'array',
-      items: approvalStepSchema,
-    },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-    completedAt: { type: 'string', format: 'date-time', nullable: true },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
   controller: WorkflowController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Initiate workflow
   fastify.post(
     '/workspaces/:workspaceId/workflows',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateBody(initiateWorkflowSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Initiate approval workflow for an expense',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -62,7 +61,7 @@ export async function workflowRoutes(
           properties: {
             expenseId: { type: 'string', format: 'uuid' },
             amount: { type: 'number', minimum: 0.01 },
-            categoryId: { type: 'string', format: 'uuid' },
+            categoryId: { type: 'string', format: 'uuid', nullable: true },
             hasReceipt: { type: 'boolean' },
           },
         },
@@ -72,12 +71,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  workflowId: { type: 'string', format: 'uuid' },
-                },
-              },
+              data: workflowSchema,
             },
           },
         },
@@ -91,9 +85,11 @@ export async function workflowRoutes(
   fastify.get(
     '/workspaces/:workspaceId/workflows/:expenseId',
     {
+      preValidation: [validateParams(workflowParamsSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get workflow by expense ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -122,9 +118,12 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/approve',
     {
+      preValidation: [validateParams(workflowParamsSchema)],
+      preHandler: [validateBody(approveStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Approve current workflow step',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -136,7 +135,7 @@ export async function workflowRoutes(
         body: {
           type: 'object',
           properties: {
-            comments: { type: 'string' },
+            comments: { type: 'string', nullable: true },
           },
         },
         response: {
@@ -145,6 +144,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
+              data: workflowSchema,
             },
           },
         },
@@ -158,9 +158,12 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/reject',
     {
+      preValidation: [validateParams(workflowParamsSchema)],
+      preHandler: [validateBody(rejectStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Reject current workflow step',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -182,6 +185,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
+              data: workflowSchema,
             },
           },
         },
@@ -195,9 +199,12 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/delegate',
     {
+      preValidation: [validateParams(workflowParamsSchema)],
+      preHandler: [validateBody(delegateStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delegate current workflow step to another user',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -219,6 +226,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
+              data: workflowSchema,
             },
           },
         },
@@ -232,9 +240,11 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/cancel',
     {
+      preValidation: [validateParams(workflowParamsSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Cancel workflow',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -249,6 +259,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
+              data: workflowSchema,
             },
           },
         },
@@ -262,9 +273,12 @@ export async function workflowRoutes(
   fastify.get(
     '/workspaces/:workspaceId/workflows/pending-approvals',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List pending approvals for current user',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -275,8 +289,8 @@ export async function workflowRoutes(
         querystring: {
           type: 'object',
           properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
+            limit: { type: 'number', minimum: 1, maximum: 100 },
+            offset: { type: 'number', minimum: 0 },
           },
         },
         response: {
@@ -285,24 +299,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: workflowSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedWorkflowsResponseSchema,
             },
           },
         },
@@ -316,9 +313,12 @@ export async function workflowRoutes(
   fastify.get(
     '/workspaces/:workspaceId/workflows/user-workflows',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
+      preHandler: [validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all workflows for current user',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -329,8 +329,8 @@ export async function workflowRoutes(
         querystring: {
           type: 'object',
           properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
+            limit: { type: 'number', minimum: 1, maximum: 100 },
+            offset: { type: 'number', minimum: 0 },
           },
         },
         response: {
@@ -339,24 +339,7 @@ export async function workflowRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: workflowSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
+              data: paginatedWorkflowsResponseSchema,
             },
           },
         },

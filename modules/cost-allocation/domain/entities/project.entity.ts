@@ -1,8 +1,8 @@
 import { ProjectId } from '../value-objects/project-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { Decimal } from '@prisma/client/runtime/library';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -279,20 +279,20 @@ export class Project extends AggregateRoot {
     this.addDomainEvent(new ProjectActivatedEvent(this.id.getValue()));
   }
 
-  toJSON(): ProjectDTO {
+  static toDTO(project: Project): ProjectDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      code: this.getCode(),
-      description: this.getDescription(),
-      startDate: this.getStartDate().toISOString(),
-      endDate: this.getEndDate()?.toISOString() ?? null,
-      managerId: this.getManagerId()?.getValue() ?? null,
-      budget: this.getBudget()?.toNumber() ?? null,
-      isActive: this.getIsActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: project.getId().getValue(),
+      workspaceId: project.getWorkspaceId().getValue(),
+      name: project.getName(),
+      code: project.getCode(),
+      description: project.getDescription(),
+      startDate: project.getStartDate().toISOString(),
+      endDate: project.getEndDate()?.toISOString() ?? null,
+      managerId: project.getManagerId()?.getValue() ?? null,
+      budget: project.getBudget()?.toNumber() ?? null,
+      isActive: project.getIsActive(),
+      createdAt: project.getCreatedAt().toISOString(),
+      updatedAt: project.getUpdatedAt().toISOString(),
     };
   }
 }

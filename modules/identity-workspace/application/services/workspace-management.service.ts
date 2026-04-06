@@ -14,6 +14,7 @@ import {
   WorkspaceNotFoundError,
   WorkspaceAlreadyExistsError,
 } from '../../domain/errors/identity.errors';
+import { PaginationOptions, PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface WorkspaceManagementServiceOptions {
   page?: number;
@@ -73,10 +74,8 @@ export class WorkspaceManagementService {
 
   async getWorkspacesByMembership(
     userId: string,
-    options?: import('../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface').PaginationOptions
-  ): Promise<
-    import('../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface').PaginatedResult<Workspace>
-  > {
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<Workspace>> {
     const userIdVO = UserId.fromString(userId);
 
     // Get paginated memberships for the user

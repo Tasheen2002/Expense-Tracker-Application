@@ -2,10 +2,10 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { Category } from '../../domain/entities/category.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListCategoriesQuery extends IQuery {
   readonly workspaceId: string;

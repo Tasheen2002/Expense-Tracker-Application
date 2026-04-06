@@ -1,20 +1,20 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { ForecastItem } from "../../domain/entities/forecast-item.entity";
-import { ForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
+import { IForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ForecastItemRepositoryImpl
   extends PrismaRepository<ForecastItem>
-  implements ForecastItemRepository
+  implements IForecastItemRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -22,17 +22,17 @@ export class ForecastItemRepositoryImpl
 
   async save(item: ForecastItem): Promise<void> {
     const data = {
-      id: item.getId().getValue(),
-      forecastId: item.getForecastId().getValue(),
-      categoryId: item.getCategoryId().getValue(),
-      amount: item.getAmount().getValue(),
-      notes: item.getNotes(),
-      createdAt: item.getCreatedAt(),
-      updatedAt: item.getUpdatedAt(),
+      id: item.id.getValue(),
+      forecastId: item.forecastId.getValue(),
+      categoryId: item.categoryId.getValue(),
+      amount: item.amount.getValue(),
+      notes: item.notes,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     };
 
     await this.prisma.forecastItem.upsert({
-      where: { id: item.getId().getValue() },
+      where: { id: item.id.getValue() },
       update: data,
       create: data,
     });
@@ -40,9 +40,9 @@ export class ForecastItemRepositoryImpl
     await this.dispatchEvents(item);
   }
 
-  async findById(id: ForecastItemId): Promise<ForecastItem | null> {
-    const raw = await this.prisma.forecastItem.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: ForecastItemId, workspaceId: string): Promise<ForecastItem | null> {
+    const raw = await this.prisma.forecastItem.findFirst({
+      where: { id: id.getValue(), forecast: { plan: { workspaceId } } },
     });
 
     if (!raw) return null;

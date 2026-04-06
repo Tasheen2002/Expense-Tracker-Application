@@ -1,4 +1,4 @@
-import { DomainEvent, DomainEventHandler, IEventBus } from "./domain-event";
+import { DomainEvent, DomainEventHandler, IEventBus } from "../../../../../../packages/core/src/domain/events/domain-event";
 
 type HandlerMap = Map<string, Set<DomainEventHandler>>;
 

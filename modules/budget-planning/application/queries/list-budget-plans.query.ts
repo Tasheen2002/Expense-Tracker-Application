@@ -1,12 +1,13 @@
-import { BudgetPlanService } from '../services/budget-plan.service';
-import { BudgetPlan } from '../../domain/entities/budget-plan.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { IBudgetPlanRepository } from '../../domain/repositories/budget-plan.repository';
+import { BudgetPlan, BudgetPlanDTO } from '../../domain/entities/budget-plan.entity';
+import { WorkspaceId } from '../../../identity-workspace';
 import { PlanStatus } from '../../domain/enums/plan-status.enum';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ListBudgetPlansQuery extends IQuery {
   userId: string;
@@ -18,22 +19,27 @@ export interface ListBudgetPlansQuery extends IQuery {
 
 export class ListBudgetPlansHandler implements IQueryHandler<
   ListBudgetPlansQuery,
-  QueryResult<PaginatedResult<BudgetPlan>>
+  QueryResult<PaginatedResult<BudgetPlanDTO>>
 > {
-  constructor(private readonly budgetPlanService: BudgetPlanService) {}
+  constructor(private readonly budgetPlanRepository: IBudgetPlanRepository) {}
 
   async handle(
     query: ListBudgetPlansQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetPlan>>> {
-    const result = await this.budgetPlanService.listPlans(
-      query.userId,
-      query.workspaceId,
+  ): Promise<QueryResult<PaginatedResult<BudgetPlanDTO>>> {
+    const result = await this.budgetPlanRepository.findAll(
+      WorkspaceId.fromString(query.workspaceId),
       query.status,
       {
         limit: query.limit,
         offset: query.offset,
       }
     );
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map((plan) => BudgetPlan.toDTO(plan)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

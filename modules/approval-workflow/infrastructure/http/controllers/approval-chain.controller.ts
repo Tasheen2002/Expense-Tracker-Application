@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateApprovalChainHandler } from '../../../application/commands/create-approval-chain.command';
 import { UpdateApprovalChainHandler } from '../../../application/commands/update-approval-chain.command';
 import { DeleteApprovalChainHandler } from '../../../application/commands/delete-approval-chain.command';
@@ -7,7 +7,7 @@ import { ActivateApprovalChainHandler } from '../../../application/commands/acti
 import { DeactivateApprovalChainHandler } from '../../../application/commands/deactivate-approval-chain.command';
 import { GetApprovalChainHandler } from '../../../application/queries/get-approval-chain.query';
 import { ListApprovalChainsHandler } from '../../../application/queries/list-approval-chains.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ApprovalChainController {
   constructor(
@@ -47,7 +47,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain created successfully',
-        result.data ? { chainId: result.data.chainId } : undefined,
+        result.data ? { chainId: result.data } : undefined,
         201
       );
     } catch (error: unknown) {
@@ -80,7 +80,8 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain updated successfully'
+        'Approval chain updated successfully',
+        { chainId }
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -103,7 +104,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain retrieved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data ?? undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -114,16 +115,16 @@ export class ApprovalChainController {
     try {
       const { workspaceId } = request.params as { workspaceId: string };
       const { activeOnly, limit, offset } = request.query as {
-        activeOnly?: string;
-        limit?: string;
-        offset?: string;
+        activeOnly?: boolean;
+        limit?: number;
+        offset?: number;
       };
 
       const result = await this.listChainsHandler.handle({
         workspaceId,
-        activeOnly: activeOnly === 'true',
-        limit: limit ? parseInt(limit, 10) : 50,
-        offset: offset ? parseInt(offset, 10) : 0,
+        activeOnly: activeOnly ?? false,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
       });
 
       return ResponseHelper.fromQuery(
@@ -132,7 +133,7 @@ export class ApprovalChainController {
         'Approval chains retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((chain) => chain.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -209,7 +210,9 @@ export class ApprovalChainController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Approval chain deleted successfully'
+        'Approval chain deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

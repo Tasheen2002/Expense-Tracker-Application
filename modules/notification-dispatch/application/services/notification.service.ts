@@ -19,7 +19,7 @@ import { IChannelProvider } from '../providers/channel-provider.interface';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface SendNotificationParams {
   workspaceId: string;

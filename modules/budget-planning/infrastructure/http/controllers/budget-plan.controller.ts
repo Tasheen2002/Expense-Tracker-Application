@@ -1,19 +1,14 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateBudgetPlanHandler } from '../../../application/commands/create-budget-plan.command';
 import { UpdateBudgetPlanHandler } from '../../../application/commands/update-budget-plan.command';
 import { ActivateBudgetPlanHandler } from '../../../application/commands/activate-budget-plan.command';
 import { DeleteBudgetPlanHandler } from '../../../application/commands/delete-budget-plan.command';
 import { GetBudgetPlanHandler } from '../../../application/queries/get-budget-plan.query';
 import { ListBudgetPlansHandler } from '../../../application/queries/list-budget-plans.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
-import { validateRequest } from '../validation/validator';
-import {
-  createBudgetPlanSchema,
-  updateBudgetPlanSchema,
-  listBudgetPlansSchema,
-} from '../validation/budget-plan.schema';
+import { ResponseHelper } from '@shared/response.helper';
 import { PlanStatus } from '../../../domain/enums/plan-status.enum';
+import { PeriodType } from '../../../domain/enums/period-type.enum';
 
 export class BudgetPlanController {
   constructor(
@@ -25,20 +20,30 @@ export class BudgetPlanController {
     private readonly listHandler: ListBudgetPlansHandler
   ) {}
 
-  async create(req: AuthenticatedRequest, reply: FastifyReply) {
+  async create(
+    req: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: {
+        name: string;
+        description?: string;
+        periodType: string;
+        startDate: string;
+        endDate: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const body = await validateRequest(req, createBudgetPlanSchema);
+      const { workspaceId } = req.params;
       const result = await this.createHandler.handle({
-        workspaceId: body.workspaceId,
-        name: body.name,
-        startDate: new Date(body.startDate),
-        endDate: new Date(body.endDate),
+        workspaceId,
+        name: req.body.name,
+        periodType: req.body.periodType as PeriodType,
+        startDate: new Date(req.body.startDate),
+        endDate: new Date(req.body.endDate),
         createdBy: userId,
-        description: body.description,
+        description: req.body.description,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -47,77 +52,74 @@ export class BudgetPlanController {
         result.data,
         201
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async update(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{
+      Params: { workspaceId: string; id: string };
+      Body: {
+        name?: string;
+        description?: string | null;
+      };
+    }>,
     reply: FastifyReply
   ) {
     try {
-      const { id } = req.params;
-      const body = await validateRequest(req, updateBudgetPlanSchema);
+      const { workspaceId, id } = req.params;
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
       const result = await this.updateHandler.handle({
         id,
+        workspaceId,
         userId,
-        name: body.name,
-        description: body.description,
+        name: req.body.name,
+        description: req.body.description ?? undefined,
       });
       return ResponseHelper.fromCommand(
         reply,
         result,
         'Budget plan updated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async activate(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
     reply: FastifyReply
   ) {
     try {
-      const { id } = req.params;
+      const { workspaceId, id } = req.params;
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const result = await this.activateHandler.handle({ id, userId });
+      const result = await this.activateHandler.handle({ id, workspaceId, userId });
       return ResponseHelper.fromCommand(
         reply,
         result,
         'Budget plan activated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async get(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { id } = req.params;
-      const result = await this.getHandler.handle({ id, userId });
+      const { workspaceId, id } = req.params;
+      const result = await this.getHandler.handle({ id, workspaceId, userId });
       return ResponseHelper.fromQuery(
         reply,
         result,
         'Budget plan retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -135,55 +137,42 @@ export class BudgetPlanController {
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
       const { workspaceId } = req.params;
+      const { status, limit, offset } = req.query;
       const result = await this.listHandler.handle({
         userId,
         workspaceId,
-        status: req.query.status as PlanStatus,
-        limit: req.query.limit ? parseInt(req.query.limit) : 50,
-        offset: req.query.offset ? parseInt(req.query.offset) : 0,
+        status: status as PlanStatus | undefined,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
       });
       return ResponseHelper.fromQuery(
         reply,
         result,
         'Budget plans retrieved successfully',
         result.data
-          ? {
-              items: result.data.items.map((plan) => plan.toJSON()),
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async delete(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
     reply: FastifyReply
   ) {
     try {
-      const { id } = req.params;
+      const { workspaceId, id } = req.params;
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const result = await this.deleteHandler.handle({ id, userId });
+      const result = await this.deleteHandler.handle({ id, workspaceId, userId });
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget plan deleted successfully'
+        'Budget plan deleted successfully',
+        undefined,
+        204
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

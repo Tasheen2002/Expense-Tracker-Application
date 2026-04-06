@@ -12,8 +12,8 @@ import { TagController } from "../controllers/tag.controller";
 import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
 import { ExpenseSplitController } from "../controllers/expense-split.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { workspaceAuthorizationMiddleware } from "@shared/middleware";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerExpenseLedgerRoutes(
   fastify: FastifyInstance,

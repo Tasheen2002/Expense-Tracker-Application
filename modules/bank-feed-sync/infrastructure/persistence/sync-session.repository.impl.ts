@@ -8,10 +8,10 @@ import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaSyncSessionRepository
   extends PrismaRepository<SyncSession>
@@ -22,24 +22,10 @@ export class PrismaSyncSessionRepository
   }
 
   async save(session: SyncSession): Promise<void> {
-    const data = {
-      id: session.getId().getValue(),
-      workspaceId: session.getWorkspaceId().getValue(),
-      connectionId: session.getConnectionId().getValue(),
-      status: session.getStatus(),
-      startedAt: session.getStartedAt(),
-      completedAt: session.getCompletedAt(),
-      transactionsFetched: session.getTransactionsFetched(),
-      transactionsImported: session.getTransactionsImported(),
-      transactionsDuplicate: session.getTransactionsDuplicate(),
-      errorMessage: session.getErrorMessage(),
-      metadata: session.getMetadata() as any,
-      createdAt: session.getCreatedAt(),
-      updatedAt: session.getUpdatedAt(),
-    };
+    const data = this.toPersistence(session);
 
     await this.prisma.syncSession.upsert({
-      where: { id: session.getId().getValue() },
+      where: { id: session.id.getValue() },
       create: data,
       update: data,
     });
@@ -139,8 +125,28 @@ export class PrismaSyncSessionRepository
     );
   }
 
+  private toPersistence(
+    session: SyncSession
+  ): Prisma.SyncSessionUncheckedCreateInput {
+    return {
+      id: session.id.getValue(),
+      workspaceId: session.workspaceId.getValue(),
+      connectionId: session.connectionId.getValue(),
+      status: session.status,
+      startedAt: session.startedAt,
+      completedAt: session.completedAt,
+      transactionsFetched: session.transactionsFetched,
+      transactionsImported: session.transactionsImported,
+      transactionsDuplicate: session.transactionsDuplicate,
+      errorMessage: session.errorMessage,
+      metadata: session.metadata as any,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+    };
+  }
+
   private toDomain(record: Prisma.SyncSessionGetPayload<object>): SyncSession {
-    return SyncSession.fromPersistence({
+    return SyncSession.reconstitute({
       id: SyncSessionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),

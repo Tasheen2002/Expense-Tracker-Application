@@ -1,10 +1,10 @@
 import { Department } from "../entities/department.entity";
 import { DepartmentId } from "../value-objects/department-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface DepartmentRepository {
   save(department: Department): Promise<void>;

@@ -1,11 +1,11 @@
-import { PrismaClient } from "@prisma/client";
-import { AggregateRoot } from "../../domain/aggregate-root";
-import { IEventBus } from "../../domain/events/domain-event";
+import { PrismaClient } from '@prisma/client';
+import { AggregateRoot } from '../../../../../../packages/core/src/domain/aggregate-root';
+import { IEventBus } from '../../../../../../packages/core/src/domain/events/domain-event';
 
 export abstract class PrismaRepository<T extends AggregateRoot> {
   constructor(
     protected readonly prisma: PrismaClient,
-    protected readonly eventBus: IEventBus,
+    protected readonly eventBus: IEventBus
   ) {}
 
   protected async dispatchEvents(aggregate: T): Promise<void> {

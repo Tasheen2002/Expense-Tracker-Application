@@ -4,7 +4,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export class GetOrCreatePreferencesQuery implements IQuery {
   readonly queryId?: string;

@@ -2,9 +2,10 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
-import { AuditService } from '../services/audit.service';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+} from '../../../../packages/core/src/application/cqrs';
+import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
+import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
+import { IAuditLogRepository } from '../../domain/repositories/audit-log.repository';
 import { AuditLogNotFoundError } from '../../domain/errors/audit.errors';
 
 export interface GetAuditLogQuery extends IQuery {
@@ -14,20 +15,20 @@ export interface GetAuditLogQuery extends IQuery {
 
 export class GetAuditLogHandler implements IQueryHandler<
   GetAuditLogQuery,
-  QueryResult<AuditLog>
+  QueryResult<AuditLogDTO>
 > {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(private readonly auditRepository: IAuditLogRepository) {}
 
-  async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLog>> {
+  async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLogDTO>> {
     try {
-      const auditLog = await this.auditService.getAuditLogById(
-        input.workspaceId,
-        input.auditLogId
-      );
-      if (!auditLog) {
+      const id = AuditLogId.fromString(input.auditLogId);
+      const auditLog = await this.auditRepository.findById(id);
+
+      if (!auditLog || auditLog.workspaceId !== input.workspaceId) {
         throw new AuditLogNotFoundError(input.auditLogId);
       }
-      return QueryResult.success(auditLog);
+
+      return QueryResult.success(AuditLog.toDTO(auditLog));
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

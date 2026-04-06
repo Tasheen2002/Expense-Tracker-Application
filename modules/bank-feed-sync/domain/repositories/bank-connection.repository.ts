@@ -4,7 +4,7 @@ import { BankConnectionId } from '../value-objects/bank-connection-id';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface IBankConnectionRepository {
   save(connection: BankConnection): Promise<void>;

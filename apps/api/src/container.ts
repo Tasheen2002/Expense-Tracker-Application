@@ -46,21 +46,24 @@ import { AuthController } from '../../../modules/identity-workspace/infrastructu
 import { WorkspaceController } from '../../../modules/identity-workspace/infrastructure/http/controllers/workspace.controller';
 import { InvitationController } from '../../../modules/identity-workspace/infrastructure/http/controllers/invitation.controller';
 import { MemberController } from '../../../modules/identity-workspace/infrastructure/http/controllers/member.controller';
-import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
-import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
-import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 
+// ... (Other module imports commented out for isolation)
+
+// Expense-Ledger Module - Repositories
 import { ExpenseRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense.repository.impl';
 import { CategoryRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/category.repository.impl';
 import { TagRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/tag.repository.impl';
 import { AttachmentRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/attachment.repository.impl';
+import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
 import { ExpenseSplitRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/expense-split.repository.impl';
 import { SplitSettlementRepositoryImpl } from '../../../modules/expense-ledger/infrastructure/persistence/split-settlement.repository.impl';
 
+// Expense-Ledger Module - Services
 import { ExpenseService } from '../../../modules/expense-ledger/application/services/expense.service';
 import { CategoryService } from '../../../modules/expense-ledger/application/services/category.service';
 import { TagService } from '../../../modules/expense-ledger/application/services/tag.service';
 import { AttachmentService } from '../../../modules/expense-ledger/application/services/attachment.service';
+import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
 import { ExpenseSplitService } from '../../../modules/expense-ledger/application/services/expense-split.service';
 
 // Expense-Ledger Module - Command Handlers
@@ -79,14 +82,14 @@ import { UpdateTagHandler } from '../../../modules/expense-ledger/application/co
 import { DeleteTagHandler } from '../../../modules/expense-ledger/application/commands/delete-tag.command';
 import { CreateAttachmentHandler } from '../../../modules/expense-ledger/application/commands/create-attachment.command';
 import { DeleteAttachmentHandler } from '../../../modules/expense-ledger/application/commands/delete-attachment.command';
+import { CreateRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-recurring-expense.command';
+import { PauseRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/pause-recurring-expense.command';
+import { ResumeRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/resume-recurring-expense.command';
+import { StopRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/stop-recurring-expense.command';
+import { ProcessRecurringExpensesHandler } from '../../../modules/expense-ledger/application/commands/process-recurring-expenses.command';
 import { CreateSplitHandler } from '../../../modules/expense-ledger/application/commands/create-split.command';
 import { DeleteSplitHandler } from '../../../modules/expense-ledger/application/commands/delete-split.command';
 import { RecordPaymentHandler } from '../../../modules/expense-ledger/application/commands/record-payment.command';
-import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
-import { GetSplitByExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-split-by-expense.query';
-import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
-import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
-import { GetSplitSettlementsHandler } from '../../../modules/expense-ledger/application/queries/get-split-settlements.query';
 
 // Expense-Ledger Module - Query Handlers
 import { GetExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-expense.query';
@@ -98,22 +101,19 @@ import { GetTagHandler } from '../../../modules/expense-ledger/application/queri
 import { ListTagsHandler } from '../../../modules/expense-ledger/application/queries/list-tags.query';
 import { GetAttachmentHandler } from '../../../modules/expense-ledger/application/queries/get-attachment.query';
 import { ListAttachmentsHandler } from '../../../modules/expense-ledger/application/queries/list-attachments.query';
+import { GetSplitByExpenseHandler } from '../../../modules/expense-ledger/application/queries/get-split-by-expense.query';
+import { GetSplitSettlementsHandler } from '../../../modules/expense-ledger/application/queries/get-split-settlements.query';
+import { GetSplitHandler } from '../../../modules/expense-ledger/application/queries/get-split.query';
+import { ListUserSplitsHandler } from '../../../modules/expense-ledger/application/queries/list-user-splits.query';
+import { ListUserSettlementsHandler } from '../../../modules/expense-ledger/application/queries/list-user-settlements.query';
 
+// Expense-Ledger Module - Controllers
 import { ExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense.controller';
 import { CategoryController } from '../../../modules/expense-ledger/infrastructure/http/controllers/category.controller';
 import { TagController } from '../../../modules/expense-ledger/infrastructure/http/controllers/tag.controller';
 import { AttachmentController } from '../../../modules/expense-ledger/infrastructure/http/controllers/attachment.controller';
-import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller';
-
-// Recurring Expense
-import { PrismaRecurringExpenseRepository } from '../../../modules/expense-ledger/infrastructure/persistence/recurring-expense.repository.impl';
-import { RecurringExpenseService } from '../../../modules/expense-ledger/application/services/recurring-expense.service';
-import { CreateRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/create-recurring-expense.command';
-import { PauseRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/pause-recurring-expense.command';
-import { ResumeRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/resume-recurring-expense.command';
-import { StopRecurringExpenseHandler } from '../../../modules/expense-ledger/application/commands/stop-recurring-expense.command';
-import { ProcessRecurringExpensesHandler } from '../../../modules/expense-ledger/application/commands/process-recurring-expenses.command';
 import { RecurringExpenseController } from '../../../modules/expense-ledger/infrastructure/http/controllers/recurring-expense.controller';
+import { ExpenseSplitController } from '../../../modules/expense-ledger/infrastructure/http/controllers/expense-split.controller';
 
 // Budget Management Module - Repositories
 import { BudgetRepositoryImpl } from '../../../modules/budget-management/infrastructure/persistence/budget.repository.impl';
@@ -143,6 +143,7 @@ import { GetBudgetHandler } from '../../../modules/budget-management/application
 import { ListBudgetsHandler } from '../../../modules/budget-management/application/queries/list-budgets.query';
 import { GetAllocationsHandler } from '../../../modules/budget-management/application/queries/get-allocations.query';
 import { GetUnreadAlertsHandler } from '../../../modules/budget-management/application/queries/get-unread-alerts.query';
+import { GetSpendingLimitHandler } from '../../../modules/budget-management/application/queries/get-spending-limit.query';
 import { ListSpendingLimitsHandler } from '../../../modules/budget-management/application/queries/list-spending-limits.query';
 
 // Budget Management Module - Controllers
@@ -428,26 +429,22 @@ import { PrismaBankTransactionRepository } from '../../../modules/bank-feed-sync
 import { TransactionSyncService } from '../../../modules/bank-feed-sync/application/services/transaction-sync.service';
 
 // Bank Feed Sync Module - Command Handlers
-import {
-  ConnectBankHandler,
-  DisconnectBankHandler,
-  UpdateConnectionTokenHandler,
-  DeleteConnectionHandler,
-  SyncTransactionsHandler,
-  ProcessTransactionHandler,
-} from '../../../modules/bank-feed-sync/application/commands';
+import { ConnectBankHandler } from '../../../modules/bank-feed-sync/application/commands/connect-bank.command';
+import { DisconnectBankHandler } from '../../../modules/bank-feed-sync/application/commands/disconnect-bank.command';
+import { UpdateConnectionTokenHandler } from '../../../modules/bank-feed-sync/application/commands/update-connection-token.command';
+import { DeleteConnectionHandler } from '../../../modules/bank-feed-sync/application/commands/delete-connection.command';
+import { SyncTransactionsHandler } from '../../../modules/bank-feed-sync/application/commands/sync-transactions.command';
+import { ProcessTransactionHandler } from '../../../modules/bank-feed-sync/application/commands/process-transaction.command';
 
 // Bank Feed Sync Module - Query Handlers
-import {
-  GetBankConnectionsHandler,
-  GetBankConnectionHandler,
-  GetSyncHistoryHandler,
-  GetSyncSessionHandler,
-  GetActiveSyncsHandler,
-  GetPendingTransactionsHandler,
-  GetBankTransactionHandler,
-  GetTransactionsByConnectionHandler,
-} from '../../../modules/bank-feed-sync/application/queries';
+import { GetBankConnectionsHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-connections.query';
+import { GetBankConnectionHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-connection.query';
+import { GetSyncHistoryHandler } from '../../../modules/bank-feed-sync/application/queries/get-sync-history.query';
+import { GetSyncSessionHandler } from '../../../modules/bank-feed-sync/application/queries/get-sync-session.query';
+import { GetActiveSyncsHandler } from '../../../modules/bank-feed-sync/application/queries/get-active-syncs.query';
+import { GetPendingTransactionsHandler } from '../../../modules/bank-feed-sync/application/queries/get-pending-transactions.query';
+import { GetBankTransactionHandler } from '../../../modules/bank-feed-sync/application/queries/get-bank-transaction.query';
+import { GetTransactionsByConnectionHandler } from '../../../modules/bank-feed-sync/application/queries/get-transactions-by-connection.query';
 
 // Bank Feed Sync Module - Controllers
 import { BankConnectionController } from '../../../modules/bank-feed-sync/infrastructure/http/controllers/bank-connection.controller';
@@ -576,9 +573,7 @@ export class Container {
       workspaceAuthHelper
     );
     const memberController = new MemberController(
-      new ListWorkspaceMembersHandler(workspaceMembershipService),
-      new RemoveMemberHandler(workspaceMembershipService),
-      new ChangeMemberRoleHandler(workspaceMembershipService),
+      workspaceMembershipService,
       workspaceAuthHelper
     );
 
@@ -852,12 +847,20 @@ export class Container {
     );
 
     // Query Handlers
-    const getBudgetHandler = new GetBudgetHandler(budgetService);
-    const listBudgetsHandler = new ListBudgetsHandler(budgetService);
-    const getAllocationsHandler = new GetAllocationsHandler(budgetService);
-    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
+    const getBudgetHandler = new GetBudgetHandler(budgetRepository);
+    const listBudgetsHandler = new ListBudgetsHandler(budgetRepository);
+    const getAllocationsHandler = new GetAllocationsHandler(
+      budgetRepository,
+      budgetAllocationRepository
+    );
+    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(
+      budgetAlertRepository
+    );
+    const getSpendingLimitHandler = new GetSpendingLimitHandler(
+      spendingLimitRepository
+    );
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
-      spendingLimitService
+      spendingLimitRepository
     );
 
     // Controllers
@@ -880,6 +883,7 @@ export class Container {
       createSpendingLimitHandler,
       updateSpendingLimitHandler,
       deleteSpendingLimitHandler,
+      getSpendingLimitHandler,
       listSpendingLimitsHandler
     );
 
@@ -1151,12 +1155,12 @@ export class Container {
     // Command & Query Handlers - Audit
     const createAuditLogHandler = new CreateAuditLogHandler(auditService);
     const purgeAuditLogsHandler = new PurgeAuditLogsHandler(auditService);
-    const getAuditLogHandler = new GetAuditLogHandler(auditService);
-    const listAuditLogsHandler = new ListAuditLogsHandler(auditService);
+    const getAuditLogHandler = new GetAuditLogHandler(auditRepository);
+    const listAuditLogsHandler = new ListAuditLogsHandler(auditRepository);
     const getEntityAuditHistoryHandler = new GetEntityAuditHistoryHandler(
-      auditService
+      auditRepository
     );
-    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditService);
+    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditRepository);
 
     // Controllers
     const notificationController = new NotificationController(
@@ -1202,10 +1206,11 @@ export class Container {
     // --- Event Subscriptions ---
 
     // 1. Notification Subscriptions
-    eventBus.subscribe(
-      'UserCreated',
-      notificationEventHandler.handleUserCreated
-    );
+    // Temporarily disabled until handlers are implemented
+    // eventBus.subscribe(
+    //   'UserCreated',
+    //   notificationEventHandler.handleUserCreated
+    // );
 
     // 2. Audit Subscriptions (Global listener)
     const auditListener = new AuditEventListener(createAuditLogHandler);
@@ -1235,18 +1240,19 @@ export class Container {
       'approval.workflow_started',
       notificationEventHandler.handleApprovalStarted
     );
-    eventBus.subscribe(
-      'approval.workflow_completed',
-      notificationEventHandler.handleWorkflowCompleted
-    );
-    eventBus.subscribe(
-      'approval.workflow_rejected',
-      notificationEventHandler.handleWorkflowRejected
-    );
-    eventBus.subscribe(
-      'approval.workflow_cancelled',
-      notificationEventHandler.handleWorkflowCancelled
-    );
+    // Temporarily disabled until handlers are implemented
+    // eventBus.subscribe(
+    //   'approval.workflow_completed',
+    //   notificationEventHandler.handleWorkflowCompleted
+    // );
+    // eventBus.subscribe(
+    //   'approval.workflow_rejected',
+    //   notificationEventHandler.handleWorkflowRejected
+    // );
+    // eventBus.subscribe(
+    //   'approval.workflow_cancelled',
+    //   notificationEventHandler.handleWorkflowCancelled
+    // );
 
     // Audit subscriptions for approval workflow events
     eventBus.subscribe('approval-chain.deleted', auditListener);
@@ -1471,18 +1477,18 @@ export class Container {
     const createScenarioHandler = new CreateScenarioHandler(scenarioService);
     const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
-    // Query Handlers
-    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
+    // Query Handlers (depend on repositories directly per CQRS)
+    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanRepository);
     const listBudgetPlansHandler = new ListBudgetPlansHandler(
-      budgetPlanService
+      budgetPlanRepository
     );
-    const getForecastHandler = new GetForecastHandler(forecastService);
-    const listForecastsHandler = new ListForecastsHandler(forecastService);
+    const getForecastHandler = new GetForecastHandler(forecastRepository);
+    const listForecastsHandler = new ListForecastsHandler(forecastRepository);
     const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastService
+      forecastItemRepository
     );
-    const getScenarioHandler = new GetScenarioHandler(scenarioService);
-    const listScenariosHandler = new ListScenariosHandler(scenarioService);
+    const getScenarioHandler = new GetScenarioHandler(scenarioRepository);
+    const listScenariosHandler = new ListScenariosHandler(scenarioRepository);
 
     // Controllers
     const budgetPlanController = new BudgetPlanController(
@@ -1666,8 +1672,7 @@ export class Container {
     const policyEvaluationService = new PolicyEvaluationService(
       policyRepository,
       violationRepository,
-      exemptionRepository,
-      cacheService
+      exemptionRepository
     );
 
     this.services.set('policyEvaluationService', policyEvaluationService);

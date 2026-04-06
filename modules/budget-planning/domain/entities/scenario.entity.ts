@@ -1,8 +1,8 @@
 import { ScenarioId } from '../value-objects/scenario-id';
 import { PlanId } from '../value-objects/plan-id';
 import { UserId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -58,14 +58,14 @@ export class ScenarioUpdatedEvent extends DomainEvent {
 
 export class Scenario extends AggregateRoot {
   private constructor(
-    private readonly id: ScenarioId,
-    private readonly planId: PlanId,
-    private name: string,
-    private description: string | null,
-    private assumptions: Record<string, any> | null,
-    private readonly createdBy: UserId,
-    private readonly createdAt: Date,
-    private updatedAt: Date
+    private readonly _id: ScenarioId,
+    private readonly _planId: PlanId,
+    private _name: string,
+    private _description: string | null,
+    private _assumptions: Record<string, unknown> | null,
+    private readonly _createdBy: UserId,
+    private readonly _createdAt: Date,
+    private _updatedAt: Date
   ) {
     super();
   }
@@ -74,7 +74,7 @@ export class Scenario extends AggregateRoot {
     planId: PlanId;
     name: string;
     description?: string | null;
-    assumptions?: Record<string, any> | null;
+    assumptions?: Record<string, unknown> | null;
     createdBy: UserId;
   }): Scenario {
     const scenario = new Scenario(
@@ -90,7 +90,7 @@ export class Scenario extends AggregateRoot {
 
     scenario.addDomainEvent(
       new ScenarioCreatedEvent(
-        scenario.id.getValue(),
+        scenario._id.getValue(),
         params.planId.getValue(),
         params.name,
         params.createdBy.getValue()
@@ -105,7 +105,7 @@ export class Scenario extends AggregateRoot {
     planId: string;
     name: string;
     description: string | null;
-    assumptions: Record<string, any> | null;
+    assumptions: Record<string, unknown> | null;
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
@@ -122,75 +122,75 @@ export class Scenario extends AggregateRoot {
     );
   }
 
-  getId(): ScenarioId {
-    return this.id;
+  get id(): ScenarioId {
+    return this._id;
   }
 
-  getPlanId(): PlanId {
-    return this.planId;
+  get planId(): PlanId {
+    return this._planId;
   }
 
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this._name;
   }
 
-  getDescription(): string | null {
-    return this.description;
+  get description(): string | null {
+    return this._description;
   }
 
-  getAssumptions(): Record<string, any> | null {
-    return this.assumptions;
+  get assumptions(): Record<string, unknown> | null {
+    return this._assumptions;
   }
 
-  getCreatedBy(): UserId {
-    return this.createdBy;
+  get createdBy(): UserId {
+    return this._createdBy;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this._createdAt;
   }
 
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this._updatedAt;
   }
 
   updateDetails(params: {
     name?: string;
     description?: string | null;
-    assumptions?: Record<string, any> | null;
+    assumptions?: Record<string, unknown> | null;
   }): void {
     const changes: Record<string, unknown> = {};
     if (params.name) {
-      this.name = params.name;
+      this._name = params.name;
       changes.name = params.name;
     }
     if (params.description !== undefined) {
-      this.description = params.description;
+      this._description = params.description;
       changes.description = params.description;
     }
     if (params.assumptions !== undefined) {
-      this.assumptions = params.assumptions;
+      this._assumptions = params.assumptions;
       changes.assumptions = params.assumptions;
     }
-    this.updatedAt = new Date();
+    this._updatedAt = new Date();
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new ScenarioUpdatedEvent(this.id.getValue(), changes)
+        new ScenarioUpdatedEvent(this._id.getValue(), changes)
       );
     }
   }
 
-  toJSON(): ScenarioDTO {
+  static toDTO(scenario: Scenario): ScenarioDTO {
     return {
-      id: this.getId().getValue(),
-      planId: this.getPlanId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
-      assumptions: this.getAssumptions(),
-      createdBy: this.getCreatedBy().getValue(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: scenario.id.getValue(),
+      planId: scenario.planId.getValue(),
+      name: scenario.name,
+      description: scenario.description,
+      assumptions: scenario.assumptions,
+      createdBy: scenario.createdBy.getValue(),
+      createdAt: scenario.createdAt.toISOString(),
+      updatedAt: scenario.updatedAt.toISOString(),
     };
   }
 }

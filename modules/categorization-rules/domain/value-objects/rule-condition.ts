@@ -58,15 +58,6 @@ export class RuleCondition {
     return this.conditionValue;
   }
 
-  // Alias methods for consistency
-  getType(): RuleConditionType {
-    return this.conditionType;
-  }
-
-  getValue(): string {
-    return this.conditionValue;
-  }
-
   matches(expenseData: {
     merchant?: string;
     description?: string;

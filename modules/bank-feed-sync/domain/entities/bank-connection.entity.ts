@@ -1,8 +1,8 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { ConnectionStatus } from '../enums/connection-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -175,6 +175,7 @@ export interface BankConnectionProps {
   accountType: string;
   accountMask?: string;
   currency: string;
+  // TODO: Encrypt accessToken at rest (infrastructure concern — use an encryption service)
   accessToken: string;
   status: ConnectionStatus;
   lastSyncAt?: Date;
@@ -185,7 +186,7 @@ export interface BankConnectionProps {
 }
 
 export class BankConnection extends AggregateRoot {
-  private constructor(private readonly props: BankConnectionProps) {
+  private constructor(private props: BankConnectionProps) {
     super();
   }
 
@@ -222,9 +223,9 @@ export class BankConnection extends AggregateRoot {
 
     connection.addDomainEvent(
       new BankConnectionCreatedEvent(
-        connection.getId().getValue(),
-        connection.getWorkspaceId().getValue(),
-        connection.getUserId().getValue(),
+        connection.id.getValue(),
+        connection.workspaceId.getValue(),
+        connection.userId.getValue(),
         institutionId,
         institutionName,
         accountName
@@ -234,7 +235,7 @@ export class BankConnection extends AggregateRoot {
     return connection;
   }
 
-  static fromPersistence(props: BankConnectionProps): BankConnection {
+  static reconstitute(props: BankConnectionProps): BankConnection {
     return new BankConnection(props);
   }
 
@@ -303,52 +304,10 @@ export class BankConnection extends AggregateRoot {
     return this.props.updatedAt;
   }
 
-  // Method-style getters for repository compatibility
-  getId(): BankConnectionId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getUserId(): UserId {
-    return this.props.userId;
-  }
-
-  getInstitutionId(): string {
-    return this.props.institutionId;
-  }
-
-  getInstitutionName(): string {
-    return this.props.institutionName;
-  }
-
-  getAccountId(): string {
-    return this.props.accountId;
-  }
-
-  getAccountName(): string {
-    return this.props.accountName;
-  }
-
-  getAccountType(): string {
-    return this.props.accountType;
-  }
-
-  getAccountMask(): string | undefined {
-    return this.props.accountMask;
-  }
-
-  getCurrency(): string {
-    return this.props.currency;
-  }
-
   /**
    * Returns a masked version of the access token for logging/display purposes.
-   * Use getAccessTokenForSync() for actual API calls.
    */
-  getAccessTokenMasked(): string {
+  get accessTokenMasked(): string {
     const token = this.props.accessToken;
     if (token.length <= 8) return '****';
     return token.substring(0, 4) + '****' + token.substring(token.length - 4);
@@ -358,32 +317,8 @@ export class BankConnection extends AggregateRoot {
    * Returns the actual access token for sync operations.
    * @internal This should only be used by BankSyncService
    */
-  getAccessTokenForSync(): string {
+  get accessTokenForSync(): string {
     return this.props.accessToken;
-  }
-
-  getStatus(): ConnectionStatus {
-    return this.props.status;
-  }
-
-  getLastSyncAt(): Date | undefined {
-    return this.props.lastSyncAt;
-  }
-
-  getTokenExpiresAt(): Date | undefined {
-    return this.props.tokenExpiresAt;
-  }
-
-  getErrorMessage(): string | undefined {
-    return this.props.errorMessage;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
   }
 
   // Business methods
@@ -394,8 +329,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionActivatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -406,8 +341,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionExpiredEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -419,8 +354,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionErrorEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         errorMessage
       )
     );
@@ -432,8 +367,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionDisconnectedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -445,8 +380,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionSyncedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         syncedAt
       )
     );
@@ -461,8 +396,8 @@ export class BankConnection extends AggregateRoot {
 
     this.addDomainEvent(
       new BankConnectionTokenUpdatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         expiresAt
       )
     );
@@ -479,29 +414,25 @@ export class BankConnection extends AggregateRoot {
     );
   }
 
-  toJSON(): BankConnectionDTO {
+  static toDTO(connection: BankConnection): BankConnectionDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      userId: this.getUserId().getValue(),
-      institutionId: this.institutionId,
-      institutionName: this.institutionName,
-      accountId: this.accountId,
-      accountName: this.accountName,
-      accountType: this.accountType,
-      accountMask: this.accountMask,
-      currency: this.currency,
-      status: this.status,
-      lastSyncAt: this.lastSyncAt,
-      tokenExpiresAt: this.tokenExpiresAt,
-      errorMessage: this.errorMessage,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      id: connection.id.getValue(),
+      workspaceId: connection.workspaceId.getValue(),
+      userId: connection.userId.getValue(),
+      institutionId: connection.institutionId,
+      institutionName: connection.institutionName,
+      accountId: connection.accountId,
+      accountName: connection.accountName,
+      accountType: connection.accountType,
+      accountMask: connection.accountMask,
+      currency: connection.currency,
+      status: connection.status,
+      lastSyncAt: connection.lastSyncAt,
+      tokenExpiresAt: connection.tokenExpiresAt,
+      errorMessage: connection.errorMessage,
+      createdAt: connection.createdAt,
+      updatedAt: connection.updatedAt,
     };
-  }
-
-  toPersistence(): BankConnectionProps {
-    return { ...this.props };
   }
 }
 
@@ -516,7 +447,7 @@ export interface BankConnectionDTO {
   accountType: string;
   accountMask?: string;
   currency: string;
-  status: ConnectionStatus;
+  status: string;
   lastSyncAt?: Date;
   tokenExpiresAt?: Date;
   errorMessage?: string;

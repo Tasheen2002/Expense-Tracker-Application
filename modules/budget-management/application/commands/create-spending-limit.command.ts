@@ -5,8 +5,8 @@ import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CreateSpendingLimitCommand extends ICommand {
   workspaceId: string;
@@ -27,6 +27,6 @@ export class CreateSpendingLimitHandler implements ICommandHandler<
     command: CreateSpendingLimitCommand
   ): Promise<CommandResult<{ limitId: string }>> {
     const limit = await this.limitService.createSpendingLimit(command);
-    return CommandResult.success({ limitId: limit.getId().getValue() });
+    return CommandResult.success({ limitId: limit.id.getValue() });
   }
 }

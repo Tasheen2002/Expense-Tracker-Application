@@ -3,10 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteScenarioCommand extends ICommand {
   id: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -17,7 +18,7 @@ export class DeleteScenarioHandler implements ICommandHandler<
   constructor(private readonly scenarioService: ScenarioService) {}
 
   async handle(command: DeleteScenarioCommand): Promise<CommandResult<void>> {
-    await this.scenarioService.deleteScenario(command.id, command.userId);
+    await this.scenarioService.deleteScenario(command.id, command.workspaceId, command.userId);
     return CommandResult.success();
   }
 }

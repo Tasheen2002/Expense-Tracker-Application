@@ -7,8 +7,8 @@ import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListExemptionsInput {
   workspaceId: string;

@@ -1,11 +1,11 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { Project } from '../../domain/entities/project.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { Project, ProjectDTO } from '../../domain/entities/project.entity';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ListProjectsQuery extends IQuery {
   workspaceId: string;
@@ -15,7 +15,7 @@ export interface ListProjectsQuery extends IQuery {
 
 export class ListProjectsHandler implements IQueryHandler<
   ListProjectsQuery,
-  QueryResult<PaginatedResult<Project>>
+  QueryResult<PaginatedResult<ProjectDTO>>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
@@ -23,7 +23,7 @@ export class ListProjectsHandler implements IQueryHandler<
 
   async handle(
     query: ListProjectsQuery
-  ): Promise<QueryResult<PaginatedResult<Project>>> {
+  ): Promise<QueryResult<PaginatedResult<ProjectDTO>>> {
     const result = await this.allocationManagementService.listProjects(
       query.workspaceId,
       {
@@ -31,6 +31,12 @@ export class ListProjectsHandler implements IQueryHandler<
         offset: query.offset || 0,
       }
     );
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map(Project.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

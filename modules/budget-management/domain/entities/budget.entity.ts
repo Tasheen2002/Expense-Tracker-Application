@@ -11,8 +11,8 @@ import {
 } from '../errors/budget.errors';
 import { BudgetPeriodType } from '../enums/budget-period-type';
 import { Decimal } from '@prisma/client/runtime/library';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -337,7 +337,7 @@ export class Budget extends AggregateRoot {
 
     if (oldName !== newName) {
       this.addDomainEvent(
-        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
           name: newName,
         })
       );
@@ -365,7 +365,7 @@ export class Budget extends AggregateRoot {
 
     if (!oldAmount.equals(newAmount)) {
       this.addDomainEvent(
-        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
           totalAmount: newAmount.toString(),
         })
       );
@@ -380,7 +380,7 @@ export class Budget extends AggregateRoot {
 
     if (oldDescription !== newDescription) {
       this.addDomainEvent(
-        new BudgetUpdatedEvent(this.getId().getValue(), this.getWorkspaceId(), {
+        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
           description: newDescription,
         })
       );
@@ -398,7 +398,7 @@ export class Budget extends AggregateRoot {
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetActivatedEvent(this.getId().getValue(), this.getWorkspaceId())
+      new BudgetActivatedEvent(this.id.getValue(), this.workspaceId)
     );
   }
 
@@ -412,18 +412,18 @@ export class Budget extends AggregateRoot {
     this.props.status = BudgetStatus.EXCEEDED;
     this.props.updatedAt = new Date();
 
-    const limitNum = this.getTotalAmount().toNumber();
+    const limitNum = this.totalAmount.toNumber();
     const thresholdPercentage =
       limitNum > 0 ? (currentSpending / limitNum) * 100 : 100;
 
     this.addDomainEvent(
       new BudgetThresholdExceededEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId(),
+        this.id.getValue(),
+        this.workspaceId,
         thresholdPercentage,
         currentSpending,
         limitNum,
-        this.getCurrency()
+        this.currency
       )
     );
   }
@@ -439,44 +439,44 @@ export class Budget extends AggregateRoot {
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetArchivedEvent(this.getId().getValue(), this.getWorkspaceId())
+      new BudgetArchivedEvent(this.id.getValue(), this.workspaceId)
     );
   }
 
   // Getters
-  getId(): BudgetId {
+  get id(): BudgetId {
     return this.props.id;
   }
 
-  getWorkspaceId(): string {
+  get workspaceId(): string {
     return this.props.workspaceId;
   }
 
-  getName(): string {
+  get name(): string {
     return this.props.name;
   }
 
-  getDescription(): string | null {
+  get description(): string | null {
     return this.props.description;
   }
 
-  getTotalAmount(): Decimal {
+  get totalAmount(): Decimal {
     return this.props.totalAmount;
   }
 
-  getCurrency(): string {
+  get currency(): string {
     return this.props.currency;
   }
 
-  getPeriod(): BudgetPeriod {
+  get period(): BudgetPeriod {
     return this.props.period;
   }
 
-  getStatus(): BudgetStatus {
+  get status(): BudgetStatus {
     return this.props.status;
   }
 
-  getCreatedBy(): string {
+  get createdBy(): string {
     return this.props.createdBy;
   }
 
@@ -510,11 +510,11 @@ export class Budget extends AggregateRoot {
     return this.props.rolloverUnused;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -538,25 +538,26 @@ export class Budget extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
-  toJSON(): BudgetDTO {
+  static toDTO(budget: Budget): BudgetDTO {
     return {
-      budgetId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      name: this.getName(),
-      description: this.getDescription(),
-      totalAmount: this.getTotalAmount().toString(),
-      currency: this.getCurrency(),
+      budgetId: budget.id.getValue(),
+      workspaceId: budget.workspaceId,
+      name: budget.name,
+      description: budget.description,
+      totalAmount: budget.totalAmount.toString(),
+      currency: budget.currency,
       period: {
-        startDate: this.getPeriod().getStartDate().toISOString(),
-        endDate: this.getPeriod().getEndDate().toISOString(),
-        type: this.getPeriod().getPeriodType(),
+        startDate: budget.period.startDate.toISOString(),
+        endDate: budget.period.endDate.toISOString(),
+        type: budget.period.periodType,
       },
-      status: this.getStatus(),
-      createdBy: this.getCreatedBy(),
-      isRecurring: this.isRecurring(),
-      rolloverUnused: this.shouldRolloverUnused(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      status: budget.status,
+      createdBy: budget.createdBy,
+      isRecurring: budget.isRecurring(),
+      rolloverUnused: budget.shouldRolloverUnused(),
+      createdAt: budget.createdAt.toISOString(),
+      updatedAt: budget.updatedAt.toISOString(),
     };
   }
+
 }

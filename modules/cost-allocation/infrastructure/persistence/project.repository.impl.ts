@@ -2,14 +2,14 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { Project } from "../../domain/entities/project.entity";
 import { ProjectRepository } from "../../domain/repositories/project.repository";
 import { ProjectId } from "../../domain/value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ProjectRepositoryImpl
   extends PrismaRepository<Project>

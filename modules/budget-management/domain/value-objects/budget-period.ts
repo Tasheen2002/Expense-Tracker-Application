@@ -5,18 +5,18 @@ import {
 import { InvalidBudgetPeriodError } from "../errors/budget.errors";
 
 export class BudgetPeriod {
-  private readonly startDate: Date;
-  private readonly endDate: Date;
-  private readonly periodType: BudgetPeriodType;
+  private readonly _startDate: Date;
+  private readonly _endDate: Date;
+  private readonly _periodType: BudgetPeriodType;
 
   private constructor(
     startDate: Date,
     endDate: Date,
     periodType: BudgetPeriodType,
   ) {
-    this.startDate = startDate;
-    this.endDate = endDate;
-    this.periodType = periodType;
+    this._startDate = startDate;
+    this._endDate = endDate;
+    this._periodType = periodType;
   }
 
   static create(
@@ -51,16 +51,16 @@ export class BudgetPeriod {
     return new BudgetPeriod(startDate, endDate, periodType);
   }
 
-  getStartDate(): Date {
-    return this.startDate;
+  get startDate(): Date {
+    return this._startDate;
   }
 
-  getEndDate(): Date {
-    return this.endDate;
+  get endDate(): Date {
+    return this._endDate;
   }
 
-  getPeriodType(): BudgetPeriodType {
-    return this.periodType;
+  get periodType(): BudgetPeriodType {
+    return this._periodType;
   }
 
   isActive(currentDate: Date = new Date()): boolean {

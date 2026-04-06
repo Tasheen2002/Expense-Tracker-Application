@@ -1,11 +1,12 @@
-import { ScenarioService } from '../services/scenario.service';
-import { Scenario } from '../../domain/entities/scenario.entity';
-import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
+import { Scenario, ScenarioDTO } from '../../domain/entities/scenario.entity';
+import { PlanId } from '../../domain/value-objects/plan-id';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ListScenariosQuery extends IQuery {
   planId: string;
@@ -14,17 +15,22 @@ export interface ListScenariosQuery extends IQuery {
 
 export class ListScenariosHandler implements IQueryHandler<
   ListScenariosQuery,
-  QueryResult<PaginatedResult<Scenario>>
+  QueryResult<PaginatedResult<ScenarioDTO>>
 > {
-  constructor(private readonly scenarioService: ScenarioService) {}
+  constructor(private readonly scenarioRepository: IScenarioRepository) {}
 
   async handle(
     query: ListScenariosQuery
-  ): Promise<QueryResult<PaginatedResult<Scenario>>> {
-    const result = await this.scenarioService.listScenarios(
-      query.planId,
-      query.userId
+  ): Promise<QueryResult<PaginatedResult<ScenarioDTO>>> {
+    const result = await this.scenarioRepository.findByPlanId(
+      PlanId.fromString(query.planId)
     );
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map((s) => Scenario.toDTO(s)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

@@ -1,10 +1,9 @@
 import { RuleExecutionId } from '../value-objects/rule-execution-id';
 import { RuleId } from '../value-objects/rule-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExpenseId, CategoryId } from '../../../expense-ledger';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -129,14 +128,27 @@ export class RuleExecution extends AggregateRoot {
     return this.executedAt;
   }
 
-  toJSON() {
+  /**
+   * Serialize RuleExecution to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(execution: RuleExecution): RuleExecutionDTO {
     return {
-      id: this.getId().getValue(),
-      ruleId: this.getRuleId().getValue(),
-      expenseId: this.getExpenseId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      appliedCategoryId: this.getAppliedCategoryId().getValue(),
-      executedAt: this.getExecutedAt(),
+      id: execution.id.getValue(),
+      ruleId: execution.ruleId.getValue(),
+      expenseId: execution.expenseId.getValue(),
+      workspaceId: execution.workspaceId.getValue(),
+      appliedCategoryId: execution.appliedCategoryId.getValue(),
+      executedAt: execution.executedAt,
     };
   }
+}
+
+export interface RuleExecutionDTO {
+  id: string;
+  ruleId: string;
+  expenseId: string;
+  workspaceId: string;
+  appliedCategoryId: string;
+  executedAt: Date;
 }

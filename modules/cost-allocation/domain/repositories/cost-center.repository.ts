@@ -1,10 +1,10 @@
 import { CostCenter } from "../entities/cost-center.entity";
 import { CostCenterId } from "../value-objects/cost-center-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface CostCenterRepository {
   save(costCenter: CostCenter): Promise<void>;

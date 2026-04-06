@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { RecurringExpenseService } from '../services/recurring-expense.service';
 import {
   ExpenseTemplate,

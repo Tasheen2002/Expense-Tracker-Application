@@ -4,10 +4,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface CreateForecastCommand extends ICommand {
   planId: string;
+  workspaceId: string;
   name: string;
   type: ForecastType;
   userId: string;
@@ -24,10 +25,11 @@ export class CreateForecastHandler implements ICommandHandler<
   ): Promise<CommandResult<{ forecastId: string }>> {
     const forecast = await this.forecastService.createForecast({
       planId: command.planId,
+      workspaceId: command.workspaceId,
       name: command.name,
       type: command.type,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastId: forecast.getId().getValue() });
+    return CommandResult.success({ forecastId: forecast.id.getValue() });
   }
 }

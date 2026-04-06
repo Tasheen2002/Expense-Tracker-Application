@@ -1,9 +1,9 @@
 import { ForecastItemId } from '../value-objects/forecast-item-id';
 import { ForecastId } from '../value-objects/forecast-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { CategoryId } from '../../../expense-ledger';
 import { ForecastAmount } from '../value-objects/forecast-amount';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -59,13 +59,13 @@ export class ForecastItemUpdatedEvent extends DomainEvent {
 
 export class ForecastItem extends AggregateRoot {
   private constructor(
-    private readonly id: ForecastItemId,
-    private readonly forecastId: ForecastId,
-    private readonly categoryId: CategoryId,
-    private amount: ForecastAmount,
-    private notes: string | null,
-    private readonly createdAt: Date,
-    private updatedAt: Date
+    private readonly _id: ForecastItemId,
+    private readonly _forecastId: ForecastId,
+    private readonly _categoryId: CategoryId,
+    private _amount: ForecastAmount,
+    private _notes: string | null,
+    private readonly _createdAt: Date,
+    private _updatedAt: Date
   ) {
     super();
   }
@@ -88,7 +88,7 @@ export class ForecastItem extends AggregateRoot {
 
     item.addDomainEvent(
       new ForecastItemCreatedEvent(
-        item.id.getValue(),
+        item._id.getValue(),
         params.forecastId.getValue(),
         params.categoryId.getValue(),
         params.amount.getValue().toString()
@@ -118,62 +118,62 @@ export class ForecastItem extends AggregateRoot {
     );
   }
 
-  getId(): ForecastItemId {
-    return this.id;
+  get id(): ForecastItemId {
+    return this._id;
   }
 
-  getForecastId(): ForecastId {
-    return this.forecastId;
+  get forecastId(): ForecastId {
+    return this._forecastId;
   }
 
-  getCategoryId(): CategoryId {
-    return this.categoryId;
+  get categoryId(): CategoryId {
+    return this._categoryId;
   }
 
-  getAmount(): ForecastAmount {
-    return this.amount;
+  get amount(): ForecastAmount {
+    return this._amount;
   }
 
-  getNotes(): string | null {
-    return this.notes;
+  get notes(): string | null {
+    return this._notes;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this._createdAt;
   }
 
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this._updatedAt;
   }
 
   updateDetails(amount?: ForecastAmount, notes?: string | null): void {
     const changes: Record<string, unknown> = {};
     if (amount) {
-      this.amount = amount;
+      this._amount = amount;
       changes.amount = amount.getValue().toString();
     }
     if (notes !== undefined) {
-      this.notes = notes;
+      this._notes = notes;
       changes.notes = notes;
     }
-    this.updatedAt = new Date();
+    this._updatedAt = new Date();
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new ForecastItemUpdatedEvent(this.id.getValue(), changes)
+        new ForecastItemUpdatedEvent(this._id.getValue(), changes)
       );
     }
   }
 
-  toJSON(): ForecastItemDTO {
+  static toDTO(item: ForecastItem): ForecastItemDTO {
     return {
-      id: this.getId().getValue(),
-      forecastId: this.getForecastId().getValue(),
-      categoryId: this.getCategoryId().getValue(),
-      amount: this.getAmount().toNumber(),
-      notes: this.getNotes(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: item.id.getValue(),
+      forecastId: item.forecastId.getValue(),
+      categoryId: item.categoryId.getValue(),
+      amount: item.amount.toNumber(),
+      notes: item.notes,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
     };
   }
 }

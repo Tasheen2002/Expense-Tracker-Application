@@ -3,8 +3,8 @@ import { BudgetService } from '../services/budget.service';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface DeleteAllocationCommand extends ICommand {
   allocationId: string;
@@ -19,17 +19,11 @@ export class DeleteAllocationHandler implements ICommandHandler<
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(command: DeleteAllocationCommand): Promise<CommandResult<void>> {
-    try {
-      
-          await this.budgetService.deleteAllocation(
-            command.allocationId,
-            command.workspaceId,
-            command.userId
-          );
-          return CommandResult.success(undefined);
-        
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.budgetService.deleteAllocation(
+      command.allocationId,
+      command.workspaceId,
+      command.userId
+    );
+    return CommandResult.success(undefined);
   }
 }

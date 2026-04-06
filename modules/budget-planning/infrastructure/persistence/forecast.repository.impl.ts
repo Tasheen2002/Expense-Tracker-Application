@@ -1,20 +1,20 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Forecast } from "../../domain/entities/forecast.entity";
-import { ForecastRepository } from "../../domain/repositories/forecast.repository";
+import { IForecastRepository } from "../../domain/repositories/forecast.repository";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ForecastRepositoryImpl
   extends PrismaRepository<Forecast>
-  implements ForecastRepository
+  implements IForecastRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -22,17 +22,17 @@ export class ForecastRepositoryImpl
 
   async save(forecast: Forecast): Promise<void> {
     const data = {
-      id: forecast.getId().getValue(),
-      planId: forecast.getPlanId().getValue(),
-      name: forecast.getName(),
-      type: forecast.getType(),
-      isActive: forecast.getIsActive(),
-      createdAt: forecast.getCreatedAt(),
-      updatedAt: forecast.getUpdatedAt(),
+      id: forecast.id.getValue(),
+      planId: forecast.planId.getValue(),
+      name: forecast.name,
+      type: forecast.type,
+      isActive: forecast.active,
+      createdAt: forecast.createdAt,
+      updatedAt: forecast.updatedAt,
     };
 
     await this.prisma.forecast.upsert({
-      where: { id: forecast.getId().getValue() },
+      where: { id: forecast.id.getValue() },
       update: data,
       create: data,
     });
@@ -40,9 +40,9 @@ export class ForecastRepositoryImpl
     await this.dispatchEvents(forecast);
   }
 
-  async findById(id: ForecastId): Promise<Forecast | null> {
-    const raw = await this.prisma.forecast.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: ForecastId, workspaceId: string): Promise<Forecast | null> {
+    const raw = await this.prisma.forecast.findFirst({
+      where: { id: id.getValue(), plan: { workspaceId } },
     });
 
     if (!raw) return null;

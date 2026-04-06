@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { BudgetPlan } from "../domain/entities/budget-plan.entity";
-import { WorkspaceId } from "../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../identity-workspace";
 import { PlanPeriod } from "../domain/value-objects/plan-period";
 import { PlanStatus } from "../domain/enums/plan-status.enum";
 import { InvalidPlanPeriodError } from "../domain/errors/budget-planning.errors";
@@ -23,13 +22,13 @@ describe("BudgetPlan Entity", () => {
       createdBy,
     });
 
-    expect(plan.getId()).toBeDefined();
-    expect(plan.getName()).toBe("Annual Budget 2024");
-    expect(plan.getDescription()).toBe("Main budget");
-    expect(plan.getStatus()).toBe(PlanStatus.DRAFT);
-    expect(plan.getPeriod().getStartDate()).toEqual(startDate);
-    expect(plan.getPeriod().getEndDate()).toEqual(endDate);
-    expect(plan.getCreatedAt()).toBeDefined();
+    expect(plan.id).toBeDefined();
+    expect(plan.name).toBe("Annual Budget 2024");
+    expect(plan.description).toBe("Main budget");
+    expect(plan.status).toBe(PlanStatus.DRAFT);
+    expect(plan.period.startDate).toEqual(startDate);
+    expect(plan.period.endDate).toEqual(endDate);
+    expect(plan.createdAt).toBeDefined();
   });
 
   it("should update details", () => {
@@ -42,10 +41,10 @@ describe("BudgetPlan Entity", () => {
 
     plan.updateDetails("New Name", "New Description");
 
-    expect(plan.getName()).toBe("New Name");
-    expect(plan.getDescription()).toBe("New Description");
-    expect(plan.getUpdatedAt().getTime()).toBeGreaterThanOrEqual(
-      plan.getCreatedAt().getTime(),
+    expect(plan.name).toBe("New Name");
+    expect(plan.description).toBe("New Description");
+    expect(plan.updatedAt.getTime()).toBeGreaterThanOrEqual(
+      plan.createdAt.getTime(),
     );
   });
 
@@ -59,7 +58,7 @@ describe("BudgetPlan Entity", () => {
 
     plan.updateStatus(PlanStatus.ACTIVE);
 
-    expect(plan.getStatus()).toBe(PlanStatus.ACTIVE);
+    expect(plan.status).toBe(PlanStatus.ACTIVE);
   });
 });
 
@@ -91,9 +90,6 @@ describe("PlanPeriod Value Object", () => {
     const end = new Date("2024-01-05"); // 4 days difference
     const period = PlanPeriod.create(start, end);
 
-    // 1st to 5th is usually 4 days duration if diff, or 5 days inclusive?
-    // Implementation: Math.ceil(diff / day)
-    // 5 - 1 = 4 days.
     expect(period.getDurationInDays()).toBe(4);
   });
 });

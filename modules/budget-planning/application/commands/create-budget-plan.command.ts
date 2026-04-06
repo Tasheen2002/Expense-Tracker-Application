@@ -1,13 +1,15 @@
 import { BudgetPlanService } from '../services/budget-plan.service';
+import { PeriodType } from '../../domain/enums/period-type.enum';
 import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface CreateBudgetPlanCommand extends ICommand {
   workspaceId: string;
   name: string;
+  periodType: PeriodType;
   startDate: Date;
   endDate: Date;
   createdBy: string;
@@ -26,11 +28,12 @@ export class CreateBudgetPlanHandler implements ICommandHandler<
     const plan = await this.budgetPlanService.createPlan({
       workspaceId: command.workspaceId,
       name: command.name,
+      periodType: command.periodType,
       description: command.description,
       startDate: command.startDate,
       endDate: command.endDate,
       createdBy: command.createdBy,
     });
-    return CommandResult.success({ budgetPlanId: plan.getId().getValue() });
+    return CommandResult.success({ budgetPlanId: plan.id.getValue() });
   }
 }

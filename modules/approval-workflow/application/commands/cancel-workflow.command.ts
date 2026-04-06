@@ -2,8 +2,8 @@ import { WorkflowService } from '../services/workflow.service';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CancelWorkflowInput extends ICommand {
   expenseId: string;
@@ -16,13 +16,6 @@ export class CancelWorkflowHandler implements ICommandHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  private getStatusCode(error: unknown): number {
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      return (error as { statusCode: number }).statusCode;
-    }
-    return 500;
-  }
-
   async handle(input: CancelWorkflowInput): Promise<CommandResult<void>> {
     try {
       await this.workflowService.cancelWorkflow(
@@ -31,11 +24,7 @@ export class CancelWorkflowHandler implements ICommandHandler<
       );
       return CommandResult.success();
     } catch (error: unknown) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Command failed',
-        undefined,
-        this.getStatusCode(error)
-      );
+      return CommandResult.fromError(error);
     }
   }
 }

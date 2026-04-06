@@ -6,8 +6,8 @@ import { registerPreferenceRoutes } from "./preference.routes";
 import { NotificationController } from "../controllers/notification.controller";
 import { TemplateController } from "../controllers/template.controller";
 import { PreferenceController } from "../controllers/preference.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { workspaceAuthorizationMiddleware } from "@shared/middleware";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerNotificationDispatchRoutes(
   fastify: FastifyInstance,

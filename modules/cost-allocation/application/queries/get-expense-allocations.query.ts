@@ -1,10 +1,10 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
-import { ExpenseAllocation } from '../../domain/entities/expense-allocation.entity';
+import { ExpenseAllocation, ExpenseAllocationDTO } from '../../domain/entities/expense-allocation.entity';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface GetExpenseAllocationsQuery extends IQuery {
   expenseId: string;
@@ -13,7 +13,7 @@ export interface GetExpenseAllocationsQuery extends IQuery {
 
 export class GetExpenseAllocationsHandler implements IQueryHandler<
   GetExpenseAllocationsQuery,
-  QueryResult<ExpenseAllocation[]>
+  QueryResult<ExpenseAllocationDTO[]>
 > {
   constructor(
     private readonly expenseAllocationService: ExpenseAllocationService
@@ -21,11 +21,11 @@ export class GetExpenseAllocationsHandler implements IQueryHandler<
 
   async handle(
     query: GetExpenseAllocationsQuery
-  ): Promise<QueryResult<ExpenseAllocation[]>> {
+  ): Promise<QueryResult<ExpenseAllocationDTO[]>> {
     const allocations = await this.expenseAllocationService.getAllocations(
       query.expenseId,
       query.workspaceId
     );
-    return QueryResult.success(allocations);
+    return QueryResult.success(allocations.map(ExpenseAllocation.toDTO));
   }
 }

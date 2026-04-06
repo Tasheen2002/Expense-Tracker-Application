@@ -2,7 +2,7 @@ import { PolicyViolation } from "../entities/policy-violation.entity";
 import { ViolationId } from "../value-objects/violation-id";
 import { ViolationStatus } from "../enums/violation-status.enum";
 import { ViolationSeverity } from "../enums/violation-severity.enum";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PaginationOptions } from "../../../../apps/api/src/shared/domain/interfaces/pagination-options.interface";
 
 export interface ViolationFilters {

@@ -2,8 +2,8 @@ import { ApprovalChainService } from '../services/approval-chain.service';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CreateApprovalChainInput extends ICommand {
   workspaceId: string;
@@ -18,24 +18,18 @@ export interface CreateApprovalChainInput extends ICommand {
 
 export class CreateApprovalChainHandler implements ICommandHandler<
   CreateApprovalChainInput,
-  CommandResult<{ chainId: string }>
+  CommandResult<string>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async handle(
     input: CreateApprovalChainInput
-  ): Promise<CommandResult<{ chainId: string }>> {
+  ): Promise<CommandResult<string>> {
     try {
       const chain = await this.approvalChainService.createChain(input);
-      return CommandResult.success({ chainId: chain.getId().getValue() });
+      return CommandResult.success(chain.getId().getValue());
     } catch (error: unknown) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Command failed',
-        undefined,
-        error && typeof error === 'object' && 'statusCode' in error
-          ? (error as { statusCode: number }).statusCode
-          : 500
-      );
+      return CommandResult.fromError(error);
     }
   }
 }

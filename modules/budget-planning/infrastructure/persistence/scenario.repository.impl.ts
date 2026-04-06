@@ -1,19 +1,19 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Scenario } from "../../domain/entities/scenario.entity";
-import { ScenarioRepository } from "../../domain/repositories/scenario.repository";
+import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
 import { ScenarioId } from "../../domain/value-objects/scenario-id";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
-import { PrismaRepositoryHelper } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper";
-import { PrismaRepository } from "../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../apps/api/src/shared/domain/events/domain-event";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ScenarioRepositoryImpl
   extends PrismaRepository<Scenario>
-  implements ScenarioRepository
+  implements IScenarioRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -21,18 +21,18 @@ export class ScenarioRepositoryImpl
 
   async save(scenario: Scenario): Promise<void> {
     const data = {
-      id: scenario.getId().getValue(),
-      planId: scenario.getPlanId().getValue(),
-      name: scenario.getName(),
-      description: scenario.getDescription(),
-      assumptions: scenario.getAssumptions() ?? undefined,
-      createdBy: scenario.getCreatedBy().getValue(),
-      createdAt: scenario.getCreatedAt(),
-      updatedAt: scenario.getUpdatedAt(),
+      id: scenario.id.getValue(),
+      planId: scenario.planId.getValue(),
+      name: scenario.name,
+      description: scenario.description,
+      assumptions: scenario.assumptions ?? undefined,
+      createdBy: scenario.createdBy.getValue(),
+      createdAt: scenario.createdAt,
+      updatedAt: scenario.updatedAt,
     };
 
     await this.prisma.scenario.upsert({
-      where: { id: scenario.getId().getValue() },
+      where: { id: scenario.id.getValue() },
       update: data,
       create: data,
     });
@@ -40,9 +40,9 @@ export class ScenarioRepositoryImpl
     await this.dispatchEvents(scenario);
   }
 
-  async findById(id: ScenarioId): Promise<Scenario | null> {
-    const raw = await this.prisma.scenario.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null> {
+    const raw = await this.prisma.scenario.findFirst({
+      where: { id: id.getValue(), plan: { workspaceId } },
     });
 
     if (!raw) return null;
@@ -52,7 +52,7 @@ export class ScenarioRepositoryImpl
       planId: raw.planId,
       name: raw.name,
       description: raw.description,
-      assumptions: raw.assumptions as Record<string, any> | null,
+      assumptions: raw.assumptions as Record<string, unknown> | null,
       createdBy: raw.createdBy,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -76,7 +76,7 @@ export class ScenarioRepositoryImpl
           planId: raw.planId,
           name: raw.name,
           description: raw.description,
-          assumptions: raw.assumptions as Record<string, any> | null,
+          assumptions: raw.assumptions as Record<string, unknown> | null,
           createdBy: raw.createdBy,
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
@@ -106,7 +106,7 @@ export class ScenarioRepositoryImpl
       planId: raw.planId,
       name: raw.name,
       description: raw.description,
-      assumptions: raw.assumptions as Record<string, any> | null,
+      assumptions: raw.assumptions as Record<string, unknown> | null,
       createdBy: raw.createdBy,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,

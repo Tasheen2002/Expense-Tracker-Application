@@ -1,10 +1,14 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnection } from '../../domain/entities/bank-connection.entity';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnectionAlreadyExistsError } from '../../domain/errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { BankConnectionAlreadyExistsError } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  ICommand,
+  ICommandHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface ConnectBankCommand {
+export interface ConnectBankCommand extends ICommand {
   workspaceId: string;
   userId: string;
   institutionId: string;
@@ -18,14 +22,15 @@ export interface ConnectBankCommand {
   tokenExpiresAt?: Date;
 }
 
-export class ConnectBankHandler {
+export class ConnectBankHandler implements ICommandHandler<
+  ConnectBankCommand,
+  CommandResult<string>
+> {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository
   ) {}
 
-  async handle(
-    command: ConnectBankCommand
-  ): Promise<CommandResult<{ connectionId: string }>> {
+  async handle(command: ConnectBankCommand): Promise<CommandResult<string>> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const userId = UserId.fromString(command.userId);
 
@@ -60,8 +65,6 @@ export class ConnectBankHandler {
     connection.activate();
     await this.connectionRepository.save(connection);
 
-    return CommandResult.success({
-      connectionId: connection.getId().getValue(),
-    });
+    return CommandResult.success(connection.id.getValue());
   }
 }

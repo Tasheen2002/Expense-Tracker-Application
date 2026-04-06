@@ -1,8 +1,7 @@
 import { CategoryRuleService } from '../services/category-rule.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { CategoryId } from '../../../expense-ledger';
 import {
   RuleConditionType,
   isValidRuleConditionType,
@@ -12,7 +11,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface CreateCategoryRuleCommand extends ICommand {
   workspaceId: string;

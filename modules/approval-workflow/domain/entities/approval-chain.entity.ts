@@ -1,13 +1,12 @@
 import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import { WorkspaceId } from '../value-objects';
-import { CategoryId } from '../value-objects';
-import { UserId } from '../value-objects';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { CategoryId } from '../../../expense-ledger';
 import {
   EmptyApproverSequenceError,
   InvalidAmountRangeError,
 } from '../errors/approval-workflow.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ApprovalChainCreatedEvent extends DomainEvent {
   constructor(
@@ -40,6 +39,8 @@ export class ApprovalChainUpdatedEvent extends DomainEvent {
       description?: string;
       minAmount?: number;
       maxAmount?: number;
+      categoryIds?: string[];
+      requiresReceipt?: boolean;
     }
   ) {
     super(chainId, 'ApprovalChain');
@@ -299,6 +300,37 @@ export class ApprovalChain extends AggregateRoot {
     }
   }
 
+  updateCategoryIds(categoryIds?: string[]): void {
+    this.props.categoryIds = categoryIds?.map((id) =>
+      CategoryId.fromString(id)
+    );
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ApprovalChainUpdatedEvent(
+        this.getId().getValue(),
+        this.getWorkspaceId().getValue(),
+        { categoryIds }
+      )
+    );
+  }
+
+  updateRequiresReceipt(requiresReceipt: boolean): void {
+    const oldRequiresReceipt = this.props.requiresReceipt;
+    this.props.requiresReceipt = requiresReceipt;
+    this.props.updatedAt = new Date();
+
+    if (oldRequiresReceipt !== requiresReceipt) {
+      this.addDomainEvent(
+        new ApprovalChainUpdatedEvent(
+          this.getId().getValue(),
+          this.getWorkspaceId().getValue(),
+          { requiresReceipt }
+        )
+      );
+    }
+  }
+
   updateAmountRange(minAmount?: number, maxAmount?: number): void {
     if (minAmount && maxAmount && minAmount > maxAmount) {
       throw new InvalidAmountRangeError();
@@ -410,20 +442,24 @@ export class ApprovalChain extends AggregateRoot {
     return true;
   }
 
-  toJSON(): ApprovalChainDTO {
+  /**
+   * Serialize ApprovalChain to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(chain: ApprovalChain): ApprovalChainDTO {
     return {
-      chainId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
-      minAmount: this.getMinAmount(),
-      maxAmount: this.getMaxAmount(),
-      categoryIds: this.getCategoryIds()?.map((id) => id.getValue()),
-      requiresReceipt: this.requiresReceipt(),
-      approverSequence: this.getApproverSequence().map((id) => id.getValue()),
-      isActive: this.isActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      chainId: chain.getId().getValue(),
+      workspaceId: chain.getWorkspaceId().getValue(),
+      name: chain.getName(),
+      description: chain.getDescription(),
+      minAmount: chain.getMinAmount(),
+      maxAmount: chain.getMaxAmount(),
+      categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()),
+      requiresReceipt: chain.requiresReceipt(),
+      approverSequence: chain.getApproverSequence().map((id) => id.getValue()),
+      isActive: chain.isActive(),
+      createdAt: chain.getCreatedAt().toISOString(),
+      updatedAt: chain.getUpdatedAt().toISOString(),
     };
   }
 }

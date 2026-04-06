@@ -1,28 +1,35 @@
 import { WorkspaceId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
+import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { TransactionStatus } from '../../domain/enums/transaction-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface GetPendingTransactionsQuery {
+export interface GetPendingTransactionsQuery extends IQuery {
   workspaceId: string;
   connectionId?: string;
   options?: PaginationOptions;
 }
 
-export class GetPendingTransactionsHandler {
+export class GetPendingTransactionsHandler implements IQueryHandler<
+  GetPendingTransactionsQuery,
+  QueryResult<PaginatedResult<BankTransactionDTO>>
+> {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
   ) {}
 
   async handle(
     query: GetPendingTransactionsQuery
-  ): Promise<QueryResult<PaginatedResult<BankTransaction>>> {
+  ): Promise<QueryResult<PaginatedResult<BankTransactionDTO>>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
 
     let result: PaginatedResult<BankTransaction>;
@@ -42,6 +49,11 @@ export class GetPendingTransactionsHandler {
       );
     }
 
-    return QueryResult.success(result);
+    const dtoResult: PaginatedResult<BankTransactionDTO> = {
+      ...result,
+      items: result.items.map((tx) => BankTransaction.toDTO(tx)),
+    };
+
+    return QueryResult.success(dtoResult);
   }
 }

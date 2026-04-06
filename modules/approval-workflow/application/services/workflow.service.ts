@@ -14,7 +14,7 @@ import { AUTO_APPROVAL_THRESHOLD } from '../../domain/constants/approval-workflo
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class WorkflowService {
   constructor(

@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   IAuditLogRepository,
   AuditLogFilter,
@@ -10,10 +10,10 @@ import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class AuditLogRepositoryImpl
   extends PrismaRepository<AuditLog>
@@ -24,22 +24,9 @@ export class AuditLogRepositoryImpl
   }
 
   async save(auditLog: AuditLog): Promise<void> {
-    await this.prisma.auditLog.create({
-      data: {
-        id: auditLog.id.getValue(),
-        workspaceId: auditLog.workspaceId,
-        userId: auditLog.userId,
-        action: auditLog.action.getValue(),
-        entityType: auditLog.resource.entityType,
-        entityId: auditLog.resource.entityId,
-        details: auditLog.details as Prisma.InputJsonValue,
-        metadata: auditLog.metadata as Prisma.InputJsonValue,
-        ipAddress: auditLog.ipAddress,
-        userAgent: auditLog.userAgent,
-        createdAt: auditLog.createdAt,
-      },
-    });
+    const data = this.toPersistence(auditLog);
 
+    await this.prisma.auditLog.create({ data });
     await this.dispatchEvents(auditLog);
   }
 
@@ -166,20 +153,10 @@ export class AuditLogRepositoryImpl
   }
 
   async saveMany(auditLogs: AuditLog[]): Promise<void> {
-    await this.prisma.auditLog.createMany({
-      data: auditLogs.map((auditLog) => ({
-        id: auditLog.id.getValue(),
-        workspaceId: auditLog.workspaceId,
-        userId: auditLog.userId,
-        action: auditLog.action.getValue(),
-        entityType: auditLog.resource.entityType,
-        entityId: auditLog.resource.entityId,
-        details: auditLog.details as Prisma.InputJsonValue,
-        metadata: auditLog.metadata as Prisma.InputJsonValue,
-        ipAddress: auditLog.ipAddress,
-        userAgent: auditLog.userAgent,
-        createdAt: auditLog.createdAt,
-      })),
+    await this.prisma.$transaction(async (tx) => {
+      await tx.auditLog.createMany({
+        data: auditLogs.map((auditLog) => this.toPersistence(auditLog)),
+      });
     });
 
     await Promise.all(auditLogs.map((log) => this.dispatchEvents(log)));
@@ -197,8 +174,26 @@ export class AuditLogRepositoryImpl
     return deleted.count;
   }
 
+  private toPersistence(
+    auditLog: AuditLog
+  ): Prisma.AuditLogUncheckedCreateInput {
+    return {
+      id: auditLog.id.getValue(),
+      workspaceId: auditLog.workspaceId,
+      userId: auditLog.userId,
+      action: auditLog.action.getValue(),
+      entityType: auditLog.resource.entityType,
+      entityId: auditLog.resource.entityId,
+      details: auditLog.details as Prisma.InputJsonValue,
+      metadata: auditLog.metadata as Prisma.InputJsonValue,
+      ipAddress: auditLog.ipAddress,
+      userAgent: auditLog.userAgent,
+      createdAt: auditLog.createdAt,
+    };
+  }
+
   private toDomain(data: Prisma.AuditLogGetPayload<object>): AuditLog {
-    return AuditLog.fromPersistence({
+    return AuditLog.reconstitute({
       id: AuditLogId.fromString(data.id),
       workspaceId: data.workspaceId,
       userId: data.userId,

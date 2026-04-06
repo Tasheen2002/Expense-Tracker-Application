@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { RuleExecutionController } from '../controllers/rule-execution.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   validateBody,
   validateParams,
@@ -12,6 +12,12 @@ import {
   workspaceParamsSchema,
   expenseParamsSchema,
 } from '../validation/categorization-rules.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
 // Shared Response Schema for Rule Execution
 const ruleExecutionSchema = {
@@ -25,10 +31,21 @@ const ruleExecutionSchema = {
   },
 };
 
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
 export async function ruleExecutionRoutes(
   fastify: FastifyInstance,
   controller: RuleExecutionController
 ) {
+  fastify.addHook('onRequest', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // Evaluate rules for an expense
   fastify.post(
     '/workspaces/:workspaceId/evaluate',
@@ -36,6 +53,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(evaluateRulesSchema),
+        requireRole(['owner', 'admin', 'manager']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -101,7 +119,10 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions/expense/:expenseId',
     {
-      preHandler: [validateParams(expenseParamsSchema)],
+      preHandler: [
+        validateParams(expenseParamsSchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
+      ],
       schema: {
         tags: ['Rule Execution'],
         description: 'Get execution history for a specific expense',
@@ -132,6 +153,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(executionQuerySchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
       ],
       schema: {
         tags: ['Rule Execution'],

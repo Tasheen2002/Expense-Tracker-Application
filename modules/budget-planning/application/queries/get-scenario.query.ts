@@ -1,27 +1,33 @@
-import { ScenarioService } from '../services/scenario.service';
-import { Scenario } from '../../domain/entities/scenario.entity';
+import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
+import { Scenario, ScenarioDTO } from '../../domain/entities/scenario.entity';
+import { ScenarioId } from '../../domain/value-objects/scenario-id';
+import { ScenarioNotFoundError } from '../../domain/errors/budget-planning.errors';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface GetScenarioQuery extends IQuery {
   id: string;
+  workspaceId: string;
   userId: string;
 }
 
 export class GetScenarioHandler implements IQueryHandler<
   GetScenarioQuery,
-  QueryResult<Scenario>
+  QueryResult<ScenarioDTO>
 > {
-  constructor(private readonly scenarioService: ScenarioService) {}
+  constructor(private readonly scenarioRepository: IScenarioRepository) {}
 
-  async handle(query: GetScenarioQuery): Promise<QueryResult<Scenario>> {
-    const result = await this.scenarioService.getScenario(
-      query.id,
-      query.userId
+  async handle(query: GetScenarioQuery): Promise<QueryResult<ScenarioDTO>> {
+    const scenario = await this.scenarioRepository.findById(
+      ScenarioId.fromString(query.id),
+      query.workspaceId
     );
-    return QueryResult.success(result);
+    if (!scenario) {
+      throw new ScenarioNotFoundError(query.id);
+    }
+    return QueryResult.success(Scenario.toDTO(scenario));
   }
 }

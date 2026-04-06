@@ -1,9 +1,9 @@
-﻿import { ReceiptService } from '../services/receipt.service';
+import { ReceiptService } from '../services/receipt.service';
 import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ReceiptStats {
   total: number;

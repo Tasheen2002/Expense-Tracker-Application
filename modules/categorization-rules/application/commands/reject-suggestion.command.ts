@@ -1,13 +1,15 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { SuggestionId } from '../../domain/value-objects/suggestion-id';
+import { WorkspaceId } from '../../../identity-workspace';
 import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface RejectSuggestionCommand extends ICommand {
   suggestionId: string;
+  workspaceId: string;
 }
 
 export class RejectSuggestionHandler implements ICommandHandler<
@@ -18,7 +20,8 @@ export class RejectSuggestionHandler implements ICommandHandler<
 
   async handle(command: RejectSuggestionCommand): Promise<CommandResult<void>> {
     await this.suggestionService.rejectSuggestion(
-      SuggestionId.fromString(command.suggestionId)
+      SuggestionId.fromString(command.suggestionId),
+      WorkspaceId.fromString(command.workspaceId)
     );
 
     return CommandResult.success();

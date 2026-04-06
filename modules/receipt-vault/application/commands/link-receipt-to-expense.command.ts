@@ -3,8 +3,8 @@ import { Receipt } from '../../domain/entities/receipt.entity';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface LinkReceiptToExpenseCommand extends ICommand {
   receiptId: string;

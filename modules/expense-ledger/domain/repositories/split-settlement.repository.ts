@@ -5,7 +5,7 @@ import { SettlementStatus } from "../enums/settlement-status";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface SplitSettlementRepository {
   save(settlement: SplitSettlement): Promise<void>;

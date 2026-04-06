@@ -2,7 +2,7 @@ import { ViolationRepository } from '../../domain/repositories/violation.reposit
 import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
 import { ViolationId } from '../../domain/value-objects/violation-id';
 import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
-import { CommandResult } from '../../../../apps/api/src/shared/application/command-result';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface OverrideViolationInput {
   violationId: string;

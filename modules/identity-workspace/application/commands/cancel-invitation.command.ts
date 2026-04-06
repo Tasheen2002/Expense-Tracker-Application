@@ -1,9 +1,6 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface CancelInvitationCommand extends ICommand {
   invitationId: string;

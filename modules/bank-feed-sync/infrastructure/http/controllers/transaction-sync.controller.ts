@@ -1,6 +1,6 @@
-﻿import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { SyncTransactionsHandler } from '../../../application/commands/sync-transactions.command';
 import { GetSyncHistoryHandler } from '../../../application/queries/get-sync-history.query';
 import { GetSyncSessionHandler } from '../../../application/queries/get-sync-session.query';
@@ -37,7 +37,7 @@ export class TransactionSyncController {
         reply,
         result,
         'Sync initiated successfully',
-        result.data,
+        result.data ? { sessionId: result.data } : undefined,
         202
       );
     } catch (error) {
@@ -71,7 +71,7 @@ export class TransactionSyncController {
         'Sync history retrieved successfully',
         result.data
           ? {
-              sessions: result.data.items.map((s) => s.toJSON()),
+              sessions: result.data.items,
               total: result.data.total,
               limit: result.data.limit,
               offset: result.data.offset,
@@ -100,7 +100,7 @@ export class TransactionSyncController {
         reply,
         result,
         'Sync session retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -129,7 +129,7 @@ export class TransactionSyncController {
         'Active syncs retrieved successfully',
         result.data
           ? {
-              sessions: result.data.items.map((s) => s.toJSON()),
+              sessions: result.data.items,
               total: result.data.total,
               limit: result.data.limit,
               offset: result.data.offset,

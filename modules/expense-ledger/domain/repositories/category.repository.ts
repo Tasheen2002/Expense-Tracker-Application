@@ -3,7 +3,7 @@ import { CategoryId } from "../value-objects/category-id";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface CategoryRepository {
   save(category: Category): Promise<void>;

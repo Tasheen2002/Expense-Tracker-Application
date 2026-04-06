@@ -1,4 +1,4 @@
-﻿import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
+import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
 import { ExemptionId } from '../../domain/value-objects/exemption-id';
 import { ExemptionNotFoundError } from '../../domain/errors/policy-controls.errors';
@@ -6,7 +6,7 @@ import {
   IQuery,
   IQueryHandler,
   QueryResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 export interface GetExemptionInput extends IQuery {
   exemptionId: string;
   workspaceId: string;

@@ -1,4 +1,4 @@
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events/domain-event";
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 /**
  * Generic domain event for outbox pattern.

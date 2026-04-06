@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { GetViolationHandler } from '../../../application/queries/get-violation.query';
 import { ListViolationsHandler } from '../../../application/queries/list-violations.query';
 import { GetViolationStatsHandler } from '../../../application/queries/get-violation-stats.query';

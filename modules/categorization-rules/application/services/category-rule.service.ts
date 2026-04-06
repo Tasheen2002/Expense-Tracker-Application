@@ -1,27 +1,26 @@
-import { CategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
+import { ICategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
 import { CategoryRule } from "../../domain/entities/category-rule.entity";
 import { RuleId } from "../../domain/value-objects/rule-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../../identity-workspace";
 import { RuleCondition } from "../../domain/value-objects/rule-condition";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import {
   CategoryRuleNotFoundError,
   DuplicateRuleNameError,
   UnauthorizedRuleAccessError,
 } from "../../domain/errors/categorization-rules.errors";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class CategoryRuleService {
   constructor(
-    private readonly ruleRepository: CategoryRuleRepository,
+    private readonly ruleRepository: ICategoryRuleRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   private async checkAccess(
-    userId: string,
-    workspaceId: string,
+    userId: UserId,
+    workspaceId: WorkspaceId,
   ): Promise<boolean> {
     return this.workspaceAccess.isAdminOrOwner(userId, workspaceId);
   }
@@ -36,8 +35,8 @@ export class CategoryRuleService {
     createdBy: UserId;
   }): Promise<CategoryRule> {
     const hasAccess = await this.checkAccess(
-      params.createdBy.getValue(),
-      params.workspaceId.getValue(),
+      params.createdBy,
+      params.workspaceId,
     );
 
     if (!hasAccess) {
@@ -70,6 +69,7 @@ export class CategoryRuleService {
 
   async updateRule(params: {
     ruleId: RuleId;
+    workspaceId: string;
     userId: string;
     name?: string;
     description?: string | null;
@@ -77,16 +77,20 @@ export class CategoryRuleService {
     condition?: RuleCondition;
     targetCategoryId?: CategoryId;
   }): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(params.ruleId);
+    const rule = await this.ruleRepository.findById(
+      params.ruleId,
+      WorkspaceId.fromString(params.workspaceId),
+    );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(params.ruleId.getValue());
     }
 
-    const isCreator = rule.getCreatedBy().getValue() === params.userId;
+    const userIdVO = UserId.fromString(params.userId);
+    const isCreator = rule.getCreatedBy().equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
-      params.userId,
-      rule.getWorkspaceId().getValue(),
+      userIdVO,
+      rule.getWorkspaceId(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -129,17 +133,21 @@ export class CategoryRuleService {
     return rule;
   }
 
-  async deleteRule(ruleId: RuleId, userId: string): Promise<void> {
-    const rule = await this.ruleRepository.findById(ruleId);
+  async deleteRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<void> {
+    const rule = await this.ruleRepository.findById(
+      ruleId,
+      WorkspaceId.fromString(workspaceId),
+    );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const isCreator = rule.getCreatedBy().getValue() === userId;
+    const userIdVO = UserId.fromString(userId);
+    const isCreator = rule.getCreatedBy().equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
-      userId,
-      rule.getWorkspaceId().getValue(),
+      userIdVO,
+      rule.getWorkspaceId(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -149,17 +157,21 @@ export class CategoryRuleService {
     await this.ruleRepository.delete(ruleId);
   }
 
-  async activateRule(ruleId: RuleId, userId: string): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId);
+  async activateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+    const rule = await this.ruleRepository.findById(
+      ruleId,
+      WorkspaceId.fromString(workspaceId),
+    );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const isCreator = rule.getCreatedBy().getValue() === userId;
+    const userIdVO = UserId.fromString(userId);
+    const isCreator = rule.getCreatedBy().equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
-      userId,
-      rule.getWorkspaceId().getValue(),
+      userIdVO,
+      rule.getWorkspaceId(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -171,17 +183,21 @@ export class CategoryRuleService {
     return rule;
   }
 
-  async deactivateRule(ruleId: RuleId, userId: string): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId);
+  async deactivateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+    const rule = await this.ruleRepository.findById(
+      ruleId,
+      WorkspaceId.fromString(workspaceId),
+    );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const isCreator = rule.getCreatedBy().getValue() === userId;
+    const userIdVO = UserId.fromString(userId);
+    const isCreator = rule.getCreatedBy().equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
-      userId,
-      rule.getWorkspaceId().getValue(),
+      userIdVO,
+      rule.getWorkspaceId(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -193,15 +209,19 @@ export class CategoryRuleService {
     return rule;
   }
 
-  async getRuleById(ruleId: RuleId, userId: string): Promise<CategoryRule> {
-    const rule = await this.ruleRepository.findById(ruleId);
+  async getRuleById(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+    const rule = await this.ruleRepository.findById(
+      ruleId,
+      WorkspaceId.fromString(workspaceId),
+    );
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
+    const userIdVO = UserId.fromString(userId);
     const hasAccess = await this.checkAccess(
-      userId,
-      rule.getWorkspaceId().getValue(),
+      userIdVO,
+      rule.getWorkspaceId(),
     );
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("view");
@@ -215,7 +235,7 @@ export class CategoryRuleService {
     userId: string,
     options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<CategoryRule>> {
-    const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
+    const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
@@ -227,7 +247,7 @@ export class CategoryRuleService {
     userId: string,
     options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<CategoryRule>> {
-    const hasAccess = await this.checkAccess(userId, workspaceId.getValue());
+    const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }

@@ -1,7 +1,7 @@
 import { CostCenterId } from '../value-objects/cost-center-id';
 import { WorkspaceId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -221,16 +221,16 @@ export class CostCenter extends AggregateRoot {
     this.addDomainEvent(new CostCenterActivatedEvent(this.id.getValue()));
   }
 
-  toJSON(): CostCenterDTO {
+  static toDTO(costCenter: CostCenter): CostCenterDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      code: this.getCode(),
-      description: this.getDescription(),
-      isActive: this.getIsActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: costCenter.getId().getValue(),
+      workspaceId: costCenter.getWorkspaceId().getValue(),
+      name: costCenter.getName(),
+      code: costCenter.getCode(),
+      description: costCenter.getDescription(),
+      isActive: costCenter.getIsActive(),
+      createdAt: costCenter.getCreatedAt().toISOString(),
+      updatedAt: costCenter.getUpdatedAt().toISOString(),
     };
   }
 }

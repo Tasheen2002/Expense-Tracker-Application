@@ -6,7 +6,7 @@ import {
   HEX_COLOR_REGEX,
 } from '../constants/receipt.constants';
 import { ReceiptValidationError } from '../errors/receipt.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface ReceiptTagDefinitionProps {
   id: TagId;

@@ -1,4 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      writeOperations: { windowMs: 60000, maxRequests: 100 },
+      auth: { windowMs: 60000, maxRequests: 100 },
+    },
+    userKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    defaultKeyGenerator: () => 'test-user',
+  })
+);
+
+vi.mock(
+  '../../../apps/api/src/shared/middleware/role-authorization.middleware',
+  () => ({
+    requireRole: () => async () => {},
+    RolePermissions: {
+      OWNER_ONLY: async () => {},
+      ADMIN_LEVEL: async () => {},
+      MANAGER_LEVEL: async () => {},
+      MEMBER_LEVEL: async () => {},
+    },
+    hasRole: () => true,
+  })
+);
+
 import Fastify, { FastifyInstance } from 'fastify';
 import { CategoryRuleController } from '../infrastructure/http/controllers/category-rule.controller';
 import { CategorySuggestionController } from '../infrastructure/http/controllers/category-suggestion.controller';
@@ -9,7 +38,7 @@ import { ruleExecutionRoutes } from '../infrastructure/http/routes/rule-executio
 import {
   CommandResult,
   QueryResult,
-} from '../../../apps/api/src/shared/application';
+} from '../../../packages/core/src/application/cqrs';
 
 // Create domain errors with statusCode for testing
 class CategoryRuleNotFoundError extends Error {
@@ -207,7 +236,7 @@ async function setupTestApp(
       await categorySuggestionRoutes(instance, suggestionController);
       await ruleExecutionRoutes(instance, executionController);
     },
-    { prefix: '/:workspaceId' }
+    { prefix: '/' }
   );
 
   return app;
@@ -260,7 +289,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: validPayload,
       });
 
@@ -274,7 +303,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for missing required fields', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { name: 'Test' },
       });
 
@@ -284,7 +313,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid conditionType', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { ...validPayload, conditionType: 'INVALID_TYPE' },
       });
 
@@ -294,7 +323,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid workspaceId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/invalid-uuid/rules`,
+        url: `/workspaces/invalid-uuid/rules`,
         payload: validPayload,
       });
 
@@ -304,7 +333,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid targetCategoryId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { ...validPayload, targetCategoryId: 'not-a-uuid' },
       });
 
@@ -314,7 +343,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for empty name', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { ...validPayload, name: '' },
       });
 
@@ -324,7 +353,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for name exceeding max length', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { ...validPayload, name: 'A'.repeat(101) },
       });
 
@@ -334,7 +363,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for negative priority', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: { ...validPayload, priority: -1 },
       });
 
@@ -348,7 +377,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: validPayload,
       });
 
@@ -362,7 +391,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: validPayload,
       });
 
@@ -391,7 +420,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -415,7 +444,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules?activeOnly=true`,
+        url: `/workspaces/${mockWorkspaceId}/rules?activeOnly=true`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -437,7 +466,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -449,7 +478,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/invalid-uuid/rules`,
+        url: `/workspaces/invalid-uuid/rules`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -468,7 +497,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -484,7 +513,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -493,7 +522,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid ruleId format', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules/invalid-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/rules/invalid-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -512,7 +541,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: { name: 'Updated Rule Name' },
       });
 
@@ -529,7 +558,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: { priority: 20 },
       });
 
@@ -544,7 +573,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: {
           conditionType: 'AMOUNT_GREATER_THAN',
           conditionValue: '100',
@@ -561,7 +590,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: { name: 'Updated' },
       });
 
@@ -571,7 +600,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for empty name', async () => {
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: { name: '' },
       });
 
@@ -585,7 +614,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
         payload: { name: 'Updated' },
       });
 
@@ -604,7 +633,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -619,7 +648,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -628,7 +657,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid ruleId format', async () => {
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/rules/not-a-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/rules/not-a-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -647,7 +676,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -662,7 +691,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -671,7 +700,7 @@ describe('Category Rule Routes', () => {
     it('should return 400 for invalid ruleId', async () => {
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/invalid-uuid/activate`,
+        url: `/workspaces/${mockWorkspaceId}/rules/invalid-uuid/activate`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -690,7 +719,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -705,7 +734,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -730,7 +759,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -752,7 +781,7 @@ describe('Category Rule Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -807,7 +836,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
         payload: validPayload,
       });
 
@@ -819,7 +848,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for missing required fields', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
         payload: { expenseId: mockExpenseId },
       });
 
@@ -829,7 +858,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for invalid confidence (> 1)', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
         payload: { ...validPayload, confidence: 1.5 },
       });
 
@@ -839,7 +868,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for invalid confidence (< 0)', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
         payload: { ...validPayload, confidence: -0.1 },
       });
 
@@ -849,7 +878,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
         payload: { ...validPayload, expenseId: 'not-a-uuid' },
       });
 
@@ -875,7 +904,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -898,7 +927,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions?pendingOnly=true`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions?pendingOnly=true`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -907,7 +936,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/invalid-uuid/suggestions`,
+        url: `/workspaces/invalid-uuid/suggestions`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -926,7 +955,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -941,7 +970,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -960,7 +989,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -975,7 +1004,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -987,7 +1016,7 @@ describe('Category Suggestion Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/suggestions/expense/not-a-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/not-a-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1006,7 +1035,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1021,7 +1050,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -1034,7 +1063,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
       });
 
       expect(response.statusCode).toBe(409);
@@ -1053,7 +1082,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1068,7 +1097,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -1081,7 +1110,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'PATCH',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
       });
 
       expect(response.statusCode).toBe(409);
@@ -1099,7 +1128,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1114,7 +1143,7 @@ describe('Category Suggestion Routes', () => {
 
       const response = await app.inject({
         method: 'DELETE',
-        url: `/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
       });
 
       expect(response.statusCode).toBe(404);
@@ -1174,7 +1203,7 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: validPayload,
       });
 
@@ -1186,7 +1215,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for missing expenseId', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: { expenseData: validPayload.expenseData },
       });
 
@@ -1196,7 +1225,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for missing expenseData', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: { expenseId: mockExpenseId },
       });
 
@@ -1206,7 +1235,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for missing amount in expenseData', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: {
           expenseId: mockExpenseId,
           expenseData: { merchant: 'Amazon' },
@@ -1219,7 +1248,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for negative amount', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: {
           ...validPayload,
           expenseData: { ...validPayload.expenseData, amount: -100 },
@@ -1232,7 +1261,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: { ...validPayload, expenseId: 'not-a-uuid' },
       });
 
@@ -1241,9 +1270,9 @@ describe('Rule Execution Routes', () => {
 
     it('should handle no matching rules gracefully', async () => {
       const mockResult = {
-        matchedRules: [],
-        appliedCategory: null,
-        executions: [],
+        appliedRule: null,
+        suggestedCategoryId: null,
+        execution: null,
       };
       executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
         CommandResult.success(mockResult)
@@ -1251,13 +1280,15 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/evaluate`,
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
         payload: validPayload,
       });
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data.matchedRules).toHaveLength(0);
+      expect(body.data.appliedRule).toBeNull();
+      expect(body.data.suggestedCategoryId).toBeNull();
+      expect(body.data.execution).toBeNull();
     });
   });
 
@@ -1273,7 +1304,7 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1289,7 +1320,7 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1300,7 +1331,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for invalid expenseId format', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/executions/expense/not-a-uuid`,
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/not-a-uuid`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1325,7 +1356,7 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/executions`,
+        url: `/workspaces/${mockWorkspaceId}/executions`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1347,7 +1378,7 @@ describe('Rule Execution Routes', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/${mockWorkspaceId}/executions?limit=10`,
+        url: `/workspaces/${mockWorkspaceId}/executions?limit=10`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -1356,7 +1387,7 @@ describe('Rule Execution Routes', () => {
     it('should return 400 for invalid workspaceId', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/invalid-uuid/executions`,
+        url: `/workspaces/invalid-uuid/executions`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -1398,7 +1429,7 @@ describe('Categorization Rules Security', () => {
 
     await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/rules`,
+      url: `/workspaces/${mockWorkspaceId}/rules`,
       payload: {
         name: 'Test Rule',
         conditionType: 'MERCHANT_CONTAINS',
@@ -1421,7 +1452,7 @@ describe('Categorization Rules Security', () => {
 
     const response = await app.inject({
       method: 'PATCH',
-      url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+      url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       payload: { name: 'Updated' },
     });
 
@@ -1435,7 +1466,7 @@ describe('Categorization Rules Security', () => {
 
     const response = await app.inject({
       method: 'DELETE',
-      url: `/${mockWorkspaceId}/rules/${mockRuleId}`,
+      url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
     });
 
     expect(response.statusCode).toBe(403);
@@ -1476,7 +1507,7 @@ describe('Categorization Rules Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/rules`,
+      url: `/workspaces/${mockWorkspaceId}/rules`,
       payload: {
         name: '规则 ルール Rule',
         conditionType: 'MERCHANT_CONTAINS',
@@ -1496,7 +1527,7 @@ describe('Categorization Rules Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/rules`,
+      url: `/workspaces/${mockWorkspaceId}/rules`,
       payload: {
         name: 'Test Rule',
         conditionType: 'MERCHANT_CONTAINS',
@@ -1516,7 +1547,7 @@ describe('Categorization Rules Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/suggestions`,
+      url: `/workspaces/${mockWorkspaceId}/suggestions`,
       payload: {
         expenseId: mockExpenseId,
         suggestedCategoryId: mockCategoryId,
@@ -1535,7 +1566,7 @@ describe('Categorization Rules Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/suggestions`,
+      url: `/workspaces/${mockWorkspaceId}/suggestions`,
       payload: {
         expenseId: mockExpenseId,
         suggestedCategoryId: mockCategoryId,
@@ -1558,7 +1589,7 @@ describe('Categorization Rules Edge Cases', () => {
 
     const response = await app.inject({
       method: 'POST',
-      url: `/${mockWorkspaceId}/evaluate`,
+      url: `/workspaces/${mockWorkspaceId}/evaluate`,
       payload: {
         expenseId: mockExpenseId,
         expenseData: {
@@ -1588,7 +1619,7 @@ describe('Categorization Rules Edge Cases', () => {
       .map(() =>
         app.inject({
           method: 'GET',
-          url: `/${mockWorkspaceId}/rules`,
+          url: `/workspaces/${mockWorkspaceId}/rules`,
         })
       );
 
@@ -1617,7 +1648,7 @@ describe('Categorization Rules Edge Cases', () => {
 
       const response = await app.inject({
         method: 'POST',
-        url: `/${mockWorkspaceId}/rules`,
+        url: `/workspaces/${mockWorkspaceId}/rules`,
         payload: {
           name: `Rule for ${conditionType}`,
           conditionType,

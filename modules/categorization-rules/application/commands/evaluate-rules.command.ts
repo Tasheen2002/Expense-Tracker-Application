@@ -1,11 +1,11 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExpenseId } from '../../../expense-ledger';
 import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface EvaluateRulesCommand extends ICommand {
   workspaceId: string;
@@ -18,7 +18,7 @@ export interface EvaluateRulesCommand extends ICommand {
   };
 }
 
-interface EvaluationResult {
+export interface EvaluationResultDTO {
   appliedRule: {
     id: string;
     name: string;
@@ -36,20 +36,20 @@ interface EvaluationResult {
 
 export class EvaluateRulesHandler implements ICommandHandler<
   EvaluateRulesCommand,
-  CommandResult<EvaluationResult>
+  CommandResult<EvaluationResultDTO>
 > {
   constructor(private readonly executionService: RuleExecutionService) {}
 
   async handle(
     command: EvaluateRulesCommand
-  ): Promise<CommandResult<EvaluationResult>> {
+  ): Promise<CommandResult<EvaluationResultDTO>> {
     const result = await this.executionService.evaluateAndApplyRules({
       workspaceId: WorkspaceId.fromString(command.workspaceId),
       expenseId: ExpenseId.fromString(command.expenseId),
       expenseData: command.expenseData,
     });
 
-    const evaluationResult: EvaluationResult = {
+    const evaluationResult: EvaluationResultDTO = {
       appliedRule: result.appliedRule
         ? {
             id: result.appliedRule.getId().getValue(),

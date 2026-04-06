@@ -3,11 +3,8 @@ import {
   InvalidCredentialsError,
   UserInactiveError,
 } from '../../domain/errors/identity.errors';
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../apps/api/src/shared/application';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 // Login User Query
 export interface LoginUserQuery extends IQuery {

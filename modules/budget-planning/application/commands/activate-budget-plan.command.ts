@@ -3,10 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface ActivateBudgetPlanCommand extends ICommand {
   id: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -19,7 +20,7 @@ export class ActivateBudgetPlanHandler implements ICommandHandler<
   async handle(
     command: ActivateBudgetPlanCommand
   ): Promise<CommandResult<void>> {
-    await this.budgetPlanService.activatePlan(command.id, command.userId);
+    await this.budgetPlanService.activatePlan(command.id, command.workspaceId, command.userId);
     return CommandResult.success();
   }
 }

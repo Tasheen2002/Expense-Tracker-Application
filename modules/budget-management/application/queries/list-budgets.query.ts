@@ -1,9 +1,17 @@
-import { BudgetService } from "../services/budget.service";
-import { Budget } from "../../domain/entities/budget.entity";
-import { BudgetStatus } from "../../domain/enums/budget-status";
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { IBudgetRepository } from '../../domain/repositories/budget.repository';
+import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
+import { BudgetStatus } from '../../domain/enums/budget-status';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface ListBudgetsDto {
+export interface ListBudgetsQuery extends IQuery {
   workspaceId: string;
   status?: BudgetStatus;
   isActive?: boolean;
@@ -13,34 +21,50 @@ export interface ListBudgetsDto {
   offset?: number;
 }
 
-export class ListBudgetsHandler {
-  constructor(private readonly budgetService: BudgetService) {}
+export class ListBudgetsHandler implements IQueryHandler<
+  ListBudgetsQuery,
+  QueryResult<PaginatedResult<BudgetDTO>>
+> {
+  constructor(private readonly budgetRepository: IBudgetRepository) {}
 
-  async handle(dto: ListBudgetsDto): Promise<PaginatedResult<Budget>> {
-    const limit = dto.limit || 50;
-    const offset = dto.offset || 0;
+  async handle(
+    query: ListBudgetsQuery
+  ): Promise<QueryResult<PaginatedResult<BudgetDTO>>> {
+    const options: PaginationOptions = {
+      limit: query.limit || 50,
+      offset: query.offset || 0,
+    };
+
+    let result;
 
     if (
-      dto.status ||
-      dto.isActive !== undefined ||
-      dto.createdBy ||
-      dto.currency
+      query.status ||
+      query.isActive !== undefined ||
+      query.createdBy ||
+      query.currency
     ) {
-      return await this.budgetService.filterBudgets(
+      result = await this.budgetRepository.findByFilters(
         {
-          workspaceId: dto.workspaceId,
-          status: dto.status,
-          isActive: dto.isActive,
-          createdBy: dto.createdBy,
-          currency: dto.currency,
+          workspaceId: query.workspaceId,
+          status: query.status,
+          isActive: query.isActive,
+          createdBy: query.createdBy,
+          currency: query.currency,
         },
-        { limit, offset },
+        options
+      );
+    } else {
+      result = await this.budgetRepository.findByWorkspace(
+        query.workspaceId,
+        options
       );
     }
 
-    return await this.budgetService.getBudgetsByWorkspace(dto.workspaceId, {
-      limit,
-      offset,
-    });
+    const dtoResult: PaginatedResult<BudgetDTO> = {
+      ...result,
+      items: result.items.map((budget) => Budget.toDTO(budget)),
+    };
+
+    return QueryResult.success(dtoResult);
   }
 }

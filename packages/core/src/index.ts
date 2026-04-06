@@ -1,1 +1,2 @@
-export const Core = "Core Package Works";
+export * from './application';
+export * from './domain';

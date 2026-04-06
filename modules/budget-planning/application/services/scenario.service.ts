@@ -1,9 +1,9 @@
 import { Scenario } from "../../domain/entities/scenario.entity";
-import { ScenarioRepository } from "../../domain/repositories/scenario.repository";
-import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
+import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
+import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ScenarioId } from "../../domain/value-objects/scenario-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { UserId } from "../../../identity-workspace";
 import {
   ScenarioNotFoundError,
   DuplicateScenarioNameError,
@@ -11,32 +11,29 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
 
 export class ScenarioService {
   constructor(
-    private readonly scenarioRepository: ScenarioRepository,
-    private readonly budgetPlanRepository: BudgetPlanRepository,
+    private readonly scenarioRepository: IScenarioRepository,
+    private readonly budgetPlanRepository: IBudgetPlanRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   private async checkPlanAccess(
     userId: string,
     planId: PlanId,
+    workspaceId: string,
     action: string,
   ): Promise<void> {
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.toString());
+      throw new BudgetPlanNotFoundError(planId.getValue());
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -46,14 +43,15 @@ export class ScenarioService {
 
   async createScenario(params: {
     planId: string;
+    workspaceId: string;
     name: string;
     description?: string;
-    assumptions?: Record<string, any>;
+    assumptions?: Record<string, unknown>;
     createdBy: string;
   }): Promise<Scenario> {
     const planId = PlanId.fromString(params.planId);
 
-    await this.checkPlanAccess(params.createdBy, planId, "create scenario");
+    await this.checkPlanAccess(params.createdBy, planId, params.workspaceId, "create scenario");
 
     const existing = await this.scenarioRepository.findByName(
       planId,
@@ -77,13 +75,14 @@ export class ScenarioService {
 
   async updateScenario(params: {
     id: string;
+    workspaceId: string;
     userId: string;
     name?: string;
     description?: string;
-    assumptions?: Record<string, any>;
+    assumptions?: Record<string, unknown>;
   }): Promise<Scenario> {
     const scenarioId = ScenarioId.fromString(params.id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
+    const scenario = await this.scenarioRepository.findById(scenarioId, params.workspaceId);
 
     if (!scenario) {
       throw new ScenarioNotFoundError(params.id);
@@ -91,14 +90,15 @@ export class ScenarioService {
 
     await this.checkPlanAccess(
       params.userId,
-      scenario.getPlanId(),
+      scenario.planId,
+      params.workspaceId,
       "update scenario",
     );
 
-    if (params.name && params.name !== scenario.getName()) {
+    if (params.name && params.name !== scenario.name) {
       // Check duplication if name is changing
       const existing = await this.scenarioRepository.findByName(
-        scenario.getPlanId(),
+        scenario.planId,
         params.name,
       );
       if (existing) {
@@ -116,40 +116,17 @@ export class ScenarioService {
     return scenario;
   }
 
-  async deleteScenario(id: string, userId: string): Promise<void> {
+  async deleteScenario(id: string, workspaceId: string, userId: string): Promise<void> {
     const scenarioId = ScenarioId.fromString(id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
+    const scenario = await this.scenarioRepository.findById(scenarioId, workspaceId);
 
     if (!scenario) {
       throw new ScenarioNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, scenario.getPlanId(), "delete scenario");
+    await this.checkPlanAccess(userId, scenario.planId, workspaceId, "delete scenario");
 
     await this.scenarioRepository.delete(scenarioId);
   }
 
-  async getScenario(id: string, userId: string): Promise<Scenario> {
-    const scenarioId = ScenarioId.fromString(id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
-
-    if (!scenario) {
-      throw new ScenarioNotFoundError(id);
-    }
-
-    await this.checkPlanAccess(userId, scenario.getPlanId(), "view scenario");
-
-    return scenario;
-  }
-
-  async listScenarios(
-    planId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<Scenario>> {
-    const pId = PlanId.fromString(planId);
-    await this.checkPlanAccess(userId, pId, "list scenarios");
-
-    return this.scenarioRepository.findByPlanId(pId, options);
-  }
 }

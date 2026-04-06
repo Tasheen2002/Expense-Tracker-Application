@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
 
 export interface UpdateCategoryCommand extends ICommand {

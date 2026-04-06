@@ -59,6 +59,17 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('No applicable approval chain found');
       expect(result.statusCode).toBe(400);
     });
+
+    it('should return success result on successful initiation', async () => {
+      mockWorkflowService.initiateWorkflow.mockResolvedValueOnce({
+        getExpenseId: () => ({
+          getValue: () => 'exp-1',
+        }),
+      } as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toBe('exp-1');
+    });
   });
 
   describe('ApproveStepHandler', () => {
@@ -98,6 +109,13 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('not authorized');
       expect(result.statusCode).toBe(403);
     });
+
+    it('should return success result on successful approve', async () => {
+      mockWorkflowService.approveStep.mockResolvedValueOnce({} as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toBeUndefined();
+    });
   });
 
   describe('RejectStepHandler', () => {
@@ -119,6 +137,13 @@ describe('Approval Workflow Commands', () => {
       expect(result.error).toContain('Rejection reason is required');
       expect(result.statusCode).toBe(400);
     });
+
+    it('should return success result on successful reject', async () => {
+      mockWorkflowService.rejectStep.mockResolvedValueOnce({} as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toBeUndefined();
+    });
   });
 
   describe('DelegateStepHandler', () => {
@@ -139,6 +164,13 @@ describe('Approval Workflow Commands', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBe('Self delegation');
       expect(result.statusCode).toBe(400);
+    });
+
+    it('should return success result on successful delegation', async () => {
+      mockWorkflowService.delegateStep.mockResolvedValueOnce({} as any);
+      const result = await handler.handle(input);
+      expect(result.success).toBe(true);
+      expect(result.data).toBeUndefined();
     });
   });
 });

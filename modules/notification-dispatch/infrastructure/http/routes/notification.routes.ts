@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { NotificationController } from '../controllers/notification.controller';
 
 export function registerNotificationRoutes(

@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { UploadReceiptHandler } from '../../../application/commands/upload-receipt.command';
 import { LinkReceiptToExpenseHandler } from '../../../application/commands/link-receipt-to-expense.command';
 import { UnlinkReceiptFromExpenseHandler } from '../../../application/commands/unlink-receipt-from-expense.command';
@@ -29,7 +29,7 @@ import type {
   UpdateMetadataInput,
 } from '../validation/metadata.schema';
 import type { AddTagToReceiptInput } from '../validation/tag.schema';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ReceiptController {
   constructor(

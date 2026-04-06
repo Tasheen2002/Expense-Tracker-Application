@@ -5,8 +5,8 @@ import { ProjectId } from '../value-objects/project-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { Decimal } from '@prisma/client/runtime/library';
 import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import * as crypto from 'crypto';
 
 // ============================================================================
@@ -202,19 +202,19 @@ export class ExpenseAllocation extends AggregateRoot {
     return this.createdAt;
   }
 
-  toJSON(): ExpenseAllocationDTO {
+  static toDTO(allocation: ExpenseAllocation): ExpenseAllocationDTO {
     return {
-      id: this.getId(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      expenseId: this.getExpenseId(),
-      amount: this.getAmount().getValue().toString(),
-      percentage: this.getPercentage()?.toString() ?? null,
-      departmentId: this.getDepartmentId()?.getValue() ?? null,
-      costCenterId: this.getCostCenterId()?.getValue() ?? null,
-      projectId: this.getProjectId()?.getValue() ?? null,
-      notes: this.getNotes(),
-      createdBy: this.getCreatedBy().getValue(),
-      createdAt: this.getCreatedAt().toISOString(),
+      id: allocation.getId(),
+      workspaceId: allocation.getWorkspaceId().getValue(),
+      expenseId: allocation.getExpenseId(),
+      amount: allocation.getAmount().getValue().toString(),
+      percentage: allocation.getPercentage()?.toString() ?? null,
+      departmentId: allocation.getDepartmentId()?.getValue() ?? null,
+      costCenterId: allocation.getCostCenterId()?.getValue() ?? null,
+      projectId: allocation.getProjectId()?.getValue() ?? null,
+      notes: allocation.getNotes(),
+      createdBy: allocation.getCreatedBy().getValue(),
+      createdAt: allocation.getCreatedAt().toISOString(),
     };
   }
 }

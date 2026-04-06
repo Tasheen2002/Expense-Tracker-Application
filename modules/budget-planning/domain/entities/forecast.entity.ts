@@ -1,8 +1,8 @@
 import { ForecastId } from '../value-objects/forecast-id';
 import { PlanId } from '../value-objects/plan-id';
 import { ForecastType } from '../enums/forecast-type.enum';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -86,13 +86,13 @@ export class ForecastDeactivatedEvent extends DomainEvent {
 
 export class Forecast extends AggregateRoot {
   private constructor(
-    private readonly id: ForecastId,
-    private readonly planId: PlanId,
-    private name: string,
-    private readonly type: ForecastType,
-    private isActive: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date
+    private readonly _id: ForecastId,
+    private readonly _planId: PlanId,
+    private _name: string,
+    private readonly _type: ForecastType,
+    private _isActive: boolean,
+    private readonly _createdAt: Date,
+    private _updatedAt: Date
   ) {
     super();
   }
@@ -114,7 +114,7 @@ export class Forecast extends AggregateRoot {
 
     forecast.addDomainEvent(
       new ForecastCreatedEvent(
-        forecast.id.getValue(),
+        forecast._id.getValue(),
         params.planId.getValue(),
         params.name,
         params.type
@@ -144,63 +144,63 @@ export class Forecast extends AggregateRoot {
     );
   }
 
-  getId(): ForecastId {
-    return this.id;
+  get id(): ForecastId {
+    return this._id;
   }
 
-  getPlanId(): PlanId {
-    return this.planId;
+  get planId(): PlanId {
+    return this._planId;
   }
 
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this._name;
   }
 
-  getType(): ForecastType {
-    return this.type;
+  get type(): ForecastType {
+    return this._type;
   }
 
-  getIsActive(): boolean {
-    return this.isActive;
+  get active(): boolean {
+    return this._isActive;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this._createdAt;
   }
 
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this._updatedAt;
   }
 
   updateName(name: string): void {
-    this.name = name;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new ForecastNameUpdatedEvent(this.id.getValue(), name));
+    this._name = name;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new ForecastNameUpdatedEvent(this._id.getValue(), name));
   }
 
   activate(): void {
-    if (this.isActive) return;
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new ForecastActivatedEvent(this.id.getValue()));
+    if (this._isActive) return;
+    this._isActive = true;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new ForecastActivatedEvent(this._id.getValue()));
   }
 
   deactivate(): void {
-    if (!this.isActive) return;
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new ForecastDeactivatedEvent(this.id.getValue()));
+    if (!this._isActive) return;
+    this._isActive = false;
+    this._updatedAt = new Date();
+    this.addDomainEvent(new ForecastDeactivatedEvent(this._id.getValue()));
   }
 
-  toJSON(): ForecastDTO {
+  static toDTO(forecast: Forecast): ForecastDTO {
     return {
-      id: this.getId().getValue(),
-      planId: this.getPlanId().getValue(),
-      name: this.getName(),
-      type: this.getType(),
-      isActive: this.getIsActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: forecast.id.getValue(),
+      planId: forecast.planId.getValue(),
+      name: forecast.name,
+      type: forecast.type,
+      isActive: forecast.active,
+      createdAt: forecast.createdAt.toISOString(),
+      updatedAt: forecast.updatedAt.toISOString(),
     };
   }
 }

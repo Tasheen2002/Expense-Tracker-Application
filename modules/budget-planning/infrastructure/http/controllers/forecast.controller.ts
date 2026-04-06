@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { CreateForecastHandler } from '../../../application/commands/create-forecast.command';
 import { AddForecastItemHandler } from '../../../application/commands/add-forecast-item.command';
 import {
@@ -10,7 +10,6 @@ import {
 import { GetForecastHandler } from '../../../application/queries/get-forecast.query';
 import { ListForecastsHandler } from '../../../application/queries/list-forecasts.query';
 import { GetForecastItemsHandler } from '../../../application/queries/get-forecast-items.query';
-
 import { ForecastType } from '../../../domain/enums/forecast-type.enum';
 
 export class ForecastController {
@@ -24,21 +23,24 @@ export class ForecastController {
     private readonly getForecastItemsHandler: GetForecastItemsHandler
   ) {}
 
-  async create(req: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { planId } = req.params as { planId: string };
-      const body = req.body as {
+  async create(
+    req: AuthenticatedRequest<{
+      Params: { workspaceId: string; planId: string };
+      Body: {
         name: string;
         type: string;
       };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, planId } = req.params;
       const result = await this.createForecastHandler.handle({
         planId,
-        name: body.name,
-        type: body.type as ForecastType,
+        workspaceId,
+        name: req.body.name,
+        type: req.body.type as ForecastType,
         userId,
       });
       return ResponseHelper.fromCommand(
@@ -48,29 +50,32 @@ export class ForecastController {
         result.data,
         201
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async addItem(req: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { forecastId } = req.params as { forecastId: string };
-      const body = req.body as {
+  async addItem(
+    req: AuthenticatedRequest<{
+      Params: { workspaceId: string; forecastId: string };
+      Body: {
         categoryId: string;
         amount: number;
         notes?: string;
       };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, forecastId } = req.params;
       const result = await this.addForecastItemHandler.handle({
         forecastId,
-        categoryId: body.categoryId,
-        amount: body.amount,
+        workspaceId,
+        categoryId: req.body.categoryId,
+        amount: req.body.amount,
         userId,
-        notes: body.notes,
+        notes: req.body.notes,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -79,64 +84,55 @@ export class ForecastController {
         result.data,
         201
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async get(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { id } = req.params;
-      const result = await this.getForecastHandler.handle({ id, userId });
+      const { workspaceId, id } = req.params;
+      const result = await this.getForecastHandler.handle({ id, workspaceId, userId });
       return ResponseHelper.fromQuery(
         reply,
         result,
         'Forecast retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async list(
-    req: AuthenticatedRequest<{ Params: { planId: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; planId: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
       const { planId } = req.params;
       const result = await this.listForecastsHandler.handle({ planId, userId });
       return ResponseHelper.fromQuery(
         reply,
         result,
         'Forecasts retrieved successfully',
-        result.data?.items.map((f) => f.toJSON())
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async listItems(
-    req: AuthenticatedRequest<{ Params: { forecastId: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; forecastId: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
       const { forecastId } = req.params;
       const result = await this.getForecastItemsHandler.handle({
         forecastId,
@@ -146,54 +142,53 @@ export class ForecastController {
         reply,
         result,
         'Forecast items retrieved successfully',
-        result.data?.items.map((item) => item.toJSON())
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async delete(
-    req: AuthenticatedRequest<{ Params: { id: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { id } = req.params;
-      const result = await this.deleteForecastHandler.handle({ id, userId });
+      const { workspaceId, id } = req.params;
+      const result = await this.deleteForecastHandler.handle({ id, workspaceId, userId });
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Forecast deleted successfully'
+        'Forecast deleted successfully',
+        undefined,
+        204
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteItem(
-    req: AuthenticatedRequest<{ Params: { itemId: string } }>,
+    req: AuthenticatedRequest<{ Params: { workspaceId: string; itemId: string } }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const { itemId } = req.params;
+      const { workspaceId, itemId } = req.params;
       const result = await this.deleteForecastItemHandler.handle({
         itemId,
+        workspaceId,
         userId,
       });
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Forecast item deleted successfully'
+        'Forecast item deleted successfully',
+        undefined,
+        204
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

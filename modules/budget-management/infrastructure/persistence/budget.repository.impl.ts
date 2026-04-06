@@ -11,12 +11,10 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-
-// ... (imports)
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class BudgetRepositoryImpl
   extends PrismaRepository<Budget>
@@ -27,39 +25,39 @@ export class BudgetRepositoryImpl
   }
 
   async save(budget: Budget): Promise<void> {
-    const period = budget.getPeriod();
+    const period = budget.period;
 
     await this.prisma.budget.upsert({
-      where: { id: budget.getId().getValue() },
+      where: { id: budget.id.getValue() },
       create: {
-        id: budget.getId().getValue(),
-        workspaceId: budget.getWorkspaceId(),
-        name: budget.getName(),
-        description: budget.getDescription(),
-        totalAmount: budget.getTotalAmount(),
-        currency: budget.getCurrency(),
-        periodType: period.getPeriodType(),
-        startDate: period.getStartDate(),
-        endDate: period.getEndDate(),
-        status: budget.getStatus(),
-        createdBy: budget.getCreatedBy(),
+        id: budget.id.getValue(),
+        workspaceId: budget.workspaceId,
+        name: budget.name,
+        description: budget.description,
+        totalAmount: budget.totalAmount,
+        currency: budget.currency,
+        periodType: period.periodType,
+        startDate: period.startDate,
+        endDate: period.endDate,
+        status: budget.status,
+        createdBy: budget.createdBy,
         isRecurring: budget.isRecurring(),
         rolloverUnused: budget.shouldRolloverUnused(),
-        createdAt: budget.getCreatedAt(),
-        updatedAt: budget.getUpdatedAt(),
+        createdAt: budget.createdAt,
+        updatedAt: budget.updatedAt,
       },
       update: {
-        name: budget.getName(),
-        description: budget.getDescription(),
-        totalAmount: budget.getTotalAmount(),
-        currency: budget.getCurrency(),
-        periodType: period.getPeriodType(),
-        startDate: period.getStartDate(),
-        endDate: period.getEndDate(),
-        status: budget.getStatus(),
+        name: budget.name,
+        description: budget.description,
+        totalAmount: budget.totalAmount,
+        currency: budget.currency,
+        periodType: period.periodType,
+        startDate: period.startDate,
+        endDate: period.endDate,
+        status: budget.status,
         isRecurring: budget.isRecurring(),
         rolloverUnused: budget.shouldRolloverUnused(),
-        updatedAt: budget.getUpdatedAt(),
+        updatedAt: budget.updatedAt,
       },
     });
 

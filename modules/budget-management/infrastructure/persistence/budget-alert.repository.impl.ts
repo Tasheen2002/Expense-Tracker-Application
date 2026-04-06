@@ -11,10 +11,10 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events/domain-event';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class BudgetAlertRepositoryImpl
   extends PrismaRepository<BudgetAlert>
@@ -26,23 +26,23 @@ export class BudgetAlertRepositoryImpl
 
   async save(alert: BudgetAlert): Promise<void> {
     await this.prisma.budgetAlert.upsert({
-      where: { id: alert.getId().getValue() },
+      where: { id: alert.id.getValue() },
       create: {
-        id: alert.getId().getValue(),
-        budgetId: alert.getBudgetId().getValue(),
-        allocationId: alert.getAllocationId()?.getValue() || null,
-        level: alert.getLevel(),
-        threshold: alert.getThreshold(),
-        currentSpent: alert.getCurrentSpent(),
-        allocatedAmount: alert.getAllocatedAmount(),
-        message: alert.getMessage(),
-        isRead: alert.isRead(),
-        notifiedAt: alert.getNotifiedAt(),
-        createdAt: alert.getCreatedAt(),
+        id: alert.id.getValue(),
+        budgetId: alert.budgetId.getValue(),
+        allocationId: alert.allocationId?.getValue() || null,
+        level: alert.level,
+        threshold: alert.threshold,
+        currentSpent: alert.currentSpent,
+        allocatedAmount: alert.allocatedAmount,
+        message: alert.message,
+        isRead: alert.isRead,
+        notifiedAt: alert.notifiedAt,
+        createdAt: alert.createdAt,
       },
       update: {
-        isRead: alert.isRead(),
-        notifiedAt: alert.getNotifiedAt(),
+        isRead: alert.isRead,
+        notifiedAt: alert.notifiedAt,
       },
     });
 
@@ -158,7 +158,7 @@ export class BudgetAlertRepositoryImpl
     });
   }
 
-  private toDomain(row: Prisma.BudgetAlertGetPayload<object>): BudgetAlert {
+  private toDomain(row: any): BudgetAlert {
     return BudgetAlert.fromPersistence({
       id: AlertId.fromString(row.id),
       budgetId: BudgetId.fromString(row.budgetId),

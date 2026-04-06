@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { ListNotificationsHandler } from '../../../application/queries/list-notifications.query';
 import { GetUnreadCountHandler } from '../../../application/queries/get-unread-count.query';
 import { MarkAsReadHandler } from '../../../application/commands/mark-as-read.command';

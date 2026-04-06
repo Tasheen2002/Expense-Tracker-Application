@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 
 interface AllocateExpenseBody {
   allocations: Array<{
@@ -81,7 +81,7 @@ export class ExpenseAllocationController {
         reply,
         result,
         'Allocations retrieved successfully',
-        result.data?.map((a) => a.toJSON()) || []
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

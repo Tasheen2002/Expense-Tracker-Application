@@ -3,10 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteForecastCommand extends ICommand {
   id: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -17,13 +18,14 @@ export class DeleteForecastHandler implements ICommandHandler<
   constructor(private readonly forecastService: ForecastService) {}
 
   async handle(command: DeleteForecastCommand): Promise<CommandResult<void>> {
-    await this.forecastService.deleteForecast(command.id, command.userId);
+    await this.forecastService.deleteForecast(command.id, command.workspaceId, command.userId);
     return CommandResult.success();
   }
 }
 
 export interface DeleteForecastItemCommand extends ICommand {
   itemId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -38,6 +40,7 @@ export class DeleteForecastItemHandler implements ICommandHandler<
   ): Promise<CommandResult<void>> {
     await this.forecastService.deleteForecastItem(
       command.itemId,
+      command.workspaceId,
       command.userId
     );
     return CommandResult.success();

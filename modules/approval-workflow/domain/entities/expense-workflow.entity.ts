@@ -7,11 +7,10 @@ import {
 } from '../errors/approval-workflow.errors';
 import { WorkflowId } from '../value-objects/workflow-id';
 import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import { ExpenseId } from '../value-objects';
-import { WorkspaceId } from '../value-objects';
-import { UserId } from '../value-objects';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
-import { AggregateRoot } from '../../../../apps/api/src/shared/domain/aggregate-root';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -437,19 +436,23 @@ export class ExpenseWorkflow extends AggregateRoot {
     );
   }
 
-  toJSON(): ExpenseWorkflowDTO {
+  /**
+   * Serialize ExpenseWorkflow to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(workflow: ExpenseWorkflow): ExpenseWorkflowDTO {
     return {
-      workflowId: this.getId().getValue(),
-      expenseId: this.getExpenseId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      userId: this.getUserId().getValue(),
-      chainId: this.getChainId()?.getValue(),
-      status: this.getStatus(),
-      currentStepNumber: this.getCurrentStepNumber(),
-      steps: this.getSteps().map((s) => s.toJSON()),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
-      completedAt: this.getCompletedAt()?.toISOString(),
+      workflowId: workflow.getId().getValue(),
+      expenseId: workflow.getExpenseId().getValue(),
+      workspaceId: workflow.getWorkspaceId().getValue(),
+      userId: workflow.getUserId().getValue(),
+      chainId: workflow.getChainId()?.getValue(),
+      status: workflow.getStatus(),
+      currentStepNumber: workflow.getCurrentStepNumber(),
+      steps: workflow.getSteps().map((s) => ApprovalStep.toDTO(s)),
+      createdAt: workflow.getCreatedAt().toISOString(),
+      updatedAt: workflow.getUpdatedAt().toISOString(),
+      completedAt: workflow.getCompletedAt()?.toISOString(),
     };
   }
 }

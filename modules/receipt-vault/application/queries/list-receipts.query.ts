@@ -17,7 +17,7 @@ export interface ListReceiptsDto {
   offset?: number;
 }
 
-import { PaginatedResult } from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class ListReceiptsHandler {
   constructor(private readonly receiptService: ReceiptService) {}

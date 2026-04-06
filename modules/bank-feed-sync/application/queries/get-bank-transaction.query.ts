@@ -1,23 +1,30 @@
 import { WorkspaceId } from '../../../identity-workspace';
 import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
-import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
-import { BankTransactionNotFoundError } from '../../domain/errors';
-import { QueryResult } from '../../../../apps/api/src/shared/application/query-result';
+import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
+import { BankTransactionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
-export interface GetBankTransactionQuery {
+export interface GetBankTransactionQuery extends IQuery {
   workspaceId: string;
   transactionId: string;
 }
 
-export class GetBankTransactionHandler {
+export class GetBankTransactionHandler implements IQueryHandler<
+  GetBankTransactionQuery,
+  QueryResult<BankTransactionDTO>
+> {
   constructor(
     private readonly transactionRepository: IBankTransactionRepository
   ) {}
 
   async handle(
     query: GetBankTransactionQuery
-  ): Promise<QueryResult<BankTransaction>> {
+  ): Promise<QueryResult<BankTransactionDTO>> {
     const workspaceId = WorkspaceId.fromString(query.workspaceId);
     const transactionId = BankTransactionId.fromString(query.transactionId);
 
@@ -30,6 +37,6 @@ export class GetBankTransactionHandler {
       throw new BankTransactionNotFoundError(query.transactionId);
     }
 
-    return QueryResult.success(transaction);
+    return QueryResult.success(BankTransaction.toDTO(transaction));
   }
 }

@@ -1,14 +1,14 @@
 import { CategoryRule } from "../entities/category-rule.entity";
 import { RuleId } from "../value-objects/rule-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface";
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface CategoryRuleRepository {
+export interface ICategoryRuleRepository {
   save(rule: CategoryRule): Promise<void>;
-  findById(id: RuleId): Promise<CategoryRule | null>;
+  findById(id: RuleId, workspaceId: WorkspaceId): Promise<CategoryRule | null>;
   findByWorkspaceId(
     workspaceId: WorkspaceId,
     options?: PaginationOptions,

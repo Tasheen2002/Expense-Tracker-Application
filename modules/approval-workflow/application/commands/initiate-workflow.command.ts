@@ -2,8 +2,8 @@ import { WorkflowService } from '../services/workflow.service';
 import {
   ICommand,
   ICommandHandler,
-  CommandResult,
-} from '../../../../apps/api/src/shared/application';
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface InitiateWorkflowInput extends ICommand {
   expenseId: string;
@@ -16,24 +16,16 @@ export interface InitiateWorkflowInput extends ICommand {
 
 export class InitiateWorkflowHandler implements ICommandHandler<
   InitiateWorkflowInput,
-  CommandResult<{ workflowId: string }>
+  CommandResult<string>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(
-    input: InitiateWorkflowInput
-  ): Promise<CommandResult<{ workflowId: string }>> {
+  async handle(input: InitiateWorkflowInput): Promise<CommandResult<string>> {
     try {
       const workflow = await this.workflowService.initiateWorkflow(input);
-      return CommandResult.success({ workflowId: workflow.getId().getValue() });
+      return CommandResult.success(workflow.getExpenseId().getValue());
     } catch (error: unknown) {
-      return CommandResult.failure(
-        error instanceof Error ? error.message : 'Command failed',
-        undefined,
-        error && typeof error === 'object' && 'statusCode' in error
-          ? (error as { statusCode: number }).statusCode
-          : 500
-      );
+      return CommandResult.fromError(error);
     }
   }
 }
