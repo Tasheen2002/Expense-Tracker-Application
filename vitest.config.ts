@@ -1,6 +1,15 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@core': path.resolve(__dirname, 'packages/core/src'),
+      '@packages': path.resolve(__dirname, 'packages'),
+      '@modules': path.resolve(__dirname, 'modules'),
+      '@shared': path.resolve(__dirname, 'apps/api/src/shared'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
