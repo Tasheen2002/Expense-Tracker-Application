@@ -1,9 +1,9 @@
 import { Scenario } from "../../domain/entities/scenario.entity";
-import { ScenarioRepository } from "../../domain/repositories/scenario.repository";
-import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
+import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
+import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ScenarioId } from "../../domain/value-objects/scenario-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { UserId } from "../../../identity-workspace";
 import {
   ScenarioNotFoundError,
   DuplicateScenarioNameError,
@@ -14,19 +14,20 @@ import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class ScenarioService {
   constructor(
-    private readonly scenarioRepository: ScenarioRepository,
-    private readonly budgetPlanRepository: BudgetPlanRepository,
+    private readonly scenarioRepository: IScenarioRepository,
+    private readonly budgetPlanRepository: IBudgetPlanRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   private async checkPlanAccess(
     userId: string,
     planId: PlanId,
+    workspaceId: string,
     action: string,
   ): Promise<void> {
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.toString());
+      throw new BudgetPlanNotFoundError(planId.getValue());
     }
 
     const isCreator = plan.createdBy.getValue() === userId;
@@ -42,14 +43,15 @@ export class ScenarioService {
 
   async createScenario(params: {
     planId: string;
+    workspaceId: string;
     name: string;
     description?: string;
-    assumptions?: Record<string, any>;
+    assumptions?: Record<string, unknown>;
     createdBy: string;
   }): Promise<Scenario> {
     const planId = PlanId.fromString(params.planId);
 
-    await this.checkPlanAccess(params.createdBy, planId, "create scenario");
+    await this.checkPlanAccess(params.createdBy, planId, params.workspaceId, "create scenario");
 
     const existing = await this.scenarioRepository.findByName(
       planId,
@@ -73,13 +75,14 @@ export class ScenarioService {
 
   async updateScenario(params: {
     id: string;
+    workspaceId: string;
     userId: string;
     name?: string;
     description?: string;
-    assumptions?: Record<string, any>;
+    assumptions?: Record<string, unknown>;
   }): Promise<Scenario> {
     const scenarioId = ScenarioId.fromString(params.id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
+    const scenario = await this.scenarioRepository.findById(scenarioId, params.workspaceId);
 
     if (!scenario) {
       throw new ScenarioNotFoundError(params.id);
@@ -88,6 +91,7 @@ export class ScenarioService {
     await this.checkPlanAccess(
       params.userId,
       scenario.planId,
+      params.workspaceId,
       "update scenario",
     );
 
@@ -112,15 +116,15 @@ export class ScenarioService {
     return scenario;
   }
 
-  async deleteScenario(id: string, userId: string): Promise<void> {
+  async deleteScenario(id: string, workspaceId: string, userId: string): Promise<void> {
     const scenarioId = ScenarioId.fromString(id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
+    const scenario = await this.scenarioRepository.findById(scenarioId, workspaceId);
 
     if (!scenario) {
       throw new ScenarioNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, scenario.planId, "delete scenario");
+    await this.checkPlanAccess(userId, scenario.planId, workspaceId, "delete scenario");
 
     await this.scenarioRepository.delete(scenarioId);
   }

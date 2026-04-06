@@ -3,6 +3,7 @@ import { WorkspaceId } from '../../../identity-workspace';
 import { UserId } from '../../../identity-workspace';
 import { PlanPeriod } from '../value-objects/plan-period';
 import { PlanStatus } from '../enums/plan-status.enum';
+import { PeriodType } from '../enums/period-type.enum';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
@@ -86,6 +87,7 @@ export class BudgetPlan extends AggregateRoot {
     private readonly _workspaceId: WorkspaceId,
     private _name: string,
     private _description: string | null,
+    private readonly _periodType: PeriodType,
     private readonly _period: PlanPeriod,
     private _status: PlanStatus,
     private readonly _createdBy: UserId,
@@ -99,6 +101,7 @@ export class BudgetPlan extends AggregateRoot {
     workspaceId: WorkspaceId;
     name: string;
     description?: string | null;
+    periodType: PeriodType;
     period: PlanPeriod;
     createdBy: UserId;
   }): BudgetPlan {
@@ -109,6 +112,7 @@ export class BudgetPlan extends AggregateRoot {
       params.workspaceId,
       params.name,
       params.description || null,
+      params.periodType,
       params.period,
       PlanStatus.DRAFT,
       params.createdBy,
@@ -133,6 +137,7 @@ export class BudgetPlan extends AggregateRoot {
     workspaceId: string;
     name: string;
     description: string | null;
+    periodType: PeriodType;
     startDate: Date;
     endDate: Date;
     status: PlanStatus;
@@ -145,6 +150,7 @@ export class BudgetPlan extends AggregateRoot {
       WorkspaceId.fromString(params.workspaceId),
       params.name,
       params.description,
+      params.periodType,
       PlanPeriod.create(params.startDate, params.endDate),
       params.status,
       UserId.fromString(params.createdBy),
@@ -167,6 +173,10 @@ export class BudgetPlan extends AggregateRoot {
 
   get description(): string | null {
     return this._description;
+  }
+
+  get periodType(): PeriodType {
+    return this._periodType;
   }
 
   get period(): PlanPeriod {
@@ -215,6 +225,7 @@ export class BudgetPlan extends AggregateRoot {
       workspaceId: plan.workspaceId.getValue(),
       name: plan.name,
       description: plan.description,
+      periodType: plan.periodType,
       period: {
         startDate: plan.period.startDate.toISOString(),
         endDate: plan.period.endDate.toISOString(),
@@ -232,6 +243,7 @@ export interface BudgetPlanDTO {
   workspaceId: string;
   name: string;
   description: string | null;
+  periodType: PeriodType;
   period: { startDate: string; endDate: string };
   status: PlanStatus;
   createdBy: string;

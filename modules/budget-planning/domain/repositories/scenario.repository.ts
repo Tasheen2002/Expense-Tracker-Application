@@ -6,9 +6,9 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ScenarioRepository {
+export interface IScenarioRepository {
   save(scenario: Scenario): Promise<void>;
-  findById(id: ScenarioId): Promise<Scenario | null>;
+  findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null>;
   findByPlanId(
     planId: PlanId,
     options?: PaginationOptions,

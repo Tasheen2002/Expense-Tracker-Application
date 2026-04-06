@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Forecast } from "../../domain/entities/forecast.entity";
-import { ForecastRepository } from "../../domain/repositories/forecast.repository";
+import { IForecastRepository } from "../../domain/repositories/forecast.repository";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
@@ -14,7 +14,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class ForecastRepositoryImpl
   extends PrismaRepository<Forecast>
-  implements ForecastRepository
+  implements IForecastRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -40,9 +40,9 @@ export class ForecastRepositoryImpl
     await this.dispatchEvents(forecast);
   }
 
-  async findById(id: ForecastId): Promise<Forecast | null> {
-    const raw = await this.prisma.forecast.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: ForecastId, workspaceId: string): Promise<Forecast | null> {
+    const raw = await this.prisma.forecast.findFirst({
+      where: { id: id.getValue(), plan: { workspaceId } },
     });
 
     if (!raw) return null;

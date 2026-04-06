@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Scenario } from "../../domain/entities/scenario.entity";
-import { ScenarioRepository } from "../../domain/repositories/scenario.repository";
+import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
 import { ScenarioId } from "../../domain/value-objects/scenario-id";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import {
@@ -13,7 +13,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class ScenarioRepositoryImpl
   extends PrismaRepository<Scenario>
-  implements ScenarioRepository
+  implements IScenarioRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -40,9 +40,9 @@ export class ScenarioRepositoryImpl
     await this.dispatchEvents(scenario);
   }
 
-  async findById(id: ScenarioId): Promise<Scenario | null> {
-    const raw = await this.prisma.scenario.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null> {
+    const raw = await this.prisma.scenario.findFirst({
+      where: { id: id.getValue(), plan: { workspaceId } },
     });
 
     if (!raw) return null;
@@ -52,7 +52,7 @@ export class ScenarioRepositoryImpl
       planId: raw.planId,
       name: raw.name,
       description: raw.description,
-      assumptions: raw.assumptions as Record<string, any> | null,
+      assumptions: raw.assumptions as Record<string, unknown> | null,
       createdBy: raw.createdBy,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,
@@ -76,7 +76,7 @@ export class ScenarioRepositoryImpl
           planId: raw.planId,
           name: raw.name,
           description: raw.description,
-          assumptions: raw.assumptions as Record<string, any> | null,
+          assumptions: raw.assumptions as Record<string, unknown> | null,
           createdBy: raw.createdBy,
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
@@ -106,7 +106,7 @@ export class ScenarioRepositoryImpl
       planId: raw.planId,
       name: raw.name,
       description: raw.description,
-      assumptions: raw.assumptions as Record<string, any> | null,
+      assumptions: raw.assumptions as Record<string, unknown> | null,
       createdBy: raw.createdBy,
       createdAt: raw.createdAt,
       updatedAt: raw.updatedAt,

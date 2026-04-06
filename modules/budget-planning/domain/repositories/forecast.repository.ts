@@ -6,9 +6,9 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ForecastRepository {
+export interface IForecastRepository {
   save(forecast: Forecast): Promise<void>;
-  findById(id: ForecastId): Promise<Forecast | null>;
+  findById(id: ForecastId, workspaceId: string): Promise<Forecast | null>;
   findByPlanId(
     planId: PlanId,
     options?: PaginationOptions,

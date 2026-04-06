@@ -1,9 +1,10 @@
-import { PrismaClient, BudgetPeriodType, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
-import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
+import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
+import { PeriodType } from "../../domain/enums/period-type.enum";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -14,7 +15,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class BudgetPlanRepositoryImpl
   extends PrismaRepository<BudgetPlan>
-  implements BudgetPlanRepository
+  implements IBudgetPlanRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -26,7 +27,7 @@ export class BudgetPlanRepositoryImpl
       workspaceId: plan.workspaceId.getValue(),
       name: plan.name,
       description: plan.description,
-      periodType: BudgetPeriodType.CUSTOM,
+      periodType: plan.periodType,
       startDate: plan.period.startDate,
       endDate: plan.period.endDate,
       status: plan.status,
@@ -44,9 +45,9 @@ export class BudgetPlanRepositoryImpl
     await this.dispatchEvents(plan);
   }
 
-  async findById(id: PlanId): Promise<BudgetPlan | null> {
-    const raw = await this.prisma.budgetPlan.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: PlanId, workspaceId: string): Promise<BudgetPlan | null> {
+    const raw = await this.prisma.budgetPlan.findFirst({
+      where: { id: id.getValue(), workspaceId },
     });
 
     if (!raw) return null;
@@ -56,6 +57,7 @@ export class BudgetPlanRepositoryImpl
       workspaceId: raw.workspaceId,
       name: raw.name,
       description: raw.description,
+      periodType: raw.periodType as PeriodType,
       startDate: raw.startDate,
       endDate: raw.endDate,
       status: raw.status as PlanStatus,
@@ -86,6 +88,7 @@ export class BudgetPlanRepositoryImpl
           workspaceId: raw.workspaceId,
           name: raw.name,
           description: raw.description,
+          periodType: raw.periodType as PeriodType,
           startDate: raw.startDate,
           endDate: raw.endDate,
           status: raw.status as PlanStatus,

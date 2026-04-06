@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Scenario } from "../domain/entities/scenario.entity";
 import { PlanId } from "../domain/value-objects/plan-id";
-import { UserId } from "../../identity-workspace/domain/value-objects/user-id.vo";
+import { UserId } from "../../identity-workspace";
 import { v4 as uuidv4 } from "uuid";
 
 describe("Scenario Entity", () => {

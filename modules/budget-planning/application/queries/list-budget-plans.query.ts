@@ -1,4 +1,4 @@
-import { BudgetPlanRepository } from '../../domain/repositories/budget-plan.repository';
+import { IBudgetPlanRepository } from '../../domain/repositories/budget-plan.repository';
 import { BudgetPlan, BudgetPlanDTO } from '../../domain/entities/budget-plan.entity';
 import { WorkspaceId } from '../../../identity-workspace';
 import { PlanStatus } from '../../domain/enums/plan-status.enum';
@@ -21,7 +21,7 @@ export class ListBudgetPlansHandler implements IQueryHandler<
   ListBudgetPlansQuery,
   QueryResult<PaginatedResult<BudgetPlanDTO>>
 > {
-  constructor(private readonly budgetPlanRepository: BudgetPlanRepository) {}
+  constructor(private readonly budgetPlanRepository: IBudgetPlanRepository) {}
 
   async handle(
     query: ListBudgetPlansQuery

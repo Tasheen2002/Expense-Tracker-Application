@@ -1,10 +1,10 @@
 import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
-import { BudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
+import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../../identity-workspace";
 import { PlanPeriod } from "../../domain/value-objects/plan-period";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
+import { PeriodType } from "../../domain/enums/period-type.enum";
 import {
   BudgetPlanNotFoundError,
   UnauthorizedBudgetPlanAccessError,
@@ -13,7 +13,7 @@ import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class BudgetPlanService {
   constructor(
-    private readonly budgetPlanRepository: BudgetPlanRepository,
+    private readonly budgetPlanRepository: IBudgetPlanRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
@@ -27,6 +27,7 @@ export class BudgetPlanService {
   async createPlan(params: {
     workspaceId: string;
     name: string;
+    periodType: PeriodType;
     description?: string;
     startDate: Date;
     endDate: Date;
@@ -48,6 +49,7 @@ export class BudgetPlanService {
       workspaceId: WorkspaceId.fromString(params.workspaceId),
       name: params.name,
       description: params.description,
+      periodType: params.periodType,
       period,
       createdBy: UserId.fromString(params.createdBy),
     });
@@ -58,12 +60,13 @@ export class BudgetPlanService {
 
   async updatePlan(params: {
     id: string;
+    workspaceId: string;
     userId: string;
     name?: string;
     description?: string;
   }): Promise<BudgetPlan> {
     const planId = PlanId.fromString(params.id);
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, params.workspaceId);
 
     if (!plan) {
       throw new BudgetPlanNotFoundError(params.id);
@@ -84,9 +87,9 @@ export class BudgetPlanService {
     return plan;
   }
 
-  async activatePlan(id: string, userId: string): Promise<BudgetPlan> {
+  async activatePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlan> {
     const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
 
     if (!plan) {
       throw new BudgetPlanNotFoundError(id);
@@ -107,9 +110,9 @@ export class BudgetPlanService {
     return plan;
   }
 
-  async deletePlan(id: string, userId: string): Promise<void> {
+  async deletePlan(id: string, workspaceId: string, userId: string): Promise<void> {
     const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
 
     if (!plan) {
       throw new BudgetPlanNotFoundError(id);

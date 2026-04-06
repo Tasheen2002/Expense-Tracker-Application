@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { BudgetPlan } from "../domain/entities/budget-plan.entity";
-import { WorkspaceId } from "../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../identity-workspace";
 import { PlanPeriod } from "../domain/value-objects/plan-period";
 import { PlanStatus } from "../domain/enums/plan-status.enum";
 import { InvalidPlanPeriodError } from "../domain/errors/budget-planning.errors";

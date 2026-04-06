@@ -1,4 +1,4 @@
-import { ScenarioRepository } from '../../domain/repositories/scenario.repository';
+import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
 import { Scenario, ScenarioDTO } from '../../domain/entities/scenario.entity';
 import { PlanId } from '../../domain/value-objects/plan-id';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
@@ -17,7 +17,7 @@ export class ListScenariosHandler implements IQueryHandler<
   ListScenariosQuery,
   QueryResult<PaginatedResult<ScenarioDTO>>
 > {
-  constructor(private readonly scenarioRepository: ScenarioRepository) {}
+  constructor(private readonly scenarioRepository: IScenarioRepository) {}
 
   async handle(
     query: ListScenariosQuery

@@ -8,6 +8,7 @@ import {
 
 export interface CreateForecastCommand extends ICommand {
   planId: string;
+  workspaceId: string;
   name: string;
   type: ForecastType;
   userId: string;
@@ -24,6 +25,7 @@ export class CreateForecastHandler implements ICommandHandler<
   ): Promise<CommandResult<{ forecastId: string }>> {
     const forecast = await this.forecastService.createForecast({
       planId: command.planId,
+      workspaceId: command.workspaceId,
       name: command.name,
       type: command.type,
       userId: command.userId,

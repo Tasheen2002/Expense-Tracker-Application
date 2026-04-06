@@ -1,4 +1,4 @@
-import { ForecastRepository } from '../../domain/repositories/forecast.repository';
+import { IForecastRepository } from '../../domain/repositories/forecast.repository';
 import { Forecast, ForecastDTO } from '../../domain/entities/forecast.entity';
 import { PlanId } from '../../domain/value-objects/plan-id';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
@@ -17,7 +17,7 @@ export class ListForecastsHandler implements IQueryHandler<
   ListForecastsQuery,
   QueryResult<PaginatedResult<ForecastDTO>>
 > {
-  constructor(private readonly forecastRepository: ForecastRepository) {}
+  constructor(private readonly forecastRepository: IForecastRepository) {}
 
   async handle(
     query: ListForecastsQuery

@@ -7,10 +7,11 @@ import {
 
 export interface CreateScenarioCommand extends ICommand {
   planId: string;
+  workspaceId: string;
   name: string;
   createdBy: string;
   description?: string;
-  assumptions?: Record<string, any>;
+  assumptions?: Record<string, unknown>;
 }
 
 export class CreateScenarioHandler implements ICommandHandler<
@@ -24,6 +25,7 @@ export class CreateScenarioHandler implements ICommandHandler<
   ): Promise<CommandResult<{ scenarioId: string }>> {
     const scenario = await this.scenarioService.createScenario({
       planId: command.planId,
+      workspaceId: command.workspaceId,
       name: command.name,
       description: command.description,
       assumptions: command.assumptions,

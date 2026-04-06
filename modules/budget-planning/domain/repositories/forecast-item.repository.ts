@@ -7,9 +7,9 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ForecastItemRepository {
+export interface IForecastItemRepository {
   save(item: ForecastItem): Promise<void>;
-  findById(id: ForecastItemId): Promise<ForecastItem | null>;
+  findById(id: ForecastItemId, workspaceId: string): Promise<ForecastItem | null>;
   findByForecastId(
     forecastId: ForecastId,
     options?: PaginationOptions,

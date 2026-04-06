@@ -62,7 +62,7 @@ export class Scenario extends AggregateRoot {
     private readonly _planId: PlanId,
     private _name: string,
     private _description: string | null,
-    private _assumptions: Record<string, any> | null,
+    private _assumptions: Record<string, unknown> | null,
     private readonly _createdBy: UserId,
     private readonly _createdAt: Date,
     private _updatedAt: Date
@@ -74,7 +74,7 @@ export class Scenario extends AggregateRoot {
     planId: PlanId;
     name: string;
     description?: string | null;
-    assumptions?: Record<string, any> | null;
+    assumptions?: Record<string, unknown> | null;
     createdBy: UserId;
   }): Scenario {
     const scenario = new Scenario(
@@ -105,7 +105,7 @@ export class Scenario extends AggregateRoot {
     planId: string;
     name: string;
     description: string | null;
-    assumptions: Record<string, any> | null;
+    assumptions: Record<string, unknown> | null;
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
@@ -138,7 +138,7 @@ export class Scenario extends AggregateRoot {
     return this._description;
   }
 
-  get assumptions(): Record<string, any> | null {
+  get assumptions(): Record<string, unknown> | null {
     return this._assumptions;
   }
 
@@ -157,7 +157,7 @@ export class Scenario extends AggregateRoot {
   updateDetails(params: {
     name?: string;
     description?: string | null;
-    assumptions?: Record<string, any> | null;
+    assumptions?: Record<string, unknown> | null;
   }): void {
     const changes: Record<string, unknown> = {};
     if (params.name) {

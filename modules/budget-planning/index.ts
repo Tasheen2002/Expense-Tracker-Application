@@ -18,6 +18,7 @@ export {
 
 // Domain enums (safe to share — value objects, not entities)
 export { ForecastType } from './domain/enums/forecast-type.enum';
+export { PeriodType } from './domain/enums/period-type.enum';
 export { PlanStatus } from './domain/enums/plan-status.enum';
 
 // DTO types (used by consumers to type API responses)
@@ -40,6 +41,7 @@ export { CreateForecastHandler } from './application/commands/create-forecast.co
 export { AddForecastItemHandler } from './application/commands/add-forecast-item.command';
 export { DeleteForecastHandler, DeleteForecastItemHandler } from './application/commands/delete-forecast.command';
 export { CreateScenarioHandler } from './application/commands/create-scenario.command';
+export { UpdateScenarioHandler } from './application/commands/update-scenario.command';
 export { DeleteScenarioHandler } from './application/commands/delete-scenario.command';
 
 // Query Handlers

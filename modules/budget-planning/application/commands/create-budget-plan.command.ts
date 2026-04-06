@@ -1,4 +1,5 @@
 import { BudgetPlanService } from '../services/budget-plan.service';
+import { PeriodType } from '../../domain/enums/period-type.enum';
 import {
   ICommand,
   ICommandHandler,
@@ -8,6 +9,7 @@ import {
 export interface CreateBudgetPlanCommand extends ICommand {
   workspaceId: string;
   name: string;
+  periodType: PeriodType;
   startDate: Date;
   endDate: Date;
   createdBy: string;
@@ -26,6 +28,7 @@ export class CreateBudgetPlanHandler implements ICommandHandler<
     const plan = await this.budgetPlanService.createPlan({
       workspaceId: command.workspaceId,
       name: command.name,
+      periodType: command.periodType,
       description: command.description,
       startDate: command.startDate,
       endDate: command.endDate,

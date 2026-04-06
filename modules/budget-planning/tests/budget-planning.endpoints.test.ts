@@ -1,5 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
+
+// Mock rate limiter — singleton store persists across tests and would cause 429s
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      writeOperations: { windowMs: 60000, maxRequests: 100 },
+      auth: { windowMs: 60000, maxRequests: 100 },
+    },
+    userKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    defaultKeyGenerator: () => 'test-user',
+  })
+);
+
 import { createServer } from '../../../apps/api/src/server';
 import { PrismaClient } from '@prisma/client';
 
