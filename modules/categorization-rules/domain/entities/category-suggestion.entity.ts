@@ -1,8 +1,7 @@
 import { SuggestionId } from '../value-objects/suggestion-id';
 import { ConfidenceScore } from '../value-objects/confidence-score';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExpenseId, CategoryId } from '../../../expense-ledger';
 import { InvalidSuggestionError } from '../errors/categorization-rules.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
@@ -253,17 +252,33 @@ export class CategorySuggestion extends AggregateRoot {
     return this.respondedAt;
   }
 
-  toJSON() {
+  /**
+   * Serialize CategorySuggestion to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(suggestion: CategorySuggestion): CategorySuggestionDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      expenseId: this.getExpenseId().getValue(),
-      suggestedCategoryId: this.getSuggestedCategoryId().getValue(),
-      confidence: this.getConfidence().getValue(),
-      reason: this.getReason(),
-      isAccepted: this.getIsAccepted(),
-      createdAt: this.getCreatedAt(),
-      respondedAt: this.getRespondedAt(),
+      id: suggestion.id.getValue(),
+      workspaceId: suggestion.workspaceId.getValue(),
+      expenseId: suggestion.expenseId.getValue(),
+      suggestedCategoryId: suggestion.suggestedCategoryId.getValue(),
+      confidence: suggestion.confidence.getValue(),
+      reason: suggestion.reason,
+      isAccepted: suggestion.isAccepted,
+      createdAt: suggestion.createdAt,
+      respondedAt: suggestion.respondedAt,
     };
   }
+}
+
+export interface CategorySuggestionDTO {
+  id: string;
+  workspaceId: string;
+  expenseId: string;
+  suggestedCategoryId: string;
+  confidence: number;
+  reason: string | null;
+  isAccepted: boolean | null;
+  createdAt: Date;
+  respondedAt: Date | null;
 }

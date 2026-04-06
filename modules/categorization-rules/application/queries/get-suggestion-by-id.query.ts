@@ -1,6 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { SuggestionId } from '../../domain/value-objects/suggestion-id';
-import { CategorySuggestion } from '../../domain/entities/category-suggestion.entity';
+import { WorkspaceId } from '../../../identity-workspace';
+import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -9,21 +10,23 @@ import {
 
 export interface GetSuggestionByIdQuery extends IQuery {
   suggestionId: string;
+  workspaceId: string;
 }
 
 export class GetSuggestionByIdHandler implements IQueryHandler<
   GetSuggestionByIdQuery,
-  QueryResult<CategorySuggestion>
+  QueryResult<CategorySuggestionDTO>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
   async handle(
     query: GetSuggestionByIdQuery
-  ): Promise<QueryResult<CategorySuggestion>> {
+  ): Promise<QueryResult<CategorySuggestionDTO>> {
     const suggestion = await this.suggestionService.getSuggestionById(
-      SuggestionId.fromString(query.suggestionId)
+      SuggestionId.fromString(query.suggestionId),
+      WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(suggestion);
+    return QueryResult.success(CategorySuggestion.toDTO(suggestion));
   }
 }

@@ -1,7 +1,7 @@
 import { CategoryRuleService } from '../services/category-rule.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { CategoryRule } from '../../domain/entities/category-rule.entity';
+import { CategoryRule, CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -17,19 +17,25 @@ export interface GetRulesByWorkspaceQuery extends IQuery {
 
 export class GetRulesByWorkspaceHandler implements IQueryHandler<
   GetRulesByWorkspaceQuery,
-  QueryResult<PaginatedResult<CategoryRule>>
+  QueryResult<PaginatedResult<CategoryRuleDTO>>
 > {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async handle(
     query: GetRulesByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<CategoryRule>>> {
+  ): Promise<QueryResult<PaginatedResult<CategoryRuleDTO>>> {
     const result = await this.ruleService.getRulesByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       query.userId,
       { limit: query.limit, offset: query.offset }
     );
 
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map(CategoryRule.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

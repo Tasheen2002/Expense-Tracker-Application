@@ -1,7 +1,7 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { RuleExecution } from '../../domain/entities/rule-execution.entity';
+import { RuleExecution, RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -16,18 +16,24 @@ export interface GetExecutionsByWorkspaceQuery extends IQuery {
 
 export class GetExecutionsByWorkspaceHandler implements IQueryHandler<
   GetExecutionsByWorkspaceQuery,
-  QueryResult<PaginatedResult<RuleExecution>>
+  QueryResult<PaginatedResult<RuleExecutionDTO>>
 > {
   constructor(private readonly executionService: RuleExecutionService) {}
 
   async handle(
     query: GetExecutionsByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<RuleExecution>>> {
+  ): Promise<QueryResult<PaginatedResult<RuleExecutionDTO>>> {
     const result = await this.executionService.getExecutionsByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       { limit: query.limit, offset: query.offset }
     );
 
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map(RuleExecution.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

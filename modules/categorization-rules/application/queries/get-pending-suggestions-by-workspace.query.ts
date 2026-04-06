@@ -1,6 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -15,19 +16,25 @@ export interface GetPendingSuggestionsByWorkspaceQuery extends IQuery {
 
 export class GetPendingSuggestionsByWorkspaceHandler implements IQueryHandler<
   GetPendingSuggestionsByWorkspaceQuery,
-  QueryResult<PaginatedResult<CategorySuggestion>>
+  QueryResult<PaginatedResult<CategorySuggestionDTO>>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
   async handle(
     query: GetPendingSuggestionsByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<CategorySuggestion>>> {
+  ): Promise<QueryResult<PaginatedResult<CategorySuggestionDTO>>> {
     const result =
       await this.suggestionService.getPendingSuggestionsByWorkspaceId(
         WorkspaceId.fromString(query.workspaceId),
         { limit: query.limit, offset: query.offset }
       );
 
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map(CategorySuggestion.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

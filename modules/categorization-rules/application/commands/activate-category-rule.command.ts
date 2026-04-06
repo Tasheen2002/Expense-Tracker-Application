@@ -8,6 +8,7 @@ import {
 
 export interface ActivateCategoryRuleCommand extends ICommand {
   ruleId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -22,6 +23,7 @@ export class ActivateCategoryRuleHandler implements ICommandHandler<
   ): Promise<CommandResult<void>> {
     await this.ruleService.activateRule(
       RuleId.fromString(command.ruleId),
+      command.workspaceId,
       command.userId
     );
 

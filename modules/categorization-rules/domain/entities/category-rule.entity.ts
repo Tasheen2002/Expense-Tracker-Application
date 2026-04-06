@@ -1,8 +1,7 @@
 import { RuleId } from '../value-objects/rule-id';
 import { RuleCondition } from '../value-objects/rule-condition';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { CategoryId } from '../../../expense-ledger';
 import { InvalidRuleError } from '../errors/categorization-rules.errors';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
@@ -355,22 +354,43 @@ export class CategoryRule extends AggregateRoot {
     return this.updatedAt;
   }
 
-  toJSON() {
+  /**
+   * Serialize CategoryRule to DTO for API responses.
+   * Static method ensures serialization is separate from domain logic.
+   */
+  static toDTO(rule: CategoryRule): CategoryRuleDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
-      priority: this.getPriority(),
-      isActive: this.getIsActive(),
+      id: rule.id.getValue(),
+      workspaceId: rule.workspaceId.getValue(),
+      name: rule.name,
+      description: rule.description,
+      priority: rule.priority,
+      isActive: rule.isActive,
       condition: {
-        type: this.getCondition().getType(),
-        value: this.getCondition().getValue(),
+        type: rule.condition.getConditionType(),
+        value: rule.condition.getConditionValue(),
       },
-      targetCategoryId: this.getTargetCategoryId().getValue(),
-      createdBy: this.getCreatedBy().getValue(),
-      createdAt: this.getCreatedAt(),
-      updatedAt: this.getUpdatedAt(),
+      targetCategoryId: rule.targetCategoryId.getValue(),
+      createdBy: rule.createdBy.getValue(),
+      createdAt: rule.createdAt,
+      updatedAt: rule.updatedAt,
     };
   }
+}
+
+export interface CategoryRuleDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  isActive: boolean;
+  condition: {
+    type: string;
+    value: string;
+  };
+  targetCategoryId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

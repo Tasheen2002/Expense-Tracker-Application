@@ -1,10 +1,9 @@
-import { CategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
-import { RuleExecutionRepository } from "../../domain/repositories/rule-execution.repository";
+import { ICategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
+import { IRuleExecutionRepository } from "../../domain/repositories/rule-execution.repository";
 import { RuleExecution } from "../../domain/entities/rule-execution.entity";
 import { CategoryRule } from "../../domain/entities/category-rule.entity";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { WorkspaceId } from "../../../identity-workspace";
+import { ExpenseId, CategoryId } from "../../../expense-ledger";
 import { RuleId } from "../../domain/value-objects/rule-id";
 import { RuleExecutionId } from "../../domain/value-objects/rule-execution-id";
 import { CategoryRuleNotFoundError } from "../../domain/errors/categorization-rules.errors";
@@ -14,8 +13,8 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 
 export class RuleExecutionService {
   constructor(
-    private readonly ruleRepository: CategoryRuleRepository,
-    private readonly executionRepository: RuleExecutionRepository,
+    private readonly ruleRepository: ICategoryRuleRepository,
+    private readonly executionRepository: IRuleExecutionRepository,
   ) {}
 
   async evaluateAndApplyRules(params: {
@@ -83,9 +82,10 @@ export class RuleExecutionService {
 
   async getExecutionsByRuleId(
     ruleId: RuleId,
+    workspaceId: WorkspaceId,
     options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<RuleExecution>> {
-    const rule = await this.ruleRepository.findById(ruleId);
+    const rule = await this.ruleRepository.findById(ruleId, workspaceId);
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
@@ -110,7 +110,8 @@ export class RuleExecutionService {
 
   async getExecutionById(
     executionId: RuleExecutionId,
+    workspaceId: WorkspaceId,
   ): Promise<RuleExecution | null> {
-    return this.executionRepository.findById(executionId);
+    return this.executionRepository.findById(executionId, workspaceId);
   }
 }

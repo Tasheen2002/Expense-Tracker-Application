@@ -8,6 +8,7 @@ import {
 
 export interface DeleteCategoryRuleCommand extends ICommand {
   ruleId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -22,6 +23,7 @@ export class DeleteCategoryRuleHandler implements ICommandHandler<
   ): Promise<CommandResult<void>> {
     await this.ruleService.deleteRule(
       RuleId.fromString(command.ruleId),
+      command.workspaceId,
       command.userId
     );
 

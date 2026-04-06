@@ -1,6 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId } from '../../../identity-workspace';
+import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -14,18 +15,18 @@ export interface GetSuggestionsByExpenseQuery extends IQuery {
 
 export class GetSuggestionsByExpenseHandler implements IQueryHandler<
   GetSuggestionsByExpenseQuery,
-  QueryResult<CategorySuggestion[]>
+  QueryResult<CategorySuggestionDTO[]>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
   async handle(
     query: GetSuggestionsByExpenseQuery
-  ): Promise<QueryResult<CategorySuggestion[]>> {
+  ): Promise<QueryResult<CategorySuggestionDTO[]>> {
     const suggestions = await this.suggestionService.getSuggestionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(suggestions.items);
+    return QueryResult.success(suggestions.items.map(CategorySuggestion.toDTO));
   }
 }

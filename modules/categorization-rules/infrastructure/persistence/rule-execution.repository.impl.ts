@@ -2,13 +2,12 @@ import {
   PrismaClient,
   RuleExecution as PrismaRuleExecution,
 } from '@prisma/client';
-import { RuleExecutionRepository } from '../../domain/repositories/rule-execution.repository';
+import { IRuleExecutionRepository } from '../../domain/repositories/rule-execution.repository';
 import { RuleExecution } from '../../domain/entities/rule-execution.entity';
 import { RuleExecutionId } from '../../domain/value-objects/rule-execution-id';
 import { RuleId } from '../../domain/value-objects/rule-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExpenseId, CategoryId } from '../../../expense-ledger';
 import { CategorySuggestion } from '../../domain/entities/category-suggestion.entity';
 import {
   PaginatedResult,
@@ -20,7 +19,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaRuleExecutionRepository
   extends PrismaRepository<RuleExecution>
-  implements RuleExecutionRepository
+  implements IRuleExecutionRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -82,11 +81,17 @@ export class PrismaRuleExecutionRepository
         update: suggestionData,
       }),
     ]);
+
+    await this.dispatchEvents(execution);
+    await this.dispatchEvents(suggestion);
   }
 
-  async findById(id: RuleExecutionId): Promise<RuleExecution | null> {
-    const execution = await this.prisma.ruleExecution.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: RuleExecutionId, workspaceId: WorkspaceId): Promise<RuleExecution | null> {
+    const execution = await this.prisma.ruleExecution.findFirst({
+      where: {
+        id: id.getValue(),
+        workspaceId: workspaceId.getValue(),
+      },
     });
 
     if (!execution) {

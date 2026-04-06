@@ -1,10 +1,9 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CategorySuggestionRepository } from "../../domain/repositories/category-suggestion.repository";
+import { ICategorySuggestionRepository } from "../../domain/repositories/category-suggestion.repository";
 import { CategorySuggestion } from "../../domain/entities/category-suggestion.entity";
 import { SuggestionId } from "../../domain/value-objects/suggestion-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { WorkspaceId } from "../../../identity-workspace";
+import { ExpenseId, CategoryId } from "../../../expense-ledger";
 import { ConfidenceScore } from "../../domain/value-objects/confidence-score";
 import {
   PaginatedResult,
@@ -16,7 +15,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaCategorySuggestionRepository
   extends PrismaRepository<CategorySuggestion>
-  implements CategorySuggestionRepository
+  implements ICategorySuggestionRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -44,9 +43,12 @@ export class PrismaCategorySuggestionRepository
     await this.dispatchEvents(suggestion);
   }
 
-  async findById(id: SuggestionId): Promise<CategorySuggestion | null> {
-    const suggestion = await this.prisma.categorySuggestion.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion | null> {
+    const suggestion = await this.prisma.categorySuggestion.findFirst({
+      where: {
+        id: id.getValue(),
+        workspaceId: workspaceId.getValue(),
+      },
     });
 
     if (!suggestion) {

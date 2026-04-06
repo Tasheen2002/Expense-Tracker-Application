@@ -1,7 +1,6 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { WorkspaceId } from '../../../identity-workspace';
+import { ExpenseId, CategoryId } from '../../../expense-ledger';
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score';
 import {
   ICommand,

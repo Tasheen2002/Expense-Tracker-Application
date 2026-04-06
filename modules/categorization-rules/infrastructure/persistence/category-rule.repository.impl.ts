@@ -2,14 +2,13 @@ import {
   PrismaClient,
   CategoryRule as PrismaCategoryRule,
 } from "@prisma/client";
-import { CategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
+import { ICategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
 import { CategoryRule } from "../../domain/entities/category-rule.entity";
 import { RuleId } from "../../domain/value-objects/rule-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId, UserId } from "../../../identity-workspace";
 import { RuleCondition } from "../../domain/value-objects/rule-condition";
 import { RuleConditionType } from "../../domain/enums/rule-condition-type";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -20,7 +19,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaCategoryRuleRepository
   extends PrismaRepository<CategoryRule>
-  implements CategoryRuleRepository
+  implements ICategoryRuleRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
@@ -51,9 +50,12 @@ export class PrismaCategoryRuleRepository
     await this.dispatchEvents(rule);
   }
 
-  async findById(id: RuleId): Promise<CategoryRule | null> {
-    const rule = await this.prisma.categoryRule.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: RuleId, workspaceId: WorkspaceId): Promise<CategoryRule | null> {
+    const rule = await this.prisma.categoryRule.findFirst({
+      where: {
+        id: id.getValue(),
+        workspaceId: workspaceId.getValue(),
+      },
     });
 
     if (!rule) {

@@ -32,7 +32,6 @@ export class RuleExecutionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId } = request.params;
 
       const result = await this.evaluateRulesHandler.handle({
@@ -59,7 +58,6 @@ export class RuleExecutionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId, expenseId } = request.params;
 
       const result = await this.getExecutionsByExpenseHandler.handle({
@@ -71,7 +69,7 @@ export class RuleExecutionController {
         reply,
         result,
         'Executions retrieved successfully',
-        result.data?.map((execution) => execution.toJSON())
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -86,7 +84,6 @@ export class RuleExecutionController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
       const { workspaceId } = request.params;
       const limit = request.query.limit
         ? parseInt(request.query.limit)
@@ -106,8 +103,7 @@ export class RuleExecutionController {
         result,
         'Executions retrieved successfully',
         {
-          items:
-            result.data?.items.map((execution) => execution.toJSON()) || [],
+          items: result.data?.items || [],
           pagination: {
             total: result.data?.total || 0,
             limit: result.data?.limit || 10,

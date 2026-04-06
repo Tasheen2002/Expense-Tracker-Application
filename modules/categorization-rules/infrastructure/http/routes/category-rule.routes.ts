@@ -14,6 +14,12 @@ import {
   ruleParamsSchema,
   executionQuerySchema,
 } from '../validation/categorization-rules.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
 // Shared Response Schema for Category Rule
 const categoryRuleSchema = {
@@ -51,10 +57,21 @@ const ruleExecutionSchema = {
   },
 };
 
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
 export async function categoryRuleRoutes(
   fastify: FastifyInstance,
   controller: CategoryRuleController
 ) {
+  fastify.addHook('onRequest', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // Create category rule
   fastify.post(
     '/workspaces/:workspaceId/rules',
@@ -62,6 +79,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(createRuleSchema),
+        requireRole(['owner', 'admin', 'manager']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -118,6 +136,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(ruleQuerySchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -160,7 +179,10 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      preHandler: [validateParams(ruleParamsSchema)],
+      preHandler: [
+        validateParams(ruleParamsSchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
+      ],
       schema: {
         tags: ['Category Rule'],
         description: 'Get category rule by ID',
@@ -188,6 +210,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(ruleParamsSchema),
         validateBody(updateRuleSchema),
+        requireRole(['owner', 'admin', 'manager']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -224,7 +247,10 @@ export async function categoryRuleRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      preHandler: [validateParams(ruleParamsSchema)],
+      preHandler: [
+        validateParams(ruleParamsSchema),
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Category Rule'],
         description: 'Delete category rule',
@@ -248,7 +274,10 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/activate',
     {
-      preHandler: [validateParams(ruleParamsSchema)],
+      preHandler: [
+        validateParams(ruleParamsSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Category Rule'],
         description: 'Activate category rule',
@@ -273,7 +302,10 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/deactivate',
     {
-      preHandler: [validateParams(ruleParamsSchema)],
+      preHandler: [
+        validateParams(ruleParamsSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Category Rule'],
         description: 'Deactivate category rule',
@@ -301,6 +333,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(ruleParamsSchema),
         validateQuery(executionQuerySchema),
+        requireRole(['owner', 'admin', 'manager', 'viewer']),
       ],
       schema: {
         tags: ['Category Rule'],

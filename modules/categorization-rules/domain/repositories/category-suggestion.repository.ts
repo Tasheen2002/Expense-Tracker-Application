@@ -1,15 +1,15 @@
 import { CategorySuggestion } from "../entities/category-suggestion.entity";
 import { SuggestionId } from "../value-objects/suggestion-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { ExpenseId } from "../../../expense-ledger/domain/value-objects/expense-id";
+import { WorkspaceId } from "../../../identity-workspace";
+import { ExpenseId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface CategorySuggestionRepository {
+export interface ICategorySuggestionRepository {
   save(suggestion: CategorySuggestion): Promise<void>;
-  findById(id: SuggestionId): Promise<CategorySuggestion | null>;
+  findById(id: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion | null>;
   findByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId,

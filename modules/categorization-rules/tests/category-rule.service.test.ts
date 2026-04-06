@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CategoryRuleService } from "../application/services/category-rule.service";
-import { CategoryRuleRepository } from "../domain/repositories/category-rule.repository";
+import { ICategoryRuleRepository } from "../domain/repositories/category-rule.repository";
 import { IWorkspaceAccessPort } from "../domain/ports/workspace-access.port";
-import { WorkspaceId } from "../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId } from "../../identity-workspace";
+import { UserId } from "../../identity-workspace";
 import { RuleCondition } from "../domain/value-objects/rule-condition";
 import { RuleConditionType } from "../domain/enums/rule-condition-type";
-import { CategoryId } from "../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../expense-ledger";
 import { UnauthorizedRuleAccessError } from "../domain/errors/categorization-rules.errors";
 import { CategoryRule } from "../domain/entities/category-rule.entity";
 
@@ -18,7 +18,7 @@ const mockRepository = {
   delete: vi.fn(),
   findByWorkspaceId: vi.fn(),
   findActiveByWorkspaceId: vi.fn(),
-} as unknown as CategoryRuleRepository;
+} as unknown as ICategoryRuleRepository;
 
 const mockWorkspaceAccess = {
   isAdminOrOwner: vi.fn(),
@@ -64,8 +64,8 @@ describe("CategoryRuleService Authorization", () => {
       // Assert
       expect(result).toBeDefined();
       expect(mockWorkspaceAccess.isAdminOrOwner).toHaveBeenCalledWith(
-        userIdStr,
-        workspaceIdStr,
+        userId,
+        workspaceId,
       );
       expect(mockRepository.save).toHaveBeenCalled();
     });
@@ -106,7 +106,7 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(false);
 
       // Act
-      await service.deleteRule(rule.getId(), userIdStr);
+      await service.deleteRule(rule.getId(), workspaceIdStr, userIdStr);
 
       // Assert
       expect(mockRepository.delete).toHaveBeenCalledWith(rule.getId());
@@ -125,7 +125,7 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(true);
 
       // Act
-      await service.deleteRule(rule.getId(), userIdStr);
+      await service.deleteRule(rule.getId(), workspaceIdStr, userIdStr);
 
       // Assert
       expect(mockRepository.delete).toHaveBeenCalledWith(rule.getId());
@@ -144,7 +144,7 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(false);
 
       // Act & Assert
-      await expect(service.deleteRule(rule.getId(), userIdStr)).rejects.toThrow(
+      await expect(service.deleteRule(rule.getId(), workspaceIdStr, userIdStr)).rejects.toThrow(
         UnauthorizedRuleAccessError,
       );
     });
