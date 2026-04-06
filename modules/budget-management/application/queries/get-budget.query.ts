@@ -1,5 +1,6 @@
-import { BudgetService } from '../services/budget.service';
-import { Budget } from '../../domain/entities/budget.entity';
+import { IBudgetRepository } from '../../domain/repositories/budget.repository';
+import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
+import { BudgetId } from '../../domain/value-objects/budget-id';
 import { BudgetNotFoundError } from '../../domain/errors/budget.errors';
 import {
   IQuery,
@@ -14,18 +15,18 @@ export interface GetBudgetQuery extends IQuery {
 
 export class GetBudgetHandler implements IQueryHandler<
   GetBudgetQuery,
-  QueryResult<Budget>
+  QueryResult<BudgetDTO>
 > {
-  constructor(private readonly budgetService: BudgetService) {}
+  constructor(private readonly budgetRepository: IBudgetRepository) {}
 
-  async handle(query: GetBudgetQuery): Promise<QueryResult<Budget>> {
-    const budget = await this.budgetService.getBudgetById(
-      query.budgetId,
+  async handle(query: GetBudgetQuery): Promise<QueryResult<BudgetDTO>> {
+    const budget = await this.budgetRepository.findById(
+      BudgetId.fromString(query.budgetId),
       query.workspaceId
     );
     if (!budget) {
       throw new BudgetNotFoundError(query.budgetId, query.workspaceId);
     }
-    return QueryResult.success(budget);
+    return QueryResult.success(Budget.toDTO(budget));
   }
 }

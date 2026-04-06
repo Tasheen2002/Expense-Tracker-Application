@@ -10,8 +10,8 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class SpendingLimitRepositoryImpl
@@ -24,24 +24,24 @@ export class SpendingLimitRepositoryImpl
 
   async save(limit: SpendingLimit): Promise<void> {
     await this.prisma.spendingLimit.upsert({
-      where: { id: limit.getId().getValue() },
+      where: { id: limit.id.getValue() },
       create: {
-        id: limit.getId().getValue(),
-        workspaceId: limit.getWorkspaceId(),
-        userId: limit.getUserId(),
-        categoryId: limit.getCategoryId(),
-        limitAmount: limit.getLimitAmount(),
-        currency: limit.getCurrency(),
-        periodType: limit.getPeriodType(),
-        isActive: limit.isActive(),
-        createdAt: limit.getCreatedAt(),
-        updatedAt: limit.getUpdatedAt(),
+        id: limit.id.getValue(),
+        workspaceId: limit.workspaceId,
+        userId: limit.userId,
+        categoryId: limit.categoryId,
+        limitAmount: limit.limitAmount,
+        currency: limit.currency,
+        periodType: limit.periodType,
+        isActive: limit.active,
+        createdAt: limit.createdAt,
+        updatedAt: limit.updatedAt,
       },
       update: {
-        limitAmount: limit.getLimitAmount(),
-        periodType: limit.getPeriodType(),
-        isActive: limit.isActive(),
-        updatedAt: limit.getUpdatedAt(),
+        limitAmount: limit.limitAmount,
+        periodType: limit.periodType,
+        isActive: limit.active,
+        updatedAt: limit.updatedAt,
       },
     });
 

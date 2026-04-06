@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { CreateScenarioHandler } from '../../../application/commands/create-scenario.command';
 import { DeleteScenarioHandler } from '../../../application/commands/delete-scenario.command';
 import { GetScenarioHandler } from '../../../application/queries/get-scenario.query';
@@ -60,7 +60,7 @@ export class ScenarioController {
         reply,
         result,
         'Scenario retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -82,7 +82,7 @@ export class ScenarioController {
         reply,
         result,
         'Scenarios retrieved successfully',
-        result.data?.items.map((s) => s.toJSON())
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -103,7 +103,9 @@ export class ScenarioController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Scenario deleted successfully'
+        'Scenario deleted successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

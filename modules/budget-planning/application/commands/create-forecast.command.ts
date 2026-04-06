@@ -28,6 +28,6 @@ export class CreateForecastHandler implements ICommandHandler<
       type: command.type,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastId: forecast.getId().getValue() });
+    return CommandResult.success({ forecastId: forecast.id.getValue() });
   }
 }

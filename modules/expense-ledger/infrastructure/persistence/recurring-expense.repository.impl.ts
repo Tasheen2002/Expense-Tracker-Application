@@ -11,7 +11,7 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class PrismaRecurringExpenseRepository implements RecurringExpenseRepository {
   constructor(

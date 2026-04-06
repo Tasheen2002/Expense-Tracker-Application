@@ -3,7 +3,7 @@ import { AttachmentRepository } from "../../domain/repositories/attachment.repos
 import { Attachment } from "../../domain/entities/attachment.entity";
 import { AttachmentId } from "../../domain/value-objects/attachment-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,

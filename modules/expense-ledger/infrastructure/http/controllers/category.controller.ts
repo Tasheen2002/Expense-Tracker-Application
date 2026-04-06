@@ -1,11 +1,11 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateCategoryHandler } from '../../../application/commands/create-category.command';
 import { UpdateCategoryHandler } from '../../../application/commands/update-category.command';
 import { DeleteCategoryHandler } from '../../../application/commands/delete-category.command';
 import { GetCategoryHandler } from '../../../application/queries/get-category.query';
 import { ListCategoriesHandler } from '../../../application/queries/list-categories.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class CategoryController {
   constructor(

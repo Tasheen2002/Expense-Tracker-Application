@@ -108,6 +108,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testBudgetPlanId =
+            data.data?.budgetPlanId ||
             data.data?.budgetPlan?.id ||
             data.budgetPlan?.id ||
             data.data?.id ||
@@ -276,6 +277,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (createRes.statusCode === 201) {
           const data = JSON.parse(createRes.payload);
           deletePlanId =
+            data.data?.budgetPlanId ||
             data.data?.budgetPlan?.id ||
             data.budgetPlan?.id ||
             data.data?.id ||
@@ -324,6 +326,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           const data = JSON.parse(res.payload);
           console.log('Create Forecast Success Data:', JSON.stringify(data));
           testForecastId =
+            data.data?.forecastId ||
             data.data?.forecast?.id ||
             data.forecast?.id ||
             data.data?.id ||
@@ -458,6 +461,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testForecastItemId =
+            data.data?.forecastItemId ||
             data.data?.item?.id || data.item?.id || data.data?.id || data.id;
         }
         expect([201, 400, 404, 500]).toContain(res.statusCode);
@@ -565,6 +569,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
         if (res.statusCode === 201) {
           const data = JSON.parse(res.payload);
           testScenarioId =
+            data.data?.scenarioId ||
             data.data?.scenario?.id ||
             data.scenario?.id ||
             data.data?.id ||

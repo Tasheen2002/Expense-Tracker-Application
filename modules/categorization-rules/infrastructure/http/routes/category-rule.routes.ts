@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { CategoryRuleController } from '../controllers/category-rule.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   validateBody,
   validateParams,

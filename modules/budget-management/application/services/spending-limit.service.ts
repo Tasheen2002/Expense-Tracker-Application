@@ -136,7 +136,7 @@ export class SpendingLimitService {
 
     for (const limit of applicableLimits) {
       // Only check limits with matching currency
-      if (limit.getCurrency() !== currency) {
+      if (limit.currency !== currency) {
         continue;
       }
 
@@ -145,7 +145,7 @@ export class SpendingLimitService {
         // Here you would need to query current spending for the period
         // and compare against the limit
         // This is a simplified version - you'd need to integrate with expense queries
-        const limitAmount = Number(limit.getLimitAmount());
+        const limitAmount = Number(limit.limitAmount);
         if (amount + currentSpending > limitAmount) {
           violatedLimits.push(limit);
         }

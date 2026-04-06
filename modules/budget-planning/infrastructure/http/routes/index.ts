@@ -6,8 +6,8 @@ import { ScenarioController } from '../controllers/scenario.controller';
 import { budgetPlanningRoutes } from './budget-plan.routes';
 import { forecastRoutes } from './forecast.routes';
 import { scenarioRoutes } from './scenario.routes';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerBudgetPlanningRoutes(
   fastify: FastifyInstance,

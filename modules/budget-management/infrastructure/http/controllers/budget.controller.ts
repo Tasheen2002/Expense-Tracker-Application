@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateBudgetHandler } from '../../../application/commands/create-budget.command';
 import { UpdateBudgetHandler } from '../../../application/commands/update-budget.command';
 import { DeleteBudgetHandler } from '../../../application/commands/delete-budget.command';
@@ -12,12 +12,9 @@ import { GetBudgetHandler } from '../../../application/queries/get-budget.query'
 import { ListBudgetsHandler } from '../../../application/queries/list-budgets.query';
 import { GetAllocationsHandler } from '../../../application/queries/get-allocations.query';
 import { GetUnreadAlertsHandler } from '../../../application/queries/get-unread-alerts.query';
-import { Budget } from '../../../domain/entities/budget.entity';
-import { BudgetAllocation } from '../../../domain/entities/budget-allocation.entity';
-import { BudgetAlert } from '../../../domain/entities/budget-alert.entity';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { BudgetStatus } from '../../../domain/enums/budget-status';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class BudgetController {
   constructor(
@@ -218,8 +215,7 @@ export class BudgetController {
       return ResponseHelper.fromQuery(
         reply,
         result,
-        'Budget retrieved successfully',
-        result.data ? Budget.toDTO(result.data) : undefined
+        'Budget retrieved successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -259,16 +255,7 @@ export class BudgetController {
       return ResponseHelper.fromQuery(
         reply,
         result,
-        'Budgets retrieved successfully',
-        {
-          items: result.data?.items.map((budget) => Budget.toDTO(budget)) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 0,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        'Budgets retrieved successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -389,19 +376,7 @@ export class BudgetController {
       return ResponseHelper.fromQuery(
         reply,
         result,
-        'Allocations retrieved successfully',
-        {
-          items:
-            result.data?.items.map((allocation: BudgetAllocation) =>
-              BudgetAllocation.toDTO(allocation)
-            ) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 0,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        'Allocations retrieved successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -424,19 +399,7 @@ export class BudgetController {
       return ResponseHelper.fromQuery(
         reply,
         result,
-        'Alerts retrieved successfully',
-        {
-          items:
-            result.data?.items.map((alert: BudgetAlert) =>
-              BudgetAlert.toDTO(alert)
-            ) || [],
-          pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 0,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
-          },
-        }
+        'Alerts retrieved successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

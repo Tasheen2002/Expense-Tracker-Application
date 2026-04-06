@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateExpenseHandler } from '../../../application/commands/create-expense.command';
 import { UpdateExpenseHandler } from '../../../application/commands/update-expense.command';
 import { DeleteExpenseHandler } from '../../../application/commands/delete-expense.command';
@@ -13,7 +13,7 @@ import { GetExpenseStatisticsHandler } from '../../../application/queries/get-ex
 import { Expense } from '../../../domain/entities/expense.entity';
 import { PaymentMethod } from '../../../domain/enums/payment-method';
 import { ExpenseStatus } from '../../../domain/enums/expense-status';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ExpenseController {
   constructor(

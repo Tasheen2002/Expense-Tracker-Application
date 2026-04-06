@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ScenarioController } from "../controllers/scenario.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function scenarioRoutes(
   fastify: FastifyInstance,
@@ -12,7 +12,7 @@ export async function scenarioRoutes(
 
   // Create scenario
   fastify.post(
-    "/:workspaceId/budget-plans/:planId/scenarios",
+    "/workspaces/:workspaceId/budget-plans/:planId/scenarios",
     {
       schema: {
         tags: ["Budget Planning - Scenarios"],
@@ -42,7 +42,7 @@ export async function scenarioRoutes(
 
   // List scenarios for a plan
   fastify.get(
-    "/:workspaceId/budget-plans/:planId/scenarios",
+    "/workspaces/:workspaceId/budget-plans/:planId/scenarios",
     {
       schema: {
         tags: ["Budget Planning - Scenarios"],
@@ -62,7 +62,7 @@ export async function scenarioRoutes(
 
   // Get single scenario
   fastify.get(
-    "/:workspaceId/scenarios/:id",
+    "/workspaces/:workspaceId/scenarios/:id",
     {
       schema: {
         tags: ["Budget Planning - Scenarios"],
@@ -82,7 +82,7 @@ export async function scenarioRoutes(
 
   // Delete scenario
   fastify.delete(
-    "/:workspaceId/scenarios/:id",
+    "/workspaces/:workspaceId/scenarios/:id",
     {
       schema: {
         tags: ["Budget Planning - Scenarios"],

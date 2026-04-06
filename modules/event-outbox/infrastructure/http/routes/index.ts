@@ -2,8 +2,8 @@ import { FastifyInstance } from "fastify";
 import { PrismaClient } from "@prisma/client";
 import { outboxEventRoutes } from "./outbox-event.routes";
 import { OutboxEventController } from "../controllers/outbox-event.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { workspaceAuthorizationMiddleware } from "@shared/middleware";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerEventOutboxRoutes(
   fastify: FastifyInstance,

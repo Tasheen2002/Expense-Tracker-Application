@@ -1,12 +1,12 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateAuditLogHandler } from '../../../application/commands/create-audit-log.command';
 import { PurgeAuditLogsHandler } from '../../../application/commands/purge-audit-logs.command';
 import { GetAuditLogHandler } from '../../../application/queries/get-audit-log.query';
 import { ListAuditLogsHandler } from '../../../application/queries/list-audit-logs.query';
 import { GetEntityAuditHistoryHandler } from '../../../application/queries/get-entity-audit-history.query';
 import { GetAuditSummaryHandler } from '../../../application/queries/get-audit-summary.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class AuditLogController {
   constructor(

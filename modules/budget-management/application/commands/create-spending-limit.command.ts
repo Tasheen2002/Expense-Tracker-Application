@@ -27,6 +27,6 @@ export class CreateSpendingLimitHandler implements ICommandHandler<
     command: CreateSpendingLimitCommand
   ): Promise<CommandResult<{ limitId: string }>> {
     const limit = await this.limitService.createSpendingLimit(command);
-    return CommandResult.success({ limitId: limit.getId().getValue() });
+    return CommandResult.success({ limitId: limit.id.getValue() });
   }
 }

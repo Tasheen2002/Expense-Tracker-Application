@@ -7,8 +7,8 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ScenarioRepositoryImpl
@@ -21,18 +21,18 @@ export class ScenarioRepositoryImpl
 
   async save(scenario: Scenario): Promise<void> {
     const data = {
-      id: scenario.getId().getValue(),
-      planId: scenario.getPlanId().getValue(),
-      name: scenario.getName(),
-      description: scenario.getDescription(),
-      assumptions: scenario.getAssumptions() ?? undefined,
-      createdBy: scenario.getCreatedBy().getValue(),
-      createdAt: scenario.getCreatedAt(),
-      updatedAt: scenario.getUpdatedAt(),
+      id: scenario.id.getValue(),
+      planId: scenario.planId.getValue(),
+      name: scenario.name,
+      description: scenario.description,
+      assumptions: scenario.assumptions ?? undefined,
+      createdBy: scenario.createdBy.getValue(),
+      createdAt: scenario.createdAt,
+      updatedAt: scenario.updatedAt,
     };
 
     await this.prisma.scenario.upsert({
-      where: { id: scenario.getId().getValue() },
+      where: { id: scenario.id.getValue() },
       update: data,
       create: data,
     });

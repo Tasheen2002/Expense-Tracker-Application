@@ -1,9 +1,9 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { RegisterUserHandler } from '../../../application/commands/register-user.command';
 import { LoginUserHandler } from '../../../application/queries/login-user.query';
 import { GetUserHandler } from '../../../application/queries/get-user.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 interface RegisterRequest {
   email: string;

@@ -4,8 +4,8 @@ import { allocationManagementRoutes } from './allocation-management.routes';
 import { expenseAllocationRoutes } from './expense-allocation.routes';
 import { AllocationManagementController } from '../controllers/allocation-management.controller';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerCostAllocationRoutes(
   fastify: FastifyInstance,

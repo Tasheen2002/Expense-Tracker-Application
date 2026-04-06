@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,

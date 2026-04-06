@@ -4,8 +4,8 @@ import { categorizationRulesRoutes } from "./index";
 import { CategoryRuleController } from "../controllers/category-rule.controller";
 import { RuleExecutionController } from "../controllers/rule-execution.controller";
 import { CategorySuggestionController } from "../controllers/category-suggestion.controller";
-import { workspaceAuthorizationMiddleware } from "../../../../../apps/api/src/shared/middleware";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { workspaceAuthorizationMiddleware } from "@shared/middleware";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerCategorizationRulesRoutes(
   fastify: FastifyInstance,

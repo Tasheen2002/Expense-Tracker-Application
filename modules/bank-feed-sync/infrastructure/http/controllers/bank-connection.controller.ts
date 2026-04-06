@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { ConnectBankHandler } from '../../../application/commands/connect-bank.command';
 import { DisconnectBankHandler } from '../../../application/commands/disconnect-bank.command';
 import { UpdateConnectionTokenHandler } from '../../../application/commands/update-connection-token.command';

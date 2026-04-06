@@ -72,7 +72,7 @@ describe("BudgetService", () => {
       const budget = await service.createBudget(validBudgetParams);
 
       expect(budget).toBeDefined();
-      expect(budget.getName()).toBe("Test Budget");
+      expect(budget.name).toBe("Test Budget");
       expect(mockBudgetRepository.save).toHaveBeenCalledWith(budget);
     });
   });
@@ -89,14 +89,14 @@ describe("BudgetService", () => {
       ).mockResolvedValue(new Decimal(0));
 
       const updatedBudget = await service.updateBudget(
-        existingBudget.getId().getValue(),
+        existingBudget.id.getValue(),
         "workspace-123",
         "user-123",
         { name: "Updated Name", totalAmount: "2000" },
       );
 
-      expect(updatedBudget.getName()).toBe("Updated Name");
-      expect(updatedBudget.getTotalAmount().toNumber()).toBe(2000);
+      expect(updatedBudget.name).toBe("Updated Name");
+      expect(updatedBudget.totalAmount.toNumber()).toBe(2000);
       expect(mockBudgetRepository.save).toHaveBeenCalledWith(updatedBudget);
     });
 
@@ -121,7 +121,7 @@ describe("BudgetService", () => {
 
       await expect(
         service.updateBudget(
-          existingBudget.getId().getValue(),
+          existingBudget.id.getValue(),
           "workspace-123",
           "other-user",
           {},
@@ -138,12 +138,12 @@ describe("BudgetService", () => {
       );
 
       await service.activateBudget(
-        existingBudget.getId().getValue(),
+        existingBudget.id.getValue(),
         "workspace-123",
         "user-123",
       );
 
-      expect(existingBudget.getStatus()).toBe(BudgetStatus.ACTIVE);
+      expect(existingBudget.status).toBe(BudgetStatus.ACTIVE);
       expect(mockBudgetRepository.save).toHaveBeenCalledWith(existingBudget);
     });
   });

@@ -203,7 +203,8 @@ describe('Budget Management Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
+        expect(body.data.hasMore).toBeDefined();
       });
 
       it('✅ should filter budgets by status', async () => {
@@ -468,11 +469,11 @@ describe('Budget Management Module - Endpoint Tests', () => {
   // SPENDING LIMIT ENDPOINTS
   // ============================================================================
   describe('Spending Limit Endpoints', () => {
-    describe('POST /api/v1/:workspaceId/spending-limits', () => {
+    describe('POST /api/v1/workspaces/:workspaceId/spending-limits', () => {
       it('✅ should create a spending limit', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/spending-limits`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -500,7 +501,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/spending-limits`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
           payload: {
             limitAmount: 1000,
             currency: 'USD',
@@ -515,7 +516,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('❌ should fail with missing required fields', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/spending-limits`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -533,11 +534,11 @@ describe('Budget Management Module - Endpoint Tests', () => {
       });
     });
 
-    describe('GET /api/v1/:workspaceId/spending-limits', () => {
+    describe('GET /api/v1/workspaces/:workspaceId/spending-limits', () => {
       it('✅ should list spending limits', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/spending-limits`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -554,7 +555,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('✅ should filter by period type', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/spending-limits?periodType=MONTHLY`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits?periodType=MONTHLY`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -570,7 +571,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/spending-limits`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
         });
 
         console.log('List Spending Limits No Auth:', response.statusCode);
@@ -578,11 +579,11 @@ describe('Budget Management Module - Endpoint Tests', () => {
       });
     });
 
-    describe('PUT /api/v1/:workspaceId/spending-limits/:limitId', () => {
+    describe('PUT /api/v1/workspaces/:workspaceId/spending-limits/:limitId', () => {
       it('✅ should update spending limit', async () => {
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -605,7 +606,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
           payload: {
             limitAmount: 1000,
           },
@@ -682,11 +683,11 @@ describe('Budget Management Module - Endpoint Tests', () => {
       });
     });
 
-    describe('DELETE /api/v1/:workspaceId/spending-limits/:limitId', () => {
+    describe('DELETE /api/v1/workspaces/:workspaceId/spending-limits/:limitId', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
         });
 
         console.log('Delete Spending Limit No Auth:', response.statusCode);
@@ -696,7 +697,7 @@ describe('Budget Management Module - Endpoint Tests', () => {
       it('✅ should delete spending limit', async () => {
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -789,16 +790,16 @@ describe('Budget Management Module - Endpoint Tests', () => {
       );
       console.log('\n🚦 Spending Limit Endpoints:');
       console.log(
-        '    POST   /:workspaceId/spending-limits            - Create Limit'
+        '    POST   /workspaces/:workspaceId/spending-limits            - Create Limit'
       );
       console.log(
-        '    GET    /:workspaceId/spending-limits            - List Limits'
+        '    GET    /workspaces/:workspaceId/spending-limits            - List Limits'
       );
       console.log(
-        '    PUT    /:workspaceId/spending-limits/:id        - Update Limit'
+        '    PUT    /workspaces/:workspaceId/spending-limits/:id        - Update Limit'
       );
       console.log(
-        '    DELETE /:workspaceId/spending-limits/:id        - Delete Limit'
+        '    DELETE /workspaces/:workspaceId/spending-limits/:id        - Delete Limit'
       );
       console.log('\n🔔 Alert Endpoints:');
       console.log(

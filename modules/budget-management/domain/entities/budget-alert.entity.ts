@@ -137,47 +137,47 @@ export class BudgetAlert extends AggregateRoot {
   }
 
   // Getters
-  getId(): AlertId {
+  get id(): AlertId {
     return this.props.id;
   }
 
-  getBudgetId(): BudgetId {
+  get budgetId(): BudgetId {
     return this.props.budgetId;
   }
 
-  getAllocationId(): AllocationId | null {
+  get allocationId(): AllocationId | null {
     return this.props.allocationId;
   }
 
-  getLevel(): AlertLevel {
+  get level(): AlertLevel {
     return this.props.level;
   }
 
-  getThreshold(): Decimal {
+  get threshold(): Decimal {
     return this.props.threshold;
   }
 
-  getCurrentSpent(): Decimal {
+  get currentSpent(): Decimal {
     return this.props.currentSpent;
   }
 
-  getAllocatedAmount(): Decimal {
+  get allocatedAmount(): Decimal {
     return this.props.allocatedAmount;
   }
 
-  getMessage(): string {
+  get message(): string {
     return this.props.message;
   }
 
-  isRead(): boolean {
+  get isRead(): boolean {
     return this.props.isRead;
   }
 
-  getNotifiedAt(): Date | null {
+  get notifiedAt(): Date | null {
     return this.props.notifiedAt;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
@@ -210,25 +210,22 @@ export class BudgetAlert extends AggregateRoot {
 
   static toDTO(alert: BudgetAlert): BudgetAlertDTO {
     return {
-      id: alert.getId().getValue(),
-      budgetId: alert.getBudgetId().getValue(),
-      allocationId: alert.getAllocationId()
-        ? alert.getAllocationId()!.getValue()
+      id: alert.id.getValue(),
+      budgetId: alert.budgetId.getValue(),
+      allocationId: alert.allocationId
+        ? alert.allocationId.getValue()
         : null,
-      level: alert.getLevel(),
-      threshold: alert.getThreshold().toString(),
-      currentSpent: alert.getCurrentSpent().toString(),
-      allocatedAmount: alert.getAllocatedAmount().toString(),
-      message: alert.getMessage(),
-      isRead: alert.isRead(),
-      notifiedAt: alert.getNotifiedAt()
-        ? alert.getNotifiedAt()!.toISOString()
+      level: alert.level,
+      threshold: alert.threshold.toString(),
+      currentSpent: alert.currentSpent.toString(),
+      allocatedAmount: alert.allocatedAmount.toString(),
+      message: alert.message,
+      isRead: alert.isRead,
+      notifiedAt: alert.notifiedAt
+        ? alert.notifiedAt.toISOString()
         : null,
-      createdAt: alert.getCreatedAt().toISOString(),
+      createdAt: alert.createdAt.toISOString(),
     };
   }
 
-  toJSON(): BudgetAlertDTO {
-    return BudgetAlert.toDTO(this);
-  }
 }

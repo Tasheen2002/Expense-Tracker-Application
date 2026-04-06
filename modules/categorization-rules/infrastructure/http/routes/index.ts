@@ -6,8 +6,8 @@ import { CategorySuggestionController } from '../controllers/category-suggestion
 import { categoryRuleRoutes } from './category-rule.routes';
 import { ruleExecutionRoutes } from './rule-execution.routes';
 import { categorySuggestionRoutes } from './category-suggestion.routes';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerCategorizationRulesRoutes(
   fastify: FastifyInstance,

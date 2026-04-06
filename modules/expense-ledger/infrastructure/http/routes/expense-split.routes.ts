@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { ExpenseSplitController } from '../controllers/expense-split.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,

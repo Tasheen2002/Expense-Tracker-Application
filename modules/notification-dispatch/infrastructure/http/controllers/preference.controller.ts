@@ -1,12 +1,12 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   NotificationPreference,
   TypeSettingValue,
 } from '../../../domain/entities/notification-preference.entity';
 import { NotificationType } from '../../../domain/enums/notification-type.enum';
 import type { GlobalPreferenceSettings } from '../../../application/services/preference.service';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 import { GetPreferencesHandler } from '../../../application/queries/get-preferences.query';
 import { UpdatePreferencesHandler } from '../../../application/commands/update-preferences.command';
 import { UpdateTypePreferenceHandler } from '../../../application/commands/update-type-preference.command';

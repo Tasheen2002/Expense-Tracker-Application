@@ -1,12 +1,12 @@
 ﻿import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateBudgetPlanHandler } from '../../../application/commands/create-budget-plan.command';
 import { UpdateBudgetPlanHandler } from '../../../application/commands/update-budget-plan.command';
 import { ActivateBudgetPlanHandler } from '../../../application/commands/activate-budget-plan.command';
 import { DeleteBudgetPlanHandler } from '../../../application/commands/delete-budget-plan.command';
 import { GetBudgetPlanHandler } from '../../../application/queries/get-budget-plan.query';
 import { ListBudgetPlansHandler } from '../../../application/queries/list-budget-plans.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 import { validateRequest } from '../validation/validator';
 import {
   createBudgetPlanSchema,
@@ -25,15 +25,19 @@ export class BudgetPlanController {
     private readonly listHandler: ListBudgetPlansHandler
   ) {}
 
-  async create(req: AuthenticatedRequest, reply: FastifyReply) {
+  async create(
+    req: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = req.user.userId;
       if (!userId) {
         return ResponseHelper.unauthorized(reply);
       }
+      const { workspaceId } = req.params;
       const body = await validateRequest(req, createBudgetPlanSchema);
       const result = await this.createHandler.handle({
-        workspaceId: body.workspaceId,
+        workspaceId,
         name: body.name,
         startDate: new Date(body.startDate),
         endDate: new Date(body.endDate),
@@ -115,7 +119,7 @@ export class BudgetPlanController {
         reply,
         result,
         'Budget plan retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -151,16 +155,6 @@ export class BudgetPlanController {
         result,
         'Budget plans retrieved successfully',
         result.data
-          ? {
-              items: result.data.items.map((plan) => plan.toJSON()),
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -181,7 +175,9 @@ export class BudgetPlanController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget plan deleted successfully'
+        'Budget plan deleted successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { InvitationController } from '../controllers/invitation.controller.js';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface.js';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface.js';
 import {
   createRateLimiter,
   RateLimitPresets,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware.js';
+} from '@shared/middleware/rate-limiter.middleware.js';
 
 const writeRateLimiter = createRateLimiter(RateLimitPresets.writeOperations);
 const apiRateLimiter = createRateLimiter(RateLimitPresets.api);

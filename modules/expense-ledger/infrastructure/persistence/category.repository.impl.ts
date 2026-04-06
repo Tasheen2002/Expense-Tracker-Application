@@ -3,7 +3,7 @@ import { CategoryRepository } from "../../domain/repositories/category.repositor
 import { Category } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,

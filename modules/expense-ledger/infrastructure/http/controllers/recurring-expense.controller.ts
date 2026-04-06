@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateRecurringExpenseHandler } from '../../../application/commands/create-recurring-expense.command';
 import { PauseRecurringExpenseHandler } from '../../../application/commands/pause-recurring-expense.command';
 import { ResumeRecurringExpenseHandler } from '../../../application/commands/resume-recurring-expense.command';
@@ -7,7 +7,7 @@ import { StopRecurringExpenseHandler } from '../../../application/commands/stop-
 import { ProcessRecurringExpensesHandler } from '../../../application/commands/process-recurring-expenses.command';
 import { RecurrenceFrequency } from '../../../domain/enums/recurrence-frequency';
 import { ExpenseTemplate } from '../../../domain/entities/recurring-expense.entity';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class RecurringExpenseController {
   constructor(

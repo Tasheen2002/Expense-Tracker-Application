@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateSplitHandler } from '../../../application/commands/create-split.command';
 import { DeleteSplitHandler } from '../../../application/commands/delete-split.command';
 import { RecordPaymentHandler } from '../../../application/commands/record-payment.command';
@@ -10,7 +10,7 @@ import { ListUserSettlementsHandler } from '../../../application/queries/list-us
 import { GetSplitSettlementsHandler } from '../../../application/queries/get-split-settlements.query';
 import { SplitType } from '../../../domain/enums/split-type';
 import { SettlementStatus } from '../../../domain/enums/settlement-status';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ExpenseSplitController {
   constructor(

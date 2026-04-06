@@ -3,8 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { bankConnectionRoutes } from './bank-connection.routes';
 import { transactionSyncRoutes } from './transaction-sync.routes';
 import { bankTransactionRoutes } from './bank-transaction.routes';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware/index';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware/index';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 /**
  * Register all Bank Feed Sync routes at the module boundary

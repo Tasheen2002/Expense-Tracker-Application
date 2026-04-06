@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { ForecastController } from "../controllers/forecast.controller";
-import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
+import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function forecastRoutes(
   fastify: FastifyInstance,
@@ -12,7 +12,7 @@ export async function forecastRoutes(
 
   // Create forecast
   fastify.post(
-    "/:workspaceId/budget-plans/:planId/forecasts",
+    "/workspaces/:workspaceId/budget-plans/:planId/forecasts",
     {
       schema: {
         tags: ["Budget Planning - Forecasts"],
@@ -43,7 +43,7 @@ export async function forecastRoutes(
 
   // List forecasts for a plan
   fastify.get(
-    "/:workspaceId/budget-plans/:planId/forecasts",
+    "/workspaces/:workspaceId/budget-plans/:planId/forecasts",
     {
       schema: {
         tags: ["Budget Planning - Forecasts"],
@@ -63,7 +63,7 @@ export async function forecastRoutes(
 
   // Get single forecast
   fastify.get(
-    "/:workspaceId/forecasts/:id",
+    "/workspaces/:workspaceId/forecasts/:id",
     {
       schema: {
         tags: ["Budget Planning - Forecasts"],
@@ -83,7 +83,7 @@ export async function forecastRoutes(
 
   // Delete forecast
   fastify.delete(
-    "/:workspaceId/forecasts/:id",
+    "/workspaces/:workspaceId/forecasts/:id",
     {
       schema: {
         tags: ["Budget Planning - Forecasts"],
@@ -107,7 +107,7 @@ export async function forecastRoutes(
 
   // Add forecast item
   fastify.post(
-    "/:workspaceId/forecasts/:forecastId/items",
+    "/workspaces/:workspaceId/forecasts/:forecastId/items",
     {
       schema: {
         tags: ["Budget Planning - Forecast Items"],
@@ -136,7 +136,7 @@ export async function forecastRoutes(
 
   // List forecast items
   fastify.get(
-    "/:workspaceId/forecasts/:forecastId/items",
+    "/workspaces/:workspaceId/forecasts/:forecastId/items",
     {
       schema: {
         tags: ["Budget Planning - Forecast Items"],
@@ -156,7 +156,7 @@ export async function forecastRoutes(
 
   // Delete forecast item
   fastify.delete(
-    "/:workspaceId/forecast-items/:itemId",
+    "/workspaces/:workspaceId/forecast-items/:itemId",
     {
       schema: {
         tags: ["Budget Planning - Forecast Items"],

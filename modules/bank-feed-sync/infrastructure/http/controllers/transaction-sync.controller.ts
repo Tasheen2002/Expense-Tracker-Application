@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { SyncTransactionsHandler } from '../../../application/commands/sync-transactions.command';
 import { GetSyncHistoryHandler } from '../../../application/queries/get-sync-history.query';
 import { GetSyncSessionHandler } from '../../../application/queries/get-sync-session.query';

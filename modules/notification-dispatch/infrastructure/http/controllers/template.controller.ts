@@ -1,8 +1,8 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { NotificationType } from '../../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../../domain/enums/notification-channel.enum';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 import { CreateTemplateHandler } from '../../../application/commands/create-template.command';
 import { UpdateTemplateHandler } from '../../../application/commands/update-template.command';
 import { ActivateTemplateHandler } from '../../../application/commands/activate-template.command';

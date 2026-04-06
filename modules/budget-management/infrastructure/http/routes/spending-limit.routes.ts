@@ -1,11 +1,11 @@
 ﻿import { FastifyInstance } from 'fastify';
 import { SpendingLimitController } from '../controllers/spending-limit.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
 import { validateBody } from '../validation/validator';
 import {
   createSpendingLimitSchema,
@@ -57,7 +57,7 @@ export async function spendingLimitRoutes(
   });
   // Create spending limit
   fastify.post(
-    '/:workspaceId/spending-limits',
+    '/workspaces/:workspaceId/spending-limits',
     {
       preValidation: [validateBody(createSpendingLimitSchema)],
       schema: {
@@ -93,7 +93,7 @@ export async function spendingLimitRoutes(
 
   // List spending limits
   fastify.get(
-    '/:workspaceId/spending-limits',
+    '/workspaces/:workspaceId/spending-limits',
     {
       schema: {
         tags: ['Spending Limit'],
@@ -130,15 +130,10 @@ export async function spendingLimitRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: spendingLimitDataSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },
@@ -152,7 +147,7 @@ export async function spendingLimitRoutes(
 
   // Get spending limit by ID
   fastify.get(
-    '/:workspaceId/spending-limits/:limitId',
+    '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       schema: {
         tags: ['Spending Limit'],
@@ -174,7 +169,7 @@ export async function spendingLimitRoutes(
 
   // Update spending limit
   fastify.patch(
-    '/:workspaceId/spending-limits/:limitId',
+    '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       preValidation: [validateBody(updateSpendingLimitSchema)],
       schema: {
@@ -203,7 +198,7 @@ export async function spendingLimitRoutes(
 
   // Delete spending limit
   fastify.delete(
-    '/:workspaceId/spending-limits/:limitId',
+    '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       schema: {
         tags: ['Spending Limit'],

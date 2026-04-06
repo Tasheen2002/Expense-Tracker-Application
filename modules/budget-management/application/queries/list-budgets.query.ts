@@ -1,7 +1,10 @@
-import { BudgetService } from '../services/budget.service';
-import { Budget } from '../../domain/entities/budget.entity';
+import { IBudgetRepository } from '../../domain/repositories/budget.repository';
+import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
 import { BudgetStatus } from '../../domain/enums/budget-status';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
@@ -20,46 +23,48 @@ export interface ListBudgetsQuery extends IQuery {
 
 export class ListBudgetsHandler implements IQueryHandler<
   ListBudgetsQuery,
-  QueryResult<PaginatedResult<Budget>>
+  QueryResult<PaginatedResult<BudgetDTO>>
 > {
-  constructor(private readonly budgetService: BudgetService) {}
+  constructor(private readonly budgetRepository: IBudgetRepository) {}
 
   async handle(
     query: ListBudgetsQuery
-  ): Promise<QueryResult<PaginatedResult<Budget>>> {
-    try {
-      const limit = query.limit || 50;
-      const offset = query.offset || 0;
+  ): Promise<QueryResult<PaginatedResult<BudgetDTO>>> {
+    const options: PaginationOptions = {
+      limit: query.limit || 50,
+      offset: query.offset || 0,
+    };
 
-      if (
-        query.status ||
-        query.isActive !== undefined ||
-        query.createdBy ||
-        query.currency
-      ) {
-        const result = await this.budgetService.filterBudgets(
-          {
-            workspaceId: query.workspaceId,
-            status: query.status,
-            isActive: query.isActive,
-            createdBy: query.createdBy,
-            currency: query.currency,
-          },
-          { limit, offset }
-        );
-        return QueryResult.success(result);
-      }
+    let result;
 
-      const result = await this.budgetService.getBudgetsByWorkspace(
-        query.workspaceId,
+    if (
+      query.status ||
+      query.isActive !== undefined ||
+      query.createdBy ||
+      query.currency
+    ) {
+      result = await this.budgetRepository.findByFilters(
         {
-          limit,
-          offset,
-        }
+          workspaceId: query.workspaceId,
+          status: query.status,
+          isActive: query.isActive,
+          createdBy: query.createdBy,
+          currency: query.currency,
+        },
+        options
       );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
+    } else {
+      result = await this.budgetRepository.findByWorkspace(
+        query.workspaceId,
+        options
+      );
     }
+
+    const dtoResult: PaginatedResult<BudgetDTO> = {
+      ...result,
+      items: result.items.map((budget) => Budget.toDTO(budget)),
+    };
+
+    return QueryResult.success(dtoResult);
   }
 }

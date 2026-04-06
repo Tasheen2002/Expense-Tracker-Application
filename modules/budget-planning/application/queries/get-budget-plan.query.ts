@@ -1,5 +1,7 @@
-import { BudgetPlanService } from '../services/budget-plan.service';
-import { BudgetPlan } from '../../domain/entities/budget-plan.entity';
+import { BudgetPlanRepository } from '../../domain/repositories/budget-plan.repository';
+import { BudgetPlan, BudgetPlanDTO } from '../../domain/entities/budget-plan.entity';
+import { PlanId } from '../../domain/value-objects/plan-id';
+import { BudgetPlanNotFoundError } from '../../domain/errors/budget-planning.errors';
 import {
   IQuery,
   IQueryHandler,
@@ -13,12 +15,17 @@ export interface GetBudgetPlanQuery extends IQuery {
 
 export class GetBudgetPlanHandler implements IQueryHandler<
   GetBudgetPlanQuery,
-  QueryResult<BudgetPlan>
+  QueryResult<BudgetPlanDTO>
 > {
-  constructor(private readonly budgetPlanService: BudgetPlanService) {}
+  constructor(private readonly budgetPlanRepository: BudgetPlanRepository) {}
 
-  async handle(query: GetBudgetPlanQuery): Promise<QueryResult<BudgetPlan>> {
-    const result = await this.budgetPlanService.getPlan(query.id, query.userId);
-    return QueryResult.success(result);
+  async handle(query: GetBudgetPlanQuery): Promise<QueryResult<BudgetPlanDTO>> {
+    const plan = await this.budgetPlanRepository.findById(
+      PlanId.fromString(query.id)
+    );
+    if (!plan) {
+      throw new BudgetPlanNotFoundError(query.id);
+    }
+    return QueryResult.success(BudgetPlan.toDTO(plan));
   }
 }

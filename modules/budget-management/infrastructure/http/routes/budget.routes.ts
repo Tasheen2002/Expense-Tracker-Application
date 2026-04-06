@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { BudgetController } from '../controllers/budget.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
   validateParams,
@@ -21,7 +21,7 @@ import {
   budgetParamsSchema,
   allocationParamsSchema,
 } from '../validation/budget.schema';
-import { requireRole } from '../../../../../apps/api/src/shared/middleware/role-authorization.middleware';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -177,15 +177,10 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: budgetSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },
@@ -409,15 +404,10 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: allocationSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
+                  total: { type: 'number' },
+                  limit: { type: 'number' },
+                  offset: { type: 'number' },
+                  hasMore: { type: 'boolean' },
                 },
               },
             },

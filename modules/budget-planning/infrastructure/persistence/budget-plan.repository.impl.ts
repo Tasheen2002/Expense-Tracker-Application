@@ -8,8 +8,8 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class BudgetPlanRepositoryImpl
@@ -22,21 +22,21 @@ export class BudgetPlanRepositoryImpl
 
   async save(plan: BudgetPlan): Promise<void> {
     const data = {
-      id: plan.getId().getValue(),
-      workspaceId: plan.getWorkspaceId().getValue(),
-      name: plan.getName(),
-      description: plan.getDescription(),
-      periodType: BudgetPeriodType.CUSTOM, // Defaulting to CUSTOM as specified in schema for now, logic to be refined with Value Object mapping
-      startDate: plan.getPeriod().getStartDate(),
-      endDate: plan.getPeriod().getEndDate(),
-      status: plan.getStatus(),
-      createdBy: plan.getCreatedBy().getValue(),
-      createdAt: plan.getCreatedAt(),
-      updatedAt: plan.getUpdatedAt(),
+      id: plan.id.getValue(),
+      workspaceId: plan.workspaceId.getValue(),
+      name: plan.name,
+      description: plan.description,
+      periodType: BudgetPeriodType.CUSTOM,
+      startDate: plan.period.startDate,
+      endDate: plan.period.endDate,
+      status: plan.status,
+      createdBy: plan.createdBy.getValue(),
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
     };
 
     await this.prisma.budgetPlan.upsert({
-      where: { id: plan.getId().getValue() },
+      where: { id: plan.id.getValue() },
       update: data,
       create: data,
     });

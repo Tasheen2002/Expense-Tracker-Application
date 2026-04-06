@@ -31,6 +31,6 @@ export class CreateBudgetPlanHandler implements ICommandHandler<
       endDate: command.endDate,
       createdBy: command.createdBy,
     });
-    return CommandResult.success({ budgetPlanId: plan.getId().getValue() });
+    return CommandResult.success({ budgetPlanId: plan.id.getValue() });
   }
 }

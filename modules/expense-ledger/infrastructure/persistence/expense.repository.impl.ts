@@ -15,10 +15,10 @@ import { ExpenseDate } from '../../domain/value-objects/expense-date';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { CurrencyRequiredError } from '../../domain/errors/expense.errors';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 type ExpenseWithRelations = Prisma.ExpenseGetPayload<{

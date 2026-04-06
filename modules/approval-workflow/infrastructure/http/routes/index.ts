@@ -4,8 +4,8 @@ import { approvalChainRoutes } from './approval-chain.routes';
 import { workflowRoutes } from './workflow.routes';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
 import { WorkflowController } from '../controllers/workflow.controller';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerApprovalWorkflowRoutes(
   fastify: FastifyInstance,

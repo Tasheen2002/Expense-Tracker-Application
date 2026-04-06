@@ -23,3 +23,10 @@ export interface IQuery {
 export interface IQueryHandler<TQuery extends IQuery, TResult = any> {
   handle(query: TQuery): Promise<TResult>;
 }
+
+// ============================================
+// Result Types
+// ============================================
+
+export { CommandResult } from './command-result';
+export { QueryResult } from './query-result';

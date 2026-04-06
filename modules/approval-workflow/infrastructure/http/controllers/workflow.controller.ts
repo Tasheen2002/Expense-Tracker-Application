@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { InitiateWorkflowHandler } from '../../../application/commands/initiate-workflow.command';
 import { ApproveStepHandler } from '../../../application/commands/approve-step.command';
 import { RejectStepHandler } from '../../../application/commands/reject-step.command';
@@ -8,7 +8,7 @@ import { CancelWorkflowHandler } from '../../../application/commands/cancel-work
 import { GetWorkflowHandler } from '../../../application/queries/get-workflow.query';
 import { ListPendingApprovalsHandler } from '../../../application/queries/list-pending-approvals.query';
 import { ListUserWorkflowsHandler } from '../../../application/queries/list-user-workflows.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class WorkflowController {
   constructor(

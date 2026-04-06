@@ -8,8 +8,8 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ForecastRepositoryImpl
@@ -22,17 +22,17 @@ export class ForecastRepositoryImpl
 
   async save(forecast: Forecast): Promise<void> {
     const data = {
-      id: forecast.getId().getValue(),
-      planId: forecast.getPlanId().getValue(),
-      name: forecast.getName(),
-      type: forecast.getType(),
-      isActive: forecast.getIsActive(),
-      createdAt: forecast.getCreatedAt(),
-      updatedAt: forecast.getUpdatedAt(),
+      id: forecast.id.getValue(),
+      planId: forecast.planId.getValue(),
+      name: forecast.name,
+      type: forecast.type,
+      isActive: forecast.active,
+      createdAt: forecast.createdAt,
+      updatedAt: forecast.updatedAt,
     };
 
     await this.prisma.forecast.upsert({
-      where: { id: forecast.getId().getValue() },
+      where: { id: forecast.id.getValue() },
       update: data,
       create: data,
     });

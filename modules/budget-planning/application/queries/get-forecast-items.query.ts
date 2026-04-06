@@ -1,5 +1,6 @@
-import { ForecastService } from '../services/forecast.service';
-import { ForecastItem } from '../../domain/entities/forecast-item.entity';
+import { ForecastItemRepository } from '../../domain/repositories/forecast-item.repository';
+import { ForecastItem, ForecastItemDTO } from '../../domain/entities/forecast-item.entity';
+import { ForecastId } from '../../domain/value-objects/forecast-id';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -14,17 +15,22 @@ export interface GetForecastItemsQuery extends IQuery {
 
 export class GetForecastItemsHandler implements IQueryHandler<
   GetForecastItemsQuery,
-  QueryResult<PaginatedResult<ForecastItem>>
+  QueryResult<PaginatedResult<ForecastItemDTO>>
 > {
-  constructor(private readonly forecastService: ForecastService) {}
+  constructor(private readonly forecastItemRepository: ForecastItemRepository) {}
 
   async handle(
     query: GetForecastItemsQuery
-  ): Promise<QueryResult<PaginatedResult<ForecastItem>>> {
-    const result = await this.forecastService.getForecastItems(
-      query.forecastId,
-      query.userId
+  ): Promise<QueryResult<PaginatedResult<ForecastItemDTO>>> {
+    const result = await this.forecastItemRepository.findByForecastId(
+      ForecastId.fromString(query.forecastId)
     );
-    return QueryResult.success(result);
+    return QueryResult.success({
+      items: result.items.map((item) => ForecastItem.toDTO(item)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    });
   }
 }

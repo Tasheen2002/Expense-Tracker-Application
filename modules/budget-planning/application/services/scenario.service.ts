@@ -11,10 +11,6 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class ScenarioService {
   constructor(
@@ -33,10 +29,10 @@ export class ScenarioService {
       throw new BudgetPlanNotFoundError(planId.toString());
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -91,14 +87,14 @@ export class ScenarioService {
 
     await this.checkPlanAccess(
       params.userId,
-      scenario.getPlanId(),
+      scenario.planId,
       "update scenario",
     );
 
-    if (params.name && params.name !== scenario.getName()) {
+    if (params.name && params.name !== scenario.name) {
       // Check duplication if name is changing
       const existing = await this.scenarioRepository.findByName(
-        scenario.getPlanId(),
+        scenario.planId,
         params.name,
       );
       if (existing) {
@@ -124,32 +120,9 @@ export class ScenarioService {
       throw new ScenarioNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, scenario.getPlanId(), "delete scenario");
+    await this.checkPlanAccess(userId, scenario.planId, "delete scenario");
 
     await this.scenarioRepository.delete(scenarioId);
   }
 
-  async getScenario(id: string, userId: string): Promise<Scenario> {
-    const scenarioId = ScenarioId.fromString(id);
-    const scenario = await this.scenarioRepository.findById(scenarioId);
-
-    if (!scenario) {
-      throw new ScenarioNotFoundError(id);
-    }
-
-    await this.checkPlanAccess(userId, scenario.getPlanId(), "view scenario");
-
-    return scenario;
-  }
-
-  async listScenarios(
-    planId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<Scenario>> {
-    const pId = PlanId.fromString(planId);
-    await this.checkPlanAccess(userId, pId, "list scenarios");
-
-    return this.scenarioRepository.findByPlanId(pId, options);
-  }
 }

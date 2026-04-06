@@ -1,11 +1,11 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateTagHandler } from '../../../application/commands/create-tag.command';
 import { UpdateTagHandler } from '../../../application/commands/update-tag.command';
 import { DeleteTagHandler } from '../../../application/commands/delete-tag.command';
 import { GetTagHandler } from '../../../application/queries/get-tag.query';
 import { ListTagsHandler } from '../../../application/queries/list-tags.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class TagController {
   constructor(

@@ -10,10 +10,6 @@ import { ForecastItem } from "../../domain/entities/forecast-item.entity";
 import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
 import {
-  PaginatedResult,
-  PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import {
   ForecastNotFoundError,
   DuplicateForecastNameError,
   DuplicateForecastItemError,
@@ -41,10 +37,10 @@ export class ForecastService {
       throw new BudgetPlanNotFoundError(planId.toString());
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -99,7 +95,7 @@ export class ForecastService {
     // Check access to the parent plan
     await this.checkPlanAccess(
       params.userId,
-      forecast.getPlanId(),
+      forecast.planId,
       "add forecast item",
     );
 
@@ -146,16 +142,16 @@ export class ForecastService {
     // we can rely on the fact that `ForecastItem` doesn't link back to `Forecast` easily without a repository call.
     // We don't have `findByItemId` on ForecastRepo.
 
-    // We can fetch forecast by item.getForecastId()
+    // We can fetch forecast by item.forecastId
     const forecast = await this.forecastRepository.findById(
-      item.getForecastId(),
+      item.forecastId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.getForecastId().toString()); // Should not happen
+      throw new ForecastNotFoundError(item.forecastId.toString()); // Should not happen
 
     await this.checkPlanAccess(
       params.userId,
-      forecast.getPlanId(),
+      forecast.planId,
       "update forecast item",
     );
 
@@ -177,61 +173,18 @@ export class ForecastService {
     }
 
     const forecast = await this.forecastRepository.findById(
-      item.getForecastId(),
+      item.forecastId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.getForecastId().toString());
+      throw new ForecastNotFoundError(item.forecastId.toString());
 
     await this.checkPlanAccess(
       userId,
-      forecast.getPlanId(),
+      forecast.planId,
       "delete forecast item",
     );
 
     await this.forecastItemRepository.delete(id);
-  }
-
-  async getForecast(id: string, userId: string): Promise<Forecast> {
-    const forecastId = ForecastId.fromString(id);
-    const forecast = await this.forecastRepository.findById(forecastId);
-    if (!forecast) {
-      throw new ForecastNotFoundError(id);
-    }
-
-    await this.checkPlanAccess(userId, forecast.getPlanId(), "view forecast");
-
-    return forecast;
-  }
-
-  async listForecasts(
-    planId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<Forecast>> {
-    const pId = PlanId.fromString(planId);
-    await this.checkPlanAccess(userId, pId, "list forecasts");
-
-    return this.forecastRepository.findByPlanId(pId, options);
-  }
-
-  async getForecastItems(
-    forecastId: string,
-    userId: string,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<ForecastItem>> {
-    const fId = ForecastId.fromString(forecastId);
-    const forecast = await this.forecastRepository.findById(fId);
-    if (!forecast) {
-      throw new ForecastNotFoundError(forecastId);
-    }
-
-    await this.checkPlanAccess(
-      userId,
-      forecast.getPlanId(),
-      "view forecast items",
-    );
-
-    return this.forecastItemRepository.findByForecastId(fId, options);
   }
 
   async deleteForecast(id: string, userId: string): Promise<void> {
@@ -241,7 +194,7 @@ export class ForecastService {
       throw new ForecastNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, forecast.getPlanId(), "delete forecast");
+    await this.checkPlanAccess(userId, forecast.planId, "delete forecast");
 
     // Use transactional delete to ensure data integrity
     await this.forecastRepository.deleteWithItems(forecastId);

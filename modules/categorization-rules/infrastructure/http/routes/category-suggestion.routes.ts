@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { CategorySuggestionController } from '../controllers/category-suggestion.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function categorySuggestionRoutes(
   fastify: FastifyInstance,

@@ -13,9 +13,9 @@ describe("BudgetPeriod Value Object", () => {
       BudgetPeriodType.CUSTOM,
       validEndDate,
     );
-    expect(period.getStartDate()).toEqual(validStartDate);
-    expect(period.getEndDate()).toEqual(validEndDate);
-    expect(period.getPeriodType()).toBe(BudgetPeriodType.CUSTOM);
+    expect(period.startDate).toEqual(validStartDate);
+    expect(period.endDate).toEqual(validEndDate);
+    expect(period.periodType).toBe(BudgetPeriodType.CUSTOM);
   });
 
   it("should throw if start date is after end date", () => {

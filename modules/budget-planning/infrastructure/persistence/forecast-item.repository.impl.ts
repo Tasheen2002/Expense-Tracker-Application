@@ -8,8 +8,8 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ForecastItemRepositoryImpl
@@ -22,17 +22,17 @@ export class ForecastItemRepositoryImpl
 
   async save(item: ForecastItem): Promise<void> {
     const data = {
-      id: item.getId().getValue(),
-      forecastId: item.getForecastId().getValue(),
-      categoryId: item.getCategoryId().getValue(),
-      amount: item.getAmount().getValue(),
-      notes: item.getNotes(),
-      createdAt: item.getCreatedAt(),
-      updatedAt: item.getUpdatedAt(),
+      id: item.id.getValue(),
+      forecastId: item.forecastId.getValue(),
+      categoryId: item.categoryId.getValue(),
+      amount: item.amount.getValue(),
+      notes: item.notes,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     };
 
     await this.prisma.forecastItem.upsert({
-      where: { id: item.getId().getValue() },
+      where: { id: item.id.getValue() },
       update: data,
       create: data,
     });

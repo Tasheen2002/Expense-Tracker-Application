@@ -9,11 +9,6 @@ import {
   BudgetPlanNotFoundError,
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
-import {
-  PaginatedResult,
-  PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 
 export class BudgetPlanService {
@@ -74,10 +69,10 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(params.id);
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === params.userId;
+    const isCreator = plan.createdBy.getValue() === params.userId;
     const isAdminOrOwner = await this.checkWorkspaceAccess(
       params.userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -97,10 +92,10 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.checkWorkspaceAccess(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -120,10 +115,10 @@ export class BudgetPlanService {
       throw new BudgetPlanNotFoundError(id);
     }
 
-    const isCreator = plan.getCreatedBy().getValue() === userId;
+    const isCreator = plan.createdBy.getValue() === userId;
     const isAdminOrOwner = await this.checkWorkspaceAccess(
       userId,
-      plan.getWorkspaceId().getValue(),
+      plan.workspaceId.getValue(),
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -135,43 +130,4 @@ export class BudgetPlanService {
     await this.budgetPlanRepository.delete(planId);
   }
 
-  async getPlan(id: string, userId: string): Promise<BudgetPlan> {
-    const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId);
-
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(id);
-    }
-
-    const hasAccess = await this.checkWorkspaceAccess(
-      userId,
-      plan.getWorkspaceId().getValue(),
-    );
-
-    if (!hasAccess) {
-      throw new UnauthorizedBudgetPlanAccessError("view");
-    }
-
-    return plan;
-  }
-
-  async listPlans(
-    userId: string,
-    workspaceId: string,
-    status?: PlanStatus,
-    options?: PaginationOptions,
-  ): Promise<PaginatedResult<BudgetPlan>> {
-    const hasAccess = await this.checkWorkspaceAccess(userId, workspaceId);
-
-    if (!hasAccess) {
-      throw new UnauthorizedBudgetPlanAccessError("list");
-    }
-
-    const plans = await this.budgetPlanRepository.findAll(
-      WorkspaceId.fromString(workspaceId),
-      status,
-      options,
-    );
-    return plans;
-  }
 }

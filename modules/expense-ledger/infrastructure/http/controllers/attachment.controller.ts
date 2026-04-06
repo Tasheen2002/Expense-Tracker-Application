@@ -1,10 +1,10 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateAttachmentHandler } from '../../../application/commands/create-attachment.command';
 import { DeleteAttachmentHandler } from '../../../application/commands/delete-attachment.command';
 import { GetAttachmentHandler } from '../../../application/queries/get-attachment.query';
 import { ListAttachmentsHandler } from '../../../application/queries/list-attachments.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class AttachmentController {
   constructor(

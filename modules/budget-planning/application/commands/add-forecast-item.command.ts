@@ -29,6 +29,6 @@ export class AddForecastItemHandler implements ICommandHandler<
       notes: command.notes,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastItemId: item.getId().getValue() });
+    return CommandResult.success({ forecastItemId: item.id.getValue() });
   }
 }

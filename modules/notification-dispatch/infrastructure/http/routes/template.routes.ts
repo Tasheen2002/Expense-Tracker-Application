@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { TemplateController } from '../controllers/template.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export function registerTemplateRoutes(
   fastify: FastifyInstance,

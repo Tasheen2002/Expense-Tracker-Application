@@ -3,7 +3,7 @@ import { TagRepository } from "../../domain/repositories/tag.repository";
 import { Tag } from "../../domain/entities/tag.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepositoryHelper } from '../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,

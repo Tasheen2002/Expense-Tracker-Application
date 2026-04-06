@@ -29,6 +29,6 @@ export class CreateScenarioHandler implements ICommandHandler<
       assumptions: command.assumptions,
       createdBy: command.createdBy,
     });
-    return CommandResult.success({ scenarioId: scenario.getId().getValue() });
+    return CommandResult.success({ scenarioId: scenario.id.getValue() });
   }
 }

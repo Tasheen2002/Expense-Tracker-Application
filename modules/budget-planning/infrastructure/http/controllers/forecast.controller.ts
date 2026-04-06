@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { CreateForecastHandler } from '../../../application/commands/create-forecast.command';
 import { AddForecastItemHandler } from '../../../application/commands/add-forecast-item.command';
 import {
@@ -99,7 +99,7 @@ export class ForecastController {
         reply,
         result,
         'Forecast retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -121,7 +121,7 @@ export class ForecastController {
         reply,
         result,
         'Forecasts retrieved successfully',
-        result.data?.items.map((f) => f.toJSON())
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -146,7 +146,7 @@ export class ForecastController {
         reply,
         result,
         'Forecast items retrieved successfully',
-        result.data?.items.map((item) => item.toJSON())
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -167,7 +167,9 @@ export class ForecastController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Forecast deleted successfully'
+        'Forecast deleted successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -191,7 +193,9 @@ export class ForecastController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Forecast item deleted successfully'
+        'Forecast item deleted successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

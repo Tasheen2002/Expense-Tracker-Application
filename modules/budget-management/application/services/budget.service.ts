@@ -94,7 +94,7 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
-    if (budget.getCreatedBy() !== userId) {
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('update');
     }
 
@@ -109,11 +109,11 @@ export class BudgetService {
     if (updates.totalAmount !== undefined) {
       const newTotal = new Decimal(updates.totalAmount);
       const currentAllocated =
-        await this.allocationRepository.getTotalAllocatedAmount(budget.getId());
+        await this.allocationRepository.getTotalAllocatedAmount(budget.id);
 
       if (newTotal.lt(currentAllocated)) {
         throw new BudgetAllocationExceededError(
-          budget.getId().getValue(),
+          budget.id.getValue(),
           newTotal.toNumber(),
           currentAllocated.toNumber()
         );
@@ -140,7 +140,7 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
-    if (budget.getCreatedBy() !== userId) {
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('activate');
     }
 
@@ -165,7 +165,7 @@ export class BudgetService {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
 
-    if (budget.getCreatedBy() !== userId) {
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('archive');
     }
 
@@ -192,7 +192,7 @@ export class BudgetService {
       budgetIdObj,
       workspaceId
     );
-    if (budget && budget.getCreatedBy() !== userId) {
+    if (budget && budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('delete');
     }
 
@@ -250,7 +250,7 @@ export class BudgetService {
       throw new BudgetNotFoundError(params.budgetId, params.workspaceId);
     }
 
-    if (budget.getCreatedBy() !== params.userId) {
+    if (budget.createdBy !== params.userId) {
       throw new UnauthorizedBudgetAccessError('add allocation to');
     }
 
@@ -264,7 +264,7 @@ export class BudgetService {
     // Use transactional validation to prevent TOCTOU race conditions
     await this.allocationRepository.saveWithBudgetValidation(
       allocation,
-      budget.getTotalAmount()
+      budget.totalAmount
     );
 
     return allocation;
@@ -289,18 +289,18 @@ export class BudgetService {
 
     // Verify ownership via parent budget
     const budget = await this.budgetRepository.findById(
-      allocation.getBudgetId(),
+      allocation.budgetId,
       workspaceId
     );
 
     if (!budget) {
       throw new BudgetNotFoundError(
-        allocation.getBudgetId().getValue(),
+        allocation.budgetId.getValue(),
         workspaceId
       );
     }
 
-    if (budget.getCreatedBy() !== userId) {
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('update allocation in');
     }
 
@@ -317,7 +317,7 @@ export class BudgetService {
       // Exclude this allocation's old amount from the total check
       await this.allocationRepository.saveWithBudgetValidation(
         allocation,
-        budget.getTotalAmount(),
+        budget.totalAmount,
         allocationId
       );
     } else {
@@ -350,11 +350,11 @@ export class BudgetService {
     // budget as EXCEEDED so its status accurately reflects its state.
     if (allocation.isOverBudget()) {
       const budget = await this.budgetRepository.findByIdInternal(
-        allocation.getBudgetId()
+        allocation.budgetId
       );
       if (budget && budget.isActive()) {
         try {
-          budget.markAsExceeded(allocation.getSpentAmount().toNumber());
+          budget.markAsExceeded(allocation.spentAmount.toNumber());
           await this.budgetRepository.save(budget);
         } catch {
           // Status transition may already be EXCEEDED; ignore duplicate transitions
@@ -380,10 +380,10 @@ export class BudgetService {
 
     // Check Auth
     const budget = await this.budgetRepository.findById(
-      allocation.getBudgetId(),
+      allocation.budgetId,
       workspaceId
     );
-    if (budget && budget.getCreatedBy() !== userId) {
+    if (budget && budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('delete allocation in');
     }
 

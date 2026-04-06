@@ -4,8 +4,8 @@ import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '../../../../../apps/api/src/shared/middleware/role-authorization.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
   validateParams,
@@ -24,7 +24,7 @@ import {
   auditSummaryResponseSchema,
   paginatedAuditLogsResponseSchema,
 } from '../validation/audit-log.schema';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,

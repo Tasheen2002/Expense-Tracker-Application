@@ -1,6 +1,6 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { ResponseHelper } from '@shared/response.helper';
 import { GetExemptionHandler } from '../../../application/queries/get-exemption.query';
 import { ListExemptionsHandler } from '../../../application/queries/list-exemptions.query';
 import { CheckActiveExemptionHandler } from '../../../application/queries/check-active-exemption.query';

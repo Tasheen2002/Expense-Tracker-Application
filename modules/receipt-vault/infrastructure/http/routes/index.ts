@@ -4,8 +4,8 @@ import { receiptRoutes } from './receipt.routes';
 import { tagRoutes } from './tag.routes';
 import { ReceiptController } from '../controllers/receipt.controller';
 import { TagController } from '../controllers/tag.controller';
-import { workspaceAuthorizationMiddleware } from '../../../../../apps/api/src/shared/middleware';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerReceiptVaultRoutes(
   fastify: FastifyInstance,

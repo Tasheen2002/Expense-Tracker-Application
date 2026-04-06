@@ -1,11 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { BankTransactionController } from '../controllers/bank-transaction.controller';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
   endpointKeyGenerator,
-} from '../../../../../apps/api/src/shared/middleware/rate-limiter.middleware';
+} from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
   validateParams,

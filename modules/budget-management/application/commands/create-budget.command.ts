@@ -32,6 +32,6 @@ export class CreateBudgetHandler implements ICommandHandler<
     command: CreateBudgetCommand
   ): Promise<CommandResult<{ budgetId: string }>> {
     const budget = await this.budgetService.createBudget(command);
-    return CommandResult.success({ budgetId: budget.getId().getValue() });
+    return CommandResult.success({ budgetId: budget.id.getValue() });
   }
 }

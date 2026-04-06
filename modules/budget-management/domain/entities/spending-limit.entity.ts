@@ -5,7 +5,6 @@ import {
   InvalidAmountError,
   InvalidCurrencyError,
   BudgetAlreadyActiveError,
-  InvalidBudgetStatusError,
   SpendingLimitAlreadyInactiveError,
 } from '../errors/budget.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
@@ -206,7 +205,7 @@ export class SpendingLimit extends AggregateRoot {
 
     spendingLimit.addDomainEvent(
       new SpendingLimitCreatedEvent(
-        spendingLimit.getId().getValue(),
+        spendingLimit.id.getValue(),
         data.workspaceId,
         limitAmount.toString(),
         data.periodType
@@ -221,43 +220,43 @@ export class SpendingLimit extends AggregateRoot {
   }
 
   // Getters
-  getId(): SpendingLimitId {
+  get id(): SpendingLimitId {
     return this.props.id;
   }
 
-  getWorkspaceId(): string {
+  get workspaceId(): string {
     return this.props.workspaceId;
   }
 
-  getUserId(): string | null {
+  get userId(): string | null {
     return this.props.userId;
   }
 
-  getCategoryId(): string | null {
+  get categoryId(): string | null {
     return this.props.categoryId;
   }
 
-  getLimitAmount(): Decimal {
+  get limitAmount(): Decimal {
     return this.props.limitAmount;
   }
 
-  getCurrency(): string {
+  get currency(): string {
     return this.props.currency;
   }
 
-  getPeriodType(): BudgetPeriodType {
+  get periodType(): BudgetPeriodType {
     return this.props.periodType;
   }
 
-  isActive(): boolean {
+  get active(): boolean {
     return this.props.isActive;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -285,8 +284,8 @@ export class SpendingLimit extends AggregateRoot {
     if (!oldAmount.equals(newAmount)) {
       this.addDomainEvent(
         new SpendingLimitUpdatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId(),
+          this.id.getValue(),
+          this.workspaceId,
           oldAmount.toString(),
           newAmount.toString()
         )
@@ -305,23 +304,23 @@ export class SpendingLimit extends AggregateRoot {
 
     this.addDomainEvent(
       new SpendingLimitActivatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId()
+        this.id.getValue(),
+        this.workspaceId
       )
     );
   }
 
   deactivate(): void {
     if (!this.props.isActive) {
-      throw new SpendingLimitAlreadyInactiveError(this.getId().getValue());
+      throw new SpendingLimitAlreadyInactiveError(this.id.getValue());
     }
     this.props.isActive = false;
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new SpendingLimitDeactivatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId()
+        this.id.getValue(),
+        this.workspaceId
       )
     );
   }
@@ -329,8 +328,8 @@ export class SpendingLimit extends AggregateRoot {
   markAsDeleted(): void {
     this.addDomainEvent(
       new SpendingLimitDeletedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId()
+        this.id.getValue(),
+        this.workspaceId
       )
     );
   }
@@ -380,20 +379,17 @@ export class SpendingLimit extends AggregateRoot {
 
   static toDTO(limit: SpendingLimit): SpendingLimitDTO {
     return {
-      limitId: limit.getId().getValue(),
-      workspaceId: limit.getWorkspaceId(),
-      userId: limit.getUserId(),
-      categoryId: limit.getCategoryId(),
-      limitAmount: limit.getLimitAmount().toString(),
-      currency: limit.getCurrency(),
-      periodType: limit.getPeriodType(),
-      isActive: limit.isActive(),
-      createdAt: limit.getCreatedAt().toISOString(),
-      updatedAt: limit.getUpdatedAt().toISOString(),
+      limitId: limit.id.getValue(),
+      workspaceId: limit.workspaceId,
+      userId: limit.userId,
+      categoryId: limit.categoryId,
+      limitAmount: limit.limitAmount.toString(),
+      currency: limit.currency,
+      periodType: limit.periodType,
+      isActive: limit.active,
+      createdAt: limit.createdAt.toISOString(),
+      updatedAt: limit.updatedAt.toISOString(),
     };
   }
 
-  toJSON(): SpendingLimitDTO {
-    return SpendingLimit.toDTO(this);
-  }
 }

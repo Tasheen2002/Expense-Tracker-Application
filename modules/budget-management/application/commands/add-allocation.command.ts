@@ -34,7 +34,7 @@ export class AddAllocationHandler implements ICommandHandler<
       description: command.description,
     });
     return CommandResult.success({
-      allocationId: allocation.getId().getValue(),
+      allocationId: allocation.id.getValue(),
     });
   }
 }

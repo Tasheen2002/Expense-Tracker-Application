@@ -29,9 +29,9 @@ describe("Budget Entity", () => {
     it("should create a valid budget", () => {
       const budget = Budget.create(validData);
       expect(budget).toBeDefined();
-      expect(budget.getId()).toBeDefined();
-      expect(budget.getName()).toBe("Test Budget");
-      expect(budget.getStatus()).toBe(BudgetStatus.DRAFT);
+      expect(budget.id).toBeDefined();
+      expect(budget.name).toBe("Test Budget");
+      expect(budget.status).toBe(BudgetStatus.DRAFT);
     });
 
     it("should throw error for invalid amount", () => {
@@ -55,7 +55,7 @@ describe("Budget Entity", () => {
     it("should update name", () => {
       const budget = Budget.create(validData);
       budget.updateName("New Name");
-      expect(budget.getName()).toBe("New Name");
+      expect(budget.name).toBe("New Name");
     });
 
     it("should throw error for empty name", () => {
@@ -70,7 +70,7 @@ describe("Budget Entity", () => {
     it("should update total amount", () => {
       const budget = Budget.create(validData);
       budget.updateTotalAmount(2000);
-      expect(budget.getTotalAmount().toNumber()).toBe(2000);
+      expect(budget.totalAmount.toNumber()).toBe(2000);
     });
 
     it("should throw error for invalid amount", () => {
@@ -85,7 +85,7 @@ describe("Budget Entity", () => {
     it("should activate budget", () => {
       const budget = Budget.create(validData);
       budget.activate();
-      expect(budget.getStatus()).toBe(BudgetStatus.ACTIVE);
+      expect(budget.status).toBe(BudgetStatus.ACTIVE);
     });
 
     it("should throw error if already active", () => {
@@ -106,7 +106,7 @@ describe("Budget Entity", () => {
       // If isValidStatusTransition allows it.
       // Actually DRAFT->ARCHIVED is usually valid.
       budget.archive();
-      expect(budget.getStatus()).toBe(BudgetStatus.ARCHIVED);
+      expect(budget.status).toBe(BudgetStatus.ARCHIVED);
     });
   });
 });

@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '../../../../../apps/api/src/shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { CreateApprovalChainHandler } from '../../../application/commands/create-approval-chain.command';
 import { UpdateApprovalChainHandler } from '../../../application/commands/update-approval-chain.command';
 import { DeleteApprovalChainHandler } from '../../../application/commands/delete-approval-chain.command';
@@ -7,7 +7,7 @@ import { ActivateApprovalChainHandler } from '../../../application/commands/acti
 import { DeactivateApprovalChainHandler } from '../../../application/commands/deactivate-approval-chain.command';
 import { GetApprovalChainHandler } from '../../../application/queries/get-approval-chain.query';
 import { ListApprovalChainsHandler } from '../../../application/queries/list-approval-chains.query';
-import { ResponseHelper } from '../../../../../apps/api/src/shared/response.helper';
+import { ResponseHelper } from '@shared/response.helper';
 
 export class ApprovalChainController {
   constructor(

@@ -7,7 +7,7 @@ export async function budgetPlanningRoutes(
 ) {
   // Create budget plan
   fastify.post(
-    "/:workspaceId/budget-plans",
+    "/workspaces/:workspaceId/budget-plans",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
@@ -40,7 +40,7 @@ export async function budgetPlanningRoutes(
 
   // List budget plans
   fastify.get(
-    "/:workspaceId/budget-plans",
+    "/workspaces/:workspaceId/budget-plans",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
@@ -70,7 +70,7 @@ export async function budgetPlanningRoutes(
 
   // Get single budget plan
   fastify.get(
-    "/:workspaceId/budget-plans/:id",
+    "/workspaces/:workspaceId/budget-plans/:id",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
@@ -90,7 +90,7 @@ export async function budgetPlanningRoutes(
 
   // Update budget plan
   fastify.patch(
-    "/:workspaceId/budget-plans/:id",
+    "/workspaces/:workspaceId/budget-plans/:id",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
@@ -117,7 +117,7 @@ export async function budgetPlanningRoutes(
 
   // Delete budget plan
   fastify.delete(
-    "/:workspaceId/budget-plans/:id",
+    "/workspaces/:workspaceId/budget-plans/:id",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
@@ -137,7 +137,7 @@ export async function budgetPlanningRoutes(
 
   // Activate budget plan
   fastify.patch(
-    "/:workspaceId/budget-plans/:id/activate",
+    "/workspaces/:workspaceId/budget-plans/:id/activate",
     {
       schema: {
         tags: ["Budget Planning - Plans"],
