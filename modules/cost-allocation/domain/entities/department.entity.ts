@@ -252,18 +252,18 @@ export class Department extends AggregateRoot {
     this.addDomainEvent(new DepartmentActivatedEvent(this.id.getValue()));
   }
 
-  toJSON(): DepartmentDTO {
+  static toDTO(department: Department): DepartmentDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      code: this.getCode(),
-      description: this.getDescription(),
-      managerId: this.getManagerId()?.getValue() ?? null,
-      parentDepartmentId: this.getParentDepartmentId()?.getValue() ?? null,
-      isActive: this.getIsActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: department.getId().getValue(),
+      workspaceId: department.getWorkspaceId().getValue(),
+      name: department.getName(),
+      code: department.getCode(),
+      description: department.getDescription(),
+      managerId: department.getManagerId()?.getValue() ?? null,
+      parentDepartmentId: department.getParentDepartmentId()?.getValue() ?? null,
+      isActive: department.getIsActive(),
+      createdAt: department.getCreatedAt().toISOString(),
+      updatedAt: department.getUpdatedAt().toISOString(),
     };
   }
 }

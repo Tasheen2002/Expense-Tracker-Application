@@ -1,5 +1,5 @@
 import { ExpenseAllocation } from "../entities/expense-allocation.entity";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 
 export interface ExpenseAllocationRepository {
   save(allocation: ExpenseAllocation): Promise<void>;

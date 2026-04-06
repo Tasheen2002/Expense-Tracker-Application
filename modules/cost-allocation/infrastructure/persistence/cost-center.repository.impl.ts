@@ -2,7 +2,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { CostCenter } from "../../domain/entities/cost-center.entity";
 import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,

@@ -1,5 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { Project } from '../../domain/entities/project.entity';
+import { Project, ProjectDTO } from '../../domain/entities/project.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -12,14 +12,14 @@ export interface GetProjectQuery extends IQuery {
 
 export class GetProjectHandler implements IQueryHandler<
   GetProjectQuery,
-  QueryResult<Project>
+  QueryResult<ProjectDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(query: GetProjectQuery): Promise<QueryResult<Project>> {
+  async handle(query: GetProjectQuery): Promise<QueryResult<ProjectDTO>> {
     const project = await this.allocationManagementService.getProject(query.id);
-    return QueryResult.success(project);
+    return QueryResult.success(Project.toDTO(project));
   }
 }

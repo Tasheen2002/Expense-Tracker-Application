@@ -4,8 +4,7 @@ import { DepartmentRepository } from "../domain/repositories/department.reposito
 import { CostCenterRepository } from "../domain/repositories/cost-center.repository";
 import { ProjectRepository } from "../domain/repositories/project.repository";
 import { IWorkspaceAccessPort } from "../application/ports/workspace-access.port";
-import { WorkspaceId } from "../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../identity-workspace";
 import {
   UnauthorizedAllocationAccessError,
   DuplicateDepartmentCodeError,

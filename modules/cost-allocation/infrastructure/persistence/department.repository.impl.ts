@@ -2,7 +2,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { Department } from "../../domain/entities/department.entity";
 import { DepartmentRepository } from "../../domain/repositories/department.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,

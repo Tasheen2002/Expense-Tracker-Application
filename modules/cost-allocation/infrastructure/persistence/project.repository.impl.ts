@@ -2,7 +2,7 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { Project } from "../../domain/entities/project.entity";
 import { ProjectRepository } from "../../domain/repositories/project.repository";
 import { ProjectId } from "../../domain/value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,

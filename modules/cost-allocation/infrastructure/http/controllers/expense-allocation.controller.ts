@@ -81,7 +81,7 @@ export class ExpenseAllocationController {
         reply,
         result,
         'Allocations retrieved successfully',
-        result.data?.map((a) => a.toJSON()) || []
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

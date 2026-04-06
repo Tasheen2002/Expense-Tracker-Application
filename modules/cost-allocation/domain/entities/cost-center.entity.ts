@@ -221,16 +221,16 @@ export class CostCenter extends AggregateRoot {
     this.addDomainEvent(new CostCenterActivatedEvent(this.id.getValue()));
   }
 
-  toJSON(): CostCenterDTO {
+  static toDTO(costCenter: CostCenter): CostCenterDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      code: this.getCode(),
-      description: this.getDescription(),
-      isActive: this.getIsActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: costCenter.getId().getValue(),
+      workspaceId: costCenter.getWorkspaceId().getValue(),
+      name: costCenter.getName(),
+      code: costCenter.getCode(),
+      description: costCenter.getDescription(),
+      isActive: costCenter.getIsActive(),
+      createdAt: costCenter.getCreatedAt().toISOString(),
+      updatedAt: costCenter.getUpdatedAt().toISOString(),
     };
   }
 }

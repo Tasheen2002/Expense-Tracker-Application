@@ -4,8 +4,7 @@ import { AllocationAmount } from "../../domain/value-objects/allocation-amount";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
 import { ProjectId } from "../../domain/value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
-import { UserId } from "../../../identity-workspace/domain/value-objects/user-id.vo";
+import { WorkspaceId, UserId } from "../../../identity-workspace";
 import {
   InvalidTotalAllocationError,
   InvalidAllocationAmountError,

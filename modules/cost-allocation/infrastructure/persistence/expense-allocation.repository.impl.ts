@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { ExpenseAllocation } from "../../domain/entities/expense-allocation.entity";
 import { ExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 

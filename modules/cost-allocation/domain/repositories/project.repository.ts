@@ -1,6 +1,6 @@
 import { Project } from "../entities/project.entity";
 import { ProjectId } from "../value-objects/project-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,

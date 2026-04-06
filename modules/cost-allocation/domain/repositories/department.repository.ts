@@ -1,6 +1,6 @@
 import { Department } from "../entities/department.entity";
 import { DepartmentId } from "../value-objects/department-id";
-import { WorkspaceId } from "../../../identity-workspace/domain/value-objects/workspace-id.vo";
+import { WorkspaceId } from "../../../identity-workspace";
 import {
   PaginatedResult,
   PaginationOptions,
