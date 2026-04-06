@@ -64,8 +64,8 @@ describe("CategoryRuleService Authorization", () => {
       // Assert
       expect(result).toBeDefined();
       expect(mockWorkspaceAccess.isAdminOrOwner).toHaveBeenCalledWith(
-        userId,
-        workspaceId,
+        userIdStr,
+        workspaceIdStr,
       );
       expect(mockRepository.save).toHaveBeenCalled();
     });

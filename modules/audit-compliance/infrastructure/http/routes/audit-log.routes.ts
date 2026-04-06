@@ -50,7 +50,6 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(auditSummaryQuerySchema),
       ],
-      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'Get audit summary statistics for a workspace',
@@ -79,7 +78,6 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(entityHistoryQuerySchema),
       ],
-      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'Get audit history for a specific entity',
@@ -108,7 +106,6 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(listAuditLogsQuerySchema),
       ],
-      preHandler: [],
       schema: {
         tags: ['Audit'],
         description: 'List audit logs with optional filters',

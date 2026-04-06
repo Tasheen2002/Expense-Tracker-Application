@@ -167,9 +167,9 @@ export async function expenseAllocationRoutes(
           },
         },
         response: {
-          200: {
-            description: 'Allocations deleted successfully',
-            ...commandResponseSchema,
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },

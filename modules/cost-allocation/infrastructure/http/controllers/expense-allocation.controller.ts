@@ -104,11 +104,11 @@ export class ExpenseAllocationController {
         userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Allocations deleted successfully'
-      );
+      if (!result.isSuccess) {
+        return ResponseHelper.fromCommand(reply, result, 'Allocations deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

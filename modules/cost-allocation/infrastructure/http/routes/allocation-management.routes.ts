@@ -281,9 +281,9 @@ export async function allocationManagementRoutes(
           },
         },
         response: {
-          200: {
-            description: 'Department deleted successfully',
-            ...commandResponseSchema,
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
@@ -513,9 +513,9 @@ export async function allocationManagementRoutes(
           },
         },
         response: {
-          200: {
-            description: 'Cost center deleted successfully',
-            ...commandResponseSchema,
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
@@ -753,9 +753,9 @@ export async function allocationManagementRoutes(
           },
         },
         response: {
-          200: {
-            description: 'Project deleted successfully',
-            ...commandResponseSchema,
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },

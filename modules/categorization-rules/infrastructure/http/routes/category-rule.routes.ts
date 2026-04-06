@@ -255,12 +255,9 @@ export async function categoryRuleRoutes(
         description: 'Delete category rule',
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
