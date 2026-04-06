@@ -221,6 +221,32 @@ export class User extends AggregateRoot {
   equals(other: User): boolean {
     return this.id.equals(other.id);
   }
+
+  static toDTO(user: User): UserDTO {
+    return {
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      fullName: user.fullName,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface UserDTO {
+  userId: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Supporting types and interfaces

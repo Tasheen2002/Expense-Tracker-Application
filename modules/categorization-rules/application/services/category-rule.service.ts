@@ -22,7 +22,7 @@ export class CategoryRuleService {
     userId: UserId,
     workspaceId: WorkspaceId,
   ): Promise<boolean> {
-    return this.workspaceAccess.isAdminOrOwner(userId, workspaceId);
+    return this.workspaceAccess.isAdminOrOwner(userId.getValue(), workspaceId.getValue());
   }
 
   async createRule(params: {

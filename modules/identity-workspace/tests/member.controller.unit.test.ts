@@ -1,35 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemberController } from '../infrastructure/http/controllers/member.controller';
-import { ListWorkspaceMembersHandler } from '../application/queries/list-workspace-members.query';
-import { RemoveMemberHandler } from '../application/commands/remove-member.command';
-import { ChangeMemberRoleHandler } from '../application/commands/change-member-role.command';
+import { WorkspaceMembershipService } from '../application/services/workspace-membership.service';
 import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace-auth.helper';
-import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
+import { WorkspaceMembership } from '../domain/entities/workspace-membership.entity';
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { CommandResult } from '../../../packages/core/src/application/command-result';
+import { MembershipId } from '../domain/value-objects/membership-id.vo';
 
-// Mock CQRS handlers
-const mockListMembersHandler = {
-  handle: vi.fn(),
-} as unknown as ListWorkspaceMembersHandler;
-
-const mockRemoveMemberHandler = {
-  handle: vi.fn(),
-} as unknown as RemoveMemberHandler;
-
-const mockChangeMemberRoleHandler = {
-  handle: vi.fn(),
-} as unknown as ChangeMemberRoleHandler;
+// Mock MembershipService
+const mockMembershipService = {
+  getUserMembership: vi.fn(),
+  removeMember: vi.fn(),
+  changeMemberRole: vi.fn(),
+  getWorkspaceMembers: vi.fn(),
+  isMember: vi.fn(),
+} as unknown as WorkspaceMembershipService;
 
 const mockAuthHelper = {
   getUserFromRequest: vi.fn(),
   verifyMembership: vi.fn(),
   verifyCanManageMembers: vi.fn(),
   verifyCanDelete: vi.fn(),
+  verifyCanEdit: vi.fn(),
 } as unknown as WorkspaceAuthHelper;
 
-// Mock Request/Reply
+// Mock Reply
 const mockReply = {
   status: vi.fn().mockReturnThis(),
   send: vi.fn(),
@@ -41,15 +36,13 @@ describe('MemberController (Unit)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     controller = new MemberController(
-      mockListMembersHandler,
-      mockRemoveMemberHandler,
-      mockChangeMemberRoleHandler,
+      mockMembershipService,
       mockAuthHelper
     );
   });
 
   describe('removeMember', () => {
-    it('should successfully remove a member after name lookup', async () => {
+    it('should successfully remove a member after lookup', async () => {
       const req = {
         params: { workspaceId: 'ws-1', userId: 'user-2' },
         user: {
@@ -65,23 +58,22 @@ describe('MemberController (Unit)', () => {
       // Mock Auth
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
 
-      // Mock handler returning success
-      vi.mocked(mockRemoveMemberHandler.handle).mockResolvedValue(
-        CommandResult.success(undefined)
-      );
+      // Mock membership lookup
+      const testMembershipId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      const mockMembership = {
+        getId: () => MembershipId.fromString(testMembershipId),
+      } as unknown as WorkspaceMembership;
+      vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(mockMembership);
+      vi.mocked(mockMembershipService.removeMember).mockResolvedValue(undefined);
 
-      // Execute
       await controller.removeMember(req, mockReply);
 
-      // Verify handler was called with correct CQRS command
-      expect(mockRemoveMemberHandler.handle).toHaveBeenCalledWith({
-        workspaceId: 'ws-1',
-        userId: 'user-2',
-      });
+      expect(mockMembershipService.getUserMembership).toHaveBeenCalledWith('user-2', 'ws-1');
+      expect(mockMembershipService.removeMember).toHaveBeenCalledWith(testMembershipId);
       expect(mockReply.status).toHaveBeenCalledWith(204);
     });
 
-    it('should fail if member not found', async () => {
+    it('should return 404 if member not found', async () => {
       const req = {
         params: { workspaceId: 'ws-1', userId: 'user-unknown' },
         user: {
@@ -95,20 +87,13 @@ describe('MemberController (Unit)', () => {
       }>;
 
       vi.mocked(mockAuthHelper.verifyCanManageMembers).mockResolvedValue(true);
-
-      // Handler returns failure when member not found
-      vi.mocked(mockRemoveMemberHandler.handle).mockResolvedValue(
-        CommandResult.failure('Member not found in this workspace')
-      );
+      vi.mocked(mockMembershipService.getUserMembership).mockResolvedValue(null);
 
       await controller.removeMember(req, mockReply);
 
-      expect(mockRemoveMemberHandler.handle).toHaveBeenCalledWith({
-        workspaceId: 'ws-1',
-        userId: 'user-unknown',
-      });
-      // fromCommand maps failure to 400
-      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockMembershipService.getUserMembership).toHaveBeenCalledWith('user-unknown', 'ws-1');
+      expect(mockMembershipService.removeMember).not.toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
   });
 });

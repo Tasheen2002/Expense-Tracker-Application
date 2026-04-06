@@ -2,7 +2,7 @@ import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { WorkspaceMembershipService } from '../../../application/services/workspace-membership.service';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
-import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
+import { WorkspaceMembership, WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
 
 export class MemberController {
@@ -33,7 +33,7 @@ export class MemberController {
         await this.membershipService.getWorkspaceMembers(workspaceId);
 
       return ResponseHelper.ok(reply, 'Members retrieved successfully', {
-        items: members.items.map((member) => member.toJSON()),
+        items: members.items.map((member) => WorkspaceMembership.toDTO(member)),
         pagination: {
           total: members.total,
           limit: members.limit,
@@ -85,7 +85,7 @@ export class MemberController {
 
       await this.membershipService.removeMember(membership.getId().getValue());
 
-      return ResponseHelper.ok(reply, 'Member removed successfully');
+      return reply.status(204).send();
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -147,7 +147,7 @@ export class MemberController {
       return ResponseHelper.ok(
         reply,
         'Member role updated successfully',
-        updatedMembership.toJSON()
+        WorkspaceMembership.toDTO(updatedMembership)
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

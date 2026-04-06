@@ -362,6 +362,7 @@ import { ActivateBudgetPlanHandler } from '../../../modules/budget-planning/appl
 import { CreateForecastHandler } from '../../../modules/budget-planning/application/commands/create-forecast.command';
 import { AddForecastItemHandler } from '../../../modules/budget-planning/application/commands/add-forecast-item.command';
 import { CreateScenarioHandler } from '../../../modules/budget-planning/application/commands/create-scenario.command';
+import { UpdateScenarioHandler } from '../../../modules/budget-planning/application/commands/update-scenario.command';
 import { DeleteBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/delete-budget-plan.command';
 import {
   DeleteForecastHandler,
@@ -1475,6 +1476,7 @@ export class Container {
       forecastService
     );
     const createScenarioHandler = new CreateScenarioHandler(scenarioService);
+    const updateScenarioHandler = new UpdateScenarioHandler(scenarioService);
     const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
     // Query Handlers (depend on repositories directly per CQRS)
@@ -1512,6 +1514,7 @@ export class Container {
 
     const scenarioController = new ScenarioController(
       createScenarioHandler,
+      updateScenarioHandler,
       deleteScenarioHandler,
       getScenarioHandler,
       listScenariosHandler
@@ -1913,6 +1916,7 @@ export class Container {
         'invitationController'
       ),
       memberController: this.get<MemberController>('memberController'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 

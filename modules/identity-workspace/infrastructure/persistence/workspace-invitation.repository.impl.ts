@@ -111,6 +111,25 @@ export class WorkspaceInvitationRepositoryImpl
     );
   }
 
+  async findPendingByWorkspaceId(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<WorkspaceInvitation>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.workspaceInvitation,
+      {
+        where: {
+          workspaceId: workspaceId.getValue(),
+          acceptedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      options,
+    );
+  }
+
   async findPendingByWorkspaceAndEmail(
     workspaceId: WorkspaceId,
     email: string,

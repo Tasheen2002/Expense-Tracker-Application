@@ -235,6 +235,38 @@ export class WorkspaceInvitation extends AggregateRoot {
   equals(other: WorkspaceInvitation): boolean {
     return this.id.equals(other.id);
   }
+
+  static toDTO(invitation: WorkspaceInvitation): WorkspaceInvitationDTO {
+    return {
+      invitationId: invitation.id.getValue(),
+      workspaceId: invitation.workspaceId.getValue(),
+      email: invitation.email,
+      role: invitation.role,
+      token: invitation.token,
+      expiresAt: invitation.expiresAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      isExpired: invitation.isExpired(),
+      isAccepted: invitation.isAccepted(),
+      createdAt: invitation.createdAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceInvitationDTO {
+  invitationId: string;
+  workspaceId: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  isExpired: boolean;
+  isAccepted: boolean;
+  createdAt: string;
 }
 
 // Supporting types and interfaces

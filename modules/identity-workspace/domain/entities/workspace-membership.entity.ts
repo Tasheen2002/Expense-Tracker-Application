@@ -235,6 +235,30 @@ export class WorkspaceMembership extends AggregateRoot {
   equals(other: WorkspaceMembership): boolean {
     return this.id.equals(other.id);
   }
+
+  static toDTO(membership: WorkspaceMembership): WorkspaceMembershipDTO {
+    return {
+      membershipId: membership.id.getValue(),
+      userId: membership.userId.getValue(),
+      workspaceId: membership.workspaceId.getValue(),
+      role: membership.role,
+      createdAt: membership.createdAt.toISOString(),
+      updatedAt: membership.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceMembershipDTO {
+  membershipId: string;
+  userId: string;
+  workspaceId: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Supporting types and interfaces

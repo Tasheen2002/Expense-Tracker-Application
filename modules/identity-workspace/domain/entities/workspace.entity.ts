@@ -229,15 +229,15 @@ export class Workspace extends AggregateRoot {
     return this.id.equals(other.id);
   }
 
-  toJSON(): WorkspaceDTO {
+  static toDTO(workspace: Workspace): WorkspaceDTO {
     return {
-      workspaceId: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      ownerId: this.ownerId.getValue(),
-      isActive: this.isActive,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      workspaceId: workspace.id.getValue(),
+      name: workspace.name,
+      slug: workspace.slug,
+      ownerId: workspace.ownerId.getValue(),
+      isActive: workspace.isActive,
+      createdAt: workspace.createdAt.toISOString(),
+      updatedAt: workspace.updatedAt.toISOString(),
     };
   }
 }

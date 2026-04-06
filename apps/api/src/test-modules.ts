@@ -15,7 +15,7 @@ export const testModuleLoader = (container: any) => fp(
       invitationController: container.get('invitationController'),
       memberController: container.get('memberController'),
     };
-    await registerIdentityWorkspaceRoutes(fastify, identityControllers as any);
+    await registerIdentityWorkspaceRoutes(fastify, identityControllers as any, prisma);
 
     // 2. Bank-Feed-Sync
     const bankFeedSyncServices = {

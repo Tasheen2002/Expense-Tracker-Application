@@ -22,7 +22,11 @@ export default fp(
     // Identity-Workspace Module
     // ============================================
     const identityWorkspaceServices = container.getIdentityWorkspaceServices();
-    await registerIdentityWorkspaceRoutes(fastify, identityWorkspaceServices);
+    await registerIdentityWorkspaceRoutes(
+      fastify,
+      identityWorkspaceServices,
+      identityWorkspaceServices.prisma
+    );
     fastify.log.info('✓ Identity-Workspace module registered');
 
     // ============================================
