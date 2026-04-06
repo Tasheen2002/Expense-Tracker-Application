@@ -15,11 +15,27 @@ import {
   chainResponseSchema,
   paginatedChainsResponseSchema,
 } from '../validation/approval.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
   controller: ApprovalChainController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Create approval chain
   fastify.post(
     '/workspaces/:workspaceId/approval-chains',

@@ -6,7 +6,7 @@ import {
   InvalidDelegationError,
 } from '../errors/approval-workflow.errors';
 import { WorkflowId } from '../value-objects/workflow-id';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { UserId } from '../../../identity-workspace';
 
 export interface ApprovalStepProps {
   stepId: ApprovalStepId;

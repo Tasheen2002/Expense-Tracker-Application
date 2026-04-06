@@ -3,7 +3,7 @@ import { ForecastItem } from "../../domain/entities/forecast-item.entity";
 import { IForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,

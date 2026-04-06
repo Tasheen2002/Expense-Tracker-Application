@@ -1,4 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
 import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { SyncStatus } from '../../domain/enums/sync-status.enum';

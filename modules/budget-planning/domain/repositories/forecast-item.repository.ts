@@ -1,7 +1,7 @@
 import { ForecastItem } from "../entities/forecast-item.entity";
 import { ForecastItemId } from "../value-objects/forecast-item-id";
 import { ForecastId } from "../value-objects/forecast-id";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,

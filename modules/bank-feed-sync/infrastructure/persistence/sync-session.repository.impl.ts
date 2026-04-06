@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { SyncSession } from '../../domain/entities/sync-session.entity';
 import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';

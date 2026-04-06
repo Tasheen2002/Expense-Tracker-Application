@@ -7,7 +7,7 @@ import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
 import { ForecastItem } from "../../domain/entities/forecast-item.entity";
-import { CategoryId } from "../../../expense-ledger/domain/value-objects/category-id";
+import { CategoryId } from "../../../expense-ledger";
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
 import {
   ForecastNotFoundError,

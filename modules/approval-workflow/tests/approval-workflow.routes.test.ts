@@ -1,4 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      writeOperations: { windowMs: 60000, maxRequests: 100 },
+      auth: { windowMs: 60000, maxRequests: 100 },
+    },
+    userKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    defaultKeyGenerator: () => 'test-user',
+  })
+);
+
 import Fastify, { FastifyInstance } from 'fastify';
 import { ApprovalChainController } from '../infrastructure/http/controllers/approval-chain.controller';
 import { WorkflowController } from '../infrastructure/http/controllers/workflow.controller';

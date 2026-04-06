@@ -233,7 +233,6 @@ export async function categoryRuleRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: categoryRuleSchema,
             },
           },
         },
@@ -288,7 +287,6 @@ export async function categoryRuleRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: categoryRuleSchema,
             },
           },
         },
@@ -316,7 +314,6 @@ export async function categoryRuleRoutes(
             properties: {
               success: { type: 'boolean' },
               message: { type: 'string' },
-              data: categoryRuleSchema,
             },
           },
         },

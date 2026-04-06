@@ -1,7 +1,6 @@
 import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { CategoryId } from '../../../expense-ledger';
 import {
   EmptyApproverSequenceError,
   InvalidAmountRangeError,

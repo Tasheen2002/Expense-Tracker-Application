@@ -2,9 +2,8 @@ import { PrismaClient, Prisma } from '@prisma/client';
 import { IApprovalChainRepository } from '../../domain/repositories/approval-chain.repository';
 import { ApprovalChain } from '../../domain/entities/approval-chain.entity';
 import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { CategoryId } from '../../../expense-ledger';
 import {
   PaginatedResult,
   PaginationOptions,

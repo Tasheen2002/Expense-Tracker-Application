@@ -1,5 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import {
   PaginatedResult,
   PaginationOptions,

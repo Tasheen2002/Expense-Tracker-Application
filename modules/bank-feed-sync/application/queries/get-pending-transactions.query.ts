@@ -1,4 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';

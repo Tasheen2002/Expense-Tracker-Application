@@ -1,5 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnection } from '../entities/bank-connection.entity';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import {

@@ -1,6 +1,6 @@
 import { ForecastItemId } from '../value-objects/forecast-item-id';
 import { ForecastId } from '../value-objects/forecast-id';
-import { CategoryId } from '../../../expense-ledger/domain/value-objects/category-id';
+import { CategoryId } from '../../../expense-ledger';
 import { ForecastAmount } from '../value-objects/forecast-amount';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';

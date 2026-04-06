@@ -15,9 +15,8 @@ import { ApprovalStep } from '../../domain/entities/approval-step.entity';
 import { ApprovalStepId } from '../../domain/value-objects/approval-step-id';
 import { WorkflowId } from '../../domain/value-objects/workflow-id';
 import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 

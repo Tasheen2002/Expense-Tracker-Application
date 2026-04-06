@@ -7,9 +7,8 @@ import {
 } from '../errors/approval-workflow.errors';
 import { WorkflowId } from '../value-objects/workflow-id';
 import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import { ExpenseId } from '../../../expense-ledger/domain/value-objects/expense-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../../identity-workspace/domain/value-objects/user-id.vo';
+import { ExpenseId } from '../../../expense-ledger';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 

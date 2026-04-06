@@ -17,11 +17,27 @@ import {
   workflowSchema,
   paginatedWorkflowsResponseSchema,
 } from '../validation/approval.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
   controller: WorkflowController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Initiate workflow
   fastify.post(
     '/workspaces/:workspaceId/workflows',

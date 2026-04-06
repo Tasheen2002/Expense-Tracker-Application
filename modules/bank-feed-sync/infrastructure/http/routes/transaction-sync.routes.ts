@@ -16,11 +16,27 @@ import {
   workspaceParamsSchema,
   syncAcceptedResponseSchema,
 } from '../validation/bank-sync.schema';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function transactionSyncRoutes(
   fastify: FastifyInstance,
   controller: TransactionSyncController
 ) {
+  // Apply write rate limiting to all mutation routes
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await writeRateLimiter(request, reply);
+    }
+  });
   // Trigger sync for a connection
   fastify.post(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync',
