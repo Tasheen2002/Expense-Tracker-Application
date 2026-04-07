@@ -1,6 +1,5 @@
-import { IForecastRepository } from '../../domain/repositories/forecast.repository';
-import { Forecast, ForecastDTO } from '../../domain/entities/forecast.entity';
-import { ForecastId } from '../../domain/value-objects/forecast-id';
+import { ForecastService } from '../services/forecast.service';
+import { ForecastDTO } from '../../domain/entities/forecast.entity';
 import { ForecastNotFoundError } from '../../domain/errors/budget-planning.errors';
 import {
   IQuery,
@@ -18,16 +17,13 @@ export class GetForecastHandler implements IQueryHandler<
   GetForecastQuery,
   QueryResult<ForecastDTO>
 > {
-  constructor(private readonly forecastRepository: IForecastRepository) {}
+  constructor(private readonly forecastService: ForecastService) {}
 
   async handle(query: GetForecastQuery): Promise<QueryResult<ForecastDTO>> {
-    const forecast = await this.forecastRepository.findById(
-      ForecastId.fromString(query.id),
-      query.workspaceId
-    );
-    if (!forecast) {
+    const dto = await this.forecastService.getForecastById(query.id, query.workspaceId);
+    if (!dto) {
       throw new ForecastNotFoundError(query.id);
     }
-    return QueryResult.success(Forecast.toDTO(forecast));
+    return QueryResult.success(dto);
   }
 }

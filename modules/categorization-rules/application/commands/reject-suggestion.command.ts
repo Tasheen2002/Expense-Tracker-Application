@@ -1,4 +1,5 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
+import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import { SuggestionId } from '../../domain/value-objects/suggestion-id';
 import { WorkspaceId } from '../../../identity-workspace';
 import {
@@ -14,16 +15,16 @@ export interface RejectSuggestionCommand extends ICommand {
 
 export class RejectSuggestionHandler implements ICommandHandler<
   RejectSuggestionCommand,
-  CommandResult<void>
+  CommandResult<CategorySuggestionDTO>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async handle(command: RejectSuggestionCommand): Promise<CommandResult<void>> {
-    await this.suggestionService.rejectSuggestion(
+  async handle(command: RejectSuggestionCommand): Promise<CommandResult<CategorySuggestionDTO>> {
+    const dto = await this.suggestionService.rejectSuggestion(
       SuggestionId.fromString(command.suggestionId),
       WorkspaceId.fromString(command.workspaceId)
     );
 
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

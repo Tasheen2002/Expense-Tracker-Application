@@ -12,6 +12,10 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 export class ScenarioService {
   constructor(
@@ -141,6 +145,24 @@ export class ScenarioService {
     await this.budgetPlanRepository.save(plan);
 
     await this.scenarioRepository.delete(scenarioId);
+  }
+
+  async getScenarioById(id: string, workspaceId: string): Promise<ScenarioDTO | null> {
+    const scenario = await this.scenarioRepository.findById(ScenarioId.fromString(id), workspaceId);
+    return scenario ? Scenario.toDTO(scenario) : null;
+  }
+
+  async getScenariosByPlan(
+    planId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ScenarioDTO>> {
+    const result = await this.scenarioRepository.findByPlanId(
+      PlanId.fromString(planId),
+      workspaceId,
+      options,
+    );
+    return { ...result, items: result.items.map((s) => Scenario.toDTO(s)) };
   }
 
 }

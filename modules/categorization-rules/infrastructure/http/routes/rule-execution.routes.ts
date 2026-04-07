@@ -53,7 +53,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(evaluateRulesSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -123,7 +123,7 @@ export async function ruleExecutionRoutes(
     {
       preHandler: [
         validateParams(expenseParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -157,7 +157,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(executionQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],

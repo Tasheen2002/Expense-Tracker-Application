@@ -1,6 +1,5 @@
-import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
-import { Scenario, ScenarioDTO } from '../../domain/entities/scenario.entity';
-import { ScenarioId } from '../../domain/value-objects/scenario-id';
+import { ScenarioService } from '../services/scenario.service';
+import { ScenarioDTO } from '../../domain/entities/scenario.entity';
 import { ScenarioNotFoundError } from '../../domain/errors/budget-planning.errors';
 import {
   IQuery,
@@ -18,16 +17,13 @@ export class GetScenarioHandler implements IQueryHandler<
   GetScenarioQuery,
   QueryResult<ScenarioDTO>
 > {
-  constructor(private readonly scenarioRepository: IScenarioRepository) {}
+  constructor(private readonly scenarioService: ScenarioService) {}
 
   async handle(query: GetScenarioQuery): Promise<QueryResult<ScenarioDTO>> {
-    const scenario = await this.scenarioRepository.findById(
-      ScenarioId.fromString(query.id),
-      query.workspaceId
-    );
-    if (!scenario) {
+    const dto = await this.scenarioService.getScenarioById(query.id, query.workspaceId);
+    if (!dto) {
       throw new ScenarioNotFoundError(query.id);
     }
-    return QueryResult.success(Scenario.toDTO(scenario));
+    return QueryResult.success(dto);
   }
 }

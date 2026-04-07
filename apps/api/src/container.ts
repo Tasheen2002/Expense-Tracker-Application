@@ -1516,18 +1516,13 @@ export class Container {
     const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
     // Query Handlers (depend on repositories directly per CQRS)
-    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanRepository);
-    const listBudgetPlansHandler = new ListBudgetPlansHandler(
-      budgetPlanRepository
-    );
-    const getForecastHandler = new GetForecastHandler(forecastRepository);
-    const listForecastsHandler = new ListForecastsHandler(forecastRepository);
-    const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastItemRepository,
-      forecastRepository
-    );
-    const getScenarioHandler = new GetScenarioHandler(scenarioRepository);
-    const listScenariosHandler = new ListScenariosHandler(scenarioRepository);
+    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
+    const listBudgetPlansHandler = new ListBudgetPlansHandler(budgetPlanService);
+    const getForecastHandler = new GetForecastHandler(forecastService);
+    const listForecastsHandler = new ListForecastsHandler(forecastService);
+    const getForecastItemsHandler = new GetForecastItemsHandler(forecastService);
+    const getScenarioHandler = new GetScenarioHandler(scenarioService);
+    const listScenariosHandler = new ListScenariosHandler(scenarioService);
 
     // Controllers
     const budgetPlanController = new BudgetPlanController(

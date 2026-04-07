@@ -1,4 +1,5 @@
 import { ScenarioService } from '../services/scenario.service';
+import { ScenarioDTO } from '../../domain/entities/scenario.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -16,12 +17,12 @@ export interface UpdateScenarioCommand extends ICommand {
 
 export class UpdateScenarioHandler implements ICommandHandler<
   UpdateScenarioCommand,
-  CommandResult<void>
+  CommandResult<ScenarioDTO>
 > {
   constructor(private readonly scenarioService: ScenarioService) {}
 
-  async handle(command: UpdateScenarioCommand): Promise<CommandResult<void>> {
-    await this.scenarioService.updateScenario({
+  async handle(command: UpdateScenarioCommand): Promise<CommandResult<ScenarioDTO>> {
+    const dto = await this.scenarioService.updateScenario({
       id: command.id,
       workspaceId: command.workspaceId,
       userId: command.userId,
@@ -29,6 +30,6 @@ export class UpdateScenarioHandler implements ICommandHandler<
       description: command.description,
       assumptions: command.assumptions,
     });
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

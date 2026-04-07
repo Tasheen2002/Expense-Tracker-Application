@@ -1,4 +1,5 @@
 import { BudgetPlanService } from '../services/budget-plan.service';
+import { BudgetPlanDTO } from '../../domain/entities/budget-plan.entity';
 import { PeriodType } from '../../domain/enums/period-type.enum';
 import {
   ICommand,
@@ -18,14 +19,14 @@ export interface CreateBudgetPlanCommand extends ICommand {
 
 export class CreateBudgetPlanHandler implements ICommandHandler<
   CreateBudgetPlanCommand,
-  CommandResult<{ budgetPlanId: string }>
+  CommandResult<BudgetPlanDTO>
 > {
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
   async handle(
     command: CreateBudgetPlanCommand
-  ): Promise<CommandResult<{ budgetPlanId: string }>> {
-    const plan = await this.budgetPlanService.createPlan({
+  ): Promise<CommandResult<BudgetPlanDTO>> {
+    const dto = await this.budgetPlanService.createPlan({
       workspaceId: command.workspaceId,
       name: command.name,
       periodType: command.periodType,
@@ -34,6 +35,6 @@ export class CreateBudgetPlanHandler implements ICommandHandler<
       endDate: command.endDate,
       createdBy: command.createdBy,
     });
-    return CommandResult.success({ budgetPlanId: plan.id.getValue() });
+    return CommandResult.success(dto);
   }
 }

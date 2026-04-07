@@ -115,7 +115,6 @@ export class CategorySuggestionService {
     }
 
     suggestion.markAsDeleted()
-    await this.suggestionRepository.save(suggestion)
     await this.suggestionRepository.delete(suggestionId)
   }
 }

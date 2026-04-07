@@ -1,6 +1,5 @@
-import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
-import { Scenario, ScenarioDTO } from '../../domain/entities/scenario.entity';
-import { PlanId } from '../../domain/value-objects/plan-id';
+import { ScenarioService } from '../services/scenario.service';
+import { ScenarioDTO } from '../../domain/entities/scenario.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -18,21 +17,15 @@ export class ListScenariosHandler implements IQueryHandler<
   ListScenariosQuery,
   QueryResult<PaginatedResult<ScenarioDTO>>
 > {
-  constructor(private readonly scenarioRepository: IScenarioRepository) {}
+  constructor(private readonly scenarioService: ScenarioService) {}
 
   async handle(
     query: ListScenariosQuery
   ): Promise<QueryResult<PaginatedResult<ScenarioDTO>>> {
-    const result = await this.scenarioRepository.findByPlanId(
-      PlanId.fromString(query.planId),
-      query.workspaceId
+    const result = await this.scenarioService.getScenariosByPlan(
+      query.planId,
+      query.workspaceId,
     );
-    return QueryResult.success({
-      items: result.items.map((s) => Scenario.toDTO(s)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

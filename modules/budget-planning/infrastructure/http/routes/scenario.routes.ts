@@ -40,7 +40,7 @@ export async function scenarioRoutes(
       preValidation: [validateParams(planIdParamsSchema)],
       preHandler: [
         validateBody(createScenarioSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -91,7 +91,7 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/budget-plans/:planId/scenarios',
     {
       preValidation: [validateParams(planIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'List all scenarios for a budget plan',
@@ -127,7 +127,7 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/scenarios/:id',
     {
       preValidation: [validateParams(scenarioParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'Get a specific scenario',
@@ -165,7 +165,7 @@ export async function scenarioRoutes(
       preValidation: [validateParams(scenarioParamsSchema)],
       preHandler: [
         validateBody(updateScenarioSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],

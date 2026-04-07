@@ -155,7 +155,6 @@ export class CategoryRuleService {
     }
 
     rule.markAsDeleted();
-    await this.ruleRepository.save(rule);
     await this.ruleRepository.delete(ruleId);
   }
 

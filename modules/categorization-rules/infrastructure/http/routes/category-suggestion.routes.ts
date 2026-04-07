@@ -58,7 +58,7 @@ export async function categorySuggestionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(createSuggestionSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -106,7 +106,7 @@ export async function categorySuggestionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(suggestionQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -168,7 +168,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -206,7 +206,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(expenseParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -247,7 +247,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -285,7 +285,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],

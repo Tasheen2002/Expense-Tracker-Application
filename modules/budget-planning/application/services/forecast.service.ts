@@ -19,6 +19,10 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 export class ForecastService {
   constructor(
@@ -216,5 +220,42 @@ export class ForecastService {
 
     // Use transactional delete to ensure data integrity
     await this.forecastRepository.deleteWithItems(forecastId);
+  }
+
+  async getForecastById(id: string, workspaceId: string): Promise<ForecastDTO | null> {
+    const forecast = await this.forecastRepository.findById(ForecastId.fromString(id), workspaceId);
+    return forecast ? Forecast.toDTO(forecast) : null;
+  }
+
+  async getForecastsByPlan(
+    planId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ForecastDTO>> {
+    const result = await this.forecastRepository.findByPlanId(
+      PlanId.fromString(planId),
+      workspaceId,
+      options,
+    );
+    return { ...result, items: result.items.map((f) => Forecast.toDTO(f)) };
+  }
+
+  async getForecastItemsByForecast(
+    forecastId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ForecastItemDTO>> {
+    const forecast = await this.forecastRepository.findById(
+      ForecastId.fromString(forecastId),
+      workspaceId,
+    );
+    if (!forecast) {
+      throw new ForecastNotFoundError(forecastId);
+    }
+    const result = await this.forecastItemRepository.findByForecastId(
+      ForecastId.fromString(forecastId),
+      options,
+    );
+    return { ...result, items: result.items.map((item) => ForecastItem.toDTO(item)) };
   }
 }
