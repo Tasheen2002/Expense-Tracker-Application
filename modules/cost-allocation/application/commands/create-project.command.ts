@@ -1,4 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
+import { ProjectDTO } from '../../domain/entities/project.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -19,7 +20,7 @@ export interface CreateProjectCommand extends ICommand {
 
 export class CreateProjectHandler implements ICommandHandler<
   CreateProjectCommand,
-  CommandResult<{ projectId: string }>
+  CommandResult<ProjectDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
@@ -27,8 +28,8 @@ export class CreateProjectHandler implements ICommandHandler<
 
   async handle(
     command: CreateProjectCommand
-  ): Promise<CommandResult<{ projectId: string }>> {
-    const project = await this.allocationManagementService.createProject({
+  ): Promise<CommandResult<ProjectDTO>> {
+    const dto = await this.allocationManagementService.createProject({
       workspaceId: command.workspaceId,
       actorId: command.actorId,
       name: command.name,
@@ -39,6 +40,6 @@ export class CreateProjectHandler implements ICommandHandler<
       managerId: command.managerId,
       budget: command.budget,
     });
-    return CommandResult.success({ projectId: project.id });
+    return CommandResult.success(dto);
   }
 }

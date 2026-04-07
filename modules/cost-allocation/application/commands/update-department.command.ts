@@ -1,4 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
+import { DepartmentDTO } from '../../domain/entities/department.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -18,14 +19,14 @@ export interface UpdateDepartmentCommand extends ICommand {
 
 export class UpdateDepartmentHandler implements ICommandHandler<
   UpdateDepartmentCommand,
-  CommandResult<void>
+  CommandResult<DepartmentDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(command: UpdateDepartmentCommand): Promise<CommandResult<void>> {
-    await this.allocationManagementService.updateDepartment({
+  async handle(command: UpdateDepartmentCommand): Promise<CommandResult<DepartmentDTO>> {
+    const dto = await this.allocationManagementService.updateDepartment({
       id: command.id,
       workspaceId: command.workspaceId,
       actorId: command.actorId,
@@ -35,6 +36,6 @@ export class UpdateDepartmentHandler implements ICommandHandler<
       managerId: command.managerId,
       parentDepartmentId: command.parentDepartmentId,
     });
-    return CommandResult.success(undefined);
+    return CommandResult.success(dto);
   }
 }

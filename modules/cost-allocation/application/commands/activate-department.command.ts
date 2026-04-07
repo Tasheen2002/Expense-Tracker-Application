@@ -1,4 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
+import { DepartmentDTO } from '../../domain/entities/department.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -13,7 +14,7 @@ export interface ActivateDepartmentCommand extends ICommand {
 
 export class ActivateDepartmentHandler implements ICommandHandler<
   ActivateDepartmentCommand,
-  CommandResult<void>
+  CommandResult<DepartmentDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
@@ -21,12 +22,12 @@ export class ActivateDepartmentHandler implements ICommandHandler<
 
   async handle(
     command: ActivateDepartmentCommand
-  ): Promise<CommandResult<void>> {
-    await this.allocationManagementService.activateDepartment(
+  ): Promise<CommandResult<DepartmentDTO>> {
+    const dto = await this.allocationManagementService.activateDepartment(
       command.id,
       command.workspaceId,
       command.actorId
     );
-    return CommandResult.success(undefined);
+    return CommandResult.success(dto);
   }
 }

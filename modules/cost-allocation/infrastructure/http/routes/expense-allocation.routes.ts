@@ -55,7 +55,7 @@ export async function expenseAllocationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description:
@@ -116,7 +116,7 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get all allocations for an expense',
@@ -183,7 +183,7 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/allocations/summary',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get allocation summary statistics for workspace',

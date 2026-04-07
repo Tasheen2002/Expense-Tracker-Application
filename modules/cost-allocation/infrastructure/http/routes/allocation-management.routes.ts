@@ -90,7 +90,7 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/departments',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Create a new department',
@@ -135,7 +135,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/departments',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'List all departments in workspace',
@@ -190,7 +190,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/departments/:departmentId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Get a specific department',
@@ -225,7 +225,7 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/departments/:departmentId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Update a department',
@@ -297,7 +297,7 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/departments/:departmentId/activate',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Departments'],
         description: 'Activate a department',
@@ -330,7 +330,7 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/cost-centers',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Create a new cost center',
@@ -373,7 +373,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/cost-centers',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'List all cost centers in workspace',
@@ -428,7 +428,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Get a specific cost center',
@@ -463,7 +463,7 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Update a cost center',
@@ -529,7 +529,7 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/cost-centers/:costCenterId/activate',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
         description: 'Activate a cost center',
@@ -562,7 +562,7 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/projects',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Create a new project',
@@ -609,7 +609,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/projects',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'List all projects in workspace',
@@ -664,7 +664,7 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/projects/:projectId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Get a specific project',
@@ -699,7 +699,7 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/projects/:projectId',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Update a project',
@@ -769,7 +769,7 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/projects/:projectId/activate',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Projects'],
         description: 'Activate a project',

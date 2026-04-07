@@ -1,4 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
+import { CostCenterDTO } from '../../domain/entities/cost-center.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -13,7 +14,7 @@ export interface ActivateCostCenterCommand extends ICommand {
 
 export class ActivateCostCenterHandler implements ICommandHandler<
   ActivateCostCenterCommand,
-  CommandResult<void>
+  CommandResult<CostCenterDTO>
 > {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
@@ -21,12 +22,12 @@ export class ActivateCostCenterHandler implements ICommandHandler<
 
   async handle(
     command: ActivateCostCenterCommand
-  ): Promise<CommandResult<void>> {
-    await this.allocationManagementService.activateCostCenter(
+  ): Promise<CommandResult<CostCenterDTO>> {
+    const dto = await this.allocationManagementService.activateCostCenter(
       command.id,
       command.workspaceId,
       command.actorId
     );
-    return CommandResult.success(undefined);
+    return CommandResult.success(dto);
   }
 }
