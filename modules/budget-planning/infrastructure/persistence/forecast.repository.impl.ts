@@ -9,15 +9,14 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ForecastRepositoryImpl
-  extends PrismaRepository<Forecast>
   implements IForecastRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  protected readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   async save(forecast: Forecast): Promise<void> {
@@ -37,7 +36,6 @@ export class ForecastRepositoryImpl
       create: data,
     });
 
-    await this.dispatchEvents(forecast);
   }
 
   async findById(id: ForecastId, workspaceId: string): Promise<Forecast | null> {

@@ -78,9 +78,11 @@ export async function ruleExecutionRoutes(
         },
         response: {
           200: {
+            description: 'Rules evaluated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',
@@ -129,9 +131,11 @@ export async function ruleExecutionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Executions for expense retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'array',
@@ -161,9 +165,11 @@ export async function ruleExecutionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Workspace executions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',

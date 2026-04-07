@@ -1,4 +1,3 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { PurchaseOrderItemId } from '../value-objects/purchase-order-item-id.vo';
 import {
@@ -87,10 +86,8 @@ export interface PurchaseOrderItemDTO {
   updatedAt: string;
 }
 
-export class PurchaseOrderItem extends AggregateRoot {
-  private constructor(private props: PurchaseOrderItemProps) {
-    super();
-  }
+export class PurchaseOrderItem {
+  private constructor(private props: PurchaseOrderItemProps) {}
 
   static create(data: CreatePurchaseOrderItemData): PurchaseOrderItem {
     if (!data.variantId || data.variantId.trim().length === 0) {
@@ -125,16 +122,6 @@ export class PurchaseOrderItem extends AggregateRoot {
       updatedAt: now,
     });
 
-    item.addDomainEvent(
-      new PurchaseOrderItemCreatedEvent(
-        item.id.getValue(),
-        item.purchaseOrderId,
-        item.variantId,
-        item.quantity,
-        item.unitPrice.toString()
-      )
-    );
-
     return item;
   }
 
@@ -168,15 +155,6 @@ export class PurchaseOrderItem extends AggregateRoot {
     }
     this.props.receivedQuantity = quantity;
     this.props.updatedAt = new Date();
-
-    this.addDomainEvent(
-      new PurchaseOrderItemReceivedEvent(
-        this.id.getValue(),
-        this.purchaseOrderId,
-        this.variantId,
-        quantity
-      )
-    );
   }
 
   getLineTotal(): Decimal {

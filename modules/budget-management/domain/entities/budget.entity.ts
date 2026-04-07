@@ -204,6 +204,26 @@ export class BudgetUpdatedEvent extends DomainEvent {
   }
 }
 
+export class BudgetDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string
+  ) {
+    super(budgetId, 'Budget');
+  }
+
+  get eventType(): string {
+    return 'budget.deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 // ============================================================================
 // ENTITY
 // ============================================================================
@@ -306,7 +326,7 @@ export class Budget extends AggregateRoot {
       data.endDate
     );
 
-    return new Budget({
+    const budget = new Budget({
       id: BudgetId.create(),
       workspaceId: data.workspaceId,
       name: data.name,
@@ -321,6 +341,19 @@ export class Budget extends AggregateRoot {
       createdAt: now,
       updatedAt: now,
     });
+
+    budget.addDomainEvent(
+      new BudgetCreatedEvent(
+        budget.id.getValue(),
+        data.workspaceId,
+        data.name,
+        totalAmount.toNumber(),
+        data.currency,
+        data.createdBy
+      )
+    );
+
+    return budget;
   }
 
   static fromPersistence(props: BudgetProps): Budget {
@@ -440,6 +473,12 @@ export class Budget extends AggregateRoot {
 
     this.addDomainEvent(
       new BudgetArchivedEvent(this.id.getValue(), this.workspaceId)
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new BudgetDeletedEvent(this.id.getValue(), this.workspaceId)
     );
   }
 

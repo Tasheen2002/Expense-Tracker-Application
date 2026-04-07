@@ -2,7 +2,7 @@ import { RecurrenceFrequency } from '../enums/recurrence-frequency';
 import { RecurrenceStatus } from '../enums/recurrence-status';
 import { RecurringExpenseId } from '../value-objects/recurring-expense-id';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 export interface ExpenseTemplate {
   title: string;
@@ -174,6 +174,7 @@ export class RecurringExpense extends AggregateRoot {
     if (this.props.endDate && nextDate > this.props.endDate) {
       this.props.status = RecurrenceStatus.COMPLETED;
       this.props.nextRunDate = nextDate; // Keep it for record, but status is completed
+      this.addDomainEvent(new RecurringExpenseStatusChangedEvent(this.id.getValue(), this.workspaceId, this.props.status));
     } else {
       this.props.nextRunDate = nextDate;
     }

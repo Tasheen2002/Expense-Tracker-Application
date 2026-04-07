@@ -19,8 +19,7 @@ import {
 import {
   createExpenseSchema,
   updateExpenseSchema,
-  expenseFilterQuerySchema,
-  expenseStatisticsQuerySchema,
+  filterExpensesSchema,
 } from '../validation/expense.schema';
 import { z } from 'zod';
 
@@ -177,7 +176,7 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/filter',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateQuery(expenseFilterQuerySchema)],
+      preHandler: [validateQuery(filterExpensesSchema)],
       schema: {
         tags: ['Expenses'],
         description: 'Filter expenses based on criteria',
@@ -219,7 +218,7 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/statistics',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateQuery(expenseStatisticsQuerySchema)],
+      preHandler: [validateQuery(paginationQuerySchema)],
       schema: {
         tags: ['Expenses'],
         description: 'Get expense statistics',
@@ -326,7 +325,7 @@ export async function expenseRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           204: {
-            description: 'Expense deleted successfully',
+            description: 'No Content',
             type: 'null',
           },
         },

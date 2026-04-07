@@ -1,13 +1,18 @@
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { BankConnection } from '../../domain/entities/bank-connection.entity';
 import { SyncSession } from '../../domain/entities/sync-session.entity';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnectionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
-import { SyncAlreadyInProgressError } from '../../domain/errors/bank-feed-sync.errors';
-import { SyncTooFrequentError } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  BankConnectionNotFoundError,
+  BankConnectionAlreadyExistsError,
+  SyncAlreadyInProgressError,
+  SyncTooFrequentError,
+} from '../../domain/errors/bank-feed-sync.errors';
+import { ConnectBankCommand } from '../commands/connect-bank.command';
 import { SyncTransactionsCommand } from '../commands/sync-transactions.command';
 import {
   MIN_SYNC_INTERVAL_MINUTES,
@@ -41,6 +46,43 @@ export class TransactionSyncService {
     private readonly transactionRepository: IBankTransactionRepository,
     private readonly bankAPIClient: IBankAPIClient
   ) {}
+
+  async connectBank(command: ConnectBankCommand): Promise<string> {
+    const workspaceId = WorkspaceId.fromString(command.workspaceId);
+    const userId = UserId.fromString(command.userId);
+
+    const existing = await this.connectionRepository.findByInstitutionAndAccount(
+      workspaceId,
+      command.institutionId,
+      command.accountId
+    );
+
+    if (existing) {
+      throw new BankConnectionAlreadyExistsError(
+        command.institutionId,
+        command.accountId
+      );
+    }
+
+    const connection = BankConnection.create(
+      workspaceId,
+      userId,
+      command.institutionId,
+      command.institutionName,
+      command.accountId,
+      command.accountName,
+      command.accountType,
+      command.currency,
+      command.accessToken,
+      command.accountMask,
+      command.tokenExpiresAt
+    );
+
+    connection.activate();
+    await this.connectionRepository.save(connection);
+
+    return connection.id.getValue();
+  }
 
   async syncTransactions(
     command: SyncTransactionsCommand

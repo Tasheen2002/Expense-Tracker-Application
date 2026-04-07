@@ -102,6 +102,7 @@ export async function approvalChainRoutes(
             properties: {
               statusCode: { type: 'number' },
               success: { type: 'boolean' },
+              message: { type: 'string' },
               data: paginatedChainsResponseSchema,
             },
           },
@@ -128,6 +129,7 @@ export async function approvalChainRoutes(
             properties: {
               statusCode: { type: 'number' },
               success: { type: 'boolean' },
+              message: { type: 'string' },
               data: chainResponseSchema,
             },
           },

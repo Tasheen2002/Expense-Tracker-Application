@@ -16,7 +16,7 @@ export class ExpenseAllocationRepositoryImpl
   async save(allocation: ExpenseAllocation): Promise<void> {
     await this.prisma.expenseAllocation.create({
       data: {
-        id: allocation.getId(),
+        id: allocation.getId().getValue(),
         workspaceId: allocation.getWorkspaceId().getValue(),
         expenseId: allocation.getExpenseId(),
         amount: allocation.getAmount().getValue(),
@@ -36,7 +36,7 @@ export class ExpenseAllocationRepositoryImpl
   async saveBatch(allocations: ExpenseAllocation[]): Promise<void> {
     await this.prisma.expenseAllocation.createMany({
       data: allocations.map((a) => ({
-        id: a.getId(),
+        id: a.getId().getValue(),
         workspaceId: a.getWorkspaceId().getValue(),
         expenseId: a.getExpenseId(),
         amount: a.getAmount().getValue(),
@@ -74,7 +74,7 @@ export class ExpenseAllocationRepositoryImpl
       if (newAllocations.length > 0) {
         await tx.expenseAllocation.createMany({
           data: newAllocations.map((a) => ({
-            id: a.getId(),
+            id: a.getId().getValue(),
             workspaceId: a.getWorkspaceId().getValue(),
             expenseId: a.getExpenseId(),
             amount: a.getAmount().getValue(),

@@ -6,7 +6,7 @@ import {
   InvitationAlreadyAcceptedError,
   InvitationExpiredError,
 } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -27,7 +27,7 @@ export class InvitationCreatedEvent extends DomainEvent {
     return "InvitationCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -50,7 +50,29 @@ export class InvitationAcceptedEvent extends DomainEvent {
     return "InvitationAccepted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
+    return {
+      invitationId: this.invitationId,
+      workspaceId: this.workspaceId,
+      email: this.email,
+    };
+  }
+}
+
+export class InvitationCancelledEvent extends DomainEvent {
+  constructor(
+    public readonly invitationId: string,
+    public readonly workspaceId: string,
+    public readonly email: string,
+  ) {
+    super(invitationId, "WorkspaceInvitation");
+  }
+
+  get eventType(): string {
+    return "InvitationCancelled";
+  }
+
+  getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -192,6 +214,16 @@ export class WorkspaceInvitation extends AggregateRoot {
 
     this.addDomainEvent(
       new InvitationAcceptedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.email,
+      ),
+    );
+  }
+
+  markAsCancelled(): void {
+    this.addDomainEvent(
+      new InvitationCancelledEvent(
         this.id.getValue(),
         this.workspaceId.getValue(),
         this.email,

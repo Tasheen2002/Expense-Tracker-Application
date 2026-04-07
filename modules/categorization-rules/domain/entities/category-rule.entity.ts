@@ -67,7 +67,7 @@ export class CategoryRuleDeactivatedEvent extends DomainEvent {
 export class CategoryRuleUpdatedEvent extends DomainEvent {
   constructor(
     public readonly ruleId: string,
-    public readonly name: string
+    public readonly updatedFields: string[]
   ) {
     super(ruleId, 'CategoryRule');
   }
@@ -79,8 +79,22 @@ export class CategoryRuleUpdatedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> {
     return {
       ruleId: this.ruleId,
-      name: this.name,
+      updatedFields: this.updatedFields,
     };
+  }
+}
+
+export class CategoryRuleDeletedEvent extends DomainEvent {
+  constructor(public readonly ruleId: string) {
+    super(ruleId, 'CategoryRule');
+  }
+
+  get eventType(): string {
+    return 'CategoryRuleDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { ruleId: this.ruleId };
   }
 }
 
@@ -208,6 +222,8 @@ export class CategoryRule extends AggregateRoot {
     description?: string | null;
     priority?: number;
   }): void {
+    const changedFields: string[] = [];
+
     if (props.name !== undefined) {
       if (!props.name || props.name.trim().length === 0) {
         throw new InvalidRuleError('Rule name cannot be empty');
@@ -216,6 +232,7 @@ export class CategoryRule extends AggregateRoot {
         throw new InvalidRuleError('Rule name cannot exceed 100 characters');
       }
       this.name = props.name.trim();
+      changedFields.push('name');
     }
 
     if (props.description !== undefined) {
@@ -225,6 +242,7 @@ export class CategoryRule extends AggregateRoot {
         );
       }
       this.description = props.description?.trim() || null;
+      changedFields.push('description');
     }
 
     if (props.priority !== undefined) {
@@ -232,12 +250,13 @@ export class CategoryRule extends AggregateRoot {
         throw new InvalidRuleError('Priority cannot be negative');
       }
       this.priority = props.priority;
+      changedFields.push('priority');
     }
 
     this.updatedAt = new Date();
-    if (props.name) {
+    if (changedFields.length > 0) {
       this.addDomainEvent(
-        new CategoryRuleUpdatedEvent(this.id.getValue(), this.name)
+        new CategoryRuleUpdatedEvent(this.id.getValue(), changedFields)
       );
     }
   }
@@ -252,7 +271,7 @@ export class CategoryRule extends AggregateRoot {
     this.name = name.trim();
     this.updatedAt = new Date();
     this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), this.name)
+      new CategoryRuleUpdatedEvent(this.id.getValue(), ['name'])
     );
   }
 
@@ -264,6 +283,9 @@ export class CategoryRule extends AggregateRoot {
     }
     this.description = description?.trim() || null;
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new CategoryRuleUpdatedEvent(this.id.getValue(), ['description'])
+    );
   }
 
   updatePriority(priority: number): void {
@@ -272,16 +294,25 @@ export class CategoryRule extends AggregateRoot {
     }
     this.priority = priority;
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new CategoryRuleUpdatedEvent(this.id.getValue(), ['priority'])
+    );
   }
 
   updateCondition(condition: RuleCondition): void {
     this.condition = condition;
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new CategoryRuleUpdatedEvent(this.id.getValue(), ['condition'])
+    );
   }
 
   updateTargetCategory(categoryId: CategoryId): void {
     this.targetCategoryId = categoryId;
     this.updatedAt = new Date();
+    this.addDomainEvent(
+      new CategoryRuleUpdatedEvent(this.id.getValue(), ['targetCategoryId'])
+    );
   }
 
   activate(): void {
@@ -294,6 +325,10 @@ export class CategoryRule extends AggregateRoot {
     this.isActive = false;
     this.updatedAt = new Date();
     this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.id.getValue()));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new CategoryRuleDeletedEvent(this.id.getValue()));
   }
 
   // Check if rule matches expense data

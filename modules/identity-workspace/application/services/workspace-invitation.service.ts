@@ -187,6 +187,8 @@ export class WorkspaceInvitationService {
       throw new InvitationAlreadyAcceptedError();
     }
 
+    invitation.markAsCancelled();
+    await this.invitationRepository.save(invitation);
     await this.invitationRepository.delete(id);
   }
 

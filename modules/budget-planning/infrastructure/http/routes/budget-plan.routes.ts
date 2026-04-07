@@ -73,6 +73,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           201: {
+            description: 'Budget plan created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -126,6 +127,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plans retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -161,6 +163,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -206,6 +209,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -270,6 +274,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan activated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },

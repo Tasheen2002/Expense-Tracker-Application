@@ -116,6 +116,8 @@ export class WorkspaceMembershipService {
       `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
     );
 
+    membership.markAsRemoved();
+    await this.membershipRepository.save(membership);
     await this.membershipRepository.delete(id);
   }
 

@@ -118,7 +118,7 @@ export async function recurringExpenseRoutes(
 
   // Pause recurring expense
   fastify.post(
-    '/recurring/:id/pause',
+    '/workspaces/:workspaceId/recurring/:id/pause',
     {
       schema: {
         tags: ['Recurring Expense'],
@@ -126,8 +126,11 @@ export async function recurringExpenseRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['workspaceId', 'id'],
+          properties: {
+            workspaceId: { type: 'string', format: 'uuid' },
+            id: { type: 'string', format: 'uuid' },
+          },
         },
         response: {
           200: {
@@ -148,7 +151,7 @@ export async function recurringExpenseRoutes(
 
   // Resume recurring expense
   fastify.post(
-    '/recurring/:id/resume',
+    '/workspaces/:workspaceId/recurring/:id/resume',
     {
       schema: {
         tags: ['Recurring Expense'],
@@ -156,8 +159,11 @@ export async function recurringExpenseRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['workspaceId', 'id'],
+          properties: {
+            workspaceId: { type: 'string', format: 'uuid' },
+            id: { type: 'string', format: 'uuid' },
+          },
         },
         response: {
           200: {
@@ -178,7 +184,7 @@ export async function recurringExpenseRoutes(
 
   // Stop recurring expense
   fastify.post(
-    '/recurring/:id/stop',
+    '/workspaces/:workspaceId/recurring/:id/stop',
     {
       schema: {
         tags: ['Recurring Expense'],
@@ -186,8 +192,11 @@ export async function recurringExpenseRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'string', format: 'uuid' } },
+          required: ['workspaceId', 'id'],
+          properties: {
+            workspaceId: { type: 'string', format: 'uuid' },
+            id: { type: 'string', format: 'uuid' },
+          },
         },
         response: {
           200: {
@@ -214,6 +223,7 @@ export async function recurringExpenseRoutes(
         tags: ['Recurring Expense'],
         description:
           'System trigger to process due recurring expenses (internal use only)',
+        security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
           additionalProperties: false,

@@ -10,6 +10,7 @@ import {
 
 export interface ListForecastsQuery extends IQuery {
   planId: string;
+  workspaceId: string;
   userId: string;
 }
 

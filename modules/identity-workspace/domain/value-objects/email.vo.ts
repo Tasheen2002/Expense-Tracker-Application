@@ -1,7 +1,7 @@
 import {
   EmptyFieldError,
   InvalidFormatError,
-} from "../../../../apps/api/src/shared/domain/errors/domain-validation.errors.js";
+} from "../../../../apps/api/src/shared/domain/errors/domain-validation.errors";
 
 export class Email {
   private constructor(private readonly value: string) {

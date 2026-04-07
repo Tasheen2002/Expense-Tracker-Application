@@ -1,4 +1,3 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { InventoryTransactionId } from '../value-objects/inventory-transaction-id.vo';
 import { TransactionType } from '../enums/transaction-type';
@@ -71,9 +70,8 @@ export interface InventoryTransactionDTO {
   createdAt: string;
 }
 
-export class InventoryTransaction extends AggregateRoot {
+export class InventoryTransaction {
   private constructor(private props: InventoryTransactionProps) {
-    super();
   }
 
   static create(data: CreateInventoryTransactionData): InventoryTransaction {
@@ -94,17 +92,6 @@ export class InventoryTransaction extends AggregateRoot {
       createdBy: data.createdBy,
       createdAt: new Date(),
     });
-
-    transaction.addDomainEvent(
-      new InventoryTransactionCreatedEvent(
-        transaction.id.getValue(),
-        transaction.workspaceId,
-        transaction.variantId,
-        transaction.locationId,
-        transaction.type,
-        transaction.quantity
-      )
-    );
 
     return transaction;
   }

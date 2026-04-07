@@ -15,7 +15,6 @@ export class CategoryRuleNotFoundError extends CategorizationRuleDomainError {
       'CATEGORY_RULE_NOT_FOUND',
       404
     );
-    this.name = 'CategoryRuleNotFoundError';
   }
 }
 
@@ -26,7 +25,6 @@ export class RuleExecutionNotFoundError extends CategorizationRuleDomainError {
       'RULE_EXECUTION_NOT_FOUND',
       404
     );
-    this.name = 'RuleExecutionNotFoundError';
   }
 }
 
@@ -37,7 +35,6 @@ export class CategorySuggestionNotFoundError extends CategorizationRuleDomainErr
       'CATEGORY_SUGGESTION_NOT_FOUND',
       404
     );
-    this.name = 'CategorySuggestionNotFoundError';
   }
 }
 
@@ -48,7 +45,6 @@ export class SuggestionNotFoundError extends CategorizationRuleDomainError {
       'SUGGESTION_NOT_FOUND',
       404
     );
-    this.name = 'SuggestionNotFoundError';
   }
 }
 
@@ -60,7 +56,6 @@ export class DuplicateRuleNameError extends CategorizationRuleDomainError {
       'DUPLICATE_RULE_NAME',
       409
     );
-    this.name = 'DuplicateRuleNameError';
   }
 }
 
@@ -71,7 +66,6 @@ export class SuggestionAlreadyRespondedError extends CategorizationRuleDomainErr
       'SUGGESTION_ALREADY_RESPONDED',
       409
     );
-    this.name = 'SuggestionAlreadyRespondedError';
   }
 }
 
@@ -79,28 +73,24 @@ export class SuggestionAlreadyRespondedError extends CategorizationRuleDomainErr
 export class InvalidRuleConditionError extends CategorizationRuleDomainError {
   constructor(message: string) {
     super(message, 'INVALID_RULE_CONDITION', 400);
-    this.name = 'InvalidRuleConditionError';
   }
 }
 
 export class InvalidConfidenceScoreError extends CategorizationRuleDomainError {
   constructor(message: string) {
     super(message, 'INVALID_CONFIDENCE_SCORE', 400);
-    this.name = 'InvalidConfidenceScoreError';
   }
 }
 
 export class InvalidSuggestionError extends CategorizationRuleDomainError {
   constructor(message: string) {
     super(message, 'INVALID_SUGGESTION', 400);
-    this.name = 'InvalidSuggestionError';
   }
 }
 
 export class InvalidRuleError extends CategorizationRuleDomainError {
   constructor(message: string) {
     super(message, 'INVALID_RULE', 400);
-    this.name = 'InvalidRuleError';
   }
 }
 
@@ -112,6 +102,5 @@ export class UnauthorizedRuleAccessError extends CategorizationRuleDomainError {
       'UNAUTHORIZED_RULE_ACCESS',
       403
     );
-    this.name = 'UnauthorizedRuleAccessError';
   }
 }

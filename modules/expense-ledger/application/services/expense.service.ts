@@ -176,6 +176,8 @@ export class ExpenseService {
       throw new InvalidExpenseStatusError(expenseId, expense.status, 'delete');
     }
 
+    expense.markAsDeleted();
+    await this.expenseRepository.save(expense);
     await this.expenseRepository.delete(
       ExpenseId.fromString(expenseId),
       workspaceId

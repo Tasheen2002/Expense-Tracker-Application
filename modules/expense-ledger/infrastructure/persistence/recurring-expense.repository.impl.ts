@@ -7,8 +7,6 @@ import {
 import { RecurringExpenseId } from "../../domain/value-objects/recurring-expense-id";
 import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
 import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -16,11 +14,12 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class PrismaRecurringExpenseRepository
-  extends PrismaRepository<RecurringExpense>
   implements RecurringExpenseRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  protected readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   async save(expense: RecurringExpense): Promise<void> {
@@ -52,7 +51,6 @@ export class PrismaRecurringExpenseRepository
       },
     });
 
-    await this.dispatchEvents(expense);
   }
 
   async findById(id: string): Promise<RecurringExpense | null> {

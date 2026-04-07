@@ -2,8 +2,6 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { AttachmentRepository } from "../../domain/repositories/attachment.repository";
 import { Attachment } from "../../domain/entities/attachment.entity";
 import { AttachmentId } from "../../domain/value-objects/attachment-id";
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
@@ -11,12 +9,9 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class AttachmentRepositoryImpl
-  extends PrismaRepository<Attachment>
   implements AttachmentRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(protected readonly prisma: PrismaClient) {}
 
   async save(attachment: Attachment): Promise<void> {
     await this.prisma.attachment.create({
@@ -31,8 +26,6 @@ export class AttachmentRepositoryImpl
         createdAt: attachment.createdAt,
       },
     });
-
-    await this.dispatchEvents(attachment);
   }
 
   async findById(id: AttachmentId): Promise<Attachment | null> {

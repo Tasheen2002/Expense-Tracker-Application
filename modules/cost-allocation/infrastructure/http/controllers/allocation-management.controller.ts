@@ -241,7 +241,7 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      if (!result.isSuccess) {
+      if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, 'Department deletion failed');
       }
 
@@ -422,7 +422,7 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      if (!result.isSuccess) {
+      if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, 'Cost Center deletion failed');
       }
 
@@ -616,7 +616,7 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      if (!result.isSuccess) {
+      if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, 'Project deletion failed');
       }
 

@@ -78,6 +78,7 @@ export async function allocationManagementRoutes(
       success: { type: 'boolean' },
       statusCode: { type: 'number' },
       message: { type: 'string' },
+      data: { type: 'null' },
     },
   };
 
@@ -149,8 +150,8 @@ export async function allocationManagementRoutes(
         querystring: {
           type: 'object',
           properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
+            limit: { type: 'integer', minimum: 1 },
+            offset: { type: 'integer', minimum: 0 },
           },
         },
         response: {
@@ -387,8 +388,8 @@ export async function allocationManagementRoutes(
         querystring: {
           type: 'object',
           properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
+            limit: { type: 'integer', minimum: 1 },
+            offset: { type: 'integer', minimum: 0 },
           },
         },
         response: {
@@ -623,8 +624,8 @@ export async function allocationManagementRoutes(
         querystring: {
           type: 'object',
           properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
+            limit: { type: 'integer', minimum: 1 },
+            offset: { type: 'integer', minimum: 0 },
           },
         },
         response: {

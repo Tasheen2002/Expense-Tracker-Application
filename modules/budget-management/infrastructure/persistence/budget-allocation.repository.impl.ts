@@ -4,22 +4,18 @@ import { AllocationId } from '../../domain/value-objects/allocation-id';
 import { BudgetId } from '../../domain/value-objects/budget-id';
 import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
 import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
+import { BudgetAllocationExceededError } from '../../domain/errors/budget.errors';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class BudgetAllocationRepositoryImpl
-  extends PrismaRepository<BudgetAllocation>
   implements IBudgetAllocationRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(protected readonly prisma: PrismaClient) {}
 
   async saveWithBudgetValidation(
     allocation: BudgetAllocation,
@@ -40,7 +36,11 @@ export class BudgetAllocationRepositoryImpl
       const newSum = currentSum.add(allocation.allocatedAmount);
 
       if (newSum.greaterThan(budgetTotalAmount)) {
-        throw new Error('Total allocated amount exceeds budget amount limit');
+        throw new BudgetAllocationExceededError(
+          allocation.budgetId.getValue(),
+          budgetTotalAmount.toNumber(),
+          newSum.toNumber()
+        );
       }
 
       await tx.budgetAllocation.upsert({
@@ -64,8 +64,6 @@ export class BudgetAllocationRepositoryImpl
         },
       });
     });
-
-    await this.dispatchEvents(allocation);
   }
 
   async save(allocation: BudgetAllocation): Promise<void> {
@@ -88,8 +86,6 @@ export class BudgetAllocationRepositoryImpl
         updatedAt: allocation.updatedAt,
       },
     });
-
-    await this.dispatchEvents(allocation);
   }
 
   async saveWithAlerts(
@@ -137,8 +133,6 @@ export class BudgetAllocationRepositoryImpl
         });
       }
     });
-
-    await this.dispatchEvents(allocation);
   }
 
   async findById(id: AllocationId): Promise<BudgetAllocation | null> {
@@ -193,18 +187,12 @@ export class BudgetAllocationRepositoryImpl
   }
 
   async delete(id: AllocationId): Promise<void> {
-    const allocation = await this.findById(id);
-    if (allocation) {
-      allocation.markAsDeleted();
-    }
-
+    // Domain events for deletion are dispatched by the service layer:
+    // the service calls allocation.markAsDeleted() + allocationRepository.save(allocation)
+    // before invoking this method, so events are already dispatched via save().
     await this.prisma.budgetAllocation.delete({
       where: { id: id.getValue() },
     });
-
-    if (allocation) {
-      await this.dispatchEvents(allocation);
-    }
   }
 
   async deleteByBudget(budgetId: BudgetId): Promise<void> {

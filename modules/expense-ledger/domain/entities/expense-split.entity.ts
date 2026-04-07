@@ -4,7 +4,7 @@ import { Money } from '../value-objects/money';
 import { SplitType } from '../enums/split-type';
 import { SplitParticipant } from './split-participant.entity';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   InvalidSplitAmountError,
   InvalidSplitPercentageError,

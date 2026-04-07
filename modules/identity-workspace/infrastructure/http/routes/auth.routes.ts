@@ -57,6 +57,7 @@ export async function registerAuthRoutes(
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -66,6 +67,7 @@ export async function registerAuthRoutes(
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -125,6 +127,7 @@ export async function registerAuthRoutes(
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -152,6 +155,7 @@ export async function registerAuthRoutes(
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
                 type: 'object',
                 properties: {
@@ -171,6 +175,7 @@ export async function registerAuthRoutes(
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },

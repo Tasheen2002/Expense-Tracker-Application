@@ -1,7 +1,7 @@
 import { UserId } from '../value-objects/user-id.vo';
 import { Email } from '../value-objects/email.vo';
 import { InvalidPasswordHashError } from '../errors/identity.errors';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -75,6 +75,60 @@ export class UserPasswordChangedEvent extends DomainEvent {
 
   getPayload(): Record<string, unknown> {
     return { userId: this.userId };
+  }
+}
+
+export class UserActivatedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
+  }
+
+  get eventType(): string {
+    return 'UserActivated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+export class UserEmailChangedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly newEmail: string
+  ) {
+    super(userId, 'User');
+  }
+
+  get eventType(): string {
+    return 'UserEmailChanged';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      userId: this.userId,
+      newEmail: this.newEmail,
+    };
+  }
+}
+
+export class UserProfileUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly fullName: string | null
+  ) {
+    super(userId, 'User');
+  }
+
+  get eventType(): string {
+    return 'UserProfileUpdated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      userId: this.userId,
+      fullName: this.fullName,
+    };
   }
 }
 
@@ -182,12 +236,14 @@ export class User extends AggregateRoot {
   updateFullName(fullName: string | null): void {
     this.fullName = fullName ? fullName.trim() : null;
     this.updatedAt = new Date();
+    this.addDomainEvent(new UserProfileUpdatedEvent(this.id.getValue(), this.fullName));
   }
 
   updateEmail(email: string): void {
     this.email = Email.create(email);
     this.emailVerified = false; // Reset verification when email changes
     this.updatedAt = new Date();
+    this.addDomainEvent(new UserEmailChangedEvent(this.id.getValue(), this.email.getValue()));
   }
 
   updatePassword(passwordHash: string): void {
@@ -216,6 +272,7 @@ export class User extends AggregateRoot {
   activate(): void {
     this.isActive = true;
     this.updatedAt = new Date();
+    this.addDomainEvent(new UserActivatedEvent(this.id.getValue()));
   }
 
   equals(other: User): boolean {

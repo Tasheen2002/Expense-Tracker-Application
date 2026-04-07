@@ -2,7 +2,6 @@ import { ForecastItemId } from '../value-objects/forecast-item-id';
 import { ForecastId } from '../value-objects/forecast-id';
 import { CategoryId } from '../../../expense-ledger';
 import { ForecastAmount } from '../value-objects/forecast-amount';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
@@ -57,7 +56,7 @@ export class ForecastItemUpdatedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
-export class ForecastItem extends AggregateRoot {
+export class ForecastItem {
   private constructor(
     private readonly _id: ForecastItemId,
     private readonly _forecastId: ForecastId,
@@ -66,9 +65,7 @@ export class ForecastItem extends AggregateRoot {
     private _notes: string | null,
     private readonly _createdAt: Date,
     private _updatedAt: Date
-  ) {
-    super();
-  }
+  ) {}
 
   static create(params: {
     forecastId: ForecastId;
@@ -84,15 +81,6 @@ export class ForecastItem extends AggregateRoot {
       params.notes || null,
       new Date(),
       new Date()
-    );
-
-    item.addDomainEvent(
-      new ForecastItemCreatedEvent(
-        item._id.getValue(),
-        params.forecastId.getValue(),
-        params.categoryId.getValue(),
-        params.amount.getValue().toString()
-      )
     );
 
     return item;
@@ -157,12 +145,6 @@ export class ForecastItem extends AggregateRoot {
       changes.notes = notes;
     }
     this._updatedAt = new Date();
-
-    if (Object.keys(changes).length > 0) {
-      this.addDomainEvent(
-        new ForecastItemUpdatedEvent(this._id.getValue(), changes)
-      );
-    }
   }
 
   static toDTO(item: ForecastItem): ForecastItemDTO {

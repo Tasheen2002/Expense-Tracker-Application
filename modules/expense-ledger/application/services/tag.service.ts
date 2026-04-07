@@ -87,6 +87,8 @@ export class TagService {
       throw new TagNotFoundError(tagId, workspaceId);
     }
 
+    tag.markAsDeleted();
+    await this.tagRepository.save(tag);
     await this.tagRepository.delete(TagId.fromString(tagId), workspaceId);
   }
 

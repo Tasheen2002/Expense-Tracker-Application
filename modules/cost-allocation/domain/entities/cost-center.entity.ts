@@ -79,6 +79,26 @@ export class CostCenterDeactivatedEvent extends DomainEvent {
   }
 }
 
+export class CostCenterDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly costCenterId: string,
+    public readonly workspaceId: string
+  ) {
+    super(costCenterId, 'CostCenter');
+  }
+
+  get eventType(): string {
+    return 'CostCenterDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      costCenterId: this.costCenterId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -219,6 +239,15 @@ export class CostCenter extends AggregateRoot {
     this.isActive = true;
     this.updatedAt = new Date();
     this.addDomainEvent(new CostCenterActivatedEvent(this.id.getValue()));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new CostCenterDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue()
+      )
+    );
   }
 
   static toDTO(costCenter: CostCenter): CostCenterDTO {

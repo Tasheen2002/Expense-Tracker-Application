@@ -83,6 +83,36 @@ export class SyncSessionFailedEvent extends DomainEvent {
   }
 }
 
+export class SyncSessionPartiallyCompletedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+    public readonly transactionsFetched: number,
+    public readonly transactionsImported: number,
+    public readonly transactionsDuplicate: number,
+    public readonly errorMessage: string
+  ) {
+    super(sessionId, 'SyncSession');
+  }
+
+  get eventType(): string {
+    return 'SyncSessionPartiallyCompleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+      transactionsFetched: this.transactionsFetched,
+      transactionsImported: this.transactionsImported,
+      transactionsDuplicate: this.transactionsDuplicate,
+      errorMessage: this.errorMessage,
+    };
+  }
+}
+
 export interface SyncSessionProps {
   id: SyncSessionId;
   workspaceId: WorkspaceId;
@@ -248,6 +278,18 @@ export class SyncSession extends AggregateRoot {
     this.props.transactionsDuplicate = transactionsDuplicate;
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SyncSessionPartiallyCompletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.connectionId.getValue(),
+        transactionsFetched,
+        transactionsImported,
+        transactionsDuplicate,
+        errorMessage
+      )
+    );
   }
 
   static toDTO(session: SyncSession): SyncSessionDTO {

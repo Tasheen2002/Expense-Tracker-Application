@@ -3,7 +3,6 @@ export { registerInventoryRoutes } from './infrastructure/http/routes';
 
 // Domain error types (used by cross-cutting error handlers)
 export {
-  InventoryManagementError,
   PurchaseOrderNotFoundError,
   SupplierNotFoundError,
   LocationNotFoundError,
@@ -15,6 +14,7 @@ export {
   SupplierAlreadyExistsError,
   LocationAlreadyExistsError,
   InvalidInventoryDataError,
+  UnauthorizedInventoryAccessError,
 } from './domain/errors/inventory.errors';
 
 // Domain enums (safe to share — value objects, not entities)

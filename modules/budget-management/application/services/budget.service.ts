@@ -183,18 +183,21 @@ export class BudgetService {
   ): Promise<void> {
     const budgetIdObj = BudgetId.fromString(budgetId);
 
-    const exists = await this.budgetRepository.exists(budgetIdObj, workspaceId);
-    if (!exists) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
     const budget = await this.budgetRepository.findById(
       budgetIdObj,
       workspaceId
     );
-    if (budget && budget.createdBy !== userId) {
+    if (!budget) {
+      throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('delete');
     }
+
+    // Emit the deleted domain event before removing the record
+    budget.markAsDeleted();
+    await this.budgetRepository.save(budget);
 
     // Delete budget (cascade will handle allocations and alerts)
     await this.budgetRepository.delete(budgetIdObj, workspaceId);
@@ -371,7 +374,7 @@ export class BudgetService {
     userId: string
   ): Promise<void> {
     const allocation = await this.allocationRepository.findById(
-      AllocationId.fromString(allocationId) // Assuming we need to fetch to check auth
+      AllocationId.fromString(allocationId)
     );
 
     if (!allocation) {
@@ -386,6 +389,10 @@ export class BudgetService {
     if (budget && budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('delete allocation in');
     }
+
+    // Emit the deleted domain event before removing the record
+    allocation.markAsDeleted();
+    await this.allocationRepository.save(allocation);
 
     await this.allocationRepository.delete(
       AllocationId.fromString(allocationId)

@@ -74,6 +74,7 @@ export async function forecastRoutes(
         },
         response: {
           201: {
+            description: 'Forecast created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -114,6 +115,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecasts retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -149,6 +151,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecast retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -230,6 +233,7 @@ export async function forecastRoutes(
         },
         response: {
           201: {
+            description: 'Forecast item added successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -270,6 +274,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecast items retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },

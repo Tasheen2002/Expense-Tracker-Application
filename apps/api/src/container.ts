@@ -41,6 +41,9 @@ import { CancelInvitationHandler } from '../../../modules/identity-workspace/app
 import { GetInvitationByTokenHandler } from '../../../modules/identity-workspace/application/queries/get-invitation-by-token.query';
 import { GetWorkspaceInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-workspace-invitations.query';
 import { GetPendingInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-pending-invitations.query';
+import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 import { WorkspaceAuthHelper } from '../../../modules/identity-workspace/infrastructure/http/middleware/workspace-auth.helper';
 import { AuthController } from '../../../modules/identity-workspace/infrastructure/http/controllers/auth.controller';
 import { WorkspaceController } from '../../../modules/identity-workspace/infrastructure/http/controllers/workspace.controller';
@@ -621,7 +624,9 @@ export class Container {
       workspaceAuthHelper
     );
     const memberController = new MemberController(
-      workspaceMembershipService,
+      new ListWorkspaceMembersHandler(workspaceMembershipService),
+      new RemoveMemberHandler(workspaceMembershipService),
+      new ChangeMemberRoleHandler(workspaceMembershipService),
       workspaceAuthHelper
     );
 
@@ -638,18 +643,14 @@ export class Container {
     const expenseRepository = new ExpenseRepositoryImpl(prisma, eventBus);
     const categoryRepository = new CategoryRepositoryImpl(prisma, eventBus);
     const tagRepository = new TagRepositoryImpl(prisma, eventBus);
-    const attachmentRepository = new AttachmentRepositoryImpl(prisma, eventBus);
-    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(
-      prisma,
-      eventBus
-    );
+    const attachmentRepository = new AttachmentRepositoryImpl(prisma);
+    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(prisma);
     const expenseSplitRepository = new ExpenseSplitRepositoryImpl(
       prisma,
       eventBus
     );
     const splitSettlementRepository = new SplitSettlementRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
 
     this.services.set('expenseRepository', expenseRepository);
@@ -845,12 +846,10 @@ export class Container {
     // Repositories
     const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(
       prisma,
@@ -1467,12 +1466,9 @@ export class Container {
 
     // Repositories
     const budgetPlanRepository = new BudgetPlanRepositoryImpl(prisma, eventBus);
-    const forecastRepository = new ForecastRepositoryImpl(prisma, eventBus);
-    const scenarioRepository = new ScenarioRepositoryImpl(prisma, eventBus);
-    const forecastItemRepository = new ForecastItemRepositoryImpl(
-      prisma,
-      eventBus
-    );
+    const forecastRepository = new ForecastRepositoryImpl(prisma);
+    const scenarioRepository = new ScenarioRepositoryImpl(prisma);
+    const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
 
     // Adapters
     const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
@@ -1581,8 +1577,7 @@ export class Container {
       eventBus
     );
     const ruleExecutionRepository = new PrismaRuleExecutionRepository(
-      prisma,
-      eventBus
+      prisma
     );
     const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
       prisma,
@@ -1804,7 +1799,7 @@ export class Container {
     this.services.set('transactionSyncService', transactionSyncService);
 
     // Command Handlers
-    const connectBankHandler = new ConnectBankHandler(bankConnectionRepository);
+    const connectBankHandler = new ConnectBankHandler(transactionSyncService);
     const disconnectBankHandler = new DisconnectBankHandler(
       bankConnectionRepository
     );
@@ -1939,7 +1934,7 @@ export class Container {
     const inventoryLocationRepository = new LocationRepositoryImpl(prisma, eventBus);
     const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma, eventBus);
     const stockRepository = new StockRepositoryImpl(prisma, eventBus);
-    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma, eventBus);
+    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma);
 
     // Services
     const supplierService = new SupplierService(supplierRepository);

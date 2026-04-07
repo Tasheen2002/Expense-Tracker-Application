@@ -93,6 +93,8 @@ export class CategorySuggestionService {
       throw new SuggestionNotFoundError(suggestionId.getValue())
     }
 
+    suggestion.markAsDeleted()
+    await this.suggestionRepository.save(suggestion)
     await this.suggestionRepository.delete(suggestionId)
   }
 }

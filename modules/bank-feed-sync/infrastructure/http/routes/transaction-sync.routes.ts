@@ -49,9 +49,11 @@ export async function transactionSyncRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           202: {
+            description: 'Sync request accepted successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: syncAcceptedResponseSchema,
             },
@@ -77,9 +79,11 @@ export async function transactionSyncRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Sync history retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: paginatedSyncSessionsResponseSchema,
             },
@@ -102,9 +106,11 @@ export async function transactionSyncRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Sync session retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: syncSessionResponseSchema,
             },
@@ -130,9 +136,11 @@ export async function transactionSyncRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Active sync sessions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: paginatedSyncSessionsResponseSchema,
             },

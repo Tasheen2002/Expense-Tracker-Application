@@ -28,6 +28,9 @@ import { GetUserWorkspacesHandler } from '../../../modules/identity-workspace/ap
 import { GetInvitationByTokenHandler } from '../../../modules/identity-workspace/application/queries/get-invitation-by-token.query';
 import { GetWorkspaceInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-workspace-invitations.query';
 import { GetPendingInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-pending-invitations.query';
+import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 
 // Identity Controllers
 import { AuthController } from '../../../modules/identity-workspace/infrastructure/http/controllers/auth.controller';
@@ -118,7 +121,12 @@ export class MinimalContainer {
       getPendingIdentityInvitationsHandler,
       workspaceAuthHelper
     );
-    const memberController = new MemberController(workspaceMembershipService, workspaceAuthHelper);
+    const memberController = new MemberController(
+      new ListWorkspaceMembersHandler(workspaceMembershipService),
+      new RemoveMemberHandler(workspaceMembershipService),
+      new ChangeMemberRoleHandler(workspaceMembershipService),
+      workspaceAuthHelper
+    );
 
     // 5. Bank Persistence
     const bankConnectionRepository = new PrismaBankConnectionRepository(this.prisma, eventBus);
@@ -139,7 +147,7 @@ export class MinimalContainer {
     );
 
     // 8. Bank Handlers
-    const connectBankHandler = new ConnectBankHandler(bankConnectionRepository);
+    const connectBankHandler = new ConnectBankHandler(transactionSyncService);
     const disconnectBankHandler = new DisconnectBankHandler(bankConnectionRepository);
     const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(bankConnectionRepository);
     const deleteConnectionHandler = new DeleteConnectionHandler(bankConnectionRepository);

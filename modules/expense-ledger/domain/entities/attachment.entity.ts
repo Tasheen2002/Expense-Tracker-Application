@@ -1,6 +1,5 @@
 import { AttachmentId } from '../value-objects/attachment-id';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   FileNameRequiredError,
   FileNameTooLongError,
@@ -39,11 +38,10 @@ export interface AttachmentProps {
   createdAt: Date;
 }
 
-export class Attachment extends AggregateRoot {
+export class Attachment {
   private readonly props: AttachmentProps;
 
   private constructor(props: AttachmentProps) {
-    super();
     this.props = props;
   }
 
@@ -58,10 +56,6 @@ export class Attachment extends AggregateRoot {
       id: AttachmentId.create(),
       createdAt: new Date(),
     });
-
-    attachment.addDomainEvent(
-      new AttachmentUploadedEvent(attachment.id.getValue(), attachment.expenseId, attachment.fileName, attachment.uploadedBy)
-    );
 
     return attachment;
   }

@@ -514,6 +514,15 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: alertSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },

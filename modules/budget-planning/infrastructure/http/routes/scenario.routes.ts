@@ -65,6 +65,7 @@ export async function scenarioRoutes(
         },
         response: {
           201: {
+            description: 'Scenario created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -105,6 +106,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenarios retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -140,6 +142,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenario retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -186,6 +189,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenario updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },

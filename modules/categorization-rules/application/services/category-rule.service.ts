@@ -154,6 +154,8 @@ export class CategoryRuleService {
       throw new UnauthorizedRuleAccessError("delete");
     }
 
+    rule.markAsDeleted();
+    await this.ruleRepository.save(rule);
     await this.ruleRepository.delete(ruleId);
   }
 

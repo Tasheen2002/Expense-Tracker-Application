@@ -78,6 +78,10 @@ export class SpendingLimitService {
     // a createdBy field is added to SpendingLimit.
     void userId;
 
+    // Emit the deleted domain event before removing the record
+    limit.markAsDeleted();
+    await this.limitRepository.save(limit);
+
     await this.limitRepository.delete(limitIdObj, workspaceId);
   }
 

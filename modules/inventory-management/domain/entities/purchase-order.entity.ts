@@ -54,6 +54,24 @@ export class PurchaseOrderStatusChangedEvent extends DomainEvent {
   }
 }
 
+export class PurchaseOrderDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly purchaseOrderId: string,
+    public readonly workspaceId: string
+  ) {
+    super(purchaseOrderId, 'PurchaseOrder');
+  }
+
+  get eventType(): string { return 'purchase_order.deleted'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      purchaseOrderId: this.purchaseOrderId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 export interface PurchaseOrderProps {
   id: PurchaseOrderId;
   workspaceId: string;
@@ -219,6 +237,15 @@ export class PurchaseOrder extends AggregateRoot {
   isApproved(): boolean { return this.props.status === PurchaseOrderStatus.APPROVED; }
   isReceived(): boolean { return this.props.status === PurchaseOrderStatus.RECEIVED; }
   isCancelled(): boolean { return this.props.status === PurchaseOrderStatus.CANCELLED; }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new PurchaseOrderDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId
+      )
+    );
+  }
 
   equals(other: PurchaseOrder): boolean {
     return this.props.id.equals(other.props.id);

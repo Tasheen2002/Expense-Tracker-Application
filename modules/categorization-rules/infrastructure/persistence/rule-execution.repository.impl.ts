@@ -14,16 +14,11 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaRuleExecutionRepository
-  extends PrismaRepository<RuleExecution>
   implements IRuleExecutionRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(protected readonly prisma: PrismaClient) {}
 
   async save(execution: RuleExecution): Promise<void> {
     const data = {
@@ -40,8 +35,6 @@ export class PrismaRuleExecutionRepository
       create: data,
       update: data,
     });
-
-    await this.dispatchEvents(execution);
   }
 
   async saveWithSuggestion(
@@ -81,9 +74,6 @@ export class PrismaRuleExecutionRepository
         update: suggestionData,
       }),
     ]);
-
-    await this.dispatchEvents(execution);
-    await this.dispatchEvents(suggestion);
   }
 
   async findById(id: RuleExecutionId, workspaceId: WorkspaceId): Promise<RuleExecution | null> {

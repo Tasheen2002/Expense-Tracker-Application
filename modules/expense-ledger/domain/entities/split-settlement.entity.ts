@@ -2,8 +2,7 @@ import { SettlementId } from '../value-objects/settlement-id';
 import { SplitId } from '../value-objects/split-id';
 import { Money } from '../value-objects/money';
 import { SettlementStatus } from '../enums/settlement-status';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -37,9 +36,8 @@ export interface SplitSettlementProps {
   updatedAt: Date;
 }
 
-export class SplitSettlement extends AggregateRoot {
+export class SplitSettlement {
   private constructor(private props: SplitSettlementProps) {
-    super();
   }
 
   static create(params: {
@@ -140,17 +138,6 @@ export class SplitSettlement extends AggregateRoot {
     }
 
     this.props.updatedAt = new Date();
-
-    this.addDomainEvent(
-      new SettlementPaymentRecordedEvent(
-        this.getId().getValue(),
-        this.getSplitId().getValue(),
-        this.getFromUserId(),
-        this.getToUserId(),
-        amount.getAmount().toString(),
-        this.props.status
-      )
-    );
   }
 
   isSettled(): boolean {

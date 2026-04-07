@@ -17,8 +17,8 @@ export class CreateAuditLogHandler implements ICommandHandler<
 
   async handle(input: CreateAuditLogCommand): Promise<CommandResult<string>> {
     try {
-      const auditLog = await this.auditService.createAuditLog(input.data);
-      return CommandResult.success(auditLog.id.getValue());
+      const auditLogId = await this.auditService.createAuditLog(input.data);
+      return CommandResult.success(auditLogId);
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

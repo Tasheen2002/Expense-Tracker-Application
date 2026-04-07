@@ -1,6 +1,4 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { InventoryTransaction } from '../../domain/entities/inventory-transaction.entity';
 import { InventoryTransactionId } from '../../domain/value-objects/inventory-transaction-id.vo';
 import { TransactionType } from '../../domain/enums/transaction-type';
@@ -12,11 +10,12 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class InventoryTransactionRepositoryImpl
-  extends PrismaRepository<InventoryTransaction>
   implements IInventoryTransactionRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  protected readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   async save(transaction: InventoryTransaction): Promise<void> {
@@ -35,7 +34,6 @@ export class InventoryTransactionRepositoryImpl
         createdAt: transaction.createdAt,
       },
     });
-    await this.dispatchEvents(transaction);
   }
 
   async findByWorkspace(

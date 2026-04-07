@@ -13,17 +13,12 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class SplitSettlementRepositoryImpl
-  extends PrismaRepository<SplitSettlement>
   implements SplitSettlementRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(protected readonly prisma: PrismaClient) {}
 
   async save(settlement: SplitSettlement): Promise<void> {
     await this.prisma.splitSettlement.upsert({
@@ -48,8 +43,6 @@ export class SplitSettlementRepositoryImpl
         updatedAt: settlement.getUpdatedAt(),
       },
     });
-
-    await this.dispatchEvents(settlement);
   }
 
   async findById(

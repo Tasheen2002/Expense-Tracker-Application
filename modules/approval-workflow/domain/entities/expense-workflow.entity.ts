@@ -133,6 +133,33 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
 }
 
 /**
+ * Emitted when an approval step is delegated to another approver.
+ */
+export class ApprovalStepDelegatedEvent extends DomainEvent {
+  constructor(
+    public readonly workflowId: string,
+    public readonly stepId: string,
+    public readonly fromApproverId: string,
+    public readonly toApproverId: string
+  ) {
+    super(workflowId, 'ApprovalWorkflow');
+  }
+
+  get eventType(): string {
+    return 'approval_step.delegated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      stepId: this.stepId,
+      workflowId: this.workflowId,
+      fromApproverId: this.fromApproverId,
+      toApproverId: this.toApproverId,
+    };
+  }
+}
+
+/**
  * Emitted when an approval workflow is cancelled.
  */
 export class ApprovalWorkflowCancelledEvent extends DomainEvent {
@@ -359,15 +386,28 @@ export class ExpenseWorkflow extends AggregateRoot {
   }
 
   processStepRejection(): void {
-    this.props.status = WorkflowStatus.REJECTED;
-    this.props.completedAt = new Date();
-    this.props.updatedAt = new Date();
-
     const currentStep = this.getCurrentStep();
     const rejectedBy = currentStep
       ? currentStep.getApproverId().getValue()
       : 'System';
     const reason = currentStep ? currentStep.getComments() : 'Unknown';
+
+    if (currentStep) {
+      this.addDomainEvent(
+        new ApprovalStepCompletedEvent(
+          this.props.workflowId.getValue(),
+          currentStep.getId().getValue(),
+          currentStep.getApproverId().getValue(),
+          currentStep.getStepNumber(),
+          'rejected',
+          currentStep.getComments()
+        )
+      );
+    }
+
+    this.props.status = WorkflowStatus.REJECTED;
+    this.props.completedAt = new Date();
+    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new ApprovalWorkflowRejectedEvent(
@@ -376,6 +416,27 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.props.workspaceId.getValue(),
         rejectedBy,
         reason
+      )
+    );
+  }
+
+  delegateStep(stepNumber: number, toUserId: string): void {
+    const step = this.props.steps.find((s) => s.getStepNumber() === stepNumber);
+    if (!step) {
+      throw new WorkflowStepNotFoundError(stepNumber);
+    }
+
+    const fromApproverId = step.getCurrentApproverId().getValue();
+    step.delegate(toUserId);
+
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ApprovalStepDelegatedEvent(
+        this.props.workflowId.getValue(),
+        step.getId().getValue(),
+        fromApproverId,
+        toUserId
       )
     );
   }

@@ -2,7 +2,7 @@ import { MembershipId } from "../value-objects/membership-id.vo";
 import { UserId } from "../value-objects/user-id.vo";
 import { WorkspaceId } from "../value-objects/workspace-id.vo";
 import { CannotChangeOwnerRoleError } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -23,7 +23,7 @@ export class MemberJoinedWorkspaceEvent extends DomainEvent {
     return "MemberJoinedWorkspace";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       membershipId: this.membershipId,
       userId: this.userId,
@@ -48,13 +48,35 @@ export class MemberRoleChangedEvent extends DomainEvent {
     return "MemberRoleChanged";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       membershipId: this.membershipId,
       userId: this.userId,
       workspaceId: this.workspaceId,
       oldRole: this.oldRole,
       newRole: this.newRole,
+    };
+  }
+}
+
+export class MemberRemovedEvent extends DomainEvent {
+  constructor(
+    public readonly membershipId: string,
+    public readonly userId: string,
+    public readonly workspaceId: string,
+  ) {
+    super(membershipId, "WorkspaceMembership");
+  }
+
+  get eventType(): string {
+    return "MemberRemoved";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      membershipId: this.membershipId,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
     };
   }
 }
@@ -171,6 +193,16 @@ export class WorkspaceMembership extends AggregateRoot {
         this.workspaceId.getValue(),
         oldRole,
         newRole,
+      ),
+    );
+  }
+
+  markAsRemoved(): void {
+    this.addDomainEvent(
+      new MemberRemovedEvent(
+        this.id.getValue(),
+        this.userId.getValue(),
+        this.workspaceId.getValue(),
       ),
     );
   }

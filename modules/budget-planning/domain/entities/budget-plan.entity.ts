@@ -60,7 +60,8 @@ export class BudgetPlanStatusChangedEvent extends DomainEvent {
 export class BudgetPlanUpdatedEvent extends DomainEvent {
   constructor(
     public readonly planId: string,
-    public readonly name: string
+    public readonly name: string,
+    public readonly description: string | null
   ) {
     super(planId, 'BudgetPlan');
   }
@@ -73,6 +74,27 @@ export class BudgetPlanUpdatedEvent extends DomainEvent {
     return {
       planId: this.planId,
       name: this.name,
+      description: this.description,
+    };
+  }
+}
+
+export class BudgetPlanDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'BudgetPlanDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      workspaceId: this.workspaceId,
     };
   }
 }
@@ -205,7 +227,7 @@ export class BudgetPlan extends AggregateRoot {
     this._updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name)
+      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name, this._description)
     );
   }
 
@@ -216,6 +238,15 @@ export class BudgetPlan extends AggregateRoot {
 
     this.addDomainEvent(
       new BudgetPlanStatusChangedEvent(this._id.getValue(), oldStatus, status)
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new BudgetPlanDeletedEvent(
+        this._id.getValue(),
+        this._workspaceId.getValue()
+      )
     );
   }
 

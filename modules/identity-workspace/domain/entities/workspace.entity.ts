@@ -1,7 +1,7 @@
 import { WorkspaceId } from '../value-objects/workspace-id.vo';
 import { UserId } from '../value-objects/user-id.vo';
 import { InvalidWorkspaceNameError } from '../errors/identity.errors';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -59,6 +59,20 @@ export class WorkspaceDeactivatedEvent extends DomainEvent {
 
   get eventType(): string {
     return 'WorkspaceDeactivated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { workspaceId: this.workspaceId };
+  }
+}
+
+export class WorkspaceActivatedEvent extends DomainEvent {
+  constructor(public readonly workspaceId: string) {
+    super(workspaceId, 'Workspace');
+  }
+
+  get eventType(): string {
+    return 'WorkspaceActivated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -184,6 +198,7 @@ export class Workspace extends AggregateRoot {
   activate(): void {
     this.isActive = true;
     this.updatedAt = new Date();
+    this.addDomainEvent(new WorkspaceActivatedEvent(this.id.getValue()));
   }
 
   isOwner(userId: UserId): boolean {

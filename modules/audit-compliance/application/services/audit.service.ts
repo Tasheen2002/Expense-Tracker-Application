@@ -21,8 +21,9 @@ export class AuditService {
 
   /**
    * Creates an audit log entry directly (for HTTP API usage).
+   * Returns the ID of the newly created audit log entry.
    */
-  async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLog> {
+  async createAuditLog(data: CreateAuditLogDTO): Promise<string> {
     const action = AuditAction.create(data.action);
     const resource = AuditResource.create(data.entityType, data.entityId);
 
@@ -38,7 +39,7 @@ export class AuditService {
     });
 
     await this.auditRepository.save(auditLog);
-    return auditLog;
+    return auditLog.id.getValue();
   }
 
   private static readonly MIN_RETENTION_DAYS = 30;

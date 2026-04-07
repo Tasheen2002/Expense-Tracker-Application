@@ -4,6 +4,28 @@ import { StockId } from '../value-objects/stock-id.vo';
 import { InsufficientStockError, InvalidQuantityError } from '../errors/inventory.errors';
 
 // Domain Events
+export class StockCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly stockId: string,
+    public readonly workspaceId: string,
+    public readonly variantId: string,
+    public readonly locationId: string
+  ) {
+    super(stockId, 'Stock');
+  }
+
+  get eventType(): string { return 'stock.created'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      stockId: this.stockId,
+      workspaceId: this.workspaceId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+    };
+  }
+}
+
 export class StockLevelChangedEvent extends DomainEvent {
   constructor(
     public readonly stockId: string,
@@ -56,6 +78,30 @@ export class LowStockAlertEvent extends DomainEvent {
   }
 }
 
+export class StockUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly stockId: string,
+    public readonly workspaceId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly changes: Record<string, unknown>
+  ) {
+    super(stockId, 'Stock');
+  }
+
+  get eventType(): string { return 'stock.updated'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      stockId: this.stockId,
+      workspaceId: this.workspaceId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+      changes: this.changes,
+    };
+  }
+}
+
 export interface StockProps {
   id: StockId;
   workspaceId: string;
@@ -100,7 +146,7 @@ export class Stock extends AggregateRoot {
 
   static create(data: CreateStockData): Stock {
     const now = new Date();
-    return new Stock({
+    const stock = new Stock({
       id: StockId.create(),
       workspaceId: data.workspaceId,
       variantId: data.variantId,
@@ -112,6 +158,17 @@ export class Stock extends AggregateRoot {
       createdAt: now,
       updatedAt: now,
     });
+
+    stock.addDomainEvent(
+      new StockCreatedEvent(
+        stock.id.getValue(),
+        stock.workspaceId,
+        stock.variantId,
+        stock.locationId
+      )
+    );
+
+    return stock;
   }
 
   static fromPersistence(props: StockProps): Stock {
@@ -203,6 +260,15 @@ export class Stock extends AggregateRoot {
     }
     this.props.reorderLevel = level;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new StockUpdatedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.variantId,
+        this.locationId,
+        { reorderLevel: level }
+      )
+    );
   }
 
   updateReorderQuantity(quantity: number): void {
@@ -211,6 +277,15 @@ export class Stock extends AggregateRoot {
     }
     this.props.reorderQuantity = quantity;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new StockUpdatedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.variantId,
+        this.locationId,
+        { reorderQuantity: quantity }
+      )
+    );
   }
 
   getAvailableQuantity(): number {

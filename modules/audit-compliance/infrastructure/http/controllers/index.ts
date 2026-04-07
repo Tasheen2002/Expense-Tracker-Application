@@ -1,1 +1,1 @@
-export * from "./audit-log.controller";
+export { AuditLogController } from './audit-log.controller';

@@ -35,6 +35,16 @@ export class TagUpdatedEvent extends DomainEvent {
   }
 }
 
+export class TagDeletedEvent extends DomainEvent {
+  constructor(public readonly tagId: string) {
+    super(tagId, 'Tag');
+  }
+  get eventType(): string { return 'tag.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { tagId: this.tagId };
+  }
+}
+
 export interface TagProps {
   id: TagId;
   workspaceId: string;
@@ -123,6 +133,10 @@ export class Tag extends AggregateRoot {
     Tag.validateColor(color);
     this.props.color = color;
     this.addDomainEvent(new TagUpdatedEvent(this.id.getValue(), this.workspaceId, 'color'));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new TagDeletedEvent(this.id.getValue()));
   }
 
   toJSON(): TagDTO {

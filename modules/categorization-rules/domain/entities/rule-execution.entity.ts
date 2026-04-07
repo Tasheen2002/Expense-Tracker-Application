@@ -2,7 +2,6 @@ import { RuleExecutionId } from '../value-objects/rule-execution-id';
 import { RuleId } from '../value-objects/rule-id';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId, CategoryId } from '../../../expense-ledger';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
@@ -39,7 +38,7 @@ export class RuleExecutedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
-export class RuleExecution extends AggregateRoot {
+export class RuleExecution {
   private id: RuleExecutionId;
   private ruleId: RuleId;
   private expenseId: ExpenseId;
@@ -55,7 +54,6 @@ export class RuleExecution extends AggregateRoot {
     appliedCategoryId: CategoryId;
     executedAt: Date;
   }) {
-    super();
     this.id = props.id;
     this.ruleId = props.ruleId;
     this.expenseId = props.expenseId;
@@ -78,16 +76,6 @@ export class RuleExecution extends AggregateRoot {
       appliedCategoryId: props.appliedCategoryId,
       executedAt: new Date(),
     });
-
-    execution.addDomainEvent(
-      new RuleExecutedEvent(
-        execution.id.getValue(),
-        props.ruleId.getValue(),
-        props.expenseId.getValue(),
-        props.workspaceId.getValue(),
-        props.appliedCategoryId.getValue()
-      )
-    );
 
     return execution;
   }

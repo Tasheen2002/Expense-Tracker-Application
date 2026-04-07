@@ -6,11 +6,14 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody } from '../validation/validator';
+import { validateBody, validateParams } from '../validation/validator';
 import {
   createSpendingLimitSchema,
   updateSpendingLimitSchema,
+  spendingLimitWorkspaceParamsSchema,
+  spendingLimitParamsSchema,
 } from '../validation/spending-limit.schema';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -60,10 +63,15 @@ export async function spendingLimitRoutes(
   fastify.post(
     '/workspaces/:workspaceId/spending-limits',
     {
-      preValidation: [validateBody(createSpendingLimitSchema)],
+      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      preHandler: [
+        validateBody(createSpendingLimitSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Create a new spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -96,9 +104,12 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits',
     {
+      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'List all spending limits in workspace',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -156,9 +167,12 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'Get spending limit by ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],
@@ -178,10 +192,15 @@ export async function spendingLimitRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      preValidation: [validateBody(updateSpendingLimitSchema)],
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [
+        validateBody(updateSpendingLimitSchema),
+        requireRole(['owner', 'admin', 'manager']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Update spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],
@@ -207,9 +226,12 @@ export async function spendingLimitRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'Delete spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],

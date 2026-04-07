@@ -200,5 +200,12 @@ export class WorkspaceInvitationRepositoryImpl
     ]);
 
     await this.dispatchEvents(invitation);
+
+    // Dispatch membership domain events (e.g. MemberJoinedWorkspaceEvent)
+    const membershipEvents = membership.domainEvents;
+    if (membershipEvents.length > 0) {
+      await this.eventBus.publishAll(membershipEvents);
+      membership.clearDomainEvents();
+    }
   }
 }

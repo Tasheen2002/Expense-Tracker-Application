@@ -1,6 +1,18 @@
 ﻿import { z } from 'zod';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 
+/**
+ * Route Params Schemas
+ */
+export const spendingLimitWorkspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+});
+
+export const spendingLimitParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  limitId: z.string().uuid('Invalid spending limit ID format'),
+});
+
 export const createSpendingLimitSchema = z.object({
   userId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),

@@ -6,7 +6,6 @@ import {
   InvalidAlertThresholdError,
   NegativeAmountError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { BudgetAlert } from './budget-alert.entity';
 
@@ -163,9 +162,8 @@ export interface BudgetAllocationDTO {
   updatedAt: string;
 }
 
-export class BudgetAllocation extends AggregateRoot {
+export class BudgetAllocation {
   private constructor(private props: BudgetAllocationProps) {
-    super();
   }
 
   static create(data: CreateBudgetAllocationData): BudgetAllocation {
@@ -200,15 +198,6 @@ export class BudgetAllocation extends AggregateRoot {
       createdAt: now,
       updatedAt: now,
     });
-
-    allocation.addDomainEvent(
-      new BudgetAllocationCreatedEvent(
-        allocation.id.getValue(),
-        allocation.budgetId.getValue(),
-        allocation.categoryId,
-        allocatedAmount.toString()
-      )
-    );
 
     return allocation;
   }
@@ -269,19 +258,9 @@ export class BudgetAllocation extends AggregateRoot {
       );
     }
 
-    const oldAmount = this.props.allocatedAmount;
     this.props.allocatedAmount = newAmount;
     this.props.updatedAt = new Date();
 
-    if (!oldAmount.equals(newAmount)) {
-      this.addDomainEvent(
-        new BudgetAllocationUpdatedEvent(
-          this.id.getValue(),
-          this.budgetId.getValue(),
-          { allocatedAmount: newAmount.toString() }
-        )
-      );
-    }
   }
 
   updateSpentAmount(amount: number | string | Decimal): void {
@@ -319,15 +298,6 @@ export class BudgetAllocation extends AggregateRoot {
     const newSpentAmount = this.props.spentAmount.add(incrementAmount);
     this.props.spentAmount = newSpentAmount;
     this.props.updatedAt = new Date();
-
-    this.addDomainEvent(
-      new BudgetSpentIncrementedEvent(
-        this.id.getValue(),
-        this.budgetId.getValue(),
-        incrementAmount.toString(),
-        newSpentAmount.toString()
-      )
-    );
   }
 
   decrementSpent(amount: number | string | Decimal): void {
@@ -349,41 +319,14 @@ export class BudgetAllocation extends AggregateRoot {
 
     this.props.spentAmount = newSpent;
     this.props.updatedAt = new Date();
-
-    this.addDomainEvent(
-      new BudgetSpentDecrementedEvent(
-        this.id.getValue(),
-        this.budgetId.getValue(),
-        decrementAmount.toString(),
-        newSpent.toString()
-      )
-    );
   }
 
   updateDescription(description: string | null): void {
-    const oldDescription = this.props.description;
-    const newDescription = description?.trim() || null;
-    this.props.description = newDescription;
+    this.props.description = description?.trim() || null;
     this.props.updatedAt = new Date();
-
-    if (oldDescription !== newDescription) {
-      this.addDomainEvent(
-        new BudgetAllocationUpdatedEvent(
-          this.id.getValue(),
-          this.budgetId.getValue(),
-          { description: newDescription }
-        )
-      );
-    }
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(
-      new BudgetAllocationDeletedEvent(
-        this.id.getValue(),
-        this.budgetId.getValue()
-      )
-    );
   }
 
   getRemainingAmount(): Decimal {

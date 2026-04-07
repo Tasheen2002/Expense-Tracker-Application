@@ -236,7 +236,7 @@ export class ExpenseSplitRepositoryImpl
         userId: p.userId,
         shareAmount: Money.create(Number(p.shareAmount), data.currency),
         sharePercentage: p.sharePercentage
-          ? new Decimal(p.sharePercentage).toNumber()
+          ? new Decimal(p.sharePercentage)
           : undefined,
         isPaid: p.isPaid,
         paidAt: p.paidAt ?? undefined,

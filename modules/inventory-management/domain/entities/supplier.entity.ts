@@ -39,6 +39,51 @@ export class SupplierUpdatedEvent extends DomainEvent {
   }
 }
 
+export class SupplierDeactivatedEvent extends DomainEvent {
+  constructor(
+    public readonly supplierId: string,
+    public readonly workspaceId: string
+  ) {
+    super(supplierId, 'Supplier');
+  }
+
+  get eventType(): string { return 'supplier.deactivated'; }
+
+  getPayload(): Record<string, unknown> {
+    return { supplierId: this.supplierId, workspaceId: this.workspaceId };
+  }
+}
+
+export class SupplierActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly supplierId: string,
+    public readonly workspaceId: string
+  ) {
+    super(supplierId, 'Supplier');
+  }
+
+  get eventType(): string { return 'supplier.activated'; }
+
+  getPayload(): Record<string, unknown> {
+    return { supplierId: this.supplierId, workspaceId: this.workspaceId };
+  }
+}
+
+export class SupplierDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly supplierId: string,
+    public readonly workspaceId: string
+  ) {
+    super(supplierId, 'Supplier');
+  }
+
+  get eventType(): string { return 'supplier.deleted'; }
+
+  getPayload(): Record<string, unknown> {
+    return { supplierId: this.supplierId, workspaceId: this.workspaceId };
+  }
+}
+
 export interface SupplierProps {
   id: SupplierId;
   workspaceId: string;
@@ -126,26 +171,37 @@ export class Supplier extends AggregateRoot {
   updateContactEmail(email: string | null): void {
     this.props.contactEmail = email;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new SupplierUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   updateContactPhone(phone: string | null): void {
     this.props.contactPhone = phone;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new SupplierUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   updateAddress(address: string | null): void {
     this.props.address = address;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new SupplierUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   deactivate(): void {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new SupplierDeactivatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   activate(): void {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new SupplierActivatedEvent(this.id.getValue(), this.workspaceId));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new SupplierDeletedEvent(this.id.getValue(), this.workspaceId)
+    );
   }
 
   get id(): SupplierId { return this.props.id; }

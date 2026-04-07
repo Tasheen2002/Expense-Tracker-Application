@@ -1,6 +1,6 @@
 import { CategoryId } from '../value-objects/category-id';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   CategoryNameRequiredError,
   CategoryNameTooLongError,
@@ -34,6 +34,16 @@ export class CategoryUpdatedEvent extends DomainEvent {
   get eventType(): string { return 'category.updated'; }
   getPayload(): Record<string, unknown> {
     return { categoryId: this.categoryId, workspaceId: this.workspaceId, field: this.field };
+  }
+}
+
+export class CategoryDeletedEvent extends DomainEvent {
+  constructor(public readonly categoryId: string) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { categoryId: this.categoryId };
   }
 }
 
@@ -190,6 +200,10 @@ export class Category extends AggregateRoot {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'isActive'));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new CategoryDeletedEvent(this.id.getValue()));
   }
 
   toJSON(): CategoryDTO {

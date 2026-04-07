@@ -40,6 +40,51 @@ export class LocationUpdatedEvent extends DomainEvent {
   }
 }
 
+export class LocationDeactivatedEvent extends DomainEvent {
+  constructor(
+    public readonly locationId: string,
+    public readonly workspaceId: string
+  ) {
+    super(locationId, 'Location');
+  }
+
+  get eventType(): string { return 'location.deactivated'; }
+
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId, workspaceId: this.workspaceId };
+  }
+}
+
+export class LocationActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly locationId: string,
+    public readonly workspaceId: string
+  ) {
+    super(locationId, 'Location');
+  }
+
+  get eventType(): string { return 'location.activated'; }
+
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId, workspaceId: this.workspaceId };
+  }
+}
+
+export class LocationDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly locationId: string,
+    public readonly workspaceId: string
+  ) {
+    super(locationId, 'Location');
+  }
+
+  get eventType(): string { return 'location.deleted'; }
+
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId, workspaceId: this.workspaceId };
+  }
+}
+
 export interface LocationProps {
   id: LocationId;
   workspaceId: string;
@@ -123,21 +168,31 @@ export class Location extends AggregateRoot {
   updateType(type: LocationType): void {
     this.props.type = type;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new LocationUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   updateAddress(address: string | null): void {
     this.props.address = address;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new LocationUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   deactivate(): void {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new LocationDeactivatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   activate(): void {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new LocationActivatedEvent(this.id.getValue(), this.workspaceId));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new LocationDeletedEvent(this.id.getValue(), this.workspaceId)
+    );
   }
 
   get id(): LocationId {

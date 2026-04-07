@@ -1,13 +1,17 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { WorkspaceMembershipService } from '../../../application/services/workspace-membership.service';
+import { ListWorkspaceMembersHandler } from '../../../application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../../../application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../../../application/commands/change-member-role.command';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
-import { WorkspaceMembership, WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
+import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
 
 export class MemberController {
   constructor(
-    private readonly membershipService: WorkspaceMembershipService,
+    private readonly listWorkspaceMembersHandler: ListWorkspaceMembersHandler,
+    private readonly removeMemberHandler: RemoveMemberHandler,
+    private readonly changeMemberRoleHandler: ChangeMemberRoleHandler,
     private readonly authHelper: WorkspaceAuthHelper
   ) {}
 
@@ -29,18 +33,26 @@ export class MemberController {
     }
 
     try {
-      const members =
-        await this.membershipService.getWorkspaceMembers(workspaceId);
-
-      return ResponseHelper.ok(reply, 'Members retrieved successfully', {
-        items: members.items.map((member) => WorkspaceMembership.toDTO(member)),
-        pagination: {
-          total: members.total,
-          limit: members.limit,
-          offset: members.offset,
-          hasMore: members.hasMore,
-        },
+      const result = await this.listWorkspaceMembersHandler.handle({
+        workspaceId,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        'Members retrieved successfully',
+        result.data
+          ? {
+              items: result.data.items,
+              pagination: {
+                total: result.data.total,
+                limit: result.data.limit,
+                offset: result.data.offset,
+                hasMore: result.data.hasMore,
+              },
+            }
+          : undefined
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -74,18 +86,18 @@ export class MemberController {
     }
 
     try {
-      // FIX: Lookup membership first
-      const membership = await this.membershipService.getUserMembership(
+      const result = await this.removeMemberHandler.handle({
+        workspaceId,
         userId,
-        workspaceId
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Member removed successfully',
+        undefined,
+        204
       );
-      if (!membership) {
-        return ResponseHelper.notFound(reply, 'Member not found in this workspace');
-      }
-
-      await this.membershipService.removeMember(membership.getId().getValue());
-
-      return reply.status(204).send();
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -130,24 +142,16 @@ export class MemberController {
     }
 
     try {
-      // FIX: Lookup membership first
-      const membership = await this.membershipService.getUserMembership(
+      const result = await this.changeMemberRoleHandler.handle({
+        workspaceId,
         userId,
-        workspaceId
-      );
-      if (!membership) {
-        return ResponseHelper.notFound(reply, 'Member not found in this workspace');
-      }
+        role,
+      });
 
-      const updatedMembership = await this.membershipService.changeMemberRole(
-        membership.getId().getValue(),
-        role
-      );
-
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
-        'Member role updated successfully',
-        WorkspaceMembership.toDTO(updatedMembership)
+        result,
+        'Member role updated successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

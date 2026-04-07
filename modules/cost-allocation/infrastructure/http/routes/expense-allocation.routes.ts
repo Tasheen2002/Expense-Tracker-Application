@@ -47,6 +47,7 @@ export async function expenseAllocationRoutes(
       success: { type: 'boolean' },
       statusCode: { type: 'number' },
       message: { type: 'string' },
+      data: { type: 'null' },
     },
   };
 
@@ -91,7 +92,7 @@ export async function expenseAllocationRoutes(
           },
         },
         response: {
-          200: {
+          201: {
             description: 'Expense allocated successfully',
             type: 'object',
             properties: {

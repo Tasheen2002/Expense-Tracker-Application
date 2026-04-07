@@ -34,6 +34,8 @@ export class DeleteConnectionHandler implements ICommandHandler<
       throw new BankConnectionNotFoundError(command.connectionId);
     }
 
+    connection.markAsDeleted();
+    await this.connectionRepository.save(connection);
     await this.connectionRepository.delete(connectionId, workspaceId);
 
     return CommandResult.success();

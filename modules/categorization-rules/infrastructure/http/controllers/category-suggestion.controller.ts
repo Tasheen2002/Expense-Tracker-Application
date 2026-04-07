@@ -125,7 +125,7 @@ export class CategorySuggestionController {
         workspaceId,
       });
 
-      if (!result.isSuccess) {
+      if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, 'Category suggestion deletion failed');
       }
 
