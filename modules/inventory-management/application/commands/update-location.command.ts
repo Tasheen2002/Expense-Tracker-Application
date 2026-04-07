@@ -1,5 +1,5 @@
 import { LocationService } from '../services/location.service';
-import { Location, LocationDTO } from '../../domain/entities/location.entity';
+import { LocationDTO } from '../../domain/entities/location.entity';
 import { LocationType } from '../../domain/enums/location-type';
 import {
   ICommand,
@@ -30,6 +30,6 @@ export class UpdateLocationHandler
         address: command.address,
       }
     );
-    return CommandResult.success(Location.toDTO(location));
+    return CommandResult.success(location);
   }
 }

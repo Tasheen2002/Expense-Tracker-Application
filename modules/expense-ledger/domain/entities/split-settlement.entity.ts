@@ -2,26 +2,8 @@ import { SettlementId } from '../value-objects/settlement-id';
 import { SplitId } from '../value-objects/split-id';
 import { Money } from '../value-objects/money';
 import { SettlementStatus } from '../enums/settlement-status';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library';
-
-export class SettlementPaymentRecordedEvent extends DomainEvent {
-  constructor(
-    public readonly settlementId: string,
-    public readonly splitId: string,
-    public readonly fromUserId: string,
-    public readonly toUserId: string,
-    public readonly amount: string,
-    public readonly newStatus: string
-  ) {
-    super(settlementId, 'SplitSettlement');
-  }
-  get eventType(): string { return 'settlement.payment_recorded'; }
-  getPayload(): Record<string, unknown> {
-    return { settlementId: this.settlementId, splitId: this.splitId, fromUserId: this.fromUserId, toUserId: this.toUserId, amount: this.amount, newStatus: this.newStatus };
-  }
-}
 
 export interface SplitSettlementProps {
   id: SettlementId;

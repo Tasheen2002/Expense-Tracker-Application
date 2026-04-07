@@ -6,7 +6,7 @@ import { IBudgetAllocationRepository } from '../../domain/repositories/budget-al
 import { IBudgetAlertRepository } from '../../domain/repositories/budget-alert.repository';
 import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
 import { BudgetAllocation, BudgetAllocationDTO } from '../../domain/entities/budget-allocation.entity';
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
+import { BudgetAlert, BudgetAlertDTO } from '../../domain/entities/budget-alert.entity';
 import { BudgetId } from '../../domain/value-objects/budget-id';
 import { AllocationId } from '../../domain/value-objects/allocation-id';
 import { AlertId } from '../../domain/value-objects/alert-id';
@@ -353,19 +353,29 @@ export class BudgetService {
 
     await this.allocationRepository.saveWithAlerts(allocation, alerts);
 
-    // If spending has reached or exceeded the allocated amount, mark the parent
-    // budget as EXCEEDED so its status accurately reflects its state.
-    if (allocation.isOverBudget()) {
-      const budget = await this.budgetRepository.findByIdInternal(
-        allocation.budgetId
-      );
-      if (budget && budget.isActive()) {
+    // Load the parent budget to emit child-entity events on the aggregate root
+    const budget = await this.budgetRepository.findByIdInternal(
+      allocation.budgetId
+    );
+
+    if (budget) {
+      // Emit alert_generated events on the Budget aggregate for each alert raised
+      for (const alert of alerts) {
+        budget.recordAlertGenerated(alert.id.getValue(), alert.level);
+      }
+
+      // If spending has reached or exceeded the allocated amount, mark the parent
+      // budget as EXCEEDED so its status accurately reflects its state.
+      if (allocation.isOverBudget() && budget.isActive()) {
         try {
           budget.markAsExceeded(allocation.spentAmount.toNumber());
-          await this.budgetRepository.save(budget);
         } catch {
           // Status transition may already be EXCEEDED; ignore duplicate transitions
         }
+      }
+
+      if (budget.domainEvents.length > 0) {
+        await this.budgetRepository.save(budget);
       }
     }
 
@@ -394,9 +404,11 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError('delete allocation in');
     }
 
-    // Emit the deleted domain event before removing the record
-    allocation.markAsDeleted();
-    await this.allocationRepository.save(allocation);
+    // Emit allocation_deleted on the parent Budget aggregate
+    if (budget) {
+      budget.recordAllocationDeleted(allocationId);
+      await this.budgetRepository.save(budget);
+    }
 
     await this.allocationRepository.delete(
       AllocationId.fromString(allocationId)
@@ -407,7 +419,7 @@ export class BudgetService {
     budgetId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<BudgetAllocation>> {
+  ): Promise<PaginatedResult<BudgetAllocationDTO>> {
     // Verify the budget belongs to the workspace before returning its allocations
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
@@ -416,21 +428,23 @@ export class BudgetService {
     if (!budget) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
-    return await this.allocationRepository.findByBudget(
+    const result = await this.allocationRepository.findByBudget(
       BudgetId.fromString(budgetId),
       options
     );
+    return { ...result, items: result.items.map((alloc) => BudgetAllocation.toDTO(alloc)) };
   }
 
   // Alert management
   async getUnreadAlerts(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<BudgetAlert>> {
-    return await this.alertRepository.findUnreadAlerts(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetAlertDTO>> {
+    const result = await this.alertRepository.findUnreadAlerts(workspaceId, options);
+    return { ...result, items: result.items.map((alert) => BudgetAlert.toDTO(alert)) };
   }
 
-  async markAlertAsRead(alertId: string): Promise<BudgetAlert> {
+  async markAlertAsRead(alertId: string): Promise<BudgetAlertDTO> {
     const alert = await this.alertRepository.findById(
       AlertId.fromString(alertId)
     );
@@ -443,7 +457,7 @@ export class BudgetService {
 
     await this.alertRepository.save(alert);
 
-    return alert;
+    return BudgetAlert.toDTO(alert);
   }
 
   // Budget period management

@@ -5,7 +5,10 @@ import {
   IAuditLogRepository,
   AuditLogFilter,
 } from '../../domain/repositories/audit-log.repository';
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import {
+  AuditLog,
+  AuditLogsPurgedEvent,
+} from '../../domain/entities/audit-log.entity';
 import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
@@ -171,6 +174,17 @@ export class AuditLogRepositoryImpl
         },
       },
     });
+
+    if (deleted.count > 0) {
+      await this.eventBus.publish(
+        new AuditLogsPurgedEvent(
+          workspaceId,
+          olderThan.toISOString(),
+          deleted.count
+        )
+      );
+    }
+
     return deleted.count;
   }
 

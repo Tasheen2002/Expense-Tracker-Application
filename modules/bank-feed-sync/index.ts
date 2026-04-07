@@ -22,6 +22,5 @@ export type { BankConnectionDTO } from './domain/entities/bank-connection.entity
 export type { SyncSessionDTO } from './domain/entities/sync-session.entity';
 export type { BankTransactionDTO } from './domain/entities/bank-transaction.entity';
 
-// Application services (for DI container wiring)
-export { TransactionSyncService } from './application/services/transaction-sync.service';
+// Interface type only (needed for DI configuration)
 export type { IBankAPIClient } from './application/services/transaction-sync.service';

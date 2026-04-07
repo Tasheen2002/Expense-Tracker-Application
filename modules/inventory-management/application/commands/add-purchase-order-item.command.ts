@@ -1,5 +1,5 @@
 import { PurchaseOrderService } from '../services/purchase-order.service';
-import { PurchaseOrderItem, PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
+import { PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -22,6 +22,6 @@ export class AddPurchaseOrderItemHandler
 
   async handle(command: AddPurchaseOrderItemCommand): Promise<CommandResult<PurchaseOrderItemDTO>> {
     const item = await this.poService.addItem(command);
-    return CommandResult.success(PurchaseOrderItem.toDTO(item));
+    return CommandResult.success(item);
   }
 }

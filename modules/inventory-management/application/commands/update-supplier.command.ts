@@ -1,5 +1,5 @@
 import { SupplierService } from '../services/supplier.service';
-import { Supplier, SupplierDTO } from '../../domain/entities/supplier.entity';
+import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -31,6 +31,6 @@ export class UpdateSupplierHandler
         address: command.address,
       }
     );
-    return CommandResult.success(Supplier.toDTO(supplier));
+    return CommandResult.success(supplier);
   }
 }

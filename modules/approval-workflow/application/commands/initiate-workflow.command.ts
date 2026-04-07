@@ -23,7 +23,7 @@ export class InitiateWorkflowHandler implements ICommandHandler<
   async handle(input: InitiateWorkflowInput): Promise<CommandResult<string>> {
     try {
       const workflow = await this.workflowService.initiateWorkflow(input);
-      return CommandResult.success(workflow.getExpenseId().getValue());
+      return CommandResult.success(workflow.expenseId);
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

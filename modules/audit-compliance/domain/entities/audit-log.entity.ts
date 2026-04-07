@@ -39,6 +39,29 @@ export class AuditLogCreatedEvent extends DomainEvent {
   }
 }
 
+export class AuditLogsPurgedEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly beforeDate: string,
+    public readonly deletedCount: number
+  ) {
+    // Use workspaceId as the aggregate id since there is no single
+    // audit-log aggregate that owns this bulk operation.
+    super(workspaceId, 'AuditLog');
+  }
+
+  get eventType(): string {
+    return 'audit.logs_purged';
+  }
+
+  public getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      beforeDate: this.beforeDate,
+      deletedCount: this.deletedCount,
+    };
+  }
+}
 
 // ============================================================================
 // Entity

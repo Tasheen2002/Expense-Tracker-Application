@@ -1,4 +1,5 @@
 import { ForecastService } from '../services/forecast.service';
+import { ForecastDTO } from '../../domain/entities/forecast.entity';
 import { ForecastType } from '../../domain/enums/forecast-type.enum';
 import {
   ICommand,
@@ -16,13 +17,13 @@ export interface CreateForecastCommand extends ICommand {
 
 export class CreateForecastHandler implements ICommandHandler<
   CreateForecastCommand,
-  CommandResult<{ forecastId: string }>
+  CommandResult<ForecastDTO>
 > {
   constructor(private readonly forecastService: ForecastService) {}
 
   async handle(
     command: CreateForecastCommand
-  ): Promise<CommandResult<{ forecastId: string }>> {
+  ): Promise<CommandResult<ForecastDTO>> {
     const forecast = await this.forecastService.createForecast({
       planId: command.planId,
       workspaceId: command.workspaceId,
@@ -30,6 +31,6 @@ export class CreateForecastHandler implements ICommandHandler<
       type: command.type,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastId: forecast.id.getValue() });
+    return CommandResult.success(forecast);
   }
 }

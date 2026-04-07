@@ -25,18 +25,22 @@ export class GetBankConnectionHandler implements IQueryHandler<
   async handle(
     query: GetBankConnectionQuery
   ): Promise<QueryResult<BankConnectionDTO>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const connectionId = BankConnectionId.fromString(query.connectionId);
+    try {
+      const workspaceId = WorkspaceId.fromString(query.workspaceId);
+      const connectionId = BankConnectionId.fromString(query.connectionId);
 
-    const connection = await this.connectionRepository.findById(
-      connectionId,
-      workspaceId
-    );
+      const connection = await this.connectionRepository.findById(
+        connectionId,
+        workspaceId
+      );
 
-    if (!connection) {
-      throw new BankConnectionNotFoundError(query.connectionId);
+      if (!connection) {
+        throw new BankConnectionNotFoundError(query.connectionId);
+      }
+
+      return QueryResult.success(BankConnection.toDTO(connection));
+    } catch (error: unknown) {
+      return QueryResult.fromError(error);
     }
-
-    return QueryResult.success(BankConnection.toDTO(connection));
   }
 }

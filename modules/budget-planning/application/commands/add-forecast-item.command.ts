@@ -1,4 +1,5 @@
 import { ForecastService } from '../services/forecast.service';
+import { ForecastItemDTO } from '../../domain/entities/forecast-item.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -16,13 +17,13 @@ export interface AddForecastItemCommand extends ICommand {
 
 export class AddForecastItemHandler implements ICommandHandler<
   AddForecastItemCommand,
-  CommandResult<{ forecastItemId: string }>
+  CommandResult<ForecastItemDTO>
 > {
   constructor(private readonly forecastService: ForecastService) {}
 
   async handle(
     command: AddForecastItemCommand
-  ): Promise<CommandResult<{ forecastItemId: string }>> {
+  ): Promise<CommandResult<ForecastItemDTO>> {
     const item = await this.forecastService.addForecastItem({
       forecastId: command.forecastId,
       workspaceId: command.workspaceId,
@@ -31,6 +32,6 @@ export class AddForecastItemHandler implements ICommandHandler<
       notes: command.notes,
       userId: command.userId,
     });
-    return CommandResult.success({ forecastItemId: item.id.getValue() });
+    return CommandResult.success(item);
   }
 }

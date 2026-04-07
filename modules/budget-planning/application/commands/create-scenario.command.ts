@@ -1,4 +1,5 @@
 import { ScenarioService } from '../services/scenario.service';
+import { ScenarioDTO } from '../../domain/entities/scenario.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -16,13 +17,13 @@ export interface CreateScenarioCommand extends ICommand {
 
 export class CreateScenarioHandler implements ICommandHandler<
   CreateScenarioCommand,
-  CommandResult<{ scenarioId: string }>
+  CommandResult<ScenarioDTO>
 > {
   constructor(private readonly scenarioService: ScenarioService) {}
 
   async handle(
     command: CreateScenarioCommand
-  ): Promise<CommandResult<{ scenarioId: string }>> {
+  ): Promise<CommandResult<ScenarioDTO>> {
     const scenario = await this.scenarioService.createScenario({
       planId: command.planId,
       workspaceId: command.workspaceId,
@@ -31,6 +32,6 @@ export class CreateScenarioHandler implements ICommandHandler<
       assumptions: command.assumptions,
       createdBy: command.createdBy,
     });
-    return CommandResult.success({ scenarioId: scenario.id.getValue() });
+    return CommandResult.success(scenario);
   }
 }

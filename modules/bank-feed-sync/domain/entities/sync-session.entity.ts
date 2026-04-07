@@ -9,6 +9,28 @@ import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-ro
 // Domain Events
 // ============================================================================
 
+export class SyncSessionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly connectionId: string,
+    public readonly workspaceId: string
+  ) {
+    super(sessionId, 'SyncSession');
+  }
+
+  get eventType(): string {
+    return 'sync_session.created';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 export class SyncSessionStartedEvent extends DomainEvent {
   constructor(
     public readonly sessionId: string,
@@ -139,7 +161,7 @@ export class SyncSession extends AggregateRoot {
     connectionId: BankConnectionId,
     metadata?: Record<string, unknown>
   ): SyncSession {
-    return new SyncSession({
+    const session = new SyncSession({
       id: SyncSessionId.create(),
       workspaceId,
       connectionId,
@@ -152,6 +174,16 @@ export class SyncSession extends AggregateRoot {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    session.addDomainEvent(
+      new SyncSessionCreatedEvent(
+        session.id.getValue(),
+        session.connectionId.getValue(),
+        session.workspaceId.getValue()
+      )
+    );
+
+    return session;
   }
 
   static reconstitute(props: SyncSessionProps): SyncSession {

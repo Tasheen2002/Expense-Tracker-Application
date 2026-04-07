@@ -43,6 +43,52 @@ export class ExpenseAllocationCreatedEvent extends DomainEvent {
   }
 }
 
+export class ExpenseAllocationDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string
+  ) {
+    super(allocationId, 'ExpenseAllocation');
+  }
+
+  get eventType(): string {
+    return 'ExpenseAllocationDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+export class ExpenseAllocationsReplacedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly newAllocationCount: number
+  ) {
+    // Uses the expenseId as the aggregate identifier since this event
+    // represents the replacement of ALL allocations for a given expense.
+    super(expenseId, 'ExpenseAllocation');
+  }
+
+  get eventType(): string {
+    return 'ExpenseAllocationsReplaced';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      newAllocationCount: this.newAllocationCount,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -200,6 +246,32 @@ export class ExpenseAllocation extends AggregateRoot {
 
   getCreatedAt(): Date {
     return this.createdAt;
+  }
+
+  /**
+   * Marks this allocation as deleted and emits a domain event.
+   * Call this before persisting the deletion so the event can be dispatched.
+   */
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ExpenseAllocationDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.expenseId
+      )
+    );
+  }
+
+  /**
+   * Records that all allocations for the given expense have been replaced.
+   * This is used as a single aggregate-level event when a bulk replace is
+   * performed and loading each old allocation entity individually is not
+   * practical.
+   */
+  recordReplacement(expenseId: string, workspaceId: string, newAllocationCount: number): void {
+    this.addDomainEvent(
+      new ExpenseAllocationsReplacedEvent(expenseId, workspaceId, newAllocationCount)
+    );
   }
 
   static toDTO(allocation: ExpenseAllocation): ExpenseAllocationDTO {

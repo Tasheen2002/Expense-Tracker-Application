@@ -1,7 +1,8 @@
 import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
 import { SplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
-import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
-import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
+import { ExpenseRepository } from '../../domain/repositories/expense.repository';
+import { ExpenseSplit, ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
+import { SplitSettlement, SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { SplitId } from '../../domain/value-objects/split-id';
 import { SettlementId } from '../../domain/value-objects/settlement-id';
@@ -23,7 +24,8 @@ import { Decimal } from '@prisma/client/runtime/library';
 export class ExpenseSplitService {
   constructor(
     private readonly splitRepository: ExpenseSplitRepository,
-    private readonly settlementRepository: SplitSettlementRepository
+    private readonly settlementRepository: SplitSettlementRepository,
+    private readonly expenseRepository?: ExpenseRepository
   ) {}
 
   async createSplit(params: {
@@ -37,7 +39,7 @@ export class ExpenseSplitService {
       shareAmount?: number;
       sharePercentage?: number;
     }>;
-  }): Promise<ExpenseSplit> {
+  }): Promise<ExpenseSplitDTO> {
     const expenseId = ExpenseId.fromString(params.expenseId);
 
     const exists = await this.splitRepository.exists(
@@ -84,14 +86,14 @@ export class ExpenseSplitService {
       }
     }
 
-    return split;
+    return split.toJSON();
   }
 
   async getSplitById(
     splitId: string,
     workspaceId: string,
     userId: string
-  ): Promise<ExpenseSplit> {
+  ): Promise<ExpenseSplitDTO> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
       workspaceId
@@ -105,14 +107,14 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
-    return split;
+    return split.toJSON();
   }
 
   async getSplitByExpenseId(
     expenseId: string,
     workspaceId: string,
     userId: string
-  ): Promise<ExpenseSplit | null> {
+  ): Promise<ExpenseSplitDTO | null> {
     const split = await this.splitRepository.findByExpenseId(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -126,15 +128,16 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(split.getId().getValue(), userId);
     }
 
-    return split;
+    return split.toJSON();
   }
 
   async listUserSplits(
     userId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<ExpenseSplit>> {
-    return await this.splitRepository.findByUser(userId, workspaceId, options);
+  ): Promise<PaginatedResult<ExpenseSplitDTO>> {
+    const result = await this.splitRepository.findByUser(userId, workspaceId, options);
+    return { ...result, items: result.items.map((s) => s.toJSON()) };
   }
 
   async deleteSplit(
@@ -155,6 +158,8 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
+    split.markAsDeleted();
+    await this.splitRepository.save(split);
     await this.splitRepository.delete(SplitId.fromString(splitId), workspaceId);
   }
 
@@ -163,7 +168,7 @@ export class ExpenseSplitService {
     workspaceId: string;
     userId: string;
     amount: number;
-  }): Promise<SplitSettlement> {
+  }): Promise<SplitSettlementDTO> {
     const settlement = await this.settlementRepository.findById(
       SettlementId.fromString(params.settlementId),
       params.workspaceId
@@ -200,9 +205,20 @@ export class ExpenseSplitService {
         participant.markAsPaid();
         await this.splitRepository.save(split);
       }
+
+      if (this.expenseRepository) {
+        const expense = await this.expenseRepository.findById(
+          split.getExpenseId(),
+          params.workspaceId
+        );
+        if (expense) {
+          expense.recordSettlement(settlement.getId().getValue());
+          await this.expenseRepository.update(expense);
+        }
+      }
     }
 
-    return settlement;
+    return settlement.toJSON();
   }
 
   async getUserSettlements(
@@ -210,20 +226,21 @@ export class ExpenseSplitService {
     workspaceId: string,
     status?: SettlementStatus,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<SplitSettlement>> {
-    return await this.settlementRepository.findByUser(
+  ): Promise<PaginatedResult<SplitSettlementDTO>> {
+    const result = await this.settlementRepository.findByUser(
       userId,
       workspaceId,
       status,
       options
     );
+    return { ...result, items: result.items.map((s) => s.toJSON()) };
   }
 
   async getSplitSettlements(
     splitId: string,
     workspaceId: string,
     userId: string
-  ): Promise<PaginatedResult<SplitSettlement>> {
+  ): Promise<PaginatedResult<SplitSettlementDTO>> {
     const split = await this.splitRepository.findById(
       SplitId.fromString(splitId),
       workspaceId
@@ -237,9 +254,10 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
-    return await this.settlementRepository.findBySplitId(
+    const result = await this.settlementRepository.findBySplitId(
       SplitId.fromString(splitId),
       workspaceId
     );
+    return { ...result, items: result.items.map((s) => s.toJSON()) };
   }
 }

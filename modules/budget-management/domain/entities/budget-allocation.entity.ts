@@ -6,129 +6,7 @@ import {
   InvalidAlertThresholdError,
   NegativeAmountError,
 } from '../errors/budget.errors';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { BudgetAlert } from './budget-alert.entity';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class BudgetAllocationCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly allocationId: string,
-    public readonly budgetId: string,
-    public readonly categoryId: string | null,
-    public readonly allocatedAmount: string
-  ) {
-    super(allocationId, 'BudgetAllocation');
-  }
-
-  get eventType(): string {
-    return 'budget-allocation.created';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      allocationId: this.allocationId,
-      budgetId: this.budgetId,
-      categoryId: this.categoryId,
-      allocatedAmount: this.allocatedAmount,
-    };
-  }
-}
-
-export class BudgetAllocationUpdatedEvent extends DomainEvent {
-  constructor(
-    public readonly allocationId: string,
-    public readonly budgetId: string,
-    public readonly changes: {
-      allocatedAmount?: string;
-      description?: string | null;
-    }
-  ) {
-    super(allocationId, 'BudgetAllocation');
-  }
-
-  get eventType(): string {
-    return 'budget-allocation.updated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      allocationId: this.allocationId,
-      budgetId: this.budgetId,
-      changes: this.changes,
-    };
-  }
-}
-
-export class BudgetSpentIncrementedEvent extends DomainEvent {
-  constructor(
-    public readonly allocationId: string,
-    public readonly budgetId: string,
-    public readonly incrementAmount: string,
-    public readonly newSpentAmount: string
-  ) {
-    super(allocationId, 'BudgetAllocation');
-  }
-
-  get eventType(): string {
-    return 'budget-allocation.spent-incremented';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      allocationId: this.allocationId,
-      budgetId: this.budgetId,
-      incrementAmount: this.incrementAmount,
-      newSpentAmount: this.newSpentAmount,
-    };
-  }
-}
-
-export class BudgetSpentDecrementedEvent extends DomainEvent {
-  constructor(
-    public readonly allocationId: string,
-    public readonly budgetId: string,
-    public readonly decrementAmount: string,
-    public readonly newSpentAmount: string
-  ) {
-    super(allocationId, 'BudgetAllocation');
-  }
-
-  get eventType(): string {
-    return 'budget-allocation.spent-decremented';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      allocationId: this.allocationId,
-      budgetId: this.budgetId,
-      decrementAmount: this.decrementAmount,
-      newSpentAmount: this.newSpentAmount,
-    };
-  }
-}
-
-export class BudgetAllocationDeletedEvent extends DomainEvent {
-  constructor(
-    public readonly allocationId: string,
-    public readonly budgetId: string
-  ) {
-    super(allocationId, 'BudgetAllocation');
-  }
-
-  get eventType(): string {
-    return 'budget-allocation.deleted';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      allocationId: this.allocationId,
-      budgetId: this.budgetId,
-    };
-  }
-}
 
 export interface BudgetAllocationProps {
   id: AllocationId;
@@ -324,9 +202,6 @@ export class BudgetAllocation {
   updateDescription(description: string | null): void {
     this.props.description = description?.trim() || null;
     this.props.updatedAt = new Date();
-  }
-
-  markAsDeleted(): void {
   }
 
   getRemainingAmount(): Decimal {

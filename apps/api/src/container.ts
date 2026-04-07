@@ -1530,7 +1530,8 @@ export class Container {
     const getForecastHandler = new GetForecastHandler(forecastRepository);
     const listForecastsHandler = new ListForecastsHandler(forecastRepository);
     const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastItemRepository
+      forecastItemRepository,
+      forecastRepository
     );
     const getScenarioHandler = new GetScenarioHandler(scenarioRepository);
     const listScenariosHandler = new ListScenariosHandler(scenarioRepository);

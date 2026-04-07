@@ -36,7 +36,7 @@ export class CreateDepartmentHandler implements ICommandHandler<
       parentDepartmentId: command.parentDepartmentId,
     });
     return CommandResult.success({
-      departmentId: department.getId().getValue(),
+      departmentId: department.id,
     });
   }
 }

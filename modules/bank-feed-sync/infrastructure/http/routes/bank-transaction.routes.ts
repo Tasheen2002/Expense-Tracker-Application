@@ -20,7 +20,7 @@ import {
   processTransactionBodySchema,
   connectionParamsSchema,
   paginationQuerySchema,
-} from '../validation/bank-sync.schema.js';
+} from '../validation/bank-sync.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,

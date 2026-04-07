@@ -1,8 +1,10 @@
-import { AuditLog } from '../../domain/entities/audit-log.entity';
+import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
 import { IAuditLogRepository } from '../../domain/repositories/audit-log.repository';
 import { AuditRetentionViolationError } from '../../domain/errors/audit.errors';
+
+export type { AuditLogDTO };
 
 export interface CreateAuditLogDTO {
   workspaceId: string;
@@ -21,9 +23,9 @@ export class AuditService {
 
   /**
    * Creates an audit log entry directly (for HTTP API usage).
-   * Returns the ID of the newly created audit log entry.
+   * Returns the full DTO of the newly created audit log entry.
    */
-  async createAuditLog(data: CreateAuditLogDTO): Promise<string> {
+  async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLogDTO> {
     const action = AuditAction.create(data.action);
     const resource = AuditResource.create(data.entityType, data.entityId);
 
@@ -39,7 +41,7 @@ export class AuditService {
     });
 
     await this.auditRepository.save(auditLog);
-    return auditLog.id.getValue();
+    return AuditLog.toDTO(auditLog);
   }
 
   private static readonly MIN_RETENTION_DAYS = 30;

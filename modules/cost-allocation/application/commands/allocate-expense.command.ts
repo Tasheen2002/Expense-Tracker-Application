@@ -1,4 +1,5 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
+import { ExpenseAllocationDTO } from '../../domain/entities/expense-allocation.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -21,19 +22,19 @@ export interface AllocateExpenseCommand extends ICommand {
 
 export class AllocateExpenseHandler implements ICommandHandler<
   AllocateExpenseCommand,
-  CommandResult<void>
+  CommandResult<ExpenseAllocationDTO[]>
 > {
   constructor(
     private readonly expenseAllocationService: ExpenseAllocationService
   ) {}
 
-  async handle(command: AllocateExpenseCommand): Promise<CommandResult<void>> {
-    await this.expenseAllocationService.allocateExpense({
+  async handle(command: AllocateExpenseCommand): Promise<CommandResult<ExpenseAllocationDTO[]>> {
+    const allocations = await this.expenseAllocationService.allocateExpense({
       workspaceId: command.workspaceId,
       expenseId: command.expenseId,
       createdBy: command.createdBy,
       allocations: command.allocations,
     });
-    return CommandResult.success(undefined);
+    return CommandResult.success(allocations);
   }
 }

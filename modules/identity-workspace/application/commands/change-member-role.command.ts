@@ -2,7 +2,6 @@ import { ICommand, ICommandHandler } from '../../../../packages/core/src/applica
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import {
-  WorkspaceMembership,
   WorkspaceMembershipDTO,
   WorkspaceRole,
 } from '../../domain/entities/workspace-membership.entity';
@@ -33,11 +32,11 @@ export class ChangeMemberRoleHandler implements ICommandHandler<
         throw new MembershipNotFoundError(command.userId);
       }
 
-      const updated = await this.membershipService.changeMemberRole(
+      const updatedDTO = await this.membershipService.changeMemberRole(
         membership.getId().getValue(),
         command.role
       );
-      return CommandResult.success(WorkspaceMembership.toDTO(updated));
+      return CommandResult.success(updatedDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

@@ -1,5 +1,5 @@
 import { ISupplierRepository } from '../../domain/repositories/supplier.repository';
-import { Supplier } from '../../domain/entities/supplier.entity';
+import { Supplier, SupplierDTO } from '../../domain/entities/supplier.entity';
 import { SupplierId } from '../../domain/value-objects/supplier-id.vo';
 import {
   SupplierNotFoundError,
@@ -19,7 +19,7 @@ export class SupplierService {
     contactEmail?: string;
     contactPhone?: string;
     address?: string;
-  }): Promise<Supplier> {
+  }): Promise<SupplierDTO> {
     const nameExists = await this.supplierRepository.existsByName(
       params.name,
       params.workspaceId
@@ -30,7 +30,7 @@ export class SupplierService {
 
     const supplier = Supplier.create(params);
     await this.supplierRepository.save(supplier);
-    return supplier;
+    return Supplier.toDTO(supplier);
   }
 
   async updateSupplier(
@@ -42,7 +42,7 @@ export class SupplierService {
       contactPhone?: string | null;
       address?: string | null;
     }
-  ): Promise<Supplier> {
+  ): Promise<SupplierDTO> {
     const supplier = await this.supplierRepository.findById(
       SupplierId.fromString(supplierId),
       workspaceId
@@ -74,7 +74,7 @@ export class SupplierService {
     }
 
     await this.supplierRepository.save(supplier);
-    return supplier;
+    return Supplier.toDTO(supplier);
   }
 
   async deleteSupplier(supplierId: string, workspaceId: string): Promise<void> {
@@ -96,17 +96,25 @@ export class SupplierService {
   async getSupplierById(
     supplierId: string,
     workspaceId: string
-  ): Promise<Supplier | null> {
-    return this.supplierRepository.findById(
+  ): Promise<SupplierDTO | null> {
+    const supplier = await this.supplierRepository.findById(
       SupplierId.fromString(supplierId),
       workspaceId
     );
+    return supplier ? Supplier.toDTO(supplier) : null;
   }
 
   async getSuppliersByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Supplier>> {
-    return this.supplierRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<SupplierDTO>> {
+    const result = await this.supplierRepository.findByWorkspace(workspaceId, options);
+    return {
+      items: result.items.map((s) => Supplier.toDTO(s)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

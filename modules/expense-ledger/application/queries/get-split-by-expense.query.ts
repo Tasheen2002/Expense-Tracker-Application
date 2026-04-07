@@ -31,7 +31,7 @@ export class GetSplitByExpenseHandler implements IQueryHandler<
       if (!split) {
         throw new SplitNotFoundError(query.expenseId);
       }
-      return QueryResult.success(split.toJSON());
+      return QueryResult.success(split);
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

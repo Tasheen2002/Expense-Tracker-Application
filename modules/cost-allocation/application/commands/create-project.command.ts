@@ -39,6 +39,6 @@ export class CreateProjectHandler implements ICommandHandler<
       managerId: command.managerId,
       budget: command.budget,
     });
-    return CommandResult.success({ projectId: project.getId().getValue() });
+    return CommandResult.success({ projectId: project.id });
   }
 }

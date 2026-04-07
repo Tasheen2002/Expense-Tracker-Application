@@ -133,9 +133,10 @@ export class ForecastController {
   ) {
     try {
       const userId = req.user.userId;
-      const { forecastId } = req.params;
+      const { forecastId, workspaceId } = req.params;
       const result = await this.getForecastItemsHandler.handle({
         forecastId,
+        workspaceId,
         userId,
       });
       return ResponseHelper.fromQuery(

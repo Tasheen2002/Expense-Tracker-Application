@@ -7,6 +7,7 @@ import {
   PurchaseOrderCannotBeEditedError,
   InvalidInventoryDataError,
 } from '../errors/inventory.errors';
+import { PurchaseOrderItem, CreatePurchaseOrderItemData } from './purchase-order-item.entity';
 import { Decimal } from '@prisma/client/runtime/library';
 
 // Domain Events
@@ -68,6 +69,56 @@ export class PurchaseOrderDeletedEvent extends DomainEvent {
     return {
       purchaseOrderId: this.purchaseOrderId,
       workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class PurchaseOrderItemAddedEvent extends DomainEvent {
+  constructor(
+    public readonly purchaseOrderId: string,
+    public readonly workspaceId: string,
+    public readonly itemId: string,
+    public readonly variantId: string,
+    public readonly quantity: number,
+    public readonly unitPrice: string
+  ) {
+    super(purchaseOrderId, 'PurchaseOrder');
+  }
+
+  get eventType(): string { return 'purchase_order.item_added'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      purchaseOrderId: this.purchaseOrderId,
+      workspaceId: this.workspaceId,
+      itemId: this.itemId,
+      variantId: this.variantId,
+      quantity: this.quantity,
+      unitPrice: this.unitPrice,
+    };
+  }
+}
+
+export class PurchaseOrderItemReceivedEvent extends DomainEvent {
+  constructor(
+    public readonly purchaseOrderId: string,
+    public readonly workspaceId: string,
+    public readonly itemId: string,
+    public readonly variantId: string,
+    public readonly receivedQuantity: number
+  ) {
+    super(purchaseOrderId, 'PurchaseOrder');
+  }
+
+  get eventType(): string { return 'purchase_order.item_received'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      purchaseOrderId: this.purchaseOrderId,
+      workspaceId: this.workspaceId,
+      itemId: this.itemId,
+      variantId: this.variantId,
+      receivedQuantity: this.receivedQuantity,
     };
   }
 }
@@ -237,6 +288,38 @@ export class PurchaseOrder extends AggregateRoot {
   isApproved(): boolean { return this.props.status === PurchaseOrderStatus.APPROVED; }
   isReceived(): boolean { return this.props.status === PurchaseOrderStatus.RECEIVED; }
   isCancelled(): boolean { return this.props.status === PurchaseOrderStatus.CANCELLED; }
+
+  addItem(data: Omit<CreatePurchaseOrderItemData, 'purchaseOrderId'>): PurchaseOrderItem {
+    this.ensureEditable();
+    const item = PurchaseOrderItem.create({
+      ...data,
+      purchaseOrderId: this.id.getValue(),
+    });
+    this.addDomainEvent(
+      new PurchaseOrderItemAddedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        item.id.getValue(),
+        item.variantId,
+        item.quantity,
+        item.unitPrice.toString()
+      )
+    );
+    return item;
+  }
+
+  receiveItem(item: PurchaseOrderItem, receivedQuantity: number): void {
+    item.recordReceivedQuantity(receivedQuantity);
+    this.addDomainEvent(
+      new PurchaseOrderItemReceivedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        item.id.getValue(),
+        item.variantId,
+        receivedQuantity
+      )
+    );
+  }
 
   markAsDeleted(): void {
     this.addDomainEvent(

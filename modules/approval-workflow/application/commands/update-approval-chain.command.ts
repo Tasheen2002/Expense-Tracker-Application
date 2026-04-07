@@ -28,7 +28,7 @@ export class UpdateApprovalChainHandler implements ICommandHandler<
   ): Promise<CommandResult<string>> {
     try {
       const chain = await this.approvalChainService.updateChain(input);
-      return CommandResult.success(chain.getId().getValue());
+      return CommandResult.success(chain.chainId);
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

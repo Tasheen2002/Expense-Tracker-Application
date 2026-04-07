@@ -28,10 +28,7 @@ export class GetSplitSettlementsHandler implements IQueryHandler<
         query.workspaceId,
         query.userId
       );
-      return QueryResult.success({
-        ...settlements,
-        items: settlements.items.map((settlement) => settlement.toJSON()),
-      });
+      return QueryResult.success(settlements);
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

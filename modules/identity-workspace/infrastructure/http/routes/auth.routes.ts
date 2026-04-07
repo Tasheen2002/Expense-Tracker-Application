@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { AuthController } from '../controllers/auth.controller.js';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface.js';
+import { AuthController } from '../controllers/auth.controller';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
-} from '@shared/middleware/rate-limiter.middleware.js';
+} from '@shared/middleware/rate-limiter.middleware';
 import { validateBody } from '../validation/validator';
 import { registerUserSchema, loginUserSchema } from '../validation/user.schema';
 

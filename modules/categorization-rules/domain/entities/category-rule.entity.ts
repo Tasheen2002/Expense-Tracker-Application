@@ -98,6 +98,32 @@ export class CategoryRuleDeletedEvent extends DomainEvent {
   }
 }
 
+export class RuleExecutedEvent extends DomainEvent {
+  constructor(
+    public readonly ruleId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string,
+    public readonly executionId: string,
+    public readonly matched: boolean
+  ) {
+    super(ruleId, 'CategoryRule');
+  }
+
+  get eventType(): string {
+    return 'category_rule.executed';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      ruleId: this.ruleId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+      executionId: this.executionId,
+      matched: this.matched,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -344,6 +370,18 @@ export class CategoryRule extends AggregateRoot {
     return this.condition.matches(expenseData);
   }
 
+  recordExecution(executionId: string, expenseId: string, matched: boolean): void {
+    this.addDomainEvent(
+      new RuleExecutedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        expenseId,
+        executionId,
+        matched,
+      )
+    );
+  }
+
   // Getters
   getId(): RuleId {
     return this.id;
@@ -407,8 +445,8 @@ export class CategoryRule extends AggregateRoot {
       },
       targetCategoryId: rule.targetCategoryId.getValue(),
       createdBy: rule.createdBy.getValue(),
-      createdAt: rule.createdAt,
-      updatedAt: rule.updatedAt,
+      createdAt: rule.createdAt.toISOString(),
+      updatedAt: rule.updatedAt.toISOString(),
     };
   }
 }
@@ -426,6 +464,6 @@ export interface CategoryRuleDTO {
   };
   targetCategoryId: string;
   createdBy: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }

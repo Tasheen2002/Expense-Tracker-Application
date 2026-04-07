@@ -1,5 +1,5 @@
 import { PurchaseOrderService } from '../services/purchase-order.service';
-import { PurchaseOrder, PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
+import { PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -21,6 +21,6 @@ export class ApprovePurchaseOrderHandler
       command.purchaseOrderId,
       command.workspaceId
     );
-    return CommandResult.success(PurchaseOrder.toDTO(po));
+    return CommandResult.success(po);
   }
 }

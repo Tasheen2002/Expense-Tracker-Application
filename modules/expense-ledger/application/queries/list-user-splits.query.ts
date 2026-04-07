@@ -28,9 +28,6 @@ export class ListUserSplitsHandler implements IQueryHandler<
       query.workspaceId,
       { limit: query.limit, offset: query.offset }
     );
-    return QueryResult.success({
-      ...result,
-      items: result.items.map((split) => split.toJSON()),
-    });
+    return QueryResult.success(result);
   }
 }

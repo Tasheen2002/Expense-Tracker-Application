@@ -31,9 +31,6 @@ export class ListUserSettlementsHandler implements IQueryHandler<
       query.status,
       { limit: query.limit, offset: query.offset }
     );
-    return QueryResult.success({
-      ...result,
-      items: result.items.map((settlement) => settlement.toJSON()),
-    });
+    return QueryResult.success(result);
   }
 }

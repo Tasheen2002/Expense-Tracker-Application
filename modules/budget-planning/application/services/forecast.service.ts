@@ -1,4 +1,5 @@
-import { Forecast } from "../../domain/entities/forecast.entity";
+import { Forecast, ForecastDTO } from "../../domain/entities/forecast.entity";
+import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
 import { IForecastRepository } from "../../domain/repositories/forecast.repository";
 import { IForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
@@ -6,7 +7,7 @@ import { PlanId } from "../../domain/value-objects/plan-id";
 import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
-import { ForecastItem } from "../../domain/entities/forecast-item.entity";
+import { ForecastItem, ForecastItemDTO } from "../../domain/entities/forecast-item.entity";
 import { CategoryId } from "../../../expense-ledger";
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
 import {
@@ -32,7 +33,7 @@ export class ForecastService {
     planId: PlanId,
     workspaceId: string,
     action: string,
-  ): Promise<void> {
+  ): Promise<BudgetPlan> {
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
       throw new BudgetPlanNotFoundError(planId.getValue());
@@ -47,6 +48,8 @@ export class ForecastService {
     if (!isCreator && !isAdminOrOwner) {
       throw new UnauthorizedBudgetPlanAccessError(action);
     }
+
+    return plan;
   }
 
   async createForecast(params: {
@@ -55,11 +58,11 @@ export class ForecastService {
     name: string;
     type: ForecastType;
     userId: string;
-  }): Promise<Forecast> {
+  }): Promise<ForecastDTO> {
     const planId = PlanId.fromString(params.planId);
 
     // Check access to the plan before creating forecast
-    await this.checkPlanAccess(params.userId, planId, params.workspaceId, "create forecast");
+    const plan = await this.checkPlanAccess(params.userId, planId, params.workspaceId, "create forecast");
 
     const existing = await this.forecastRepository.findByName(
       planId,
@@ -76,7 +79,11 @@ export class ForecastService {
     });
 
     await this.forecastRepository.save(forecast);
-    return forecast;
+
+    plan.recordForecastCreated(forecast.id.getValue(), forecast.name);
+    await this.budgetPlanRepository.save(plan);
+
+    return Forecast.toDTO(forecast);
   }
 
   async addForecastItem(params: {
@@ -86,7 +93,7 @@ export class ForecastService {
     amount: number;
     notes?: string;
     userId: string;
-  }): Promise<ForecastItem> {
+  }): Promise<ForecastItemDTO> {
     const forecastId = ForecastId.fromString(params.forecastId);
     const categoryId = CategoryId.fromString(params.categoryId);
 
@@ -96,7 +103,7 @@ export class ForecastService {
     }
 
     // Check access to the parent plan
-    await this.checkPlanAccess(
+    const plan = await this.checkPlanAccess(
       params.userId,
       forecast.planId,
       params.workspaceId,
@@ -119,7 +126,11 @@ export class ForecastService {
     });
 
     await this.forecastItemRepository.save(item);
-    return item;
+
+    plan.recordForecastItemUpdated(forecast.id.getValue(), item.id.getValue());
+    await this.budgetPlanRepository.save(plan);
+
+    return ForecastItem.toDTO(item);
   }
 
   async updateForecastItem(params: {
@@ -128,7 +139,7 @@ export class ForecastService {
     amount?: number;
     notes?: string;
     userId: string;
-  }): Promise<ForecastItem> {
+  }): Promise<ForecastItemDTO> {
     const itemId = ForecastItemId.fromString(params.itemId);
     const item = await this.forecastItemRepository.findById(itemId, params.workspaceId);
 
@@ -144,7 +155,7 @@ export class ForecastService {
     if (!forecast)
       throw new ForecastNotFoundError(item.forecastId.getValue());
 
-    await this.checkPlanAccess(
+    const plan = await this.checkPlanAccess(
       params.userId,
       forecast.planId,
       params.workspaceId,
@@ -158,7 +169,11 @@ export class ForecastService {
     item.updateDetails(amount, params.notes);
 
     await this.forecastItemRepository.save(item);
-    return item;
+
+    plan.recordForecastItemUpdated(forecast.id.getValue(), item.id.getValue());
+    await this.budgetPlanRepository.save(plan);
+
+    return ForecastItem.toDTO(item);
   }
 
   async deleteForecastItem(itemId: string, workspaceId: string, userId: string): Promise<void> {
@@ -175,13 +190,15 @@ export class ForecastService {
     if (!forecast)
       throw new ForecastNotFoundError(item.forecastId.getValue());
 
-    await this.checkPlanAccess(
+    const plan = await this.checkPlanAccess(
       userId,
       forecast.planId,
       workspaceId,
       "delete forecast item",
     );
 
+    plan.recordForecastItemDeleted(item.forecastId.getValue(), itemId);
+    await this.budgetPlanRepository.save(plan);
     await this.forecastItemRepository.delete(id);
   }
 
@@ -192,7 +209,10 @@ export class ForecastService {
       throw new ForecastNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, forecast.planId, workspaceId, "delete forecast");
+    const plan = await this.checkPlanAccess(userId, forecast.planId, workspaceId, "delete forecast");
+
+    plan.recordForecastDeleted(forecastId.getValue());
+    await this.budgetPlanRepository.save(plan);
 
     // Use transactional delete to ensure data integrity
     await this.forecastRepository.deleteWithItems(forecastId);

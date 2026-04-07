@@ -1,11 +1,8 @@
 import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 export class CostAllocationDomainError extends DomainError {
-  public readonly errorCode: string;
-
   constructor(message: string, errorCode: string, statusCode: number) {
     super(message, errorCode, statusCode);
-    this.errorCode = errorCode;
   }
 }
 

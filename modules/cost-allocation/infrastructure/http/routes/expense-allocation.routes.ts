@@ -203,7 +203,48 @@ export async function expenseAllocationRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: { type: 'object' },
+              data: {
+                type: 'object',
+                properties: {
+                  totalAllocations: { type: 'number' },
+                  byDepartment: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        departmentId: { type: 'string' },
+                        departmentName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                  byCostCenter: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        costCenterId: { type: 'string' },
+                        costCenterName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                  byProject: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        projectId: { type: 'string' },
+                        projectName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },

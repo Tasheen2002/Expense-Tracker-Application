@@ -64,6 +64,14 @@ export class RuleExecutionService {
           suggestion,
         );
 
+        // Emit RuleExecutedEvent from the CategoryRule aggregate root
+        rule.recordExecution(
+          execution.getId().getValue(),
+          params.expenseId.getValue(),
+          true,
+        );
+        await this.ruleRepository.save(rule);
+
         return {
           appliedRule: CategoryRule.toDTO(rule),
           suggestedCategoryId: rule.getTargetCategoryId().getValue(),

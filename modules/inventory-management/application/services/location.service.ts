@@ -1,5 +1,5 @@
 import { ILocationRepository } from '../../domain/repositories/location.repository';
-import { Location } from '../../domain/entities/location.entity';
+import { Location, LocationDTO } from '../../domain/entities/location.entity';
 import { LocationId } from '../../domain/value-objects/location-id.vo';
 import { LocationType } from '../../domain/enums/location-type';
 import {
@@ -19,7 +19,7 @@ export class LocationService {
     name: string;
     type?: LocationType;
     address?: string;
-  }): Promise<Location> {
+  }): Promise<LocationDTO> {
     const nameExists = await this.locationRepository.existsByName(
       params.name,
       params.workspaceId
@@ -30,7 +30,7 @@ export class LocationService {
 
     const location = Location.create(params);
     await this.locationRepository.save(location);
-    return location;
+    return Location.toDTO(location);
   }
 
   async updateLocation(
@@ -41,7 +41,7 @@ export class LocationService {
       type?: LocationType;
       address?: string | null;
     }
-  ): Promise<Location> {
+  ): Promise<LocationDTO> {
     const location = await this.locationRepository.findById(
       LocationId.fromString(locationId),
       workspaceId
@@ -70,7 +70,7 @@ export class LocationService {
     }
 
     await this.locationRepository.save(location);
-    return location;
+    return Location.toDTO(location);
   }
 
   async deleteLocation(locationId: string, workspaceId: string): Promise<void> {
@@ -92,17 +92,25 @@ export class LocationService {
   async getLocationById(
     locationId: string,
     workspaceId: string
-  ): Promise<Location | null> {
-    return this.locationRepository.findById(
+  ): Promise<LocationDTO | null> {
+    const location = await this.locationRepository.findById(
       LocationId.fromString(locationId),
       workspaceId
     );
+    return location ? Location.toDTO(location) : null;
   }
 
   async getLocationsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Location>> {
-    return this.locationRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<LocationDTO>> {
+    const result = await this.locationRepository.findByWorkspace(workspaceId, options);
+    return {
+      items: result.items.map((l) => Location.toDTO(l)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

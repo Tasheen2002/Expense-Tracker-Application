@@ -1,7 +1,7 @@
 import { IPurchaseOrderRepository } from '../../domain/repositories/purchase-order.repository';
 import { ISupplierRepository } from '../../domain/repositories/supplier.repository';
-import { PurchaseOrder } from '../../domain/entities/purchase-order.entity';
-import { PurchaseOrderItem } from '../../domain/entities/purchase-order-item.entity';
+import { PurchaseOrder, PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
+import { PurchaseOrderItem, PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import { PurchaseOrderId } from '../../domain/value-objects/purchase-order-id.vo';
 import { PurchaseOrderItemId } from '../../domain/value-objects/purchase-order-item-id.vo';
 import { SupplierId } from '../../domain/value-objects/supplier-id.vo';
@@ -31,7 +31,7 @@ export class PurchaseOrderService {
     notes?: string;
     currency?: string;
     createdBy: string;
-  }): Promise<PurchaseOrder> {
+  }): Promise<PurchaseOrderDTO> {
     const supplierExists = await this.supplierRepository.exists(
       SupplierId.fromString(params.supplierId),
       params.workspaceId
@@ -42,7 +42,7 @@ export class PurchaseOrderService {
 
     const po = PurchaseOrder.create(params);
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
   async updatePurchaseOrder(
@@ -52,7 +52,7 @@ export class PurchaseOrderService {
       notes?: string | null;
       expectedDate?: Date | null;
     }
-  ): Promise<PurchaseOrder> {
+  ): Promise<PurchaseOrderDTO> {
     const po = await this.poRepository.findById(
       PurchaseOrderId.fromString(poId),
       workspaceId
@@ -69,7 +69,7 @@ export class PurchaseOrderService {
     }
 
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
   async deletePurchaseOrder(poId: string, workspaceId: string): Promise<void> {
@@ -88,32 +88,32 @@ export class PurchaseOrderService {
     );
   }
 
-  async submitPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrder> {
+  async submitPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
     const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
     po.submit();
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
-  async approvePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrder> {
+  async approvePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
     const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
     po.approve();
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
-  async receivePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrder> {
+  async receivePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
     const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
     po.receive();
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
-  async cancelPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrder> {
+  async cancelPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
     const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
     po.cancel();
     await this.poRepository.save(po);
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
   // Item management
@@ -124,7 +124,7 @@ export class PurchaseOrderService {
     variantName: string;
     quantity: number;
     unitPrice: number | string;
-  }): Promise<PurchaseOrderItem> {
+  }): Promise<PurchaseOrderItemDTO> {
     const po = await this.getPurchaseOrderOrThrow(
       params.purchaseOrderId,
       params.workspaceId
@@ -140,7 +140,7 @@ export class PurchaseOrderService {
 
     await this.poRepository.saveItem(item);
     await this.recalculateTotal(po.id.getValue(), params.workspaceId);
-    return item;
+    return PurchaseOrderItem.toDTO(item);
   }
 
   async removeItem(itemId: string, workspaceId: string): Promise<void> {
@@ -174,29 +174,40 @@ export class PurchaseOrderService {
   async getPurchaseOrderById(
     poId: string,
     workspaceId: string
-  ): Promise<PurchaseOrder | null> {
-    return this.poRepository.findById(
+  ): Promise<PurchaseOrderDTO | null> {
+    const po = await this.poRepository.findById(
       PurchaseOrderId.fromString(poId),
       workspaceId
     );
+    return po ? PurchaseOrder.toDTO(po) : null;
   }
 
   async getPurchaseOrdersByWorkspace(
     workspaceId: string,
     filters?: { status?: PurchaseOrderStatus; supplierId?: string },
     options?: PaginationOptions
-  ): Promise<PaginatedResult<PurchaseOrder>> {
+  ): Promise<PaginatedResult<PurchaseOrderDTO>> {
+    let result;
     if (filters?.status || filters?.supplierId) {
-      return this.poRepository.findByFilters(
+      result = await this.poRepository.findByFilters(
         { workspaceId, ...filters },
         options
       );
+    } else {
+      result = await this.poRepository.findByWorkspace(workspaceId, options);
     }
-    return this.poRepository.findByWorkspace(workspaceId, options);
+    return {
+      items: result.items.map((po) => PurchaseOrder.toDTO(po)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
-  async getItemsByPurchaseOrder(purchaseOrderId: string): Promise<PurchaseOrderItem[]> {
-    return this.poRepository.findItemsByPurchaseOrder(purchaseOrderId);
+  async getItemsByPurchaseOrder(purchaseOrderId: string): Promise<PurchaseOrderItemDTO[]> {
+    const items = await this.poRepository.findItemsByPurchaseOrder(purchaseOrderId);
+    return items.map((item) => PurchaseOrderItem.toDTO(item));
   }
 
   private async getPurchaseOrderOrThrow(

@@ -1,8 +1,5 @@
 import { ApprovalChainService } from '../services/approval-chain.service';
-import {
-  ApprovalChain,
-  ApprovalChainDTO,
-} from '../../domain/entities/approval-chain.entity';
+import { ApprovalChainDTO } from '../../domain/entities/approval-chain.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -39,10 +36,7 @@ export class ListApprovalChainsHandler implements IQueryHandler<
         input.activeOnly,
         { limit: input.limit, offset: input.offset }
       );
-      return QueryResult.success({
-        ...result,
-        items: result.items.map((chain) => ApprovalChain.toDTO(chain)),
-      });
+      return QueryResult.success(result);
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

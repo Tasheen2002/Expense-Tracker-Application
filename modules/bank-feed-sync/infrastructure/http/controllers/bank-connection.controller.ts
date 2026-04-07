@@ -54,7 +54,7 @@ export class BankConnectionController {
         reply,
         result,
         'Bank connection created successfully',
-        result.data ? { id: result.data } : undefined,
+        result.data ?? undefined,
         201
       );
     } catch (error) {

@@ -24,6 +24,6 @@ export class GetSplitHandler implements IQueryHandler<
       query.workspaceId,
       query.userId
     );
-    return QueryResult.success(split.toJSON());
+    return QueryResult.success(split);
   }
 }

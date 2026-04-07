@@ -1,8 +1,5 @@
 import { ApprovalChainService } from '../services/approval-chain.service';
-import {
-  ApprovalChain,
-  ApprovalChainDTO,
-} from '../../domain/entities/approval-chain.entity';
+import { ApprovalChainDTO } from '../../domain/entities/approval-chain.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -35,7 +32,7 @@ export class GetApprovalChainHandler implements IQueryHandler<
         input.chainId,
         input.workspaceId
       );
-      return QueryResult.success(ApprovalChain.toDTO(chain));
+      return QueryResult.success(chain);
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

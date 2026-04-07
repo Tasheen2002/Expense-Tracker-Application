@@ -211,6 +211,56 @@ export class ExpenseDeletedEvent extends DomainEvent {
 }
 
 /**
+ * Emitted when an attachment is added to an expense.
+ */
+export class AttachmentAddedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly attachmentId: string
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.attachment_added';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      attachmentId: this.attachmentId,
+    };
+  }
+}
+
+/**
+ * Emitted when a settlement payment is recorded against an expense split.
+ */
+export class SettlementRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly settlementId: string
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.settlement_recorded';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      settlementId: this.settlementId,
+    };
+  }
+}
+
+/**
  * Emitted when one or more fields of an expense are updated.
  */
 export class ExpenseUpdatedEvent extends DomainEvent {
@@ -482,6 +532,13 @@ export class Expense extends AggregateRoot {
     if (!this.hasAttachment(attachmentId)) {
       this.props.attachmentIds.push(attachmentId);
       this.props.updatedAt = new Date();
+      this.addDomainEvent(
+        new AttachmentAddedEvent(
+          this.id.getValue(),
+          this.workspaceId,
+          attachmentId.getValue()
+        )
+      );
     }
   }
 
@@ -704,6 +761,16 @@ export class Expense extends AggregateRoot {
     return (
       this.props.status === ExpenseStatus.DRAFT ||
       this.props.status === ExpenseStatus.REJECTED
+    );
+  }
+
+  recordSettlement(settlementId: string): void {
+    this.addDomainEvent(
+      new SettlementRecordedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        settlementId
+      )
     );
   }
 

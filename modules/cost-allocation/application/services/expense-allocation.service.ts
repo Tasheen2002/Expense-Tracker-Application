@@ -1,4 +1,4 @@
-import { ExpenseAllocation } from "../../domain/entities/expense-allocation.entity";
+import { ExpenseAllocation, ExpenseAllocationDTO } from "../../domain/entities/expense-allocation.entity";
 import { ExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
 import { AllocationAmount } from "../../domain/value-objects/allocation-amount";
 import { DepartmentId } from "../../domain/value-objects/department-id";
@@ -36,7 +36,7 @@ export class ExpenseAllocationService {
       projectId?: string;
       notes?: string;
     }>;
-  }): Promise<void> {
+  }): Promise<ExpenseAllocationDTO[]> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     // 1. Fetch Expense Validation Data via port (no direct Prisma dependency)
@@ -117,6 +117,8 @@ export class ExpenseAllocationService {
       workspaceId,
       allocationEntities,
     );
+
+    return allocationEntities.map(ExpenseAllocation.toDTO);
   }
 
   private validateAllocationTarget(
@@ -142,11 +144,12 @@ export class ExpenseAllocationService {
   async getAllocations(
     expenseId: string,
     workspaceId: string,
-  ): Promise<ExpenseAllocation[]> {
-    return this.allocationRepository.findByExpenseId(
+  ): Promise<ExpenseAllocationDTO[]> {
+    const allocations = await this.allocationRepository.findByExpenseId(
       expenseId,
       WorkspaceId.fromString(workspaceId),
     );
+    return allocations.map(ExpenseAllocation.toDTO);
   }
 
   async deleteAllocations(

@@ -1,5 +1,5 @@
 import { LocationService } from '../services/location.service';
-import { Location, LocationDTO } from '../../domain/entities/location.entity';
+import { LocationDTO } from '../../domain/entities/location.entity';
 import { LocationType } from '../../domain/enums/location-type';
 import {
   ICommand,
@@ -21,6 +21,6 @@ export class CreateLocationHandler
 
   async handle(command: CreateLocationCommand): Promise<CommandResult<LocationDTO>> {
     const location = await this.locationService.createLocation(command);
-    return CommandResult.success(Location.toDTO(location));
+    return CommandResult.success(location);
   }
 }

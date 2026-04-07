@@ -1,8 +1,5 @@
 import { WorkflowService } from '../services/workflow.service';
-import {
-  ExpenseWorkflow,
-  ExpenseWorkflowDTO,
-} from '../../domain/entities/expense-workflow.entity';
+import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -33,7 +30,7 @@ export class GetWorkflowHandler implements IQueryHandler<
         input.expenseId,
         input.workspaceId
       );
-      return QueryResult.success(ExpenseWorkflow.toDTO(workflow));
+      return QueryResult.success(workflow);
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

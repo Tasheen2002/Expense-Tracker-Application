@@ -1,8 +1,8 @@
 import { IStockRepository } from '../../domain/repositories/stock.repository';
 import { IInventoryTransactionRepository } from '../../domain/repositories/inventory-transaction.repository';
 import { ILocationRepository } from '../../domain/repositories/location.repository';
-import { Stock } from '../../domain/entities/stock.entity';
-import { InventoryTransaction } from '../../domain/entities/inventory-transaction.entity';
+import { Stock, StockDTO } from '../../domain/entities/stock.entity';
+import { InventoryTransaction, InventoryTransactionDTO } from '../../domain/entities/inventory-transaction.entity';
 import { StockId } from '../../domain/value-objects/stock-id.vo';
 import { LocationId } from '../../domain/value-objects/location-id.vo';
 import { TransactionType } from '../../domain/enums/transaction-type';
@@ -32,7 +32,7 @@ export class StockService {
     referenceId?: string;
     referenceType?: string;
     createdBy: string;
-  }): Promise<{ stock: Stock; transaction: InventoryTransaction }> {
+  }): Promise<{ stock: StockDTO; transaction: InventoryTransactionDTO }> {
     // Verify location exists
     const locationExists = await this.locationRepository.exists(
       LocationId.fromString(params.locationId),
@@ -60,16 +60,16 @@ export class StockService {
     // Apply stock change based on transaction type
     switch (params.type) {
       case TransactionType.IN:
-        stock.addQuantity(params.quantity);
+        stock.addQuantity(params.quantity, params.type);
         break;
       case TransactionType.OUT:
-        stock.removeQuantity(params.quantity);
+        stock.removeQuantity(params.quantity, params.type);
         break;
       case TransactionType.ADJUSTMENT:
         stock.adjustQuantity(params.quantity);
         break;
       case TransactionType.TRANSFER:
-        stock.removeQuantity(params.quantity);
+        stock.removeQuantity(params.quantity, params.type);
         break;
     }
 
@@ -90,41 +90,66 @@ export class StockService {
 
     await this.transactionRepository.save(transaction);
 
-    return { stock, transaction };
+    return {
+      stock: Stock.toDTO(stock),
+      transaction: InventoryTransaction.toDTO(transaction),
+    };
   }
 
   async getStockByVariantAndLocation(
     variantId: string,
     locationId: string,
     workspaceId: string
-  ): Promise<Stock | null> {
-    return this.stockRepository.findByVariantAndLocation(
+  ): Promise<StockDTO | null> {
+    const stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
       workspaceId
     );
+    return stock ? Stock.toDTO(stock) : null;
   }
 
   async getStockByLocation(
     locationId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Stock>> {
-    return this.stockRepository.findByLocation(locationId, workspaceId, options);
+  ): Promise<PaginatedResult<StockDTO>> {
+    const result = await this.stockRepository.findByLocation(locationId, workspaceId, options);
+    return {
+      items: result.items.map((s) => Stock.toDTO(s)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async getStockByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Stock>> {
-    return this.stockRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<StockDTO>> {
+    const result = await this.stockRepository.findByWorkspace(workspaceId, options);
+    return {
+      items: result.items.map((s) => Stock.toDTO(s)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async getTransactionsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransaction>> {
-    return this.transactionRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<InventoryTransactionDTO>> {
+    const result = await this.transactionRepository.findByWorkspace(workspaceId, options);
+    return {
+      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async updateStockSettings(
@@ -134,7 +159,7 @@ export class StockService {
       reorderLevel?: number;
       reorderQuantity?: number;
     }
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     const stock = await this.stockRepository.findById(
       StockId.fromString(stockId),
       workspaceId
@@ -151,6 +176,6 @@ export class StockService {
     }
 
     await this.stockRepository.save(stock);
-    return stock;
+    return Stock.toDTO(stock);
   }
 }

@@ -9,7 +9,7 @@ export class IdentityWorkspaceError extends DomainError {
     public readonly code: string,
     statusCode: number = 400
   ) {
-    super(message, statusCode);
+    super(message, code, statusCode);
   }
 }
 

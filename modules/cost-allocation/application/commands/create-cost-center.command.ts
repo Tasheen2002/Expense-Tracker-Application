@@ -32,7 +32,7 @@ export class CreateCostCenterHandler implements ICommandHandler<
       description: command.description,
     });
     return CommandResult.success({
-      costCenterId: costCenter.getId().getValue(),
+      costCenterId: costCenter.id,
     });
   }
 }

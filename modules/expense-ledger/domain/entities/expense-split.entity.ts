@@ -28,6 +28,20 @@ export class ExpenseSplitCreatedEvent extends DomainEvent {
   }
 }
 
+export class ExpenseSplitDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly splitId: string,
+    public readonly expenseId: string,
+    public readonly workspaceId: string
+  ) {
+    super(splitId, 'ExpenseSplit');
+  }
+  get eventType(): string { return 'expense_split.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { splitId: this.splitId, expenseId: this.expenseId, workspaceId: this.workspaceId };
+  }
+}
+
 export interface ExpenseSplitProps {
   id: SplitId;
   expenseId: ExpenseId;
@@ -212,6 +226,16 @@ export class ExpenseSplit extends AggregateRoot {
 
   isParticipant(userId: string): boolean {
     return this.props.participants.some((p) => p.getUserId() === userId);
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ExpenseSplitDeletedEvent(
+        this.getId().getValue(),
+        this.getExpenseId().getValue(),
+        this.getWorkspaceId()
+      )
+    );
   }
 
   isFullySettled(): boolean {

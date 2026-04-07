@@ -1,6 +1,6 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { BankConnection } from '../../domain/entities/bank-connection.entity';
+import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
@@ -47,7 +47,7 @@ export class TransactionSyncService {
     private readonly bankAPIClient: IBankAPIClient
   ) {}
 
-  async connectBank(command: ConnectBankCommand): Promise<string> {
+  async connectBank(command: ConnectBankCommand): Promise<BankConnectionDTO> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const userId = UserId.fromString(command.userId);
 
@@ -81,7 +81,7 @@ export class TransactionSyncService {
     connection.activate();
     await this.connectionRepository.save(connection);
 
-    return connection.id.getValue();
+    return BankConnection.toDTO(connection);
   }
 
   async syncTransactions(

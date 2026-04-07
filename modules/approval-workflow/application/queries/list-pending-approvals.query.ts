@@ -1,8 +1,5 @@
 import { WorkflowService } from '../services/workflow.service';
-import {
-  ExpenseWorkflow,
-  ExpenseWorkflowDTO,
-} from '../../domain/entities/expense-workflow.entity';
+import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -39,10 +36,7 @@ export class ListPendingApprovalsHandler implements IQueryHandler<
         input.workspaceId,
         { limit: input.limit, offset: input.offset }
       );
-      return QueryResult.success({
-        ...result,
-        items: result.items.map((w) => ExpenseWorkflow.toDTO(w)),
-      });
+      return QueryResult.success(result);
     } catch (error: unknown) {
       return QueryResult.failure(
         error instanceof Error ? error.message : 'Query failed',

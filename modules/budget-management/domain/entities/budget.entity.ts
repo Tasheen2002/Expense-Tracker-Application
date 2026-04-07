@@ -224,6 +224,58 @@ export class BudgetDeletedEvent extends DomainEvent {
   }
 }
 
+/**
+ * Emitted on the Budget aggregate when one of its allocations is deleted.
+ */
+export class AllocationDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string,
+    public readonly allocationId: string
+  ) {
+    super(budgetId, 'Budget');
+  }
+
+  get eventType(): string {
+    return 'budget.allocation_deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+      allocationId: this.allocationId,
+    };
+  }
+}
+
+/**
+ * Emitted on the Budget aggregate when a budget alert is generated.
+ */
+export class AlertGeneratedEvent extends DomainEvent {
+  constructor(
+    public readonly budgetId: string,
+    public readonly workspaceId: string,
+    public readonly alertId: string,
+    public readonly level: string
+  ) {
+    super(budgetId, 'Budget');
+  }
+
+  get eventType(): string {
+    return 'budget.alert_generated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      budgetId: this.budgetId,
+      workspaceId: this.workspaceId,
+      alertId: this.alertId,
+      level: this.level,
+    };
+  }
+}
+
 // ============================================================================
 // ENTITY
 // ============================================================================
@@ -555,6 +607,27 @@ export class Budget extends AggregateRoot {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  recordAllocationDeleted(allocationId: string): void {
+    this.addDomainEvent(
+      new AllocationDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        allocationId
+      )
+    );
+  }
+
+  recordAlertGenerated(alertId: string, level: string): void {
+    this.addDomainEvent(
+      new AlertGeneratedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        alertId,
+        level
+      )
+    );
   }
 
   validateAllocationAmount(amount: Decimal, currentAllocated: Decimal): void {

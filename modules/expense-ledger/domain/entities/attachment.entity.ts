@@ -1,5 +1,4 @@
 import { AttachmentId } from '../value-objects/attachment-id';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   FileNameRequiredError,
   FileNameTooLongError,
@@ -11,21 +10,6 @@ import {
   MimeTypeTooLongError,
   InvalidFileTypeError,
 } from '../errors/expense.errors';
-
-export class AttachmentUploadedEvent extends DomainEvent {
-  constructor(
-    public readonly attachmentId: string,
-    public readonly expenseId: string,
-    public readonly fileName: string,
-    public readonly uploadedBy: string
-  ) {
-    super(attachmentId, 'Attachment');
-  }
-  get eventType(): string { return 'attachment.uploaded'; }
-  getPayload(): Record<string, unknown> {
-    return { attachmentId: this.attachmentId, expenseId: this.expenseId, fileName: this.fileName, uploadedBy: this.uploadedBy };
-  }
-}
 
 export interface AttachmentProps {
   id: AttachmentId;

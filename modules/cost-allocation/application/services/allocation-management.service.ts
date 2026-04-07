@@ -1,6 +1,6 @@
-import { Department } from "../../domain/entities/department.entity";
-import { CostCenter } from "../../domain/entities/cost-center.entity";
-import { Project } from "../../domain/entities/project.entity";
+import { Department, DepartmentDTO } from "../../domain/entities/department.entity";
+import { CostCenter, CostCenterDTO } from "../../domain/entities/cost-center.entity";
+import { Project, ProjectDTO } from "../../domain/entities/project.entity";
 import { DepartmentRepository } from "../../domain/repositories/department.repository";
 import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
 import { ProjectRepository } from "../../domain/repositories/project.repository";
@@ -44,7 +44,7 @@ export class AllocationManagementService {
     description?: string;
     managerId?: string;
     parentDepartmentId?: string;
-  }): Promise<Department> {
+  }): Promise<DepartmentDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     if (
@@ -81,27 +81,34 @@ export class AllocationManagementService {
     });
 
     await this.departmentRepository.save(department);
-    return department;
+    return Department.toDTO(department);
   }
 
-  async getDepartment(id: string): Promise<Department> {
+  async getDepartment(id: string): Promise<DepartmentDTO> {
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
     );
     if (!department) {
       throw new DepartmentNotFoundError(id);
     }
-    return department;
+    return Department.toDTO(department);
   }
 
   async listDepartments(
     workspaceId: string,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<Department>> {
-    return this.departmentRepository.findAll(
+  ): Promise<PaginatedResult<DepartmentDTO>> {
+    const result = await this.departmentRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
     );
+    return {
+      items: result.items.map(Department.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async updateDepartment(params: {
@@ -113,7 +120,7 @@ export class AllocationManagementService {
     description?: string | null;
     managerId?: string | null;
     parentDepartmentId?: string | null;
-  }): Promise<Department> {
+  }): Promise<DepartmentDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
     const departmentId = DepartmentId.fromString(params.id);
 
@@ -161,7 +168,7 @@ export class AllocationManagementService {
     });
 
     await this.departmentRepository.save(department);
-    return department;
+    return Department.toDTO(department);
   }
 
   async deleteDepartment(
@@ -189,7 +196,7 @@ export class AllocationManagementService {
     id: string,
     workspaceId: string,
     actorId: string,
-  ): Promise<Department> {
+  ): Promise<DepartmentDTO> {
     if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
       throw new UnauthorizedAllocationAccessError("activate department");
     }
@@ -202,7 +209,7 @@ export class AllocationManagementService {
 
     department.activate();
     await this.departmentRepository.save(department);
-    return department;
+    return Department.toDTO(department);
   }
 
   // ==========================================
@@ -215,7 +222,7 @@ export class AllocationManagementService {
     name: string;
     code: string;
     description?: string;
-  }): Promise<CostCenter> {
+  }): Promise<CostCenterDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     if (
@@ -243,27 +250,34 @@ export class AllocationManagementService {
     });
 
     await this.costCenterRepository.save(costCenter);
-    return costCenter;
+    return CostCenter.toDTO(costCenter);
   }
 
-  async getCostCenter(id: string): Promise<CostCenter> {
+  async getCostCenter(id: string): Promise<CostCenterDTO> {
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
     );
     if (!costCenter) {
       throw new CostCenterNotFoundError(id);
     }
-    return costCenter;
+    return CostCenter.toDTO(costCenter);
   }
 
   async listCostCenters(
     workspaceId: string,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<CostCenter>> {
-    return this.costCenterRepository.findAll(
+  ): Promise<PaginatedResult<CostCenterDTO>> {
+    const result = await this.costCenterRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
     );
+    return {
+      items: result.items.map(CostCenter.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async updateCostCenter(params: {
@@ -273,7 +287,7 @@ export class AllocationManagementService {
     name?: string;
     code?: string;
     description?: string | null;
-  }): Promise<CostCenter> {
+  }): Promise<CostCenterDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     if (
@@ -311,7 +325,7 @@ export class AllocationManagementService {
     });
 
     await this.costCenterRepository.save(costCenter);
-    return costCenter;
+    return CostCenter.toDTO(costCenter);
   }
 
   async deleteCostCenter(
@@ -339,7 +353,7 @@ export class AllocationManagementService {
     id: string,
     workspaceId: string,
     actorId: string,
-  ): Promise<CostCenter> {
+  ): Promise<CostCenterDTO> {
     if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
       throw new UnauthorizedAllocationAccessError("activate cost center");
     }
@@ -352,7 +366,7 @@ export class AllocationManagementService {
 
     costCenter.activate();
     await this.costCenterRepository.save(costCenter);
-    return costCenter;
+    return CostCenter.toDTO(costCenter);
   }
 
   // ==========================================
@@ -369,7 +383,7 @@ export class AllocationManagementService {
     endDate?: string | Date;
     managerId?: string;
     budget?: number;
-  }): Promise<Project> {
+  }): Promise<ProjectDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     if (
@@ -404,27 +418,34 @@ export class AllocationManagementService {
     });
 
     await this.projectRepository.save(project);
-    return project;
+    return Project.toDTO(project);
   }
 
-  async getProject(id: string): Promise<Project> {
+  async getProject(id: string): Promise<ProjectDTO> {
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
     );
     if (!project) {
       throw new ProjectNotFoundError(id);
     }
-    return project;
+    return Project.toDTO(project);
   }
 
   async listProjects(
     workspaceId: string,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<Project>> {
-    return this.projectRepository.findAll(
+  ): Promise<PaginatedResult<ProjectDTO>> {
+    const result = await this.projectRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
     );
+    return {
+      items: result.items.map(Project.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async updateProject(params: {
@@ -438,7 +459,7 @@ export class AllocationManagementService {
     endDate?: string | Date | null;
     managerId?: string | null;
     budget?: number | null;
-  }): Promise<Project> {
+  }): Promise<ProjectDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
     if (
@@ -495,7 +516,7 @@ export class AllocationManagementService {
     });
 
     await this.projectRepository.save(project);
-    return project;
+    return Project.toDTO(project);
   }
 
   async deleteProject(
@@ -523,7 +544,7 @@ export class AllocationManagementService {
     id: string,
     workspaceId: string,
     actorId: string,
-  ): Promise<Project> {
+  ): Promise<ProjectDTO> {
     if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
       throw new UnauthorizedAllocationAccessError("activate project");
     }
@@ -536,6 +557,6 @@ export class AllocationManagementService {
 
     project.activate();
     await this.projectRepository.save(project);
-    return project;
+    return Project.toDTO(project);
   }
 }

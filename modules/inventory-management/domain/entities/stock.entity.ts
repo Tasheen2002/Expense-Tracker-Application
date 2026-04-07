@@ -102,6 +102,32 @@ export class StockUpdatedEvent extends DomainEvent {
   }
 }
 
+export class InventoryTransactionRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly stockId: string,
+    public readonly workspaceId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly transactionType: string,
+    public readonly quantity: number
+  ) {
+    super(stockId, 'Stock');
+  }
+
+  get eventType(): string { return 'stock.transaction_recorded'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      stockId: this.stockId,
+      workspaceId: this.workspaceId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+      transactionType: this.transactionType,
+      quantity: this.quantity,
+    };
+  }
+}
+
 export interface StockProps {
   id: StockId;
   workspaceId: string;
@@ -200,7 +226,7 @@ export class Stock extends AggregateRoot {
     }
   }
 
-  addQuantity(amount: number): void {
+  addQuantity(amount: number, transactionType: string = 'IN'): void {
     if (amount <= 0) {
       throw new InvalidQuantityError('Amount to add must be greater than zero');
     }
@@ -208,9 +234,19 @@ export class Stock extends AggregateRoot {
     this.props.quantity += amount;
     this.props.updatedAt = new Date();
     this.emitStockLevelChanged(prev);
+    this.addDomainEvent(
+      new InventoryTransactionRecordedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.variantId,
+        this.locationId,
+        transactionType,
+        amount
+      )
+    );
   }
 
-  removeQuantity(amount: number): void {
+  removeQuantity(amount: number, transactionType: string = 'OUT'): void {
     if (amount <= 0) {
       throw new InvalidQuantityError('Amount to remove must be greater than zero');
     }
@@ -222,6 +258,16 @@ export class Stock extends AggregateRoot {
     this.props.quantity -= amount;
     this.props.updatedAt = new Date();
     this.emitStockLevelChanged(prev);
+    this.addDomainEvent(
+      new InventoryTransactionRecordedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.variantId,
+        this.locationId,
+        transactionType,
+        amount
+      )
+    );
   }
 
   reserve(amount: number): void {
@@ -252,6 +298,16 @@ export class Stock extends AggregateRoot {
     this.props.quantity = newQuantity;
     this.props.updatedAt = new Date();
     this.emitStockLevelChanged(prev);
+    this.addDomainEvent(
+      new InventoryTransactionRecordedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        this.variantId,
+        this.locationId,
+        'ADJUSTMENT',
+        newQuantity
+      )
+    );
   }
 
   updateReorderLevel(level: number): void {

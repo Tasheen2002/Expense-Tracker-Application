@@ -81,6 +81,7 @@ export async function registerMemberRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Members listed successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -96,6 +97,26 @@ export async function registerMemberRoutes(
                   pagination: paginationSchema,
                 },
               },
+            },
+          },
+          403: {
+            description: 'Forbidden',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+          404: {
+            description: 'Workspace not found',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
             },
           },
         },
@@ -122,6 +143,36 @@ export async function registerMemberRoutes(
           204: {
             description: 'Member removed successfully',
             type: 'null',
+          },
+          400: {
+            description: 'Bad Request',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+          403: {
+            description: 'Forbidden',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+          404: {
+            description: 'Member not found',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
           },
         },
       },
@@ -153,12 +204,43 @@ export async function registerMemberRoutes(
         },
         response: {
           200: {
+            description: 'Member role updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'integer' },
               message: { type: 'string' },
               data: membershipSchema,
+            },
+          },
+          400: {
+            description: 'Bad Request',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+          403: {
+            description: 'Forbidden',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+            },
+          },
+          404: {
+            description: 'Member not found',
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              statusCode: { type: 'integer' },
+              error: { type: 'string' },
+              message: { type: 'string' },
             },
           },
         },
