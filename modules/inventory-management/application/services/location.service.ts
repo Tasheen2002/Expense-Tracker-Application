@@ -74,13 +74,15 @@ export class LocationService {
   }
 
   async deleteLocation(locationId: string, workspaceId: string): Promise<void> {
-    const exists = await this.locationRepository.exists(
+    const location = await this.locationRepository.findById(
       LocationId.fromString(locationId),
       workspaceId
     );
-    if (!exists) {
+    if (!location) {
       throw new LocationNotFoundError(locationId, workspaceId);
     }
+    location.markAsDeleted();
+    await this.locationRepository.save(location);
     await this.locationRepository.delete(
       LocationId.fromString(locationId),
       workspaceId

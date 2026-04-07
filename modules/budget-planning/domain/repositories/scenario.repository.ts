@@ -11,6 +11,7 @@ export interface IScenarioRepository {
   findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null>;
   findByPlanId(
     planId: PlanId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Scenario>>;
   delete(id: ScenarioId): Promise<void>;

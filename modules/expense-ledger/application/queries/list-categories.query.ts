@@ -33,9 +33,6 @@ export class ListCategoriesHandler implements IQueryHandler<
           query.workspaceId,
           pagination
         );
-    return QueryResult.success({
-      ...result,
-      items: result.items.map((category) => category.toJSON()),
-    });
+    return QueryResult.success(result);
   }
 }

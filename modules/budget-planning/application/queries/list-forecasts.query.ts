@@ -24,7 +24,8 @@ export class ListForecastsHandler implements IQueryHandler<
     query: ListForecastsQuery
   ): Promise<QueryResult<PaginatedResult<ForecastDTO>>> {
     const result = await this.forecastRepository.findByPlanId(
-      PlanId.fromString(query.planId)
+      PlanId.fromString(query.planId),
+      query.workspaceId
     );
     return QueryResult.success({
       items: result.items.map((f) => Forecast.toDTO(f)),

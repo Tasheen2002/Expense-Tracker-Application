@@ -4,8 +4,8 @@ import {
 } from '../../domain/repositories/budget.repository';
 import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
 import { IBudgetAlertRepository } from '../../domain/repositories/budget-alert.repository';
-import { Budget } from '../../domain/entities/budget.entity';
-import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
+import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
+import { BudgetAllocation, BudgetAllocationDTO } from '../../domain/entities/budget-allocation.entity';
 import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
 import { BudgetId } from '../../domain/value-objects/budget-id';
 import { AllocationId } from '../../domain/value-objects/allocation-id';
@@ -46,7 +46,7 @@ export class BudgetService {
     createdBy: string;
     isRecurring?: boolean;
     rolloverUnused?: boolean;
-  }): Promise<Budget> {
+  }): Promise<BudgetDTO> {
     // Check for duplicate budget name in workspace
     const nameExists = await this.budgetRepository.existsByName(
       params.name,
@@ -72,7 +72,7 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async updateBudget(
@@ -84,7 +84,7 @@ export class BudgetService {
       description?: string | null;
       totalAmount?: number | string;
     }
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -123,14 +123,14 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async activateBudget(
     budgetId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -148,14 +148,14 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async archiveBudget(
     budgetId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -173,7 +173,7 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async deleteBudget(
@@ -206,32 +206,36 @@ export class BudgetService {
   async getBudgetById(
     budgetId: string,
     workspaceId: string
-  ): Promise<Budget | null> {
-    return await this.budgetRepository.findById(
+  ): Promise<BudgetDTO | null> {
+    const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
     );
+    return budget ? Budget.toDTO(budget) : null;
   }
 
   async getBudgetsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findByWorkspace(workspaceId, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   async getActiveBudgets(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findActiveBudgets(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findActiveBudgets(workspaceId, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   async filterBudgets(
     filters: BudgetFilters,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findByFilters(filters, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findByFilters(filters, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   // Allocation methods
@@ -242,7 +246,7 @@ export class BudgetService {
     categoryId?: string;
     allocatedAmount: number | string;
     description?: string;
-  }): Promise<BudgetAllocation> {
+  }): Promise<BudgetAllocationDTO> {
     // Verify parent budget ownership first
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(params.budgetId),
@@ -270,7 +274,7 @@ export class BudgetService {
       budget.totalAmount
     );
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async updateAllocation(
@@ -281,7 +285,7 @@ export class BudgetService {
       allocatedAmount?: number | string;
       description?: string | null;
     }
-  ): Promise<BudgetAllocation> {
+  ): Promise<BudgetAllocationDTO> {
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId)
     );
@@ -327,13 +331,13 @@ export class BudgetService {
       await this.allocationRepository.save(allocation);
     }
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async updateAllocationSpent(
     allocationId: string,
     spentAmount: number | string
-  ): Promise<BudgetAllocation> {
+  ): Promise<BudgetAllocationDTO> {
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId)
     );
@@ -365,7 +369,7 @@ export class BudgetService {
       }
     }
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async deleteAllocation(

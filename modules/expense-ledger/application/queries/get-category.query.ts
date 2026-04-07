@@ -28,6 +28,6 @@ export class GetCategoryHandler implements IQueryHandler<
       throw new CategoryNotFoundError(query.categoryId, query.workspaceId);
     }
 
-    return QueryResult.success(category.toJSON());
+    return QueryResult.success(category);
   }
 }

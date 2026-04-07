@@ -1,7 +1,7 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
 import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { RuleExecution, RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
+import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -28,12 +28,6 @@ export class GetExecutionsByWorkspaceHandler implements IQueryHandler<
       { limit: query.limit, offset: query.offset }
     );
 
-    return QueryResult.success({
-      items: result.items.map(RuleExecution.toDTO),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

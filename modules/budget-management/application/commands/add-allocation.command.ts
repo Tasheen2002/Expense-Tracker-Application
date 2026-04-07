@@ -1,5 +1,4 @@
 import { BudgetService } from '../services/budget.service';
-import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
 
 import {
   ICommand,
@@ -34,7 +33,7 @@ export class AddAllocationHandler implements ICommandHandler<
       description: command.description,
     });
     return CommandResult.success({
-      allocationId: allocation.id.getValue(),
+      allocationId: allocation.allocationId,
     });
   }
 }

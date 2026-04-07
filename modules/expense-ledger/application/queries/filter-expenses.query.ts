@@ -58,10 +58,7 @@ export class FilterExpensesHandler implements IQueryHandler<
         searchText: query.searchText,
         pagination: { limit: query.limit, offset: query.offset },
       });
-      return QueryResult.success({
-        ...result,
-        items: result.items.map((expense) => expense.toJSON()),
-      });
+      return QueryResult.success(result);
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

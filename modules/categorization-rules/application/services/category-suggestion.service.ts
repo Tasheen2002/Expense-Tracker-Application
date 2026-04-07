@@ -1,5 +1,5 @@
 import { ICategorySuggestionRepository } from '../../domain/repositories/category-suggestion.repository'
-import { CategorySuggestion } from '../../domain/entities/category-suggestion.entity'
+import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity'
 import { SuggestionId } from '../../domain/value-objects/suggestion-id'
 import { WorkspaceId } from '../../../identity-workspace'
 import { ExpenseId, CategoryId } from '../../../expense-ledger'
@@ -18,7 +18,7 @@ export class CategorySuggestionService {
     suggestedCategoryId: CategoryId
     confidence: ConfidenceScore
     reason?: string
-  }): Promise<CategorySuggestion> {
+  }): Promise<CategorySuggestionDTO> {
     const suggestion = CategorySuggestion.create({
       workspaceId: params.workspaceId,
       expenseId: params.expenseId,
@@ -28,10 +28,10 @@ export class CategorySuggestionService {
     })
 
     await this.suggestionRepository.save(suggestion)
-    return suggestion
+    return CategorySuggestion.toDTO(suggestion)
   }
 
-  async acceptSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion> {
+  async acceptSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestionDTO> {
     const suggestion = await this.suggestionRepository.findById(suggestionId, workspaceId)
 
     if (!suggestion) {
@@ -40,10 +40,10 @@ export class CategorySuggestionService {
 
     suggestion.accept()
     await this.suggestionRepository.save(suggestion)
-    return suggestion
+    return CategorySuggestion.toDTO(suggestion)
   }
 
-  async rejectSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion> {
+  async rejectSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestionDTO> {
     const suggestion = await this.suggestionRepository.findById(suggestionId, workspaceId)
 
     if (!suggestion) {
@@ -52,38 +52,59 @@ export class CategorySuggestionService {
 
     suggestion.reject()
     await this.suggestionRepository.save(suggestion)
-    return suggestion
+    return CategorySuggestion.toDTO(suggestion)
   }
 
-  async getSuggestionById(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion> {
+  async getSuggestionById(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestionDTO> {
     const suggestion = await this.suggestionRepository.findById(suggestionId, workspaceId)
 
     if (!suggestion) {
       throw new SuggestionNotFoundError(suggestionId.getValue())
     }
 
-    return suggestion
+    return CategorySuggestion.toDTO(suggestion)
   }
 
   async getSuggestionsByExpenseId(
     expenseId: ExpenseId,
     workspaceId: WorkspaceId
-  ): Promise<PaginatedResult<CategorySuggestion>> {
-    return this.suggestionRepository.findByExpenseId(expenseId, workspaceId)
+  ): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    const result = await this.suggestionRepository.findByExpenseId(expenseId, workspaceId)
+    return {
+      items: result.items.map(CategorySuggestion.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    }
   }
 
   async getPendingSuggestionsByWorkspaceId(
     workspaceId: WorkspaceId,
     options?: { limit?: number; offset?: number },
-  ): Promise<PaginatedResult<CategorySuggestion>> {
-    return this.suggestionRepository.findPendingByWorkspaceId(workspaceId, options)
+  ): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    const result = await this.suggestionRepository.findPendingByWorkspaceId(workspaceId, options)
+    return {
+      items: result.items.map(CategorySuggestion.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    }
   }
 
   async getSuggestionsByWorkspaceId(
     workspaceId: WorkspaceId,
     options?: { limit?: number; offset?: number },
-  ): Promise<PaginatedResult<CategorySuggestion>> {
-    return this.suggestionRepository.findByWorkspaceId(workspaceId, options)
+  ): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    const result = await this.suggestionRepository.findByWorkspaceId(workspaceId, options)
+    return {
+      items: result.items.map(CategorySuggestion.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    }
   }
 
   async deleteSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<void> {

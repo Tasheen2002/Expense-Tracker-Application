@@ -1,5 +1,5 @@
 import { ICategoryRuleRepository } from "../../domain/repositories/category-rule.repository";
-import { CategoryRule } from "../../domain/entities/category-rule.entity";
+import { CategoryRule, CategoryRuleDTO } from "../../domain/entities/category-rule.entity";
 import { RuleId } from "../../domain/value-objects/rule-id";
 import { WorkspaceId, UserId } from "../../../identity-workspace";
 import { RuleCondition } from "../../domain/value-objects/rule-condition";
@@ -33,7 +33,7 @@ export class CategoryRuleService {
     condition: RuleCondition;
     targetCategoryId: CategoryId;
     createdBy: UserId;
-  }): Promise<CategoryRule> {
+  }): Promise<CategoryRuleDTO> {
     const hasAccess = await this.checkAccess(
       params.createdBy,
       params.workspaceId,
@@ -64,7 +64,7 @@ export class CategoryRuleService {
     });
 
     await this.ruleRepository.save(rule);
-    return rule;
+    return CategoryRule.toDTO(rule);
   }
 
   async updateRule(params: {
@@ -76,7 +76,7 @@ export class CategoryRuleService {
     priority?: number;
     condition?: RuleCondition;
     targetCategoryId?: CategoryId;
-  }): Promise<CategoryRule> {
+  }): Promise<CategoryRuleDTO> {
     const rule = await this.ruleRepository.findById(
       params.ruleId,
       WorkspaceId.fromString(params.workspaceId),
@@ -130,7 +130,7 @@ export class CategoryRuleService {
     }
 
     await this.ruleRepository.save(rule);
-    return rule;
+    return CategoryRule.toDTO(rule);
   }
 
   async deleteRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<void> {
@@ -159,7 +159,7 @@ export class CategoryRuleService {
     await this.ruleRepository.delete(ruleId);
   }
 
-  async activateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+  async activateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
     const rule = await this.ruleRepository.findById(
       ruleId,
       WorkspaceId.fromString(workspaceId),
@@ -182,10 +182,10 @@ export class CategoryRuleService {
 
     rule.activate();
     await this.ruleRepository.save(rule);
-    return rule;
+    return CategoryRule.toDTO(rule);
   }
 
-  async deactivateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+  async deactivateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
     const rule = await this.ruleRepository.findById(
       ruleId,
       WorkspaceId.fromString(workspaceId),
@@ -208,10 +208,10 @@ export class CategoryRuleService {
 
     rule.deactivate();
     await this.ruleRepository.save(rule);
-    return rule;
+    return CategoryRule.toDTO(rule);
   }
 
-  async getRuleById(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRule> {
+  async getRuleById(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
     const rule = await this.ruleRepository.findById(
       ruleId,
       WorkspaceId.fromString(workspaceId),
@@ -229,30 +229,44 @@ export class CategoryRuleService {
       throw new UnauthorizedRuleAccessError("view");
     }
 
-    return rule;
+    return CategoryRule.toDTO(rule);
   }
 
   async getRulesByWorkspaceId(
     workspaceId: WorkspaceId,
     userId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<PaginatedResult<CategoryRule>> {
+  ): Promise<PaginatedResult<CategoryRuleDTO>> {
     const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
-    return this.ruleRepository.findByWorkspaceId(workspaceId, options);
+    const result = await this.ruleRepository.findByWorkspaceId(workspaceId, options);
+    return {
+      items: result.items.map(CategoryRule.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async getActiveRulesByWorkspaceId(
     workspaceId: WorkspaceId,
     userId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<PaginatedResult<CategoryRule>> {
+  ): Promise<PaginatedResult<CategoryRuleDTO>> {
     const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
-    return this.ruleRepository.findActiveByWorkspaceId(workspaceId, options);
+    const result = await this.ruleRepository.findActiveByWorkspaceId(workspaceId, options);
+    return {
+      items: result.items.map(CategoryRule.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

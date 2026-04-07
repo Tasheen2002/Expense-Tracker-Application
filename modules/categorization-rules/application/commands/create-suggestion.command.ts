@@ -34,7 +34,7 @@ export class CreateSuggestionHandler implements ICommandHandler<
     });
 
     return CommandResult.success({
-      suggestionId: suggestion.getId().getValue(),
+      suggestionId: suggestion.id,
     });
   }
 }

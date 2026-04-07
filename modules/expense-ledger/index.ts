@@ -13,6 +13,8 @@ export { registerExpenseLedgerRoutes } from './infrastructure/http/routes';
 // Domain error types (used by cross-cutting error handlers)
 export {
   ExpenseNotFoundError,
+  UnauthorizedExpenseAccessError,
+  InvalidExpenseStatusError,
   CategoryNotFoundError,
   CategoryInUseError,
   TagNotFoundError,
@@ -23,9 +25,18 @@ export { SplitNotFoundError } from './domain/errors/split-expense.errors';
 
 // Domain enums (safe to share — value objects, not entities)
 export { ExpenseStatus } from './domain/enums/expense-status';
+export { PaymentMethod } from './domain/enums/payment-method';
 export { SplitType } from './domain/enums/split-type';
 export { SettlementStatus } from './domain/enums/settlement-status';
 export { RecurrenceFrequency } from './domain/enums/recurrence-frequency';
+export { RecurrenceStatus } from './domain/enums/recurrence-status';
+
+// DTO types (for cross-module type sharing)
+export type { ExpenseDTO } from './domain/entities/expense.entity';
+export type { CategoryDTO } from './domain/entities/category.entity';
+export type { TagDTO } from './domain/entities/tag.entity';
+export type { AttachmentDTO } from './domain/entities/attachment.entity';
+export type { RecurringExpenseDTO } from './domain/entities/recurring-expense.entity';
 
 // Shared Value Objects (safe to consume by other modules)
 export { ExpenseId } from './domain/value-objects/expense-id';

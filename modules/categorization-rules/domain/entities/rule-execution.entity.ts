@@ -2,37 +2,6 @@ import { RuleExecutionId } from '../value-objects/rule-execution-id';
 import { RuleId } from '../value-objects/rule-id';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId, CategoryId } from '../../../expense-ledger';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class RuleExecutedEvent extends DomainEvent {
-  constructor(
-    public readonly executionId: string,
-    public readonly ruleId: string,
-    public readonly expenseId: string,
-    public readonly workspaceId: string,
-    public readonly appliedCategoryId: string
-  ) {
-    super(executionId, 'RuleExecution');
-  }
-
-  get eventType(): string {
-    return 'RuleExecuted';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      executionId: this.executionId,
-      ruleId: this.ruleId,
-      expenseId: this.expenseId,
-      workspaceId: this.workspaceId,
-      appliedCategoryId: this.appliedCategoryId,
-    };
-  }
-}
 
 // ============================================================================
 // Entity

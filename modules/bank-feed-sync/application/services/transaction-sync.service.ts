@@ -1,7 +1,7 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { BankConnection } from '../../domain/entities/bank-connection.entity';
-import { SyncSession } from '../../domain/entities/sync-session.entity';
+import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
@@ -86,7 +86,7 @@ export class TransactionSyncService {
 
   async syncTransactions(
     command: SyncTransactionsCommand
-  ): Promise<SyncSession> {
+  ): Promise<SyncSessionDTO> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const connectionId = BankConnectionId.fromString(command.connectionId);
 
@@ -203,7 +203,7 @@ export class TransactionSyncService {
       connection.updateLastSync();
       await this.connectionRepository.save(connection);
 
-      return session;
+      return SyncSession.toDTO(session);
     } catch (error) {
       // Mark session as failed
       const errorMessage =

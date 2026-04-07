@@ -10,6 +10,7 @@ import {
 
 export interface ListScenariosQuery extends IQuery {
   planId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -23,7 +24,8 @@ export class ListScenariosHandler implements IQueryHandler<
     query: ListScenariosQuery
   ): Promise<QueryResult<PaginatedResult<ScenarioDTO>>> {
     const result = await this.scenarioRepository.findByPlanId(
-      PlanId.fromString(query.planId)
+      PlanId.fromString(query.planId),
+      query.workspaceId
     );
     return QueryResult.success({
       items: result.items.map((s) => Scenario.toDTO(s)),

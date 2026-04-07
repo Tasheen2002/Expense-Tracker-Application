@@ -1,5 +1,5 @@
 import { TagRepository } from '../../domain/repositories/tag.repository';
-import { Tag } from '../../domain/entities/tag.entity';
+import { Tag, TagDTO } from '../../domain/entities/tag.entity';
 import { TagId } from '../../domain/value-objects/tag-id';
 import {
   TagNotFoundError,
@@ -17,7 +17,7 @@ export class TagService {
     workspaceId: string;
     name: string;
     color?: string;
-  }): Promise<Tag> {
+  }): Promise<TagDTO> {
     // Check if tag with the same name already exists
     const existingTag = await this.tagRepository.findByName(
       params.name,
@@ -36,7 +36,7 @@ export class TagService {
 
     await this.tagRepository.save(tag);
 
-    return tag;
+    return tag.toJSON();
   }
 
   async updateTag(
@@ -46,7 +46,7 @@ export class TagService {
       name?: string;
       color?: string;
     }
-  ): Promise<Tag> {
+  ): Promise<TagDTO> {
     const tag = await this.tagRepository.findById(
       TagId.fromString(tagId),
       workspaceId
@@ -74,7 +74,7 @@ export class TagService {
 
     await this.tagRepository.update(tag);
 
-    return tag;
+    return tag.toJSON();
   }
 
   async deleteTag(tagId: string, workspaceId: string): Promise<void> {
@@ -92,17 +92,22 @@ export class TagService {
     await this.tagRepository.delete(TagId.fromString(tagId), workspaceId);
   }
 
-  async getTagById(tagId: string, workspaceId: string): Promise<Tag | null> {
-    return await this.tagRepository.findById(
+  async getTagById(tagId: string, workspaceId: string): Promise<TagDTO | null> {
+    const tag = await this.tagRepository.findById(
       TagId.fromString(tagId),
       workspaceId
     );
+    return tag ? tag.toJSON() : null;
   }
 
   async getTagsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Tag>> {
-    return await this.tagRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<TagDTO>> {
+    const result = await this.tagRepository.findByWorkspace(workspaceId, options);
+    return {
+      ...result,
+      items: result.items.map((tag) => tag.toJSON()),
+    };
   }
 }

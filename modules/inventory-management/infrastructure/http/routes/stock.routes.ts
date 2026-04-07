@@ -139,10 +139,15 @@ export async function stockRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: stockSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer' },
+                      limit: { type: 'integer' },
+                      offset: { type: 'integer' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -179,10 +184,15 @@ export async function stockRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: transactionSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer' },
+                      limit: { type: 'integer' },
+                      offset: { type: 'integer' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },

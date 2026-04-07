@@ -151,10 +151,15 @@ export async function purchaseOrderRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: purchaseOrderSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'integer' },
+                      limit: { type: 'integer' },
+                      offset: { type: 'integer' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },

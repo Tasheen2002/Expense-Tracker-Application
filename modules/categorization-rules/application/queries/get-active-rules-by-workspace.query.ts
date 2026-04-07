@@ -1,7 +1,7 @@
 import { CategoryRuleService } from '../services/category-rule.service';
 import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { CategoryRule, CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
+import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -30,12 +30,6 @@ export class GetActiveRulesByWorkspaceHandler implements IQueryHandler<
       { limit: query.limit, offset: query.offset }
     );
 
-    return QueryResult.success({
-      items: result.items.map(CategoryRule.toDTO),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

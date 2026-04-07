@@ -1,6 +1,6 @@
 import { CategoryRuleService } from '../services/category-rule.service';
 import { RuleId } from '../../domain/value-objects/rule-id';
-import { CategoryRule, CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
+import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -26,6 +26,6 @@ export class GetRuleByIdHandler implements IQueryHandler<
       query.userId
     );
 
-    return QueryResult.success(CategoryRule.toDTO(rule));
+    return QueryResult.success(rule);
   }
 }

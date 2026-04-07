@@ -1,55 +1,6 @@
 import { ScenarioId } from '../value-objects/scenario-id';
 import { PlanId } from '../value-objects/plan-id';
 import { UserId } from '../../../identity-workspace';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class ScenarioCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly scenarioId: string,
-    public readonly planId: string,
-    public readonly name: string,
-    public readonly createdBy: string
-  ) {
-    super(scenarioId, 'Scenario');
-  }
-
-  get eventType(): string {
-    return 'ScenarioCreated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      scenarioId: this.scenarioId,
-      planId: this.planId,
-      name: this.name,
-      createdBy: this.createdBy,
-    };
-  }
-}
-
-export class ScenarioUpdatedEvent extends DomainEvent {
-  constructor(
-    public readonly scenarioId: string,
-    public readonly changes: Record<string, unknown>
-  ) {
-    super(scenarioId, 'Scenario');
-  }
-
-  get eventType(): string {
-    return 'ScenarioUpdated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      scenarioId: this.scenarioId,
-      changes: this.changes,
-    };
-  }
-}
 
 // ============================================================================
 // Entity

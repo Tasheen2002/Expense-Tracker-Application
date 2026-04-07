@@ -179,8 +179,9 @@ export class AllocationManagementService {
       throw new DepartmentNotFoundError(id);
     }
 
-    // Soft delete by deactivating
+    // Soft delete by deactivating and staging the deleted event
     department.deactivate();
+    department.markAsDeleted();
     await this.departmentRepository.save(department);
   }
 
@@ -328,8 +329,9 @@ export class AllocationManagementService {
       throw new CostCenterNotFoundError(id);
     }
 
-    // Soft delete by deactivating
+    // Soft delete by deactivating and staging the deleted event
     costCenter.deactivate();
+    costCenter.markAsDeleted();
     await this.costCenterRepository.save(costCenter);
   }
 
@@ -511,8 +513,9 @@ export class AllocationManagementService {
       throw new ProjectNotFoundError(id);
     }
 
-    // Soft delete by deactivating
+    // Soft delete by deactivating and staging the deleted event
     project.deactivate();
+    project.markAsDeleted();
     await this.projectRepository.save(project);
   }
 

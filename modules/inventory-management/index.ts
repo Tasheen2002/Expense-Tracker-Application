@@ -22,6 +22,12 @@ export { PurchaseOrderStatus } from './domain/enums/purchase-order-status';
 export { LocationType } from './domain/enums/location-type';
 export { TransactionType } from './domain/enums/transaction-type';
 
+// Domain value objects (for cross-module identity references)
+export { StockId } from './domain/value-objects/stock-id.vo';
+export { PurchaseOrderId } from './domain/value-objects/purchase-order-id.vo';
+export { SupplierId } from './domain/value-objects/supplier-id.vo';
+export { LocationId } from './domain/value-objects/location-id.vo';
+
 // DTO types (for cross-module type sharing)
 export type { SupplierDTO } from './domain/entities/supplier.entity';
 export type { LocationDTO } from './domain/entities/location.entity';

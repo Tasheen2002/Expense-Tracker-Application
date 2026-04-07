@@ -4,7 +4,6 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
-import { Tag } from '../../domain/entities/tag.entity';
 
 export interface CreateTagCommand extends ICommand {
   readonly workspaceId: string;
@@ -26,6 +25,6 @@ export class CreateTagHandler implements ICommandHandler<
       name: command.name,
       color: command.color,
     });
-    return CommandResult.success({ tagId: tag.id.getValue() });
+    return CommandResult.success({ tagId: tag.tagId });
   }
 }

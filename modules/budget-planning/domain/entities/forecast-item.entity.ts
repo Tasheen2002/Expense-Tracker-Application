@@ -2,55 +2,6 @@ import { ForecastItemId } from '../value-objects/forecast-item-id';
 import { ForecastId } from '../value-objects/forecast-id';
 import { CategoryId } from '../../../expense-ledger';
 import { ForecastAmount } from '../value-objects/forecast-amount';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class ForecastItemCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly forecastItemId: string,
-    public readonly forecastId: string,
-    public readonly categoryId: string,
-    public readonly amount: string
-  ) {
-    super(forecastItemId, 'ForecastItem');
-  }
-
-  get eventType(): string {
-    return 'ForecastItemCreated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      forecastItemId: this.forecastItemId,
-      forecastId: this.forecastId,
-      categoryId: this.categoryId,
-      amount: this.amount,
-    };
-  }
-}
-
-export class ForecastItemUpdatedEvent extends DomainEvent {
-  constructor(
-    public readonly forecastItemId: string,
-    public readonly changes: Record<string, unknown>
-  ) {
-    super(forecastItemId, 'ForecastItem');
-  }
-
-  get eventType(): string {
-    return 'ForecastItemUpdated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      forecastItemId: this.forecastItemId,
-      changes: this.changes,
-    };
-  }
-}
 
 // ============================================================================
 // Entity

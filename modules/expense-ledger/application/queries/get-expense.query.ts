@@ -28,6 +28,6 @@ export class GetExpenseHandler implements IQueryHandler<
       throw new ExpenseNotFoundError(query.expenseId, query.workspaceId);
     }
 
-    return QueryResult.success(expense.toJSON());
+    return QueryResult.success(expense);
   }
 }

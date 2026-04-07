@@ -4,7 +4,6 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
-import { Category } from '../../domain/entities/category.entity';
 
 export interface CreateCategoryCommand extends ICommand {
   readonly workspaceId: string;
@@ -30,6 +29,6 @@ export class CreateCategoryHandler implements ICommandHandler<
       color: command.color,
       icon: command.icon,
     });
-    return CommandResult.success({ categoryId: category.id.getValue() });
+    return CommandResult.success({ categoryId: category.categoryId });
   }
 }

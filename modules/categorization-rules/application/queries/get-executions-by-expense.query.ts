@@ -1,7 +1,7 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
 import { ExpenseId } from '../../../expense-ledger';
 import { WorkspaceId } from '../../../identity-workspace';
-import { RuleExecution, RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
+import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -22,11 +22,11 @@ export class GetExecutionsByExpenseHandler implements IQueryHandler<
   async handle(
     query: GetExecutionsByExpenseQuery
   ): Promise<QueryResult<RuleExecutionDTO[]>> {
-    const executions = await this.executionService.getExecutionsByExpenseId(
+    const result = await this.executionService.getExecutionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(executions.items.map(RuleExecution.toDTO));
+    return QueryResult.success(result.items);
   }
 }

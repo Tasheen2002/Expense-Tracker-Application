@@ -52,6 +52,6 @@ export class CreateCategoryRuleHandler implements ICommandHandler<
       createdBy: UserId.fromString(command.createdBy),
     });
 
-    return CommandResult.success({ ruleId: rule.getId().getValue() });
+    return CommandResult.success({ ruleId: rule.id });
   }
 }

@@ -58,10 +58,12 @@ export class ForecastRepositoryImpl
 
   async findByPlanId(
     planId: PlanId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Forecast>> {
     const where: Prisma.ForecastWhereInput = {
       planId: planId.getValue(),
+      plan: { workspaceId },
     };
 
     return PrismaRepositoryHelper.paginate(

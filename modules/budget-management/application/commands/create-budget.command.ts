@@ -1,5 +1,4 @@
 import { BudgetService } from '../services/budget.service';
-import { Budget } from '../../domain/entities/budget.entity';
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 
 import {
@@ -32,6 +31,6 @@ export class CreateBudgetHandler implements ICommandHandler<
     command: CreateBudgetCommand
   ): Promise<CommandResult<{ budgetId: string }>> {
     const budget = await this.budgetService.createBudget(command);
-    return CommandResult.success({ budgetId: budget.id.getValue() });
+    return CommandResult.success({ budgetId: budget.budgetId });
   }
 }

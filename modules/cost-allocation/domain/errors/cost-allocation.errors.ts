@@ -4,7 +4,7 @@ export class CostAllocationDomainError extends DomainError {
   public readonly errorCode: string;
 
   constructor(message: string, errorCode: string, statusCode: number) {
-    super(message, statusCode);
+    super(message, errorCode, statusCode);
     this.errorCode = errorCode;
   }
 }

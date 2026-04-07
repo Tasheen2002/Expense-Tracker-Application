@@ -73,13 +73,15 @@ export class PurchaseOrderService {
   }
 
   async deletePurchaseOrder(poId: string, workspaceId: string): Promise<void> {
-    const exists = await this.poRepository.exists(
+    const po = await this.poRepository.findById(
       PurchaseOrderId.fromString(poId),
       workspaceId
     );
-    if (!exists) {
+    if (!po) {
       throw new PurchaseOrderNotFoundError(poId, workspaceId);
     }
+    po.markAsDeleted();
+    await this.poRepository.save(po);
     await this.poRepository.delete(
       PurchaseOrderId.fromString(poId),
       workspaceId

@@ -26,9 +26,6 @@ export class ListTagsHandler implements IQueryHandler<
       limit: query.limit,
       offset: query.offset,
     });
-    return QueryResult.success({
-      ...result,
-      items: result.items.map((tag) => tag.toJSON()),
-    });
+    return QueryResult.success(result);
   }
 }

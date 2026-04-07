@@ -78,13 +78,15 @@ export class SupplierService {
   }
 
   async deleteSupplier(supplierId: string, workspaceId: string): Promise<void> {
-    const exists = await this.supplierRepository.exists(
+    const supplier = await this.supplierRepository.findById(
       SupplierId.fromString(supplierId),
       workspaceId
     );
-    if (!exists) {
+    if (!supplier) {
       throw new SupplierNotFoundError(supplierId, workspaceId);
     }
+    supplier.markAsDeleted();
+    await this.supplierRepository.save(supplier);
     await this.supplierRepository.delete(
       SupplierId.fromString(supplierId),
       workspaceId

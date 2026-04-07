@@ -28,6 +28,6 @@ export class GetTagHandler implements IQueryHandler<
       throw new TagNotFoundError(query.tagId, query.workspaceId);
     }
 
-    return QueryResult.success(tag.toJSON());
+    return QueryResult.success(tag);
   }
 }

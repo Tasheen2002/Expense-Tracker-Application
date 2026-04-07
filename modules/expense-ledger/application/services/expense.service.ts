@@ -4,7 +4,7 @@ import {
   PaginatedResult,
 } from '../../domain/repositories/expense.repository';
 import { TagRepository } from '../../domain/repositories/tag.repository';
-import { Expense } from '../../domain/entities/expense.entity';
+import { Expense, ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import { TagId } from '../../domain/value-objects/tag-id';
@@ -38,7 +38,7 @@ export class ExpenseService {
     paymentMethod: PaymentMethod;
     isReimbursable: boolean;
     tagIds?: string[];
-  }): Promise<Expense> {
+  }): Promise<ExpenseDTO> {
     // Deduplicate tag IDs before creating expense
     const uniqueTagIds = params.tagIds
       ? Array.from(new Set(params.tagIds))
@@ -72,7 +72,7 @@ export class ExpenseService {
 
     await this.expenseRepository.save(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async updateExpense(
@@ -90,7 +90,7 @@ export class ExpenseService {
       paymentMethod?: PaymentMethod;
       isReimbursable?: boolean;
     }
-  ): Promise<Expense> {
+  ): Promise<ExpenseDTO> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -149,7 +149,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async deleteExpense(
@@ -187,24 +187,29 @@ export class ExpenseService {
   async getExpenseById(
     expenseId: string,
     workspaceId: string
-  ): Promise<Expense | null> {
-    return await this.expenseRepository.findById(
+  ): Promise<ExpenseDTO | null> {
+    const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
     );
+    return expense ? expense.toJSON() : null;
   }
 
   async getExpensesWithFilters(
     filters: ExpenseFilters
-  ): Promise<PaginatedResult<Expense>> {
-    return await this.expenseRepository.findWithFilters(filters);
+  ): Promise<PaginatedResult<ExpenseDTO>> {
+    const result = await this.expenseRepository.findWithFilters(filters);
+    return {
+      ...result,
+      items: result.items.map((expense) => expense.toJSON()),
+    };
   }
 
   async submitExpense(
     expenseId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Expense> {
+  ): Promise<ExpenseDTO> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -222,14 +227,14 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async approveExpense(
     expenseId: string,
     workspaceId: string,
     approverId: string
-  ): Promise<Expense> {
+  ): Promise<ExpenseDTO> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -252,7 +257,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async rejectExpense(
@@ -260,7 +265,7 @@ export class ExpenseService {
     workspaceId: string,
     rejecterId: string,
     reason?: string
-  ): Promise<Expense> {
+  ): Promise<ExpenseDTO> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -283,14 +288,14 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async markExpenseAsReimbursed(
     expenseId: string,
     workspaceId: string,
     processedBy: string
-  ): Promise<Expense> {
+  ): Promise<ExpenseDTO> {
     const expense = await this.expenseRepository.findById(
       ExpenseId.fromString(expenseId),
       workspaceId
@@ -313,7 +318,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense;
+    return expense.toJSON();
   }
 
   async getExpenseStatistics(

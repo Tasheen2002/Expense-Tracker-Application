@@ -9,7 +9,6 @@ import { CategoryRepository } from '../../domain/repositories/category.repositor
 import { TagRepository } from '../../domain/repositories/tag.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import { TagId } from '../../domain/value-objects/tag-id';
-import { Expense } from '../../domain/entities/expense.entity';
 import {
   CategoryNotFoundError,
   TagNotFoundError,
@@ -82,6 +81,6 @@ export class CreateExpenseHandler implements ICommandHandler<
       isReimbursable: command.isReimbursable,
       tagIds: command.tagIds,
     });
-    return CommandResult.success({ expenseId: expense.id.getValue() });
+    return CommandResult.success({ expenseId: expense.expenseId });
   }
 }

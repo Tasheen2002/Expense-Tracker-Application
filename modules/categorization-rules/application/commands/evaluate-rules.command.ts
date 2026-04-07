@@ -52,21 +52,19 @@ export class EvaluateRulesHandler implements ICommandHandler<
     const evaluationResult: EvaluationResultDTO = {
       appliedRule: result.appliedRule
         ? {
-            id: result.appliedRule.getId().getValue(),
-            name: result.appliedRule.getName(),
-            priority: result.appliedRule.getPriority(),
+            id: result.appliedRule.id,
+            name: result.appliedRule.name,
+            priority: result.appliedRule.priority,
           }
         : null,
-      suggestedCategoryId: result.suggestedCategoryId?.getValue() || null,
+      suggestedCategoryId: result.suggestedCategoryId,
       execution: result.execution
         ? {
-            id: result.execution.getId().getValue(),
-            ruleId: result.execution.getRuleId().getValue(),
-            expenseId: result.execution.getExpenseId().getValue(),
-            appliedCategoryId: result.execution
-              .getAppliedCategoryId()
-              .getValue(),
-            executedAt: result.execution.getExecutedAt(),
+            id: result.execution.id,
+            ruleId: result.execution.ruleId,
+            expenseId: result.execution.expenseId,
+            appliedCategoryId: result.execution.appliedCategoryId,
+            executedAt: result.execution.executedAt,
           }
         : null,
     };

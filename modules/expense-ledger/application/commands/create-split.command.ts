@@ -7,6 +7,7 @@ import { ExpenseSplitService } from '../services/expense-split.service';
 import { ExpenseService } from '../services/expense.service';
 import { SplitType } from '../../domain/enums/split-type';
 import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { Money } from '../../domain/value-objects/money';
 import {
   ExpenseNotFoundError,
   UnauthorizedExpenseAccessError,
@@ -57,7 +58,7 @@ export class CreateSplitHandler implements ICommandHandler<
       expenseId: command.expenseId,
       workspaceId: command.workspaceId,
       userId: command.userId,
-      totalAmount: expense.amount,
+      totalAmount: Money.create(expense.amount, expense.currency),
       splitType: command.splitType,
       participants: command.participants,
     });

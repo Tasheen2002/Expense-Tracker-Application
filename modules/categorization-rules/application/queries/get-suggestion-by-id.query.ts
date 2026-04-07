@@ -1,7 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { SuggestionId } from '../../domain/value-objects/suggestion-id';
 import { WorkspaceId } from '../../../identity-workspace';
-import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
+import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -27,6 +27,6 @@ export class GetSuggestionByIdHandler implements IQueryHandler<
       WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(CategorySuggestion.toDTO(suggestion));
+    return QueryResult.success(suggestion);
   }
 }

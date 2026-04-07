@@ -59,10 +59,12 @@ export class ScenarioRepositoryImpl
 
   async findByPlanId(
     planId: PlanId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Scenario>> {
     const where: Prisma.ScenarioWhereInput = {
       planId: planId.getValue(),
+      plan: { workspaceId },
     };
 
     return PrismaRepositoryHelper.paginate(
