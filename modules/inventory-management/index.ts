@@ -1,48 +1,65 @@
-/**
- * Inventory Management Module
- * 
- * This module handles stock management, purchase orders, suppliers, locations,
- * stock alerts, and pickup reservations for the e-commerce platform.
- * 
- * Following DDD architecture:
- * - application/: Use cases (commands, queries, services)
- * - domain/: Business logic (entities, value objects, repositories)
- * - infrastructure/: Technical implementation (HTTP, persistence)
- * - tests/: Module tests
- */
+// HTTP entry-point (used by the API app to mount routes)
+export { registerInventoryRoutes } from './infrastructure/http/routes';
 
-// Domain Exports
-export * from "./domain/entities/purchase-order.entity";
-export * from "./domain/entities/purchase-order-item.entity";
-export * from "./domain/entities/stock.entity";
-export * from "./domain/entities/location.entity";
-export * from "./domain/entities/supplier.entity";
-export * from "./domain/entities/stock-alert.entity";
-export * from "./domain/entities/pickup-reservation.entity";
-export * from "./domain/entities/inventory-transaction.entity";
+// Domain error types (used by cross-cutting error handlers)
+export {
+  InventoryManagementError,
+  PurchaseOrderNotFoundError,
+  SupplierNotFoundError,
+  LocationNotFoundError,
+  StockNotFoundError,
+  InsufficientStockError,
+  InvalidQuantityError,
+  InvalidPurchaseOrderStatusError,
+  PurchaseOrderCannotBeEditedError,
+  SupplierAlreadyExistsError,
+  LocationAlreadyExistsError,
+  InvalidInventoryDataError,
+} from './domain/errors/inventory.errors';
 
-export * from "./domain/value-objects/purchase-order-id.vo";
-export * from "./domain/value-objects/supplier-id.vo";
-export * from "./domain/value-objects/purchase-order-status.vo";
-export * from "./domain/value-objects/alert-type.vo";
+// Domain enums (safe to share — value objects, not entities)
+export { PurchaseOrderStatus } from './domain/enums/purchase-order-status';
+export { LocationType } from './domain/enums/location-type';
+export { TransactionType } from './domain/enums/transaction-type';
 
-export * from "./domain/repositories/purchase-order.repository";
-export * from "./domain/repositories/purchase-order-item.repository";
-export * from "./domain/repositories/stock.repository";
-export * from "./domain/repositories/location.repository";
-export * from "./domain/repositories/supplier.repository";
+// DTO types (for cross-module type sharing)
+export type { SupplierDTO } from './domain/entities/supplier.entity';
+export type { LocationDTO } from './domain/entities/location.entity';
+export type { PurchaseOrderDTO } from './domain/entities/purchase-order.entity';
+export type { PurchaseOrderItemDTO } from './domain/entities/purchase-order-item.entity';
+export type { StockDTO } from './domain/entities/stock.entity';
+export type { InventoryTransactionDTO } from './domain/entities/inventory-transaction.entity';
 
-export * from "./domain/errors/inventory.errors";
+// Application services (for DI container wiring)
+export { SupplierService } from './application/services/supplier.service';
+export { LocationService } from './application/services/location.service';
+export { PurchaseOrderService } from './application/services/purchase-order.service';
+export { StockService } from './application/services/stock.service';
 
-// Application Exports
-export * from "./application/services/purchase-order-management.service";
-export * from "./application/services/stock-management.service";
-export * from "./application/services/location-management.service";
-export * from "./application/services/supplier-management.service";
-export * from "./application/services/stock-alert.service";
-export * from "./application/services/pickup-reservation.service";
+// Command handlers
+export { CreateSupplierHandler } from './application/commands/create-supplier.command';
+export { UpdateSupplierHandler } from './application/commands/update-supplier.command';
+export { DeleteSupplierHandler } from './application/commands/delete-supplier.command';
+export { CreateLocationHandler } from './application/commands/create-location.command';
+export { UpdateLocationHandler } from './application/commands/update-location.command';
+export { DeleteLocationHandler } from './application/commands/delete-location.command';
+export { CreatePurchaseOrderHandler } from './application/commands/create-purchase-order.command';
+export { UpdatePurchaseOrderHandler } from './application/commands/update-purchase-order.command';
+export { DeletePurchaseOrderHandler } from './application/commands/delete-purchase-order.command';
+export { SubmitPurchaseOrderHandler } from './application/commands/submit-purchase-order.command';
+export { ApprovePurchaseOrderHandler } from './application/commands/approve-purchase-order.command';
+export { ReceivePurchaseOrderHandler } from './application/commands/receive-purchase-order.command';
+export { CancelPurchaseOrderHandler } from './application/commands/cancel-purchase-order.command';
+export { AddPurchaseOrderItemHandler } from './application/commands/add-purchase-order-item.command';
+export { RemovePurchaseOrderItemHandler } from './application/commands/remove-purchase-order-item.command';
+export { AdjustStockHandler } from './application/commands/adjust-stock.command';
 
-// Infrastructure Exports
-export * from "./infrastructure/http/routes/inventory.routes";
-export * from "./infrastructure/persistence/purchase-order.repository.impl";
-export * from "./infrastructure/persistence/purchase-order-item.repository.impl";
+// Query handlers
+export { GetSupplierHandler } from './application/queries/get-supplier.query';
+export { ListSuppliersHandler } from './application/queries/list-suppliers.query';
+export { GetLocationHandler } from './application/queries/get-location.query';
+export { ListLocationsHandler } from './application/queries/list-locations.query';
+export { GetPurchaseOrderHandler } from './application/queries/get-purchase-order.query';
+export { ListPurchaseOrdersHandler } from './application/queries/list-purchase-orders.query';
+export { GetStockHandler } from './application/queries/get-stock.query';
+export { ListTransactionsHandler } from './application/queries/list-transactions.query';

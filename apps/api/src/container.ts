@@ -474,6 +474,53 @@ import { GetDeadLetterCountHandler } from '../../../modules/event-outbox/applica
 // Event Outbox Module - Controllers
 import { OutboxEventController } from '../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller';
 
+// Inventory Management Module - Repositories
+import { SupplierRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/supplier.repository.impl';
+import { LocationRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/location.repository.impl';
+import { PurchaseOrderRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/purchase-order.repository.impl';
+import { StockRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/stock.repository.impl';
+import { InventoryTransactionRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/inventory-transaction.repository.impl';
+
+// Inventory Management Module - Services
+import { SupplierService } from '../../../modules/inventory-management/application/services/supplier.service';
+import { LocationService as InventoryLocationService } from '../../../modules/inventory-management/application/services/location.service';
+import { PurchaseOrderService } from '../../../modules/inventory-management/application/services/purchase-order.service';
+import { StockService } from '../../../modules/inventory-management/application/services/stock.service';
+
+// Inventory Management Module - Command Handlers
+import { CreateSupplierHandler } from '../../../modules/inventory-management/application/commands/create-supplier.command';
+import { UpdateSupplierHandler } from '../../../modules/inventory-management/application/commands/update-supplier.command';
+import { DeleteSupplierHandler } from '../../../modules/inventory-management/application/commands/delete-supplier.command';
+import { CreateLocationHandler as CreateInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/create-location.command';
+import { UpdateLocationHandler as UpdateInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/update-location.command';
+import { DeleteLocationHandler as DeleteInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/delete-location.command';
+import { CreatePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/create-purchase-order.command';
+import { UpdatePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/update-purchase-order.command';
+import { DeletePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/delete-purchase-order.command';
+import { SubmitPurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/submit-purchase-order.command';
+import { ApprovePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/approve-purchase-order.command';
+import { ReceivePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/receive-purchase-order.command';
+import { CancelPurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/cancel-purchase-order.command';
+import { AddPurchaseOrderItemHandler } from '../../../modules/inventory-management/application/commands/add-purchase-order-item.command';
+import { RemovePurchaseOrderItemHandler } from '../../../modules/inventory-management/application/commands/remove-purchase-order-item.command';
+import { AdjustStockHandler } from '../../../modules/inventory-management/application/commands/adjust-stock.command';
+
+// Inventory Management Module - Query Handlers
+import { GetSupplierHandler } from '../../../modules/inventory-management/application/queries/get-supplier.query';
+import { ListSuppliersHandler } from '../../../modules/inventory-management/application/queries/list-suppliers.query';
+import { GetLocationHandler as GetInventoryLocationHandler } from '../../../modules/inventory-management/application/queries/get-location.query';
+import { ListLocationsHandler as ListInventoryLocationsHandler } from '../../../modules/inventory-management/application/queries/list-locations.query';
+import { GetPurchaseOrderHandler } from '../../../modules/inventory-management/application/queries/get-purchase-order.query';
+import { ListPurchaseOrdersHandler } from '../../../modules/inventory-management/application/queries/list-purchase-orders.query';
+import { GetStockHandler } from '../../../modules/inventory-management/application/queries/get-stock.query';
+import { ListTransactionsHandler } from '../../../modules/inventory-management/application/queries/list-transactions.query';
+
+// Inventory Management Module - Controllers
+import { SupplierController } from '../../../modules/inventory-management/infrastructure/http/controllers/supplier.controller';
+import { LocationController as InventoryLocationController } from '../../../modules/inventory-management/infrastructure/http/controllers/location.controller';
+import { PurchaseOrderController } from '../../../modules/inventory-management/infrastructure/http/controllers/purchase-order.controller';
+import { StockController } from '../../../modules/inventory-management/infrastructure/http/controllers/stock.controller';
+
 /**
  * Dependency Injection Container
  * Following e-commerce pattern for service registration
@@ -1883,6 +1930,96 @@ export class Container {
     );
     this.services.set('outboxEventController', outboxEventController);
 
+    // ============================================
+    // Inventory Management Module
+    // ============================================
+
+    // Repositories
+    const supplierRepository = new SupplierRepositoryImpl(prisma, eventBus);
+    const inventoryLocationRepository = new LocationRepositoryImpl(prisma, eventBus);
+    const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma, eventBus);
+    const stockRepository = new StockRepositoryImpl(prisma, eventBus);
+    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma, eventBus);
+
+    // Services
+    const supplierService = new SupplierService(supplierRepository);
+    const inventoryLocationService = new InventoryLocationService(inventoryLocationRepository);
+    const purchaseOrderService = new PurchaseOrderService(
+      purchaseOrderRepository,
+      supplierRepository
+    );
+    const stockService = new StockService(
+      stockRepository,
+      inventoryTransactionRepository,
+      inventoryLocationRepository
+    );
+
+    // Command Handlers
+    const createSupplierHandler = new CreateSupplierHandler(supplierService);
+    const updateSupplierHandler = new UpdateSupplierHandler(supplierService);
+    const deleteSupplierHandler = new DeleteSupplierHandler(supplierService);
+    const createInventoryLocationHandler = new CreateInventoryLocationHandler(inventoryLocationService);
+    const updateInventoryLocationHandler = new UpdateInventoryLocationHandler(inventoryLocationService);
+    const deleteInventoryLocationHandler = new DeleteInventoryLocationHandler(inventoryLocationService);
+    const createPurchaseOrderHandler = new CreatePurchaseOrderHandler(purchaseOrderService);
+    const updatePurchaseOrderHandler = new UpdatePurchaseOrderHandler(purchaseOrderService);
+    const deletePurchaseOrderHandler = new DeletePurchaseOrderHandler(purchaseOrderService);
+    const submitPurchaseOrderHandler = new SubmitPurchaseOrderHandler(purchaseOrderService);
+    const approvePurchaseOrderHandler = new ApprovePurchaseOrderHandler(purchaseOrderService);
+    const receivePurchaseOrderHandler = new ReceivePurchaseOrderHandler(purchaseOrderService);
+    const cancelPurchaseOrderHandler = new CancelPurchaseOrderHandler(purchaseOrderService);
+    const addPurchaseOrderItemHandler = new AddPurchaseOrderItemHandler(purchaseOrderService);
+    const removePurchaseOrderItemHandler = new RemovePurchaseOrderItemHandler(purchaseOrderService);
+    const adjustStockHandler = new AdjustStockHandler(stockService);
+
+    // Query Handlers
+    const getSupplierHandler = new GetSupplierHandler(supplierRepository);
+    const listSuppliersHandler = new ListSuppliersHandler(supplierRepository);
+    const getInventoryLocationHandler = new GetInventoryLocationHandler(inventoryLocationRepository);
+    const listInventoryLocationsHandler = new ListInventoryLocationsHandler(inventoryLocationRepository);
+    const getPurchaseOrderHandler = new GetPurchaseOrderHandler(purchaseOrderRepository);
+    const listPurchaseOrdersHandler = new ListPurchaseOrdersHandler(purchaseOrderRepository);
+    const getStockHandler = new GetStockHandler(stockRepository);
+    const listTransactionsHandler = new ListTransactionsHandler(inventoryTransactionRepository);
+
+    // Controllers
+    const supplierController = new SupplierController(
+      createSupplierHandler,
+      updateSupplierHandler,
+      deleteSupplierHandler,
+      getSupplierHandler,
+      listSuppliersHandler
+    );
+    const inventoryLocationController = new InventoryLocationController(
+      createInventoryLocationHandler,
+      updateInventoryLocationHandler,
+      deleteInventoryLocationHandler,
+      getInventoryLocationHandler,
+      listInventoryLocationsHandler
+    );
+    const purchaseOrderController = new PurchaseOrderController(
+      createPurchaseOrderHandler,
+      updatePurchaseOrderHandler,
+      deletePurchaseOrderHandler,
+      submitPurchaseOrderHandler,
+      approvePurchaseOrderHandler,
+      receivePurchaseOrderHandler,
+      cancelPurchaseOrderHandler,
+      addPurchaseOrderItemHandler,
+      removePurchaseOrderItemHandler,
+      getPurchaseOrderHandler,
+      listPurchaseOrdersHandler
+    );
+    const stockController = new StockController(
+      adjustStockHandler,
+      getStockHandler,
+      listTransactionsHandler
+    );
+    this.services.set('supplierController', supplierController);
+    this.services.set('inventoryLocationController', inventoryLocationController);
+    this.services.set('purchaseOrderController', purchaseOrderController);
+    this.services.set('stockController', stockController);
+
     // Store Prisma for module route registration
     this.services.set('prisma', prisma);
   }
@@ -2091,6 +2228,19 @@ export class Container {
       outboxEventController: this.get<OutboxEventController>(
         'outboxEventController'
       ),
+      prisma: this.get<PrismaClient>('prisma'),
+    };
+  }
+
+  /**
+   * Get all inventory-management services for route registration
+   */
+  getInventoryManagementServices() {
+    return {
+      supplierController: this.get<SupplierController>('supplierController'),
+      locationController: this.get<InventoryLocationController>('inventoryLocationController'),
+      purchaseOrderController: this.get<PurchaseOrderController>('purchaseOrderController'),
+      stockController: this.get<StockController>('stockController'),
       prisma: this.get<PrismaClient>('prisma'),
     };
   }

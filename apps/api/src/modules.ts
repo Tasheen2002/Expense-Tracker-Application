@@ -13,6 +13,7 @@ import { registerAuditComplianceRoutes } from '../../../modules/audit-compliance
 import { registerPolicyControlsRoutes } from '../../../modules/policy-controls/infrastructure/http/routes/index';
 import { registerBankFeedSyncRoutes } from '../../../modules/bank-feed-sync/infrastructure/http/routes/index';
 import { registerEventOutboxRoutes } from '../../../modules/event-outbox/infrastructure/http/routes/index';
+import { registerInventoryRoutes } from '../../../modules/inventory-management/infrastructure/http/routes/index';
 
 export default fp(
   async (fastify) => {
@@ -154,6 +155,17 @@ export default fp(
       eventOutboxServices.prisma
     );
     fastify.log.info('✓ Event Outbox module registered');
+
+    // ============================================
+    // Inventory Management Module
+    // ============================================
+    const inventoryManagementServices = container.getInventoryManagementServices();
+    await registerInventoryRoutes(
+      fastify,
+      inventoryManagementServices,
+      inventoryManagementServices.prisma
+    );
+    fastify.log.info('✓ Inventory Management module registered');
 
     fastify.log.info('All modules registered successfully');
   },
