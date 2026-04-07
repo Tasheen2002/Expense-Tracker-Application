@@ -22,15 +22,11 @@ export class GetSplitSettlementsHandler implements IQueryHandler<
   async handle(
     query: GetSplitSettlementsQuery
   ): Promise<QueryResult<PaginatedResult<SplitSettlementDTO>>> {
-    try {
-      const settlements = await this.expenseSplitService.getSplitSettlements(
-        query.splitId,
-        query.workspaceId,
-        query.userId
-      );
-      return QueryResult.success(settlements);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const settlements = await this.expenseSplitService.getSplitSettlements(
+      query.splitId,
+      query.workspaceId,
+      query.userId
+    );
+    return QueryResult.success(settlements);
   }
 }

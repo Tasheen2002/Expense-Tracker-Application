@@ -20,7 +20,7 @@ export class GetAttachmentHandler implements IQueryHandler<
   constructor(private readonly attachmentService: AttachmentService) {}
 
   async handle(query: GetAttachmentQuery): Promise<QueryResult<AttachmentDTO>> {
-    const attachment = await this.attachmentService.getAttachmentById(
+    const attachment = await this.attachmentService.getAttachmentDTOById(
       query.attachmentId
     );
 
@@ -32,6 +32,6 @@ export class GetAttachmentHandler implements IQueryHandler<
       throw new AttachmentNotFoundError(query.attachmentId);
     }
 
-    return QueryResult.success(attachment.toJSON());
+    return QueryResult.success(attachment);
   }
 }

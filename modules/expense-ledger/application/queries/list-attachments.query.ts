@@ -20,9 +20,9 @@ export class ListAttachmentsHandler implements IQueryHandler<
   async handle(
     query: ListAttachmentsQuery
   ): Promise<QueryResult<AttachmentDTO[]>> {
-    const result = await this.attachmentService.getAttachmentsByExpense(
+    const result = await this.attachmentService.getAttachmentDTOsByExpense(
       query.expenseId
     );
-    return QueryResult.success(result.items.map((attachment) => attachment.toJSON()));
+    return QueryResult.success(result.items);
   }
 }

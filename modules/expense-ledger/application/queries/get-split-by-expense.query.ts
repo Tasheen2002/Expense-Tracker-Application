@@ -22,18 +22,14 @@ export class GetSplitByExpenseHandler implements IQueryHandler<
   async handle(
     query: GetSplitByExpenseQuery
   ): Promise<QueryResult<ExpenseSplitDTO>> {
-    try {
-      const split = await this.expenseSplitService.getSplitByExpenseId(
-        query.expenseId,
-        query.workspaceId,
-        query.userId
-      );
-      if (!split) {
-        throw new SplitNotFoundError(query.expenseId);
-      }
-      return QueryResult.success(split);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
+    const split = await this.expenseSplitService.getSplitByExpenseId(
+      query.expenseId,
+      query.workspaceId,
+      query.userId
+    );
+    if (!split) {
+      throw new SplitNotFoundError(query.expenseId);
     }
+    return QueryResult.success(split);
   }
 }

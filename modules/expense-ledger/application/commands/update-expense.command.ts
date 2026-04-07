@@ -5,6 +5,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { ExpenseService } from '../services/expense.service';
+import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { CategoryRepository } from '../../domain/repositories/category.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
@@ -26,14 +27,14 @@ export interface UpdateExpenseCommand extends ICommand {
 
 export class UpdateExpenseHandler implements ICommandHandler<
   UpdateExpenseCommand,
-  CommandResult<void>
+  CommandResult<ExpenseDTO>
 > {
   constructor(
     private readonly expenseService: ExpenseService,
     private readonly categoryRepository: CategoryRepository
   ) {}
 
-  async handle(command: UpdateExpenseCommand): Promise<CommandResult<void>> {
+  async handle(command: UpdateExpenseCommand): Promise<CommandResult<ExpenseDTO>> {
     if (command.categoryId) {
       const categoryExists = await this.categoryRepository.exists(
         CategoryId.fromString(command.categoryId),
@@ -47,7 +48,7 @@ export class UpdateExpenseHandler implements ICommandHandler<
       }
     }
 
-    const expense = await this.expenseService.updateExpense(
+    const dto = await this.expenseService.updateExpense(
       command.expenseId,
       command.workspaceId,
       command.userId,
@@ -63,6 +64,6 @@ export class UpdateExpenseHandler implements ICommandHandler<
         isReimbursable: command.isReimbursable,
       }
     );
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

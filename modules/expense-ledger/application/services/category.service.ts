@@ -118,7 +118,6 @@ export class CategoryService {
     }
 
     category.markAsDeleted();
-    await this.categoryRepository.save(category);
     await this.categoryRepository.delete(
       CategoryId.fromString(categoryId),
       workspaceId

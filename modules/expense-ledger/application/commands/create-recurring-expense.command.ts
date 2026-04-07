@@ -4,10 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { RecurringExpenseService } from '../services/recurring-expense.service';
-import {
-  ExpenseTemplate,
-  RecurringExpenseDTO,
-} from '../../domain/entities/recurring-expense.entity';
+import { ExpenseTemplate, RecurringExpenseDTO } from '../../domain/entities/recurring-expense.entity';
 import { RecurrenceFrequency } from '../../domain/enums/recurrence-frequency';
 
 export interface CreateRecurringExpenseCommand extends ICommand {
@@ -31,21 +28,15 @@ export class CreateRecurringExpenseHandler implements ICommandHandler<
   async handle(
     command: CreateRecurringExpenseCommand
   ): Promise<CommandResult<RecurringExpenseDTO>> {
-    try {
-      const expense = await this.recurringExpenseService.createRecurringExpense(
-        {
-          workspaceId: command.workspaceId,
-          userId: command.userId,
-          frequency: command.frequency,
-          interval: command.interval,
-          startDate: command.startDate,
-          endDate: command.endDate,
-          template: command.template,
-        }
-      );
-      return CommandResult.success(expense.toJSON());
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const dto = await this.recurringExpenseService.createRecurringExpense({
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      frequency: command.frequency,
+      interval: command.interval,
+      startDate: command.startDate,
+      endDate: command.endDate,
+      template: command.template,
+    });
+    return CommandResult.success(dto);
   }
 }

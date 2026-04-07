@@ -1,6 +1,6 @@
 import { TagId } from '../value-objects/tag-id';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   TagNameRequiredError,
   TagNameTooLongError,

@@ -159,7 +159,6 @@ export class ExpenseSplitService {
     }
 
     split.markAsDeleted();
-    await this.splitRepository.save(split);
     await this.splitRepository.delete(SplitId.fromString(splitId), workspaceId);
   }
 

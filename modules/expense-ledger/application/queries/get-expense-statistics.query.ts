@@ -34,32 +34,28 @@ export class GetExpenseStatisticsHandler implements IQueryHandler<
   async handle(
     query: GetExpenseStatisticsQuery
   ): Promise<QueryResult<ExpenseStatisticsResult>> {
-    try {
-      const stats = await this.expenseService.getExpenseStatistics(
-        query.workspaceId,
-        query.userId,
-        query.currency
-      );
+    const stats = await this.expenseService.getExpenseStatistics(
+      query.workspaceId,
+      query.userId,
+      query.currency
+    );
 
-      const totalCount = Object.values(stats.countByStatus).reduce(
-        (sum, count) => sum + count,
-        0
-      );
+    const totalCount = Object.values(stats.countByStatus).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
-      return QueryResult.success({
-        totalExpense: stats.totalAmount,
-        currency: stats.currency,
-        expenseCountByStatus: {
-          draft: stats.countByStatus[ExpenseStatus.DRAFT],
-          submitted: stats.countByStatus[ExpenseStatus.SUBMITTED],
-          approved: stats.countByStatus[ExpenseStatus.APPROVED],
-          rejected: stats.countByStatus[ExpenseStatus.REJECTED],
-          reimbursed: stats.countByStatus[ExpenseStatus.REIMBURSED],
-        },
-        totalCount,
-      });
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    return QueryResult.success({
+      totalExpense: stats.totalAmount,
+      currency: stats.currency,
+      expenseCountByStatus: {
+        draft: stats.countByStatus[ExpenseStatus.DRAFT],
+        submitted: stats.countByStatus[ExpenseStatus.SUBMITTED],
+        approved: stats.countByStatus[ExpenseStatus.APPROVED],
+        rejected: stats.countByStatus[ExpenseStatus.REJECTED],
+        reimbursed: stats.countByStatus[ExpenseStatus.REIMBURSED],
+      },
+      totalCount,
+    });
   }
 }

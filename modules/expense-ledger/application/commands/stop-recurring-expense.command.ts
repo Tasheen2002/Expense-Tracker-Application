@@ -20,11 +20,7 @@ export class StopRecurringExpenseHandler implements ICommandHandler<
   async handle(
     command: StopRecurringExpenseCommand
   ): Promise<CommandResult<void>> {
-    try {
-      await this.recurringExpenseService.stopRecurringExpense(command.id);
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.recurringExpenseService.stopRecurringExpense(command.id);
+    return CommandResult.success();
   }
 }

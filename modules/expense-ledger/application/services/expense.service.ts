@@ -177,7 +177,6 @@ export class ExpenseService {
     }
 
     expense.markAsDeleted();
-    await this.expenseRepository.save(expense);
     await this.expenseRepository.delete(
       ExpenseId.fromString(expenseId),
       workspaceId

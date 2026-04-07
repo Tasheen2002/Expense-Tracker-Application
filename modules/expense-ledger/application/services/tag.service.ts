@@ -88,7 +88,6 @@ export class TagService {
     }
 
     tag.markAsDeleted();
-    await this.tagRepository.save(tag);
     await this.tagRepository.delete(TagId.fromString(tagId), workspaceId);
   }
 

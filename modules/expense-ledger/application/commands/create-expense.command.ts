@@ -5,6 +5,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { ExpenseService } from '../services/expense.service';
+import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { CategoryRepository } from '../../domain/repositories/category.repository';
 import { TagRepository } from '../../domain/repositories/tag.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
@@ -31,7 +32,7 @@ export interface CreateExpenseCommand extends ICommand {
 
 export class CreateExpenseHandler implements ICommandHandler<
   CreateExpenseCommand,
-  CommandResult<{ expenseId: string }>
+  CommandResult<ExpenseDTO>
 > {
   constructor(
     private readonly expenseService: ExpenseService,
@@ -41,7 +42,7 @@ export class CreateExpenseHandler implements ICommandHandler<
 
   async handle(
     command: CreateExpenseCommand
-  ): Promise<CommandResult<{ expenseId: string }>> {
+  ): Promise<CommandResult<ExpenseDTO>> {
     if (command.categoryId) {
       const categoryExists = await this.categoryRepository.exists(
         CategoryId.fromString(command.categoryId),
@@ -67,7 +68,7 @@ export class CreateExpenseHandler implements ICommandHandler<
       }
     }
 
-    const expense = await this.expenseService.createExpense({
+    const dto = await this.expenseService.createExpense({
       workspaceId: command.workspaceId,
       userId: command.userId,
       title: command.title,
@@ -81,6 +82,6 @@ export class CreateExpenseHandler implements ICommandHandler<
       isReimbursable: command.isReimbursable,
       tagIds: command.tagIds,
     });
-    return CommandResult.success({ expenseId: expense.expenseId });
+    return CommandResult.success(dto);
   }
 }

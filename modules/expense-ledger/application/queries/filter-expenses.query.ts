@@ -42,25 +42,21 @@ export class FilterExpensesHandler implements IQueryHandler<
   async handle(
     query: FilterExpensesQuery
   ): Promise<QueryResult<FilterExpensesResult>> {
-    try {
-      const result = await this.expenseService.getExpensesWithFilters({
-        workspaceId: query.workspaceId,
-        userId: query.userId,
-        categoryId: query.categoryId,
-        status: query.status,
-        paymentMethod: query.paymentMethod,
-        isReimbursable: query.isReimbursable,
-        startDate: query.startDate,
-        endDate: query.endDate,
-        minAmount: query.minAmount,
-        maxAmount: query.maxAmount,
-        currency: query.currency,
-        searchText: query.searchText,
-        pagination: { limit: query.limit, offset: query.offset },
-      });
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const result = await this.expenseService.getExpensesWithFilters({
+      workspaceId: query.workspaceId,
+      userId: query.userId,
+      categoryId: query.categoryId,
+      status: query.status,
+      paymentMethod: query.paymentMethod,
+      isReimbursable: query.isReimbursable,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      minAmount: query.minAmount,
+      maxAmount: query.maxAmount,
+      currency: query.currency,
+      searchText: query.searchText,
+      pagination: { limit: query.limit, offset: query.offset },
+    });
+    return QueryResult.success(result);
   }
 }
