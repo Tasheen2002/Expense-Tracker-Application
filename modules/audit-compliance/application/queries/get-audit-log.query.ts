@@ -18,11 +18,7 @@ export class GetAuditLogHandler implements IQueryHandler<
   constructor(private readonly auditService: AuditService) {}
 
   async handle(input: GetAuditLogQuery): Promise<QueryResult<AuditLogDTO>> {
-    try {
-      const auditLog = await this.auditService.getAuditLog(input.auditLogId, input.workspaceId);
-      return QueryResult.success(auditLog);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const auditLog = await this.auditService.getAuditLog(input.auditLogId, input.workspaceId);
+    return QueryResult.success(auditLog);
   }
 }

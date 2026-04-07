@@ -24,16 +24,12 @@ export class GetEntityAuditHistoryHandler implements IQueryHandler<
   async handle(
     input: GetEntityAuditHistoryQuery
   ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
-    try {
-      const result = await this.auditService.getEntityAuditHistory(
-        input.workspaceId,
-        input.entityType,
-        input.entityId,
-        { limit: input.limit, offset: input.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const result = await this.auditService.getEntityAuditHistory(
+      input.workspaceId,
+      input.entityType,
+      input.entityId,
+      { limit: input.limit, offset: input.offset }
+    );
+    return QueryResult.success(result);
   }
 }

@@ -32,16 +32,12 @@ export class ListAuditLogsHandler implements IQueryHandler<
   async handle(
     input: ListAuditLogsQuery
   ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
-    try {
-      const result = await this.auditService.listAuditLogs(
-        input.workspaceId,
-        input.filters,
-        input.limit,
-        input.offset
-      );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const result = await this.auditService.listAuditLogs(
+      input.workspaceId,
+      input.filters,
+      input.limit,
+      input.offset
+    );
+    return QueryResult.success(result);
   }
 }

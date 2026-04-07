@@ -22,15 +22,11 @@ export class GetAuditSummaryHandler implements IQueryHandler<
   async handle(
     input: GetAuditSummaryQuery
   ): Promise<QueryResult<AuditSummary>> {
-    try {
-      const summary = await this.auditService.getAuditSummary(
-        input.workspaceId,
-        input.startDate,
-        input.endDate
-      );
-      return QueryResult.success(summary);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const summary = await this.auditService.getAuditSummary(
+      input.workspaceId,
+      input.startDate,
+      input.endDate
+    );
+    return QueryResult.success(summary);
   }
 }
