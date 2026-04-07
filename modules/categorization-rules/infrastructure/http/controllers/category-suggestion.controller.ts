@@ -125,11 +125,11 @@ export class CategorySuggestionController {
         workspaceId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category suggestion deleted successfully'
-      );
+      if (!result.isSuccess) {
+        return ResponseHelper.fromCommand(reply, result, 'Category suggestion deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

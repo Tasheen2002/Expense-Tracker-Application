@@ -1,10 +1,58 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { PurchaseOrderItemId } from '../value-objects/purchase-order-item-id.vo';
 import {
   InvalidInventoryDataError,
   InvalidQuantityError,
 } from '../errors/inventory.errors';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// Domain Events
+export class PurchaseOrderItemCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly itemId: string,
+    public readonly purchaseOrderId: string,
+    public readonly variantId: string,
+    public readonly quantity: number,
+    public readonly unitPrice: string
+  ) {
+    super(itemId, 'PurchaseOrderItem');
+  }
+
+  get eventType(): string { return 'purchase_order_item.created'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      itemId: this.itemId,
+      purchaseOrderId: this.purchaseOrderId,
+      variantId: this.variantId,
+      quantity: this.quantity,
+      unitPrice: this.unitPrice,
+    };
+  }
+}
+
+export class PurchaseOrderItemReceivedEvent extends DomainEvent {
+  constructor(
+    public readonly itemId: string,
+    public readonly purchaseOrderId: string,
+    public readonly variantId: string,
+    public readonly receivedQuantity: number
+  ) {
+    super(itemId, 'PurchaseOrderItem');
+  }
+
+  get eventType(): string { return 'purchase_order_item.received'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      itemId: this.itemId,
+      purchaseOrderId: this.purchaseOrderId,
+      variantId: this.variantId,
+      receivedQuantity: this.receivedQuantity,
+    };
+  }
+}
 
 export interface PurchaseOrderItemProps {
   id: PurchaseOrderItemId;
@@ -65,7 +113,7 @@ export class PurchaseOrderItem extends AggregateRoot {
     }
 
     const now = new Date();
-    return new PurchaseOrderItem({
+    const item = new PurchaseOrderItem({
       id: PurchaseOrderItemId.create(),
       purchaseOrderId: data.purchaseOrderId,
       variantId: data.variantId.trim(),
@@ -76,6 +124,18 @@ export class PurchaseOrderItem extends AggregateRoot {
       createdAt: now,
       updatedAt: now,
     });
+
+    item.addDomainEvent(
+      new PurchaseOrderItemCreatedEvent(
+        item.id.getValue(),
+        item.purchaseOrderId,
+        item.variantId,
+        item.quantity,
+        item.unitPrice.toString()
+      )
+    );
+
+    return item;
   }
 
   static fromPersistence(props: PurchaseOrderItemProps): PurchaseOrderItem {
@@ -108,6 +168,15 @@ export class PurchaseOrderItem extends AggregateRoot {
     }
     this.props.receivedQuantity = quantity;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PurchaseOrderItemReceivedEvent(
+        this.id.getValue(),
+        this.purchaseOrderId,
+        this.variantId,
+        quantity
+      )
+    );
   }
 
   getLineTotal(): Decimal {

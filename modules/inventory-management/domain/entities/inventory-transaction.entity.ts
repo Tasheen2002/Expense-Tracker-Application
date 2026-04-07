@@ -1,7 +1,35 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { InventoryTransactionId } from '../value-objects/inventory-transaction-id.vo';
 import { TransactionType } from '../enums/transaction-type';
 import { InvalidQuantityError } from '../errors/inventory.errors';
+
+// Domain Events
+export class InventoryTransactionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly type: string,
+    public readonly quantity: number
+  ) {
+    super(transactionId, 'InventoryTransaction');
+  }
+
+  get eventType(): string { return 'inventory_transaction.created'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+      type: this.type,
+      quantity: this.quantity,
+    };
+  }
+}
 
 export interface InventoryTransactionProps {
   id: InventoryTransactionId;
@@ -53,7 +81,7 @@ export class InventoryTransaction extends AggregateRoot {
       throw new InvalidQuantityError('Transaction quantity must be greater than zero');
     }
 
-    return new InventoryTransaction({
+    const transaction = new InventoryTransaction({
       id: InventoryTransactionId.create(),
       workspaceId: data.workspaceId,
       variantId: data.variantId,
@@ -66,6 +94,19 @@ export class InventoryTransaction extends AggregateRoot {
       createdBy: data.createdBy,
       createdAt: new Date(),
     });
+
+    transaction.addDomainEvent(
+      new InventoryTransactionCreatedEvent(
+        transaction.id.getValue(),
+        transaction.workspaceId,
+        transaction.variantId,
+        transaction.locationId,
+        transaction.type,
+        transaction.quantity
+      )
+    );
+
+    return transaction;
   }
 
   static fromPersistence(props: InventoryTransactionProps): InventoryTransaction {

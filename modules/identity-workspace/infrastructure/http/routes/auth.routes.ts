@@ -38,7 +38,8 @@ export async function registerAuthRoutes(
             description: 'User registered successfully',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               data: {
                 type: 'object',
                 properties: {
@@ -55,7 +56,7 @@ export async function registerAuthRoutes(
             description: 'Bad Request',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -64,7 +65,7 @@ export async function registerAuthRoutes(
             description: 'User already exists',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -98,7 +99,8 @@ export async function registerAuthRoutes(
             description: 'Login successful',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               data: {
                 type: 'object',
                 properties: {
@@ -122,7 +124,7 @@ export async function registerAuthRoutes(
             description: 'Unauthorized',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -148,7 +150,8 @@ export async function registerAuthRoutes(
             description: 'Current user information',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               data: {
                 type: 'object',
                 properties: {
@@ -167,7 +170,7 @@ export async function registerAuthRoutes(
             description: 'Unauthorized',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
               error: { type: 'string' },
               message: { type: 'string' },
             },

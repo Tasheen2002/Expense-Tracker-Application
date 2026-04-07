@@ -85,14 +85,16 @@ export async function budgetRoutes(
   const alertSchema = {
     type: 'object',
     properties: {
-      alertId: { type: 'string', format: 'uuid' },
-      budgetId: { type: 'string' },
-      allocationId: { type: 'string', nullable: true },
-      type: { type: 'string' },
-      threshold: { type: 'number' },
-      currentAmount: { type: 'string' },
+      id: { type: 'string', format: 'uuid' },
+      budgetId: { type: 'string', format: 'uuid' },
+      allocationId: { type: 'string', format: 'uuid', nullable: true },
+      level: { type: 'string' },
+      threshold: { type: 'string' },
+      currentSpent: { type: 'string' },
+      allocatedAmount: { type: 'string' },
       message: { type: 'string' },
       isRead: { type: 'boolean' },
+      notifiedAt: { type: 'string', format: 'date-time', nullable: true },
       createdAt: { type: 'string', format: 'date-time' },
     },
   };
@@ -177,10 +179,15 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: budgetSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -404,10 +411,15 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: allocationSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -498,7 +510,12 @@ export async function budgetRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: alertSchema,
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: alertSchema },
+                },
+              },
             },
           },
         },

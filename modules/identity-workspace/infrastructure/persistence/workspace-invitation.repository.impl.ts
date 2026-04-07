@@ -198,5 +198,7 @@ export class WorkspaceInvitationRepositoryImpl
         },
       }),
     ]);
+
+    await this.dispatchEvents(invitation);
   }
 }

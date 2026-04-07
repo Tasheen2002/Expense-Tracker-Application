@@ -125,7 +125,9 @@ export class SpendingLimitController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Spending limit deleted successfully'
+        'Spending limit deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

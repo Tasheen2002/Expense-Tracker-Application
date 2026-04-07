@@ -56,8 +56,10 @@ export async function auditLogRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Audit summary retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: auditSummaryResponseSchema,
@@ -84,8 +86,10 @@ export async function auditLogRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Entity audit history retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: paginatedAuditLogsResponseSchema,
@@ -112,8 +116,10 @@ export async function auditLogRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Audit logs listed successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: paginatedAuditLogsResponseSchema,
@@ -137,8 +143,10 @@ export async function auditLogRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Audit log retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: auditLogResponseSchema,
@@ -177,8 +185,10 @@ export async function auditLogRoutes(
         },
         response: {
           201: {
+            description: 'Audit log created successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: createAuditLogResponseSchema,

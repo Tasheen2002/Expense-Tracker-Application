@@ -115,9 +115,11 @@ export async function categoryRuleRoutes(
         },
         response: {
           201: {
+            description: 'Category rule created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categoryRuleSchema,
             },
@@ -144,9 +146,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rules retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',
@@ -189,9 +193,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categoryRuleSchema,
             },
@@ -229,9 +235,11 @@ export async function categoryRuleRoutes(
         },
         response: {
           200: {
+            description: 'Category rule updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
             },
           },
@@ -280,9 +288,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule activated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
             },
           },
@@ -307,9 +317,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule deactivated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
             },
           },
@@ -335,9 +347,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Rule executions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',

@@ -33,8 +33,9 @@ const spendingLimitDataSchema = {
   },
 };
 
-const singleResponse = (statusCode: number, dataSchema?: object) => ({
+const singleResponse = (statusCode: number, dataSchema?: object, description?: string) => ({
   [statusCode]: {
+    description: description || 'Successful response',
     type: 'object',
     properties: {
       success: { type: 'boolean' },
@@ -84,7 +85,7 @@ export async function spendingLimitRoutes(
             },
           },
         },
-        response: singleResponse(201, spendingLimitDataSchema),
+        response: singleResponse(201, spendingLimitDataSchema, 'Spending limit created successfully'),
       },
     },
     (request, reply) =>
@@ -121,6 +122,7 @@ export async function spendingLimitRoutes(
         },
         response: {
           200: {
+            description: 'Spending limits retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -130,10 +132,15 @@ export async function spendingLimitRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: spendingLimitDataSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -160,7 +167,7 @@ export async function spendingLimitRoutes(
             limitId: { type: 'string', format: 'uuid' },
           },
         },
-        response: singleResponse(200, spendingLimitDataSchema),
+        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit retrieved successfully'),
       },
     },
     (request, reply) =>
@@ -189,7 +196,7 @@ export async function spendingLimitRoutes(
             limitAmount: { type: 'number', minimum: 0.01 },
           },
         },
-        response: singleResponse(200, spendingLimitDataSchema),
+        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit updated successfully'),
       },
     },
     (request, reply) =>
@@ -211,7 +218,12 @@ export async function spendingLimitRoutes(
             limitId: { type: 'string', format: 'uuid' },
           },
         },
-        response: singleResponse(200),
+        response: {
+          204: {
+            description: 'No Content',
+            type: 'null',
+          },
+        },
       },
     },
     (request, reply) =>
