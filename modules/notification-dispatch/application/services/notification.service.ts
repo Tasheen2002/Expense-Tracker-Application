@@ -3,7 +3,7 @@ import { INotificationTemplateRepository } from '../../domain/repositories/notif
 import { INotificationPreferenceRepository } from '../../domain/repositories/notification-preference.repository';
 import { IRecipientLookup } from '../../domain/repositories/recipient-lookup';
 
-import { Notification } from '../../domain/entities/notification.entity';
+import { Notification, NotificationDTO } from '../../domain/entities/notification.entity';
 import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
@@ -40,7 +40,7 @@ export class NotificationService {
     private readonly emailProvider?: IChannelProvider
   ) {}
 
-  async send(params: SendNotificationParams): Promise<Notification[]> {
+  async send(params: SendNotificationParams): Promise<NotificationDTO[]> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
     const recipientId = UserId.fromString(params.recipientId);
     const sentNotifications: Notification[] = [];
@@ -153,13 +153,13 @@ export class NotificationService {
       sentNotifications.push(notification);
     }
 
-    return sentNotifications;
+    return sentNotifications.map((n) => Notification.toDTO(n));
   }
 
   async markAsRead(
     notificationId: string,
     userId: string
-  ): Promise<Notification> {
+  ): Promise<NotificationDTO> {
     const id = NotificationId.fromString(notificationId);
     const recipientId = UserId.fromString(userId);
     const notification = await this.notificationRepository.findById(id);
@@ -175,7 +175,7 @@ export class NotificationService {
 
     notification.markAsRead();
     await this.notificationRepository.save(notification);
-    return notification;
+    return Notification.toDTO(notification);
   }
 
   async markAllAsRead(recipientId: string, workspaceId: string): Promise<void> {
@@ -188,24 +188,26 @@ export class NotificationService {
     recipientId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Notification>> {
+  ): Promise<PaginatedResult<NotificationDTO>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
-    return this.notificationRepository.findUnreadByRecipient(
+    const result = await this.notificationRepository.findUnreadByRecipient(
       userId,
       wsId,
       options
     );
+    return { ...result, items: result.items.map((n) => Notification.toDTO(n)) };
   }
 
   async getNotifications(
     recipientId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Notification>> {
+  ): Promise<PaginatedResult<NotificationDTO>> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
-    return this.notificationRepository.findByRecipient(userId, wsId, options);
+    const result = await this.notificationRepository.findByRecipient(userId, wsId, options);
+    return { ...result, items: result.items.map((n) => Notification.toDTO(n)) };
   }
 
   async getUnreadCount(

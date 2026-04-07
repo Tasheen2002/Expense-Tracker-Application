@@ -1,5 +1,6 @@
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
+import { NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
 import { TemplateService } from '../services/template.service';
 import {
   ICommand,
@@ -18,25 +19,21 @@ export interface CreateTemplateCommand extends ICommand {
 
 export class CreateTemplateHandler implements ICommandHandler<
   CreateTemplateCommand,
-  CommandResult<{ templateId: string }>
+  CommandResult<NotificationTemplateDTO>
 > {
   constructor(private readonly templateService: TemplateService) {}
 
   async handle(
     input: CreateTemplateCommand
-  ): Promise<CommandResult<{ templateId: string }>> {
-    try {
-      const template = await this.templateService.createTemplate({
-        workspaceId: input.workspaceId,
-        name: input.name,
-        type: input.type,
-        channel: input.channel,
-        subjectTemplate: input.subjectTemplate,
-        bodyTemplate: input.bodyTemplate,
-      });
-      return CommandResult.success({ templateId: template.getId().getValue() });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  ): Promise<CommandResult<NotificationTemplateDTO>> {
+    const dto = await this.templateService.createTemplate({
+      workspaceId: input.workspaceId,
+      name: input.name,
+      type: input.type,
+      channel: input.channel,
+      subjectTemplate: input.subjectTemplate,
+      bodyTemplate: input.bodyTemplate,
+    });
+    return CommandResult.success(dto);
   }
 }

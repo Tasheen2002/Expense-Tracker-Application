@@ -67,7 +67,7 @@ export class TemplateController {
         reply,
         result,
         'Template retrieved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data ?? undefined
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -99,7 +99,7 @@ export class TemplateController {
         reply,
         result,
         'Active template retrieved successfully',
-        result.data.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

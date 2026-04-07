@@ -1,4 +1,4 @@
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { NotificationType } from "../enums/notification-type.enum";
 import { NotificationChannel } from "../enums/notification-channel.enum";
 import { NotificationPriority } from "../enums/notification-priority.enum";

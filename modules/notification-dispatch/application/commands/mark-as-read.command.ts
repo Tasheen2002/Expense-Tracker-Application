@@ -1,4 +1,5 @@
 import { NotificationService } from '../services/notification.service';
+import { NotificationDTO } from '../../domain/entities/notification.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -12,19 +13,15 @@ export interface MarkAsReadCommand extends ICommand {
 
 export class MarkAsReadHandler implements ICommandHandler<
   MarkAsReadCommand,
-  CommandResult<void>
+  CommandResult<NotificationDTO>
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(input: MarkAsReadCommand): Promise<CommandResult<void>> {
-    try {
-      await this.notificationService.markAsRead(
-        input.notificationId,
-        input.userId
-      );
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  async handle(input: MarkAsReadCommand): Promise<CommandResult<NotificationDTO>> {
+    const dto = await this.notificationService.markAsRead(
+      input.notificationId,
+      input.userId
+    );
+    return CommandResult.success(dto);
   }
 }

@@ -17,14 +17,10 @@ export class MarkAllAsReadHandler implements ICommandHandler<
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(input: MarkAllAsReadCommand): Promise<CommandResult<void>> {
-    try {
-      await this.notificationService.markAllAsRead(
-        input.recipientId,
-        input.workspaceId
-      );
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.notificationService.markAllAsRead(
+      input.recipientId,
+      input.workspaceId
+    );
+    return CommandResult.success();
   }
 }

@@ -17,14 +17,10 @@ export class GetUnreadCountHandler implements IQueryHandler<
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(input: GetUnreadCountQuery): Promise<QueryResult<number>> {
-    try {
-      const count = await this.notificationService.getUnreadCount(
-        input.recipientId,
-        input.workspaceId
-      );
-      return QueryResult.success(count);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const count = await this.notificationService.getUnreadCount(
+      input.recipientId,
+      input.workspaceId
+    );
+    return QueryResult.success(count);
   }
 }

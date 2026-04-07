@@ -1,7 +1,7 @@
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
 import { TemplateService } from '../services/template.service';
-import { NotificationTemplate } from '../../domain/entities/notification-template.entity';
+import { NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -16,22 +16,18 @@ export interface GetActiveTemplateQuery extends IQuery {
 
 export class GetActiveTemplateHandler implements IQueryHandler<
   GetActiveTemplateQuery,
-  QueryResult<NotificationTemplate | null>
+  QueryResult<NotificationTemplateDTO | null>
 > {
   constructor(private readonly templateService: TemplateService) {}
 
   async handle(
     input: GetActiveTemplateQuery
-  ): Promise<QueryResult<NotificationTemplate | null>> {
-    try {
-      const template = await this.templateService.getActiveTemplate(
-        input.workspaceId,
-        input.type,
-        input.channel
-      );
-      return QueryResult.success(template);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<NotificationTemplateDTO | null>> {
+    const template = await this.templateService.getActiveTemplate(
+      input.workspaceId,
+      input.type,
+      input.channel
+    );
+    return QueryResult.success(template);
   }
 }

@@ -1,5 +1,6 @@
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationPriority } from '../../domain/enums/notification-priority.enum';
+import { NotificationDTO } from '../../domain/entities/notification.entity';
 import { NotificationService } from '../services/notification.service';
 import {
   ICommand,
@@ -17,26 +18,20 @@ export interface SendNotificationCommand extends ICommand {
 
 export class SendNotificationHandler implements ICommandHandler<
   SendNotificationCommand,
-  CommandResult<{ notificationIds: string[] }>
+  CommandResult<NotificationDTO[]>
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(
     input: SendNotificationCommand
-  ): Promise<CommandResult<{ notificationIds: string[] }>> {
-    try {
-      const notifications = await this.notificationService.send({
-        workspaceId: input.workspaceId,
-        recipientId: input.recipientId,
-        type: input.type,
-        data: input.data,
-        priority: input.priority,
-      });
-      return CommandResult.success({
-        notificationIds: notifications.map((n) => n.getId().getValue()),
-      });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  ): Promise<CommandResult<NotificationDTO[]>> {
+    const dtos = await this.notificationService.send({
+      workspaceId: input.workspaceId,
+      recipientId: input.recipientId,
+      type: input.type,
+      data: input.data,
+      priority: input.priority,
+    });
+    return CommandResult.success(dtos);
   }
 }

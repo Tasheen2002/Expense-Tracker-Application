@@ -1,5 +1,5 @@
 import { PreferenceService } from '../services/preference.service';
-import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
+import { NotificationPreferenceDTO } from '../../domain/entities/notification-preference.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -13,21 +13,17 @@ export interface GetPreferencesQuery extends IQuery {
 
 export class GetPreferencesHandler implements IQueryHandler<
   GetPreferencesQuery,
-  QueryResult<NotificationPreference | null>
+  QueryResult<NotificationPreferenceDTO | null>
 > {
   constructor(private readonly preferenceService: PreferenceService) {}
 
   async handle(
     input: GetPreferencesQuery
-  ): Promise<QueryResult<NotificationPreference | null>> {
-    try {
-      const preferences = await this.preferenceService.getPreferences(
-        input.userId,
-        input.workspaceId
-      );
-      return QueryResult.success(preferences);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<NotificationPreferenceDTO | null>> {
+    const preferences = await this.preferenceService.getPreferences(
+      input.userId,
+      input.workspaceId
+    );
+    return QueryResult.success(preferences);
   }
 }

@@ -37,8 +37,7 @@ export class PreferenceController {
       // When no preferences exist yet, return safe defaults without persisting.
       // Preferences are created lazily on the first PATCH.
       const data = result.data
-        ? result.data.toJSON()
-        : { emailEnabled: true, inAppEnabled: true, pushEnabled: false };
+        ?? { emailEnabled: true, inAppEnabled: true, pushEnabled: false };
       return ResponseHelper.fromQuery(
         reply,
         result,

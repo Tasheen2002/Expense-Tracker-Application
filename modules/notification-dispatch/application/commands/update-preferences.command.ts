@@ -2,6 +2,7 @@ import {
   PreferenceService,
   GlobalPreferenceSettings,
 } from '../services/preference.service';
+import { NotificationPreferenceDTO } from '../../domain/entities/notification-preference.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -16,20 +17,16 @@ export interface UpdatePreferencesCommand extends ICommand {
 
 export class UpdatePreferencesHandler implements ICommandHandler<
   UpdatePreferencesCommand,
-  CommandResult<void>
+  CommandResult<NotificationPreferenceDTO>
 > {
   constructor(private readonly preferenceService: PreferenceService) {}
 
-  async handle(input: UpdatePreferencesCommand): Promise<CommandResult<void>> {
-    try {
-      await this.preferenceService.updateGlobalPreferences(
-        input.userId,
-        input.workspaceId,
-        input.settings
-      );
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  async handle(input: UpdatePreferencesCommand): Promise<CommandResult<NotificationPreferenceDTO>> {
+    const dto = await this.preferenceService.updateGlobalPreferences(
+      input.userId,
+      input.workspaceId,
+      input.settings
+    );
+    return CommandResult.success(dto);
   }
 }
