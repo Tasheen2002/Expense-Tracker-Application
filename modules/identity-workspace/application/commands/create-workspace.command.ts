@@ -1,4 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
+import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
@@ -9,7 +10,7 @@ export interface CreateWorkspaceCommand extends ICommand {
 
 export class CreateWorkspaceHandler implements ICommandHandler<
   CreateWorkspaceCommand,
-  CommandResult<{ workspaceId: string }>
+  CommandResult<WorkspaceDTO>
 > {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService
@@ -17,15 +18,13 @@ export class CreateWorkspaceHandler implements ICommandHandler<
 
   async handle(
     command: CreateWorkspaceCommand
-  ): Promise<CommandResult<{ workspaceId: string }>> {
+  ): Promise<CommandResult<WorkspaceDTO>> {
     try {
-      const workspace = await this.workspaceManagementService.createWorkspace({
+      const workspaceDTO = await this.workspaceManagementService.createWorkspaceDTO({
         name: command.name,
         ownerId: command.ownerId,
       });
-      return CommandResult.success({
-        workspaceId: workspace.getId().getValue(),
-      });
+      return CommandResult.success(workspaceDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

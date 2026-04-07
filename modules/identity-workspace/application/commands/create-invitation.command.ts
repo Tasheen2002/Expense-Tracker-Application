@@ -1,4 +1,5 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
+import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
 import { WorkspaceRole } from '../../domain/entities/workspace-membership.entity';
 import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
@@ -11,36 +12,24 @@ export interface CreateInvitationCommand extends ICommand {
   expiryHours?: number;
 }
 
-export type CreateInvitationResultType = {
-  invitationId: string;
-  token: string;
-  email: string;
-  expiresAt: Date;
-};
-
 export class CreateInvitationHandler implements ICommandHandler<
   CreateInvitationCommand,
-  CommandResult<CreateInvitationResultType>
+  CommandResult<WorkspaceInvitationDTO>
 > {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
   async handle(
     command: CreateInvitationCommand
-  ): Promise<CommandResult<CreateInvitationResultType>> {
+  ): Promise<CommandResult<WorkspaceInvitationDTO>> {
     try {
-      const invitation = await this.invitationService.createInvitation({
+      const invitationDTO = await this.invitationService.createInvitationDTO({
         workspaceId: command.workspaceId,
         email: command.email,
         role: command.role,
-        expiryHours: command.expiryHours ?? 168, // Default: 168 hours (7 days)
+        expiryHours: command.expiryHours ?? 168,
       });
 
-      return CommandResult.success({
-        invitationId: invitation.getId().getValue(),
-        token: invitation.getToken(),
-        email: invitation.getEmail(),
-        expiresAt: invitation.getExpiresAt(),
-      });
+      return CommandResult.success(invitationDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

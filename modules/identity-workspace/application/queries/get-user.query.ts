@@ -1,4 +1,5 @@
 import { UserManagementService } from '../services/user-management.service';
+import { UserDTO } from '../../domain/entities/user.entity';
 import {
   UserLookupCriteriaRequiredError,
   UserNotFoundError,
@@ -11,52 +12,30 @@ export interface GetUserQuery extends IQuery {
   email?: string;
 }
 
-export interface UserResult {
-  userId: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export class GetUserHandler implements IQueryHandler<
   GetUserQuery,
-  QueryResult<UserResult>
+  QueryResult<UserDTO>
 > {
   constructor(private readonly userManagementService: UserManagementService) {}
 
-  async handle(query: GetUserQuery): Promise<QueryResult<UserResult>> {
+  async handle(query: GetUserQuery): Promise<QueryResult<UserDTO>> {
     try {
-      // Validate that either userId or email is provided
       if (!query.userId && !query.email) {
         throw new UserLookupCriteriaRequiredError();
       }
 
-      // Get user by ID or email
-      let user;
+      let userDTO: UserDTO | null = null;
       if (query.userId) {
-        user = await this.userManagementService.getUserById(query.userId);
+        userDTO = await this.userManagementService.getUserDTOById(query.userId);
       } else if (query.email) {
-        user = await this.userManagementService.getUserByEmail(query.email);
+        userDTO = await this.userManagementService.getUserDTOByEmail(query.email);
       }
 
-      if (!user) {
+      if (!userDTO) {
         throw new UserNotFoundError(query.userId ?? query.email!);
       }
 
-      const result: UserResult = {
-        userId: user.getId().getValue(),
-        email: user.getEmail().getValue(),
-        fullName: user.getFullName(),
-        isActive: user.getIsActive(),
-        emailVerified: user.getEmailVerified(),
-        createdAt: user.getCreatedAt(),
-        updatedAt: user.getUpdatedAt(),
-      };
-
-      return QueryResult.success<UserResult>(result);
+      return QueryResult.success(userDTO);
     } catch (error) {
       return QueryResult.fromError(error);
     }

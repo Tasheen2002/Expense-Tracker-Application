@@ -3,10 +3,12 @@ import { IWorkspaceMembershipRepository } from '../../domain/repositories/worksp
 import { IUserRepository } from '../../domain/repositories/user.repository';
 import {
   WorkspaceInvitation,
+  WorkspaceInvitationDTO,
   CreateWorkspaceInvitationData,
 } from '../../domain/entities/workspace-invitation.entity';
 import {
   WorkspaceMembership,
+  WorkspaceMembershipDTO,
   WorkspaceRole,
 } from '../../domain/entities/workspace-membership.entity';
 import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
@@ -194,5 +196,47 @@ export class WorkspaceInvitationService {
 
   async cleanupExpiredInvitations(): Promise<number> {
     return await this.invitationRepository.deleteExpired();
+  }
+
+  async createInvitationDTO(
+    data: CreateWorkspaceInvitationData
+  ): Promise<WorkspaceInvitationDTO> {
+    const invitation = await this.createInvitation(data);
+    return WorkspaceInvitation.toDTO(invitation);
+  }
+
+  async acceptInvitationDTO(
+    token: string,
+    userId: string
+  ): Promise<WorkspaceMembershipDTO> {
+    const membership = await this.acceptInvitation(token, userId);
+    return WorkspaceMembership.toDTO(membership);
+  }
+
+  async getInvitationDTOByToken(
+    token: string
+  ): Promise<WorkspaceInvitationDTO | null> {
+    const invitation = await this.getInvitationByToken(token);
+    return invitation ? WorkspaceInvitation.toDTO(invitation) : null;
+  }
+
+  async getWorkspaceInvitationDTOs(
+    workspaceId: string
+  ): Promise<WorkspaceInvitationDTO[]> {
+    const invitations = await this.getWorkspaceInvitations(workspaceId);
+    return invitations.map((inv) => WorkspaceInvitation.toDTO(inv));
+  }
+
+  async getPendingInvitationDTOs(
+    workspaceId: string,
+    options?: import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginationOptions
+  ): Promise<import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginatedResult<WorkspaceInvitationDTO>> {
+    const result = await this.getPendingInvitations(workspaceId, options);
+    return { ...result, items: result.items.map((inv) => WorkspaceInvitation.toDTO(inv)) };
+  }
+
+  async getUserInvitationDTOs(email: string): Promise<WorkspaceInvitationDTO[]> {
+    const invitations = await this.getUserInvitations(email);
+    return invitations.map((inv) => WorkspaceInvitation.toDTO(inv));
   }
 }

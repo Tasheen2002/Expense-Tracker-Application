@@ -1,5 +1,5 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
-import { WorkspaceInvitation, WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
+import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
@@ -17,10 +17,8 @@ export class GetUserInvitationsHandler implements IQueryHandler<
     query: GetUserInvitationsQuery
   ): Promise<QueryResult<WorkspaceInvitationDTO[]>> {
     try {
-      const invitations = await this.invitationService.getUserInvitations(
-        query.email
-      );
-      return QueryResult.success(invitations.map((inv: WorkspaceInvitation) => WorkspaceInvitation.toDTO(inv)));
+      const dtos = await this.invitationService.getUserInvitationDTOs(query.email);
+      return QueryResult.success(dtos);
     } catch (error) {
       return QueryResult.fromError(error);
     }

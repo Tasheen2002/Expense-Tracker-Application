@@ -1,5 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { Workspace, WorkspaceDTO } from '../../domain/entities/workspace.entity';
+import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import {
@@ -23,17 +23,14 @@ export class GetUserWorkspacesHandler implements IQueryHandler<
   async handle(
     query: GetUserWorkspacesQuery
   ): Promise<QueryResult<PaginatedResult<WorkspaceDTO>>> {
-    const workspaces =
-      await this.workspaceManagementService.getWorkspacesByMembership(
+    try {
+      const result = await this.workspaceManagementService.getWorkspacesDTOByMembership(
         query.userId,
         query.options
       );
-    return QueryResult.success({
-      items: workspaces.items.map((w: Workspace) => Workspace.toDTO(w)),
-      total: workspaces.total,
-      limit: workspaces.limit,
-      offset: workspaces.offset,
-      hasMore: workspaces.hasMore,
-    });
+      return QueryResult.success(result);
+    } catch (error) {
+      return QueryResult.fromError(error);
+    }
   }
 }

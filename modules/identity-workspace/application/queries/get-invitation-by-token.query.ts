@@ -1,5 +1,5 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
-import { WorkspaceInvitation, WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
+import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
@@ -17,10 +17,10 @@ export class GetInvitationByTokenHandler implements IQueryHandler<
     query: GetInvitationByTokenQuery
   ): Promise<QueryResult<WorkspaceInvitationDTO | null>> {
     try {
-      const invitation = await this.invitationService.getInvitationByToken(
+      const invitationDTO = await this.invitationService.getInvitationDTOByToken(
         query.token
       );
-      return QueryResult.success(invitation ? WorkspaceInvitation.toDTO(invitation) : null);
+      return QueryResult.success(invitationDTO);
     } catch (error) {
       return QueryResult.fromError(error);
     }
