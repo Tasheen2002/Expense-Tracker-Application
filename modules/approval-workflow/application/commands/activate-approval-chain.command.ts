@@ -20,14 +20,10 @@ export class ActivateApprovalChainHandler implements ICommandHandler<
   async handle(
     input: ActivateApprovalChainInput
   ): Promise<CommandResult<ApprovalChainDTO>> {
-    try {
-      const chain = await this.approvalChainService.activateChain(
-        input.chainId,
-        input.workspaceId
-      );
-      return CommandResult.success(chain);
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const chain = await this.approvalChainService.activateChain(
+      input.chainId,
+      input.workspaceId
+    );
+    return CommandResult.success(chain);
   }
 }

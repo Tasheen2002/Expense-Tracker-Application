@@ -17,14 +17,10 @@ export class DeleteApprovalChainHandler implements ICommandHandler<
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async handle(input: DeleteApprovalChainInput): Promise<CommandResult<void>> {
-    try {
-      await this.approvalChainService.deleteChain(
-        input.chainId,
-        input.workspaceId
-      );
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.approvalChainService.deleteChain(
+      input.chainId,
+      input.workspaceId
+    );
+    return CommandResult.success();
   }
 }

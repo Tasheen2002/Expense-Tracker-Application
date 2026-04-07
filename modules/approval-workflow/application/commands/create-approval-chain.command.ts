@@ -26,11 +26,7 @@ export class CreateApprovalChainHandler implements ICommandHandler<
   async handle(
     input: CreateApprovalChainInput
   ): Promise<CommandResult<ApprovalChainDTO>> {
-    try {
-      const chain = await this.approvalChainService.createChain(input);
-      return CommandResult.success(chain);
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const chain = await this.approvalChainService.createChain(input);
+    return CommandResult.success(chain);
   }
 }

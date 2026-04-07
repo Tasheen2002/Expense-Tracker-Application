@@ -20,11 +20,7 @@ export class RejectStepHandler implements ICommandHandler<
   constructor(private readonly workflowService: WorkflowService) {}
 
   async handle(input: RejectStepInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
-    try {
-      const workflow = await this.workflowService.rejectStep(input);
-      return CommandResult.success(workflow);
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const workflow = await this.workflowService.rejectStep(input);
+    return CommandResult.success(workflow);
   }
 }

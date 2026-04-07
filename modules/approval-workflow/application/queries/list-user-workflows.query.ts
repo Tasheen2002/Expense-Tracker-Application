@@ -20,28 +20,14 @@ export class ListUserWorkflowsHandler implements IQueryHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  private getStatusCode(error: unknown): number {
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      return (error as { statusCode: number }).statusCode;
-    }
-    return 500;
-  }
-
   async handle(
     input: ListUserWorkflowsInput
   ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
-    try {
-      const result = await this.workflowService.listUserWorkflows(
-        input.userId,
-        input.workspaceId,
-        { limit: input.limit, offset: input.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Query failed',
-        this.getStatusCode(error)
-      );
-    }
+    const result = await this.workflowService.listUserWorkflows(
+      input.userId,
+      input.workspaceId,
+      { limit: input.limit, offset: input.offset }
+    );
+    return QueryResult.success(result);
   }
 }

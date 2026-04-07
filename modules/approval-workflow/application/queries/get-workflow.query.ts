@@ -17,25 +17,11 @@ export class GetWorkflowHandler implements IQueryHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  private getStatusCode(error: unknown): number {
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      return (error as { statusCode: number }).statusCode;
-    }
-    return 500;
-  }
-
   async handle(input: GetWorkflowInput): Promise<QueryResult<ExpenseWorkflowDTO>> {
-    try {
-      const workflow = await this.workflowService.getWorkflow(
-        input.expenseId,
-        input.workspaceId
-      );
-      return QueryResult.success(workflow);
-    } catch (error: unknown) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Query failed',
-        this.getStatusCode(error)
-      );
-    }
+    const workflow = await this.workflowService.getWorkflow(
+      input.expenseId,
+      input.workspaceId
+    );
+    return QueryResult.success(workflow);
   }
 }

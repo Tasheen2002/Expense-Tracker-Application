@@ -18,14 +18,10 @@ export class CancelWorkflowHandler implements ICommandHandler<
   constructor(private readonly workflowService: WorkflowService) {}
 
   async handle(input: CancelWorkflowInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
-    try {
-      const workflow = await this.workflowService.cancelWorkflow(
-        input.expenseId,
-        input.workspaceId
-      );
-      return CommandResult.success(workflow);
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const workflow = await this.workflowService.cancelWorkflow(
+      input.expenseId,
+      input.workspaceId
+    );
+    return CommandResult.success(workflow);
   }
 }

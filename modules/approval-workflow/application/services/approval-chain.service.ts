@@ -155,7 +155,6 @@ export class ApprovalChainService {
     }
 
     chain.markAsDeleted();
-    await this.chainRepository.save(chain);
     await this.chainRepository.delete(chain.getId());
   }
 

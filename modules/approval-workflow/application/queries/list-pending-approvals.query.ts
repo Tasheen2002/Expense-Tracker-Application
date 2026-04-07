@@ -20,28 +20,14 @@ export class ListPendingApprovalsHandler implements IQueryHandler<
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  private getStatusCode(error: unknown): number {
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      return (error as { statusCode: number }).statusCode;
-    }
-    return 500;
-  }
-
   async handle(
     input: ListPendingApprovalsInput
   ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
-    try {
-      const result = await this.workflowService.listPendingApprovals(
-        input.approverId,
-        input.workspaceId,
-        { limit: input.limit, offset: input.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.failure(
-        error instanceof Error ? error.message : 'Query failed',
-        this.getStatusCode(error)
-      );
-    }
+    const result = await this.workflowService.listPendingApprovals(
+      input.approverId,
+      input.workspaceId,
+      { limit: input.limit, offset: input.offset }
+    );
+    return QueryResult.success(result);
   }
 }
