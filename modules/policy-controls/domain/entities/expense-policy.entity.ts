@@ -10,7 +10,7 @@ import {
   InvalidPolicyConfigurationError,
 } from '../errors/policy-controls.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -461,20 +461,20 @@ export class ExpensePolicy extends AggregateRoot {
     return true;
   }
 
-  toJSON(): ExpensePolicyDTO {
+  static toDTO(policy: ExpensePolicy): ExpensePolicyDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      name: this.getName(),
-      description: this.getDescription(),
-      policyType: this.getPolicyType(),
-      severity: this.getSeverity(),
-      configuration: this.getConfiguration(),
-      priority: this.getPriority(),
-      isActive: this.isActive(),
-      createdBy: this.getCreatedBy(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: policy.getId().getValue(),
+      workspaceId: policy.getWorkspaceId().getValue(),
+      name: policy.getName(),
+      description: policy.getDescription(),
+      policyType: policy.getPolicyType(),
+      severity: policy.getSeverity(),
+      configuration: policy.getConfiguration(),
+      priority: policy.getPriority(),
+      isActive: policy.isActive(),
+      createdBy: policy.getCreatedBy(),
+      createdAt: policy.getCreatedAt().toISOString(),
+      updatedAt: policy.getUpdatedAt().toISOString(),
     };
   }
 }

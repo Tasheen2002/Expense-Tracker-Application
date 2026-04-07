@@ -1,7 +1,5 @@
-import { ViolationRepository } from '../../domain/repositories/violation.repository';
-import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
-import { ViolationId } from '../../domain/value-objects/violation-id';
-import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { ViolationService } from '../services/violation.service';
+import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface OverrideViolationInput {
@@ -12,22 +10,15 @@ export interface OverrideViolationInput {
 }
 
 export class OverrideViolationHandler {
-  constructor(private readonly violationRepository: ViolationRepository) {}
+  constructor(private readonly violationService: ViolationService) {}
 
-  async handle(input: OverrideViolationInput): Promise<CommandResult<void>> {
-    const violation = await this.violationRepository.findById(
-      ViolationId.fromString(input.violationId)
+  async handle(input: OverrideViolationInput): Promise<CommandResult<PolicyViolationDTO>> {
+    const dto = await this.violationService.overrideViolation(
+      input.violationId,
+      input.workspaceId,
+      input.overriddenBy,
+      input.overrideReason,
     );
-    if (
-      !violation ||
-      violation.getWorkspaceId().getValue() !== input.workspaceId
-    ) {
-      throw new ViolationNotFoundError(input.violationId);
-    }
-
-    violation.override(input.overriddenBy, input.overrideReason);
-    await this.violationRepository.save(violation);
-
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

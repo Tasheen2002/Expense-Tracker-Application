@@ -1,6 +1,7 @@
 import { PolicyRepository } from "../../domain/repositories/policy.repository";
 import {
   ExpensePolicy,
+  ExpensePolicyDTO,
   PolicyConfiguration,
 } from "../../domain/entities/expense-policy.entity";
 import { PolicyId } from "../../domain/value-objects/policy-id";
@@ -27,7 +28,7 @@ export class PolicyService {
     configuration: PolicyConfiguration;
     priority?: number;
     createdBy: string;
-  }): Promise<ExpensePolicy> {
+  }): Promise<ExpensePolicyDTO> {
     // Check if policy with same name exists in workspace
     const existingPolicy = await this.policyRepository.findByNameInWorkspace(
       params.workspaceId,
@@ -49,7 +50,7 @@ export class PolicyService {
     });
 
     await this.policyRepository.save(policy);
-    return policy;
+    return ExpensePolicy.toDTO(policy);
   }
 
   async updatePolicy(params: {
@@ -60,8 +61,8 @@ export class PolicyService {
     severity?: ViolationSeverity;
     configuration?: PolicyConfiguration;
     priority?: number;
-  }): Promise<ExpensePolicy> {
-    const policy = await this.getPolicy(params.policyId, params.workspaceId);
+  }): Promise<ExpensePolicyDTO> {
+    const policy = await this._getPolicyEntity(params.policyId, params.workspaceId);
 
     if (params.name && params.name !== policy.getName()) {
       // Check if new name already exists
@@ -95,10 +96,18 @@ export class PolicyService {
     }
 
     await this.policyRepository.save(policy);
-    return policy;
+    return ExpensePolicy.toDTO(policy);
   }
 
   async getPolicy(
+    policyId: string,
+    workspaceId: string,
+  ): Promise<ExpensePolicyDTO> {
+    const policy = await this._getPolicyEntity(policyId, workspaceId);
+    return ExpensePolicy.toDTO(policy);
+  }
+
+  private async _getPolicyEntity(
     policyId: string,
     workspaceId: string,
   ): Promise<ExpensePolicy> {
@@ -117,43 +126,53 @@ export class PolicyService {
     workspaceId: string,
     activeOnly = false,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<ExpensePolicy>> {
+  ): Promise<PaginatedResult<ExpensePolicyDTO>> {
+    let result: PaginatedResult<ExpensePolicy>;
     if (activeOnly) {
-      return this.policyRepository.findActiveByWorkspace(workspaceId, options);
+      result = await this.policyRepository.findActiveByWorkspace(workspaceId, options);
+    } else {
+      result = await this.policyRepository.findByWorkspace(workspaceId, options);
     }
-    return this.policyRepository.findByWorkspace(workspaceId, options);
+    return {
+      ...result,
+      items: result.items.map((p) => ExpensePolicy.toDTO(p)),
+    };
   }
 
   async listPoliciesByType(
     workspaceId: string,
     type: PolicyType,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<ExpensePolicy>> {
-    return this.policyRepository.findByType(workspaceId, type, options);
+  ): Promise<PaginatedResult<ExpensePolicyDTO>> {
+    const result = await this.policyRepository.findByType(workspaceId, type, options);
+    return {
+      ...result,
+      items: result.items.map((p) => ExpensePolicy.toDTO(p)),
+    };
   }
 
   async activatePolicy(
     policyId: string,
     workspaceId: string,
-  ): Promise<ExpensePolicy> {
-    const policy = await this.getPolicy(policyId, workspaceId);
+  ): Promise<ExpensePolicyDTO> {
+    const policy = await this._getPolicyEntity(policyId, workspaceId);
     policy.activate();
     await this.policyRepository.save(policy);
-    return policy;
+    return ExpensePolicy.toDTO(policy);
   }
 
   async deactivatePolicy(
     policyId: string,
     workspaceId: string,
-  ): Promise<ExpensePolicy> {
-    const policy = await this.getPolicy(policyId, workspaceId);
+  ): Promise<ExpensePolicyDTO> {
+    const policy = await this._getPolicyEntity(policyId, workspaceId);
     policy.deactivate();
     await this.policyRepository.save(policy);
-    return policy;
+    return ExpensePolicy.toDTO(policy);
   }
 
   async deletePolicy(policyId: string, workspaceId: string): Promise<void> {
-    const policy = await this.getPolicy(policyId, workspaceId);
+    const policy = await this._getPolicyEntity(policyId, workspaceId);
     await this.policyRepository.delete(policy.getId());
   }
 }

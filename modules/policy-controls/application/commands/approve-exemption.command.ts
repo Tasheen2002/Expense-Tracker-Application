@@ -1,10 +1,5 @@
-import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
-import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
-import { ExemptionId } from '../../domain/value-objects/exemption-id';
-import {
-  ExemptionNotFoundError,
-  UnauthorizedExemptionApprovalError,
-} from '../../domain/errors/policy-controls.errors';
+import { ExemptionService } from '../services/exemption.service';
+import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface ApproveExemptionInput {
@@ -14,26 +9,14 @@ export interface ApproveExemptionInput {
 }
 
 export class ApproveExemptionHandler {
-  constructor(private readonly exemptionRepository: ExemptionRepository) {}
+  constructor(private readonly exemptionService: ExemptionService) {}
 
-  async handle(input: ApproveExemptionInput): Promise<CommandResult<void>> {
-    const exemption = await this.exemptionRepository.findById(
-      ExemptionId.fromString(input.exemptionId)
+  async handle(input: ApproveExemptionInput): Promise<CommandResult<PolicyExemptionDTO>> {
+    const dto = await this.exemptionService.approveExemption(
+      input.exemptionId,
+      input.workspaceId,
+      input.approvedBy,
     );
-    if (
-      !exemption ||
-      exemption.getWorkspaceId().getValue() !== input.workspaceId
-    ) {
-      throw new ExemptionNotFoundError(input.exemptionId);
-    }
-
-    if (exemption.getRequestedBy() === input.approvedBy) {
-      throw new UnauthorizedExemptionApprovalError(input.approvedBy);
-    }
-
-    exemption.approve(input.approvedBy);
-    await this.exemptionRepository.save(exemption);
-
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

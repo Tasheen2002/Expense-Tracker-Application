@@ -393,6 +393,9 @@ import { PrismaViolationRepository } from '../../../modules/policy-controls/infr
 import { PrismaExemptionRepository } from '../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl';
 
 // Policy Controls Module - Services
+import { PolicyService } from '../../../modules/policy-controls/application/services/policy.service';
+import { ViolationService } from '../../../modules/policy-controls/application/services/violation.service';
+import { ExemptionService } from '../../../modules/policy-controls/application/services/exemption.service';
 import { PolicyEvaluationService } from '../../../modules/policy-controls/application/services/policy-evaluation.service';
 
 // Policy Controls Module - Command Handlers
@@ -1703,40 +1706,46 @@ export class Container {
     this.services.set('exemptionRepository', exemptionRepository);
 
     // Services
+    const policyService = new PolicyService(policyRepository);
+    const violationService = new ViolationService(violationRepository);
+    const exemptionService = new ExemptionService(exemptionRepository);
     const policyEvaluationService = new PolicyEvaluationService(
       policyRepository,
       violationRepository,
       exemptionRepository
     );
 
+    this.services.set('policyService', policyService);
+    this.services.set('violationService', violationService);
+    this.services.set('exemptionService', exemptionService);
     this.services.set('policyEvaluationService', policyEvaluationService);
 
     // Controllers
     const policyController = new PolicyController(
-      new CreatePolicyHandler(policyRepository),
-      new UpdatePolicyHandler(policyRepository),
-      new ActivatePolicyHandler(policyRepository),
-      new DeactivatePolicyHandler(policyRepository),
-      new DeletePolicyHandler(policyRepository),
-      new GetPolicyHandler(policyRepository),
-      new ListPoliciesHandler(policyRepository)
+      new CreatePolicyHandler(policyService),
+      new UpdatePolicyHandler(policyService),
+      new ActivatePolicyHandler(policyService),
+      new DeactivatePolicyHandler(policyService),
+      new DeletePolicyHandler(policyService),
+      new GetPolicyHandler(policyService),
+      new ListPoliciesHandler(policyService)
     );
     const violationController = new ViolationController(
-      new GetViolationHandler(violationRepository),
-      new ListViolationsHandler(violationRepository),
-      new GetViolationStatsHandler(violationRepository),
-      new AcknowledgeViolationHandler(violationRepository),
-      new ResolveViolationHandler(violationRepository),
-      new ExemptViolationHandler(violationRepository),
-      new OverrideViolationHandler(violationRepository)
+      new GetViolationHandler(violationService),
+      new ListViolationsHandler(violationService),
+      new GetViolationStatsHandler(violationService),
+      new AcknowledgeViolationHandler(violationService),
+      new ResolveViolationHandler(violationService),
+      new ExemptViolationHandler(violationService),
+      new OverrideViolationHandler(violationService)
     );
     const exemptionController = new ExemptionController(
-      new GetExemptionHandler(exemptionRepository),
-      new ListExemptionsHandler(exemptionRepository),
-      new CheckActiveExemptionHandler(exemptionRepository),
-      new RequestExemptionHandler(exemptionRepository, policyRepository),
-      new ApproveExemptionHandler(exemptionRepository),
-      new RejectExemptionHandler(exemptionRepository)
+      new GetExemptionHandler(exemptionService),
+      new ListExemptionsHandler(exemptionService),
+      new CheckActiveExemptionHandler(exemptionService),
+      new RequestExemptionHandler(exemptionService),
+      new ApproveExemptionHandler(exemptionService),
+      new RejectExemptionHandler(exemptionService)
     );
 
     this.services.set('policyController', policyController);

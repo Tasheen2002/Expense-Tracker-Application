@@ -1,7 +1,5 @@
-import { ViolationRepository } from '../../domain/repositories/violation.repository';
-import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
-import { ViolationId } from '../../domain/value-objects/violation-id';
-import { ViolationNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { ViolationService } from '../services/violation.service';
+import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -14,26 +12,14 @@ export interface GetViolationInput extends IQuery {
 
 export class GetViolationHandler implements IQueryHandler<
   GetViolationInput,
-  QueryResult<PolicyViolation>
+  QueryResult<PolicyViolationDTO>
 > {
-  constructor(private readonly violationRepository: ViolationRepository) {}
+  constructor(private readonly violationService: ViolationService) {}
 
   async handle(
     input: GetViolationInput
-  ): Promise<QueryResult<PolicyViolation>> {
-    try {
-      const violation = await this.violationRepository.findById(
-        ViolationId.fromString(input.violationId)
-      );
-      if (
-        !violation ||
-        violation.getWorkspaceId().getValue() !== input.workspaceId
-      ) {
-        throw new ViolationNotFoundError(input.violationId);
-      }
-      return QueryResult.success(violation);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<PolicyViolationDTO>> {
+    const dto = await this.violationService.getViolation(input.violationId, input.workspaceId);
+    return QueryResult.success(dto);
   }
 }

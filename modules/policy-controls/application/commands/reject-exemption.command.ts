@@ -1,7 +1,5 @@
-import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
-import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
-import { ExemptionId } from '../../domain/value-objects/exemption-id';
-import { ExemptionNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { ExemptionService } from '../services/exemption.service';
+import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface RejectExemptionInput {
@@ -12,22 +10,15 @@ export interface RejectExemptionInput {
 }
 
 export class RejectExemptionHandler {
-  constructor(private readonly exemptionRepository: ExemptionRepository) {}
+  constructor(private readonly exemptionService: ExemptionService) {}
 
-  async handle(input: RejectExemptionInput): Promise<CommandResult<void>> {
-    const exemption = await this.exemptionRepository.findById(
-      ExemptionId.fromString(input.exemptionId)
+  async handle(input: RejectExemptionInput): Promise<CommandResult<PolicyExemptionDTO>> {
+    const dto = await this.exemptionService.rejectExemption(
+      input.exemptionId,
+      input.workspaceId,
+      input.rejectedBy,
+      input.rejectionReason,
     );
-    if (
-      !exemption ||
-      exemption.getWorkspaceId().getValue() !== input.workspaceId
-    ) {
-      throw new ExemptionNotFoundError(input.exemptionId);
-    }
-
-    exemption.reject(input.rejectedBy, input.rejectionReason);
-    await this.exemptionRepository.save(exemption);
-
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

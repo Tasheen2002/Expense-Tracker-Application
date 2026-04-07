@@ -39,7 +39,7 @@ export class ViolationController {
         reply,
         result,
         'Violation retrieved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -79,7 +79,7 @@ export class ViolationController {
 
       const data = result.data
         ? {
-            items: result.data.items.map((v) => v.toJSON()),
+            items: result.data.items,
             pagination: {
               total: result.data.total,
               limit: result.data.limit,

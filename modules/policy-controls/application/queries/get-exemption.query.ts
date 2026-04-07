@@ -1,7 +1,5 @@
-import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
-import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
-import { ExemptionId } from '../../domain/value-objects/exemption-id';
-import { ExemptionNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { ExemptionService } from '../services/exemption.service';
+import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -14,26 +12,14 @@ export interface GetExemptionInput extends IQuery {
 
 export class GetExemptionHandler implements IQueryHandler<
   GetExemptionInput,
-  QueryResult<PolicyExemption>
+  QueryResult<PolicyExemptionDTO>
 > {
-  constructor(private readonly exemptionRepository: ExemptionRepository) {}
+  constructor(private readonly exemptionService: ExemptionService) {}
 
   async handle(
     input: GetExemptionInput
-  ): Promise<QueryResult<PolicyExemption>> {
-    try {
-      const exemption = await this.exemptionRepository.findById(
-        ExemptionId.fromString(input.exemptionId)
-      );
-      if (
-        !exemption ||
-        exemption.getWorkspaceId().getValue() !== input.workspaceId
-      ) {
-        throw new ExemptionNotFoundError(input.exemptionId);
-      }
-      return QueryResult.success(exemption);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<PolicyExemptionDTO>> {
+    const dto = await this.exemptionService.getExemption(input.exemptionId, input.workspaceId);
+    return QueryResult.success(dto);
   }
 }
