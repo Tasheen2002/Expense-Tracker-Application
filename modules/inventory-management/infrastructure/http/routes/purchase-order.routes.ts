@@ -91,7 +91,7 @@ export async function purchaseOrderRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createPurchaseOrderSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -133,7 +133,7 @@ export async function purchaseOrderRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listPurchaseOrdersQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -176,7 +176,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId',
     {
       preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Get purchase order by ID with items',
@@ -206,7 +206,7 @@ export async function purchaseOrderRoutes(
       preValidation: [validateParams(purchaseOrderParamsSchema)],
       preHandler: [
         validateBody(updatePurchaseOrderSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -264,7 +264,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/submit',
     {
       preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Submit purchase order for approval',
@@ -320,7 +320,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/receive',
     {
       preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Mark purchase order as received',
@@ -348,7 +348,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/cancel',
     {
       preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Cancel purchase order',
@@ -378,7 +378,7 @@ export async function purchaseOrderRoutes(
       preValidation: [validateParams(purchaseOrderParamsSchema)],
       preHandler: [
         validateBody(addPurchaseOrderItemSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -417,7 +417,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/items/:itemId',
     {
       preValidation: [validateParams(purchaseOrderItemParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Remove item from purchase order',

@@ -86,7 +86,6 @@ export class SupplierService {
       throw new SupplierNotFoundError(supplierId, workspaceId);
     }
     supplier.markAsDeleted();
-    await this.supplierRepository.save(supplier);
     await this.supplierRepository.delete(
       SupplierId.fromString(supplierId),
       workspaceId

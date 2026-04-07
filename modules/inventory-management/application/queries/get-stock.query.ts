@@ -1,5 +1,5 @@
-import { IStockRepository } from '../../domain/repositories/stock.repository';
-import { Stock, StockDTO } from '../../domain/entities/stock.entity';
+import { StockService } from '../services/stock.service';
+import { StockDTO } from '../../domain/entities/stock.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -17,30 +17,22 @@ export interface GetStockQuery extends IQuery {
 export class GetStockHandler
   implements IQueryHandler<GetStockQuery, QueryResult<PaginatedResult<StockDTO>>>
 {
-  constructor(private readonly stockRepository: IStockRepository) {}
+  constructor(private readonly stockService: StockService) {}
 
   async handle(
     query: GetStockQuery
   ): Promise<QueryResult<PaginatedResult<StockDTO>>> {
     const result = query.locationId
-      ? await this.stockRepository.findByLocation(
+      ? await this.stockService.getStockByLocation(
           query.locationId,
           query.workspaceId,
           { limit: query.limit, offset: query.offset }
         )
-      : await this.stockRepository.findByWorkspace(query.workspaceId, {
+      : await this.stockService.getStockByWorkspace(query.workspaceId, {
           limit: query.limit,
           offset: query.offset,
         });
 
-    const dtoResult: PaginatedResult<StockDTO> = {
-      items: result.items.map((s) => Stock.toDTO(s)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

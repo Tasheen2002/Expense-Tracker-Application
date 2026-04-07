@@ -1,7 +1,6 @@
-import { IPurchaseOrderRepository } from '../../domain/repositories/purchase-order.repository';
-import { PurchaseOrder, PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
-import { PurchaseOrderItem, PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
-import { PurchaseOrderId } from '../../domain/value-objects/purchase-order-id.vo';
+import { PurchaseOrderService } from '../services/purchase-order.service';
+import { PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
+import { PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import { PurchaseOrderNotFoundError } from '../../domain/errors/inventory.errors';
 import {
   IQuery,
@@ -21,28 +20,23 @@ export interface PurchaseOrderWithItemsDTO extends PurchaseOrderDTO {
 export class GetPurchaseOrderHandler
   implements IQueryHandler<GetPurchaseOrderQuery, QueryResult<PurchaseOrderWithItemsDTO>>
 {
-  constructor(private readonly poRepository: IPurchaseOrderRepository) {}
+  constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
 
   async handle(
     query: GetPurchaseOrderQuery
   ): Promise<QueryResult<PurchaseOrderWithItemsDTO>> {
-    const po = await this.poRepository.findById(
-      PurchaseOrderId.fromString(query.purchaseOrderId),
+    const poDTO = await this.purchaseOrderService.getPurchaseOrderById(
+      query.purchaseOrderId,
       query.workspaceId
     );
-    if (!po) {
+    if (!poDTO) {
       throw new PurchaseOrderNotFoundError(query.purchaseOrderId, query.workspaceId);
     }
 
-    const items = await this.poRepository.findItemsByPurchaseOrder(
+    const items = await this.purchaseOrderService.getItemsByPurchaseOrder(
       query.purchaseOrderId
     );
 
-    const dto: PurchaseOrderWithItemsDTO = {
-      ...PurchaseOrder.toDTO(po),
-      items: items.map((item) => PurchaseOrderItem.toDTO(item)),
-    };
-
-    return QueryResult.success(dto);
+    return QueryResult.success({ ...poDTO, items });
   }
 }

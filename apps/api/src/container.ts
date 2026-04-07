@@ -1967,14 +1967,14 @@ export class Container {
     const adjustStockHandler = new AdjustStockHandler(stockService);
 
     // Query Handlers
-    const getSupplierHandler = new GetSupplierHandler(supplierRepository);
-    const listSuppliersHandler = new ListSuppliersHandler(supplierRepository);
-    const getInventoryLocationHandler = new GetInventoryLocationHandler(inventoryLocationRepository);
-    const listInventoryLocationsHandler = new ListInventoryLocationsHandler(inventoryLocationRepository);
-    const getPurchaseOrderHandler = new GetPurchaseOrderHandler(purchaseOrderRepository);
-    const listPurchaseOrdersHandler = new ListPurchaseOrdersHandler(purchaseOrderRepository);
-    const getStockHandler = new GetStockHandler(stockRepository);
-    const listTransactionsHandler = new ListTransactionsHandler(inventoryTransactionRepository);
+    const getSupplierHandler = new GetSupplierHandler(supplierService);
+    const listSuppliersHandler = new ListSuppliersHandler(supplierService);
+    const getInventoryLocationHandler = new GetInventoryLocationHandler(inventoryLocationService);
+    const listInventoryLocationsHandler = new ListInventoryLocationsHandler(inventoryLocationService);
+    const getPurchaseOrderHandler = new GetPurchaseOrderHandler(purchaseOrderService);
+    const listPurchaseOrdersHandler = new ListPurchaseOrdersHandler(purchaseOrderService);
+    const getStockHandler = new GetStockHandler(stockService);
+    const listTransactionsHandler = new ListTransactionsHandler(stockService);
 
     // Controllers
     const supplierController = new SupplierController(

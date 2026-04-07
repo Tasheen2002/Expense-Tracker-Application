@@ -58,7 +58,7 @@ export async function supplierRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createSupplierSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Supplier'],
@@ -99,7 +99,7 @@ export async function supplierRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Supplier'],
@@ -142,7 +142,7 @@ export async function supplierRoutes(
     '/workspaces/:workspaceId/suppliers/:supplierId',
     {
       preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Supplier'],
         description: 'Get supplier by ID',
@@ -172,7 +172,7 @@ export async function supplierRoutes(
       preValidation: [validateParams(supplierParamsSchema)],
       preHandler: [
         validateBody(updateSupplierSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Supplier'],

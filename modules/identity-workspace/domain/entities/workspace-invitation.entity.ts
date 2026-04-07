@@ -144,19 +144,6 @@ export class WorkspaceInvitation extends AggregateRoot {
     );
   }
 
-  static fromDatabaseRow(row: WorkspaceInvitationRow): WorkspaceInvitation {
-    return new WorkspaceInvitation(
-      InvitationId.fromString(row.id),
-      WorkspaceId.fromString(row.workspace_id),
-      row.email,
-      row.role as WorkspaceRole,
-      row.token,
-      row.expires_at,
-      row.accepted_at,
-      row.created_at,
-    );
-  }
-
   // Getters
   getId(): InvitationId {
     return this.id;
@@ -237,33 +224,6 @@ export class WorkspaceInvitation extends AggregateRoot {
     return randomBytes(32).toString("hex");
   }
 
-  // Convert to data for persistence
-  toData(): WorkspaceInvitationData {
-    return {
-      id: this.id.getValue(),
-      workspaceId: this.workspaceId.getValue(),
-      email: this.email,
-      role: this.role,
-      token: this.token,
-      expiresAt: this.expiresAt,
-      acceptedAt: this.acceptedAt,
-      createdAt: this.createdAt,
-    };
-  }
-
-  toDatabaseRow(): WorkspaceInvitationRow {
-    return {
-      id: this.id.getValue(),
-      workspace_id: this.workspaceId.getValue(),
-      email: this.email,
-      role: this.role,
-      token: this.token,
-      expires_at: this.expiresAt,
-      accepted_at: this.acceptedAt,
-      created_at: this.createdAt,
-    };
-  }
-
   equals(other: WorkspaceInvitation): boolean {
     return this.id.equals(other.id);
   }
@@ -320,13 +280,4 @@ export interface WorkspaceInvitationData {
   createdAt: Date;
 }
 
-export interface WorkspaceInvitationRow {
-  id: string;
-  workspace_id: string;
-  email: string;
-  role: string;
-  token: string;
-  expires_at: Date;
-  accepted_at: Date | null;
-  created_at: Date;
-}
+

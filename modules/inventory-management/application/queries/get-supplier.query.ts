@@ -1,6 +1,5 @@
-import { ISupplierRepository } from '../../domain/repositories/supplier.repository';
-import { Supplier, SupplierDTO } from '../../domain/entities/supplier.entity';
-import { SupplierId } from '../../domain/value-objects/supplier-id.vo';
+import { SupplierService } from '../services/supplier.service';
+import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import { SupplierNotFoundError } from '../../domain/errors/inventory.errors';
 import {
   IQuery,
@@ -16,16 +15,16 @@ export interface GetSupplierQuery extends IQuery {
 export class GetSupplierHandler
   implements IQueryHandler<GetSupplierQuery, QueryResult<SupplierDTO>>
 {
-  constructor(private readonly supplierRepository: ISupplierRepository) {}
+  constructor(private readonly supplierService: SupplierService) {}
 
   async handle(query: GetSupplierQuery): Promise<QueryResult<SupplierDTO>> {
-    const supplier = await this.supplierRepository.findById(
-      SupplierId.fromString(query.supplierId),
+    const dto = await this.supplierService.getSupplierById(
+      query.supplierId,
       query.workspaceId
     );
-    if (!supplier) {
+    if (!dto) {
       throw new SupplierNotFoundError(query.supplierId, query.workspaceId);
     }
-    return QueryResult.success(Supplier.toDTO(supplier));
+    return QueryResult.success(dto);
   }
 }

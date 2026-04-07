@@ -141,17 +141,6 @@ export class WorkspaceMembership extends AggregateRoot {
     );
   }
 
-  static fromDatabaseRow(row: WorkspaceMembershipRow): WorkspaceMembership {
-    return new WorkspaceMembership(
-      MembershipId.fromString(row.id),
-      UserId.fromString(row.user_id),
-      WorkspaceId.fromString(row.workspace_id),
-      row.role as WorkspaceRole,
-      row.created_at,
-      row.updated_at,
-    );
-  }
-
   // Getters
   getId(): MembershipId {
     return this.id;
@@ -241,29 +230,6 @@ export class WorkspaceMembership extends AggregateRoot {
     return this.role === WorkspaceRole.OWNER;
   }
 
-  // Convert to data for persistence
-  toData(): WorkspaceMembershipData {
-    return {
-      id: this.id.getValue(),
-      userId: this.userId.getValue(),
-      workspaceId: this.workspaceId.getValue(),
-      role: this.role,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): WorkspaceMembershipRow {
-    return {
-      id: this.id.getValue(),
-      user_id: this.userId.getValue(),
-      workspace_id: this.workspaceId.getValue(),
-      role: this.role,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
-  }
-
   equals(other: WorkspaceMembership): boolean {
     return this.id.equals(other.id);
   }
@@ -309,11 +275,4 @@ export interface WorkspaceMembershipData {
   updatedAt: Date;
 }
 
-export interface WorkspaceMembershipRow {
-  id: string;
-  user_id: string;
-  workspace_id: string;
-  role: string;
-  created_at: Date;
-  updated_at: Date;
-}
+

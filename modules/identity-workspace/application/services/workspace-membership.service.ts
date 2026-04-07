@@ -121,7 +121,7 @@ export class WorkspaceMembershipService {
     );
 
     membership.markAsRemoved();
-    await this.membershipRepository.save(membership);
+    await this.membershipRepository.update(membership);
     await this.membershipRepository.delete(id);
   }
 

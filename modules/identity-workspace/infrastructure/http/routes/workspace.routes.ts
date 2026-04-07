@@ -163,7 +163,7 @@ export async function registerWorkspaceScopedRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         workspaceAuth,
-        requireRole(['owner', 'admin', 'manager', 'member']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Workspace'],
@@ -204,7 +204,6 @@ export async function registerWorkspaceScopedRoutes(
           type: 'object',
           properties: {
             name: { type: 'string', minLength: 1 },
-            isActive: { type: 'boolean' },
           },
         },
         response: {
@@ -214,6 +213,7 @@ export async function registerWorkspaceScopedRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'integer' },
               message: { type: 'string' },
+              data: workspaceSchema,
             },
           },
         },

@@ -32,6 +32,5 @@ export { LocationId } from './domain/value-objects/location-id.vo';
 export type { SupplierDTO } from './domain/entities/supplier.entity';
 export type { LocationDTO } from './domain/entities/location.entity';
 export type { PurchaseOrderDTO } from './domain/entities/purchase-order.entity';
-export type { PurchaseOrderItemDTO } from './domain/entities/purchase-order-item.entity';
 export type { StockDTO } from './domain/entities/stock.entity';
 export type { InventoryTransactionDTO } from './domain/entities/inventory-transaction.entity';

@@ -1,5 +1,5 @@
-import { ISupplierRepository } from '../../domain/repositories/supplier.repository';
-import { Supplier, SupplierDTO } from '../../domain/entities/supplier.entity';
+import { SupplierService } from '../services/supplier.service';
+import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -16,24 +16,15 @@ export interface ListSuppliersQuery extends IQuery {
 export class ListSuppliersHandler
   implements IQueryHandler<ListSuppliersQuery, QueryResult<PaginatedResult<SupplierDTO>>>
 {
-  constructor(private readonly supplierRepository: ISupplierRepository) {}
+  constructor(private readonly supplierService: SupplierService) {}
 
   async handle(
     query: ListSuppliersQuery
   ): Promise<QueryResult<PaginatedResult<SupplierDTO>>> {
-    const result = await this.supplierRepository.findByWorkspace(
+    const result = await this.supplierService.getSuppliersByWorkspace(
       query.workspaceId,
       { limit: query.limit, offset: query.offset }
     );
-
-    const dtoResult: PaginatedResult<SupplierDTO> = {
-      items: result.items.map((s) => Supplier.toDTO(s)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

@@ -1,5 +1,5 @@
-import { ILocationRepository } from '../../domain/repositories/location.repository';
-import { Location, LocationDTO } from '../../domain/entities/location.entity';
+import { LocationService } from '../services/location.service';
+import { LocationDTO } from '../../domain/entities/location.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -16,24 +16,15 @@ export interface ListLocationsQuery extends IQuery {
 export class ListLocationsHandler
   implements IQueryHandler<ListLocationsQuery, QueryResult<PaginatedResult<LocationDTO>>>
 {
-  constructor(private readonly locationRepository: ILocationRepository) {}
+  constructor(private readonly locationService: LocationService) {}
 
   async handle(
     query: ListLocationsQuery
   ): Promise<QueryResult<PaginatedResult<LocationDTO>>> {
-    const result = await this.locationRepository.findByWorkspace(
+    const result = await this.locationService.getLocationsByWorkspace(
       query.workspaceId,
       { limit: query.limit, offset: query.offset }
     );
-
-    const dtoResult: PaginatedResult<LocationDTO> = {
-      items: result.items.map((l) => Location.toDTO(l)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

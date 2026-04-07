@@ -152,6 +152,36 @@ export class StockService {
     };
   }
 
+  async getTransactionsByVariant(
+    variantId: string,
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<InventoryTransactionDTO>> {
+    const result = await this.transactionRepository.findByVariant(variantId, workspaceId, options);
+    return {
+      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
+  }
+
+  async getTransactionsByLocation(
+    locationId: string,
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<InventoryTransactionDTO>> {
+    const result = await this.transactionRepository.findByLocation(locationId, workspaceId, options);
+    return {
+      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
+  }
+
   async updateStockSettings(
     stockId: string,
     workspaceId: string,

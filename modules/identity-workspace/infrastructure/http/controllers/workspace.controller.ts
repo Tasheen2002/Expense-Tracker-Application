@@ -148,7 +148,8 @@ export class WorkspaceController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Workspace updated successfully'
+        'Workspace updated successfully',
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

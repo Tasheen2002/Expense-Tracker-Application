@@ -1,5 +1,5 @@
-import { IInventoryTransactionRepository } from '../../domain/repositories/inventory-transaction.repository';
-import { InventoryTransaction, InventoryTransactionDTO } from '../../domain/entities/inventory-transaction.entity';
+import { StockService } from '../services/stock.service';
+import { InventoryTransactionDTO } from '../../domain/entities/inventory-transaction.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -18,42 +18,33 @@ export interface ListTransactionsQuery extends IQuery {
 export class ListTransactionsHandler
   implements IQueryHandler<ListTransactionsQuery, QueryResult<PaginatedResult<InventoryTransactionDTO>>>
 {
-  constructor(
-    private readonly transactionRepository: IInventoryTransactionRepository
-  ) {}
+  constructor(private readonly stockService: StockService) {}
 
   async handle(
     query: ListTransactionsQuery
   ): Promise<QueryResult<PaginatedResult<InventoryTransactionDTO>>> {
-    let result;
+    const options = { limit: query.limit, offset: query.offset };
 
+    let result: PaginatedResult<InventoryTransactionDTO>;
     if (query.variantId) {
-      result = await this.transactionRepository.findByVariant(
+      result = await this.stockService.getTransactionsByVariant(
         query.variantId,
         query.workspaceId,
-        { limit: query.limit, offset: query.offset }
+        options
       );
     } else if (query.locationId) {
-      result = await this.transactionRepository.findByLocation(
+      result = await this.stockService.getTransactionsByLocation(
         query.locationId,
         query.workspaceId,
-        { limit: query.limit, offset: query.offset }
+        options
       );
     } else {
-      result = await this.transactionRepository.findByWorkspace(
+      result = await this.stockService.getTransactionsByWorkspace(
         query.workspaceId,
-        { limit: query.limit, offset: query.offset }
+        options
       );
     }
 
-    const dtoResult: PaginatedResult<InventoryTransactionDTO> = {
-      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

@@ -73,7 +73,7 @@ export async function registerMemberRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(paginationQuerySchema),
         workspaceAuth,
-        requireRole(['owner', 'admin', 'manager', 'member']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Member'],

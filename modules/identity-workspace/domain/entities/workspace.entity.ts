@@ -132,18 +132,6 @@ export class Workspace extends AggregateRoot {
     );
   }
 
-  static fromDatabaseRow(row: WorkspaceRow): Workspace {
-    return new Workspace(
-      WorkspaceId.fromString(row.id),
-      row.name,
-      row.slug,
-      UserId.fromString(row.owner_id),
-      row.is_active,
-      row.created_at,
-      row.updated_at
-    );
-  }
-
   // Getters
   getId(): WorkspaceId {
     return this.id;
@@ -215,31 +203,6 @@ export class Workspace extends AggregateRoot {
       .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   }
 
-  // Convert to data for persistence
-  toData(): WorkspaceData {
-    return {
-      id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      ownerId: this.ownerId.getValue(),
-      isActive: this.isActive,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): WorkspaceRow {
-    return {
-      id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      owner_id: this.ownerId.getValue(),
-      is_active: this.isActive,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
-  }
-
   equals(other: Workspace): boolean {
     return this.id.equals(other.id);
   }
@@ -271,16 +234,6 @@ export interface WorkspaceData {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface WorkspaceRow {
-  id: string;
-  name: string;
-  slug: string;
-  owner_id: string;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
 }
 
 export interface WorkspaceDTO {

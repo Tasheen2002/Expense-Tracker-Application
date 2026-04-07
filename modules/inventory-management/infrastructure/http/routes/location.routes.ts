@@ -57,7 +57,7 @@ export async function locationRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createLocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Location'],
@@ -97,7 +97,7 @@ export async function locationRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Location'],
@@ -140,7 +140,7 @@ export async function locationRoutes(
     '/workspaces/:workspaceId/locations/:locationId',
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Inventory - Location'],
         description: 'Get location by ID',
@@ -170,7 +170,7 @@ export async function locationRoutes(
       preValidation: [validateParams(locationParamsSchema)],
       preHandler: [
         validateBody(updateLocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Location'],

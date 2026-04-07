@@ -9,7 +9,6 @@ import {
 import {
   WorkspaceMembership,
   WorkspaceMembershipDTO,
-  WorkspaceRole,
 } from '../../domain/entities/workspace-membership.entity';
 import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
 import { InvitationId } from '../../domain/value-objects/invitation-id.vo';
@@ -229,13 +228,18 @@ export class WorkspaceInvitationService {
 
   async getPendingInvitationDTOs(
     workspaceId: string,
-    options?: import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginationOptions
-  ): Promise<import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginatedResult<WorkspaceInvitationDTO>> {
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<WorkspaceInvitationDTO>> {
     const result = await this.getPendingInvitations(workspaceId, options);
-    return { ...result, items: result.items.map((inv) => WorkspaceInvitation.toDTO(inv)) };
+    return {
+      ...result,
+      items: result.items.map((inv) => WorkspaceInvitation.toDTO(inv)),
+    };
   }
 
-  async getUserInvitationDTOs(email: string): Promise<WorkspaceInvitationDTO[]> {
+  async getUserInvitationDTOs(
+    email: string
+  ): Promise<WorkspaceInvitationDTO[]> {
     const invitations = await this.getUserInvitations(email);
     return invitations.map((inv) => WorkspaceInvitation.toDTO(inv));
   }

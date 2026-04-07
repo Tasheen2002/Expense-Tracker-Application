@@ -81,7 +81,6 @@ export class PurchaseOrderService {
       throw new PurchaseOrderNotFoundError(poId, workspaceId);
     }
     po.markAsDeleted();
-    await this.poRepository.save(po);
     await this.poRepository.delete(
       PurchaseOrderId.fromString(poId),
       workspaceId

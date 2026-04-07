@@ -1,6 +1,5 @@
-import { ILocationRepository } from '../../domain/repositories/location.repository';
-import { Location, LocationDTO } from '../../domain/entities/location.entity';
-import { LocationId } from '../../domain/value-objects/location-id.vo';
+import { LocationService } from '../services/location.service';
+import { LocationDTO } from '../../domain/entities/location.entity';
 import { LocationNotFoundError } from '../../domain/errors/inventory.errors';
 import {
   IQuery,
@@ -16,16 +15,16 @@ export interface GetLocationQuery extends IQuery {
 export class GetLocationHandler
   implements IQueryHandler<GetLocationQuery, QueryResult<LocationDTO>>
 {
-  constructor(private readonly locationRepository: ILocationRepository) {}
+  constructor(private readonly locationService: LocationService) {}
 
   async handle(query: GetLocationQuery): Promise<QueryResult<LocationDTO>> {
-    const location = await this.locationRepository.findById(
-      LocationId.fromString(query.locationId),
+    const dto = await this.locationService.getLocationById(
+      query.locationId,
       query.workspaceId
     );
-    if (!location) {
+    if (!dto) {
       throw new LocationNotFoundError(query.locationId, query.workspaceId);
     }
-    return QueryResult.success(Location.toDTO(location));
+    return QueryResult.success(dto);
   }
 }

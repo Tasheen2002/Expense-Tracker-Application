@@ -51,8 +51,8 @@ export class WorkspaceManagementService {
 
   async getWorkspacesDTOByMembership(
     userId: string,
-    options?: import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginationOptions
-  ): Promise<import('../../../../packages/core/src/domain/interfaces/paginated-result.interface').PaginatedResult<WorkspaceDTO>> {
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<WorkspaceDTO>> {
     const result = await this.getWorkspacesByMembership(userId, options);
     return { ...result, items: result.items.map((w) => Workspace.toDTO(w)) };
   }

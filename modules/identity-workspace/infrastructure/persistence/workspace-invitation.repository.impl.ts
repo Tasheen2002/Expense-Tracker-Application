@@ -1,9 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { IWorkspaceInvitationRepository } from "../../domain/repositories/workspace-invitation.repository";
-import {
-  WorkspaceInvitation,
-  WorkspaceInvitationRow,
-} from "../../domain/entities/workspace-invitation.entity";
+import { WorkspaceInvitation } from "../../domain/entities/workspace-invitation.entity";
 import { WorkspaceMembership } from "../../domain/entities/workspace-membership.entity";
 import { InvitationId } from "../../domain/value-objects/invitation-id.vo";
 import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
@@ -23,39 +20,34 @@ export class WorkspaceInvitationRepositoryImpl
     super(prisma, eventBus);
   }
 
-  // Helper to convert Prisma result (camelCase) to WorkspaceInvitationRow (snake_case)
-  private toDatabaseRow(
-    prismaRow: Prisma.WorkspaceInvitationGetPayload<{}>,
-  ): WorkspaceInvitationRow {
-    return {
-      id: prismaRow.id,
-      workspace_id: prismaRow.workspaceId,
-      email: prismaRow.email,
-      role: prismaRow.role,
-      token: prismaRow.token,
-      expires_at: prismaRow.expiresAt,
-      accepted_at: prismaRow.acceptedAt,
-      created_at: prismaRow.createdAt,
-    };
+  private reconstitute(row: Prisma.WorkspaceInvitationGetPayload<{}>): WorkspaceInvitation {
+    return WorkspaceInvitation.reconstitute({
+      id: row.id,
+      workspaceId: row.workspaceId,
+      email: row.email,
+      role: row.role as any,
+      token: row.token,
+      expiresAt: row.expiresAt,
+      acceptedAt: row.acceptedAt,
+      createdAt: row.createdAt,
+    });
   }
 
   async save(invitation: WorkspaceInvitation): Promise<void> {
-    const data = invitation.toDatabaseRow();
-
     await this.prisma.workspaceInvitation.upsert({
-      where: { id: data.id },
+      where: { id: invitation.getId().getValue() },
       create: {
-        id: data.id,
-        workspaceId: data.workspace_id,
-        email: data.email,
-        role: data.role,
-        token: data.token,
-        expiresAt: data.expires_at,
-        acceptedAt: data.accepted_at,
-        createdAt: data.created_at,
+        id: invitation.getId().getValue(),
+        workspaceId: invitation.getWorkspaceId().getValue(),
+        email: invitation.getEmail(),
+        role: invitation.getRole(),
+        token: invitation.getToken(),
+        expiresAt: invitation.getExpiresAt(),
+        acceptedAt: invitation.getAcceptedAt(),
+        createdAt: invitation.getCreatedAt(),
       },
       update: {
-        acceptedAt: data.accepted_at,
+        acceptedAt: invitation.getAcceptedAt(),
       },
     });
     await this.dispatchEvents(invitation);
@@ -66,9 +58,7 @@ export class WorkspaceInvitationRepositoryImpl
       where: { id: id.getValue() },
     });
 
-    return row
-      ? WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row))
-      : null;
+    return row ? this.reconstitute(row) : null;
   }
 
   async findByToken(token: string): Promise<WorkspaceInvitation | null> {
@@ -76,9 +66,7 @@ export class WorkspaceInvitationRepositoryImpl
       where: { token },
     });
 
-    return row
-      ? WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row))
-      : null;
+    return row ? this.reconstitute(row) : null;
   }
 
   async findByWorkspaceId(
@@ -91,7 +79,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { workspaceId: workspaceId.getValue() },
         orderBy: { createdAt: "desc" },
       },
-      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      (row) => this.reconstitute(row),
       options,
     );
   }
@@ -106,7 +94,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { email: email.toLowerCase() },
         orderBy: { createdAt: "desc" },
       },
-      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      (row) => this.reconstitute(row),
       options,
     );
   }
@@ -125,7 +113,7 @@ export class WorkspaceInvitationRepositoryImpl
         },
         orderBy: { createdAt: "desc" },
       },
-      (row) => WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row)),
+      (row) => this.reconstitute(row),
       options,
     );
   }
@@ -140,15 +128,13 @@ export class WorkspaceInvitationRepositoryImpl
         email: email.toLowerCase(),
         acceptedAt: null,
         expiresAt: {
-          gt: new Date(), // Not expired
+          gt: new Date(),
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return row
-      ? WorkspaceInvitation.fromDatabaseRow(this.toDatabaseRow(row))
-      : null;
+    return row ? this.reconstitute(row) : null;
   }
 
   async delete(id: InvitationId): Promise<void> {
@@ -174,34 +160,27 @@ export class WorkspaceInvitationRepositoryImpl
     invitation: WorkspaceInvitation,
     membership: WorkspaceMembership,
   ): Promise<void> {
-    const invData = invitation.toDatabaseRow();
-    const memData = membership.toDatabaseRow();
-
     await this.prisma.$transaction([
-      // Update invitation
       this.prisma.workspaceInvitation.update({
-        where: { id: invData.id },
+        where: { id: invitation.getId().getValue() },
         data: {
-          acceptedAt: invData.accepted_at,
-          // We only need to update acceptedAt, likely
+          acceptedAt: invitation.getAcceptedAt(),
         },
       }),
-      // Create membership
       this.prisma.workspaceMembership.create({
         data: {
-          id: memData.id,
-          userId: memData.user_id,
-          workspaceId: memData.workspace_id,
-          role: memData.role,
-          createdAt: memData.created_at,
-          updatedAt: memData.updated_at,
+          id: membership.getId().getValue(),
+          userId: membership.getUserId().getValue(),
+          workspaceId: membership.getWorkspaceId().getValue(),
+          role: membership.getRole(),
+          createdAt: membership.getCreatedAt(),
+          updatedAt: membership.getUpdatedAt(),
         },
       }),
     ]);
 
     await this.dispatchEvents(invitation);
 
-    // Dispatch membership domain events (e.g. MemberJoinedWorkspaceEvent)
     const membershipEvents = membership.domainEvents;
     if (membershipEvents.length > 0) {
       await this.eventBus.publishAll(membershipEvents);

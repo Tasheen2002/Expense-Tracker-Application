@@ -82,7 +82,6 @@ export class LocationService {
       throw new LocationNotFoundError(locationId, workspaceId);
     }
     location.markAsDeleted();
-    await this.locationRepository.save(location);
     await this.locationRepository.delete(
       LocationId.fromString(locationId),
       workspaceId

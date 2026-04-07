@@ -77,7 +77,7 @@ export async function stockRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(adjustStockSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Stock'],
@@ -104,7 +104,13 @@ export async function stockRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: stockSchema,
+              data: {
+                type: 'object',
+                properties: {
+                  stock: stockSchema,
+                  transaction: transactionSchema,
+                },
+              },
             },
           },
         },
@@ -121,7 +127,7 @@ export async function stockRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listStockQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Stock'],
@@ -166,7 +172,7 @@ export async function stockRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listTransactionsQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Inventory - Stock'],
