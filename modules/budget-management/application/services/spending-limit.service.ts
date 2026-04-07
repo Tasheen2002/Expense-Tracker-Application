@@ -2,7 +2,10 @@ import {
   ISpendingLimitRepository,
   SpendingLimitFilters,
 } from '../../domain/repositories/spending-limit.repository';
-import { SpendingLimit } from '../../domain/entities/spending-limit.entity';
+import {
+  SpendingLimit,
+  SpendingLimitDTO,
+} from '../../domain/entities/spending-limit.entity';
 import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id';
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
@@ -21,7 +24,7 @@ export class SpendingLimitService {
     limitAmount: number | string;
     currency: string;
     periodType: BudgetPeriodType;
-  }): Promise<SpendingLimit> {
+  }): Promise<SpendingLimitDTO> {
     const limit = SpendingLimit.create({
       workspaceId: params.workspaceId,
       userId: params.userId,
@@ -33,7 +36,7 @@ export class SpendingLimitService {
 
     await this.limitRepository.save(limit);
 
-    return limit;
+    return SpendingLimit.toDTO(limit);
   }
 
   async updateSpendingLimit(
@@ -42,7 +45,7 @@ export class SpendingLimitService {
     updates: {
       limitAmount?: number | string;
     }
-  ): Promise<SpendingLimit> {
+  ): Promise<SpendingLimitDTO> {
     const limit = await this.limitRepository.findById(
       SpendingLimitId.fromString(limitId),
       workspaceId
@@ -58,7 +61,7 @@ export class SpendingLimitService {
 
     await this.limitRepository.save(limit);
 
-    return limit;
+    return SpendingLimit.toDTO(limit);
   }
 
   async deleteSpendingLimit(
@@ -73,14 +76,10 @@ export class SpendingLimitService {
       throw new SpendingLimitNotFoundError(limitId);
     }
 
-    // Workspace membership is enforced by the HTTP middleware. The userId is
-    // retained here for audit purposes and future ownership checks if
-    // a createdBy field is added to SpendingLimit.
     void userId;
 
     // Emit the deleted domain event before removing the record
     limit.markAsDeleted();
-    await this.limitRepository.save(limit);
 
     await this.limitRepository.delete(limitIdObj, workspaceId);
   }
@@ -88,25 +87,37 @@ export class SpendingLimitService {
   async getSpendingLimitById(
     limitId: string,
     workspaceId: string
-  ): Promise<SpendingLimit | null> {
-    return await this.limitRepository.findById(
+  ): Promise<SpendingLimitDTO | null> {
+    const limit = await this.limitRepository.findById(
       SpendingLimitId.fromString(limitId),
       workspaceId
     );
+    return limit ? SpendingLimit.toDTO(limit) : null;
   }
 
   async getSpendingLimitsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<SpendingLimit>> {
-    return await this.limitRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<SpendingLimitDTO>> {
+    const result = await this.limitRepository.findByWorkspace(
+      workspaceId,
+      options
+    );
+    return {
+      ...result,
+      items: result.items.map((l) => SpendingLimit.toDTO(l)),
+    };
   }
 
   async filterSpendingLimits(
     filters: SpendingLimitFilters,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<SpendingLimit>> {
-    return await this.limitRepository.findByFilters(filters, options);
+  ): Promise<PaginatedResult<SpendingLimitDTO>> {
+    const result = await this.limitRepository.findByFilters(filters, options);
+    return {
+      ...result,
+      items: result.items.map((l) => SpendingLimit.toDTO(l)),
+    };
   }
 
   async getApplicableLimits(

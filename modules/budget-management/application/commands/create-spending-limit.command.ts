@@ -1,5 +1,5 @@
 import { SpendingLimitService } from '../services/spending-limit.service';
-import { SpendingLimit } from '../../domain/entities/spending-limit.entity';
+import { SpendingLimitDTO } from '../../domain/entities/spending-limit.entity';
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 
 import {
@@ -19,14 +19,14 @@ export interface CreateSpendingLimitCommand extends ICommand {
 
 export class CreateSpendingLimitHandler implements ICommandHandler<
   CreateSpendingLimitCommand,
-  CommandResult<{ limitId: string }>
+  CommandResult<SpendingLimitDTO>
 > {
   constructor(private readonly limitService: SpendingLimitService) {}
 
   async handle(
     command: CreateSpendingLimitCommand
-  ): Promise<CommandResult<{ limitId: string }>> {
-    const limit = await this.limitService.createSpendingLimit(command);
-    return CommandResult.success({ limitId: limit.id.getValue() });
+  ): Promise<CommandResult<SpendingLimitDTO>> {
+    const dto = await this.limitService.createSpendingLimit(command);
+    return CommandResult.success(dto);
   }
 }

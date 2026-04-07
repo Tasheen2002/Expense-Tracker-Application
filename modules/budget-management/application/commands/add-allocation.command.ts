@@ -1,4 +1,5 @@
 import { BudgetService } from '../services/budget.service';
+import { BudgetAllocationDTO } from '../../domain/entities/budget-allocation.entity';
 
 import {
   ICommand,
@@ -17,14 +18,14 @@ export interface AddAllocationCommand extends ICommand {
 
 export class AddAllocationHandler implements ICommandHandler<
   AddAllocationCommand,
-  CommandResult<{ allocationId: string }>
+  CommandResult<BudgetAllocationDTO>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
   async handle(
     command: AddAllocationCommand
-  ): Promise<CommandResult<{ allocationId: string }>> {
-    const allocation = await this.budgetService.addAllocation({
+  ): Promise<CommandResult<BudgetAllocationDTO>> {
+    const dto = await this.budgetService.addAllocation({
       budgetId: command.budgetId,
       workspaceId: command.workspaceId,
       userId: command.userId,
@@ -32,8 +33,6 @@ export class AddAllocationHandler implements ICommandHandler<
       allocatedAmount: command.allocatedAmount,
       description: command.description,
     });
-    return CommandResult.success({
-      allocationId: allocation.allocationId,
-    });
+    return CommandResult.success(dto);
   }
 }

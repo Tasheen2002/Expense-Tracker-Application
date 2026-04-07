@@ -66,7 +66,7 @@ export async function spendingLimitRoutes(
       preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
       preHandler: [
         validateBody(createSpendingLimitSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Spending Limit'],
@@ -105,7 +105,7 @@ export async function spendingLimitRoutes(
     '/workspaces/:workspaceId/spending-limits',
     {
       preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'List all spending limits in workspace',
@@ -168,7 +168,7 @@ export async function spendingLimitRoutes(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       preValidation: [validateParams(spendingLimitParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'Get spending limit by ID',
@@ -195,7 +195,7 @@ export async function spendingLimitRoutes(
       preValidation: [validateParams(spendingLimitParamsSchema)],
       preHandler: [
         validateBody(updateSpendingLimitSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Spending Limit'],

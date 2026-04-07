@@ -1,8 +1,5 @@
-import { IBudgetAlertRepository } from '../../domain/repositories/budget-alert.repository';
-import {
-  BudgetAlert,
-  BudgetAlertDTO,
-} from '../../domain/entities/budget-alert.entity';
+import { BudgetService } from '../services/budget.service';
+import { BudgetAlertDTO } from '../../domain/entities/budget-alert.entity';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -26,9 +23,7 @@ export class GetUnreadAlertsHandler
       QueryResult<PaginatedResult<BudgetAlertDTO>>
     >
 {
-  constructor(
-    private readonly budgetAlertRepository: IBudgetAlertRepository
-  ) {}
+  constructor(private readonly budgetService: BudgetService) {}
 
   async handle(
     query: GetUnreadAlertsQuery
@@ -38,16 +33,11 @@ export class GetUnreadAlertsHandler
       offset: query.offset,
     };
 
-    const result = await this.budgetAlertRepository.findUnreadAlerts(
+    const result = await this.budgetService.getUnreadAlerts(
       query.workspaceId,
       options
     );
 
-    const dtoResult: PaginatedResult<BudgetAlertDTO> = {
-      ...result,
-      items: result.items.map((alert) => BudgetAlert.toDTO(alert)),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

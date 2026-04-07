@@ -106,7 +106,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createBudgetSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget'],
@@ -161,7 +161,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listBudgetsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget'],
@@ -204,7 +204,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget'],
         description: 'Get budget by ID',
@@ -234,7 +234,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(budgetParamsSchema)],
       preHandler: [
         validateBody(updateBudgetSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget'],
@@ -276,7 +276,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/activate',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget'],
         description: 'Activate budget',
@@ -304,7 +304,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/archive',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget'],
         description: 'Archive budget',
@@ -356,7 +356,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(budgetParamsSchema)],
       preHandler: [
         validateBody(addAllocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -394,7 +394,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Get budget allocations',
@@ -438,7 +438,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(allocationParamsSchema)],
       preHandler: [
         validateBody(updateAllocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -475,7 +475,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
       preValidation: [validateParams(allocationParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Delete allocation',
@@ -497,7 +497,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/alerts/unread',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Alert'],
         description: 'Get unread budget alerts',

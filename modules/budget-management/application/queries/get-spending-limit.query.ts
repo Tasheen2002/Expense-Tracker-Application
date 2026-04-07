@@ -1,9 +1,5 @@
-import { ISpendingLimitRepository } from '../../domain/repositories/spending-limit.repository';
-import {
-  SpendingLimit,
-  SpendingLimitDTO,
-} from '../../domain/entities/spending-limit.entity';
-import { SpendingLimitId } from '../../domain/value-objects/spending-limit-id';
+import { SpendingLimitService } from '../services/spending-limit.service';
+import { SpendingLimitDTO } from '../../domain/entities/spending-limit.entity';
 import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
 import {
   IQuery,
@@ -20,22 +16,20 @@ export class GetSpendingLimitHandler
   implements
     IQueryHandler<GetSpendingLimitQuery, QueryResult<SpendingLimitDTO>>
 {
-  constructor(
-    private readonly spendingLimitRepository: ISpendingLimitRepository
-  ) {}
+  constructor(private readonly spendingLimitService: SpendingLimitService) {}
 
   async handle(
     query: GetSpendingLimitQuery
   ): Promise<QueryResult<SpendingLimitDTO>> {
-    const limit = await this.spendingLimitRepository.findById(
-      SpendingLimitId.fromString(query.limitId),
+    const dto = await this.spendingLimitService.getSpendingLimitById(
+      query.limitId,
       query.workspaceId
     );
 
-    if (!limit) {
+    if (!dto) {
       throw new SpendingLimitNotFoundError(query.limitId);
     }
 
-    return QueryResult.success(SpendingLimit.toDTO(limit));
+    return QueryResult.success(dto);
   }
 }

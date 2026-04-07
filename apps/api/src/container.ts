@@ -894,20 +894,15 @@ export class Container {
     );
 
     // Query Handlers
-    const getBudgetHandler = new GetBudgetHandler(budgetRepository);
-    const listBudgetsHandler = new ListBudgetsHandler(budgetRepository);
-    const getAllocationsHandler = new GetAllocationsHandler(
-      budgetRepository,
-      budgetAllocationRepository
-    );
-    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(
-      budgetAlertRepository
-    );
+    const getBudgetHandler = new GetBudgetHandler(budgetService);
+    const listBudgetsHandler = new ListBudgetsHandler(budgetService);
+    const getAllocationsHandler = new GetAllocationsHandler(budgetService);
+    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
     const getSpendingLimitHandler = new GetSpendingLimitHandler(
-      spendingLimitRepository
+      spendingLimitService
     );
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
-      spendingLimitRepository
+      spendingLimitService
     );
 
     // Controllers
