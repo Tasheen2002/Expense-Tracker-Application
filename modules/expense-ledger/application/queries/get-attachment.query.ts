@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
-import { Attachment } from '../../domain/entities/attachment.entity';
+import { AttachmentDTO } from '../../domain/entities/attachment.entity';
 import { AttachmentNotFoundError } from '../../domain/errors/expense.errors';
 
 export interface GetAttachmentQuery extends IQuery {
@@ -15,11 +15,11 @@ export interface GetAttachmentQuery extends IQuery {
 
 export class GetAttachmentHandler implements IQueryHandler<
   GetAttachmentQuery,
-  QueryResult<Attachment>
+  QueryResult<AttachmentDTO>
 > {
   constructor(private readonly attachmentService: AttachmentService) {}
 
-  async handle(query: GetAttachmentQuery): Promise<QueryResult<Attachment>> {
+  async handle(query: GetAttachmentQuery): Promise<QueryResult<AttachmentDTO>> {
     const attachment = await this.attachmentService.getAttachmentById(
       query.attachmentId
     );
@@ -32,6 +32,6 @@ export class GetAttachmentHandler implements IQueryHandler<
       throw new AttachmentNotFoundError(query.attachmentId);
     }
 
-    return QueryResult.success(attachment);
+    return QueryResult.success(attachment.toJSON());
   }
 }

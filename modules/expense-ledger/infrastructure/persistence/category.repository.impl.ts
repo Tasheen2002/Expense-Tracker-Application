@@ -3,17 +3,20 @@ import { CategoryRepository } from "../../domain/repositories/category.repositor
 import { Category } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export class CategoryRepositoryImpl implements CategoryRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly eventBus: IEventBus,
-  ) {}
+export class CategoryRepositoryImpl
+  extends PrismaRepository<Category>
+  implements CategoryRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(category: Category): Promise<void> {
     await this.prisma.category.create({
@@ -30,7 +33,7 @@ export class CategoryRepositoryImpl implements CategoryRepository {
       },
     });
 
-    // NOTE: Category does not extend AggregateRoot - no domain events to dispatch
+    await this.dispatchEvents(category);
   }
 
   async update(category: Category): Promise<void> {
@@ -49,7 +52,7 @@ export class CategoryRepositoryImpl implements CategoryRepository {
       },
     });
 
-    // NOTE: Category does not extend AggregateRoot - no domain events to dispatch
+    await this.dispatchEvents(category);
   }
 
   async findById(

@@ -7,6 +7,21 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
+const categorySchema = {
+  type: 'object',
+  properties: {
+    categoryId: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    name: { type: 'string' },
+    description: { type: 'string', nullable: true },
+    color: { type: 'string', nullable: true },
+    icon: { type: 'string', nullable: true },
+    isActive: { type: 'boolean' },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
@@ -29,6 +44,7 @@ export async function categoryRoutes(
       schema: {
         tags: ['Category'],
         description: 'Create a new category',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -48,25 +64,13 @@ export async function categoryRoutes(
         },
         response: {
           201: {
+            description: 'Category created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  categoryId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  description: { type: 'string' },
-                  color: { type: 'string' },
-                  icon: { type: 'string' },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string' },
-                  updatedAt: { type: 'string' },
-                },
-              },
+              data: categorySchema,
             },
           },
         },
@@ -83,6 +87,7 @@ export async function categoryRoutes(
       schema: {
         tags: ['Category'],
         description: 'Update a category',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'categoryId'],
@@ -102,24 +107,13 @@ export async function categoryRoutes(
         },
         response: {
           200: {
+            description: 'Category updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  categoryId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  description: { type: 'string' },
-                  color: { type: 'string' },
-                  icon: { type: 'string' },
-                  isActive: { type: 'boolean' },
-                  updatedAt: { type: 'string' },
-                },
-              },
+              data: categorySchema,
             },
           },
         },
@@ -136,6 +130,7 @@ export async function categoryRoutes(
       schema: {
         tags: ['Category'],
         description: 'Delete a category',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'categoryId'],
@@ -145,13 +140,9 @@ export async function categoryRoutes(
           },
         },
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
+          204: {
+            description: 'No Content',
+            type: 'null',
           },
         },
       },
@@ -167,6 +158,7 @@ export async function categoryRoutes(
       schema: {
         tags: ['Category'],
         description: 'Get category by ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'categoryId'],
@@ -177,25 +169,13 @@ export async function categoryRoutes(
         },
         response: {
           200: {
+            description: 'Category retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  categoryId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  description: { type: 'string' },
-                  color: { type: 'string' },
-                  icon: { type: 'string' },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string' },
-                  updatedAt: { type: 'string' },
-                },
-              },
+              data: categorySchema,
             },
           },
         },
@@ -212,6 +192,7 @@ export async function categoryRoutes(
       schema: {
         tags: ['Category'],
         description: 'List all categories',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -227,6 +208,7 @@ export async function categoryRoutes(
         },
         response: {
           200: {
+            description: 'Categories retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -235,23 +217,7 @@ export async function categoryRoutes(
               data: {
                 type: 'object',
                 properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        categoryId: { type: 'string' },
-                        workspaceId: { type: 'string' },
-                        name: { type: 'string' },
-                        description: { type: 'string' },
-                        color: { type: 'string' },
-                        icon: { type: 'string' },
-                        isActive: { type: 'boolean' },
-                        createdAt: { type: 'string' },
-                        updatedAt: { type: 'string' },
-                      },
-                    },
-                  },
+                  items: { type: 'array', items: categorySchema },
                   pagination: {
                     type: 'object',
                     properties: {

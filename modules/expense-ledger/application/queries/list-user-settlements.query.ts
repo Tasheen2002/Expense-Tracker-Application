@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
-import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
+import { SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { SettlementStatus } from '../../domain/enums/settlement-status';
 
@@ -18,19 +18,22 @@ export interface ListUserSettlementsQuery extends IQuery {
 
 export class ListUserSettlementsHandler implements IQueryHandler<
   ListUserSettlementsQuery,
-  QueryResult<PaginatedResult<SplitSettlement>>
+  QueryResult<PaginatedResult<SplitSettlementDTO>>
 > {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
   async handle(
     query: ListUserSettlementsQuery
-  ): Promise<QueryResult<PaginatedResult<SplitSettlement>>> {
+  ): Promise<QueryResult<PaginatedResult<SplitSettlementDTO>>> {
     const result = await this.splitService.getUserSettlements(
       query.userId,
       query.workspaceId,
       query.status,
       { limit: query.limit, offset: query.offset }
     );
-    return QueryResult.success(result);
+    return QueryResult.success({
+      ...result,
+      items: result.items.map((settlement) => settlement.toJSON()),
+    });
   }
 }

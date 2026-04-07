@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
-import { Attachment } from '../../domain/entities/attachment.entity';
+import { AttachmentDTO } from '../../domain/entities/attachment.entity';
 
 export interface ListAttachmentsQuery extends IQuery {
   readonly expenseId: string;
@@ -13,16 +13,16 @@ export interface ListAttachmentsQuery extends IQuery {
 
 export class ListAttachmentsHandler implements IQueryHandler<
   ListAttachmentsQuery,
-  QueryResult<Attachment[]>
+  QueryResult<AttachmentDTO[]>
 > {
   constructor(private readonly attachmentService: AttachmentService) {}
 
   async handle(
     query: ListAttachmentsQuery
-  ): Promise<QueryResult<Attachment[]>> {
+  ): Promise<QueryResult<AttachmentDTO[]>> {
     const result = await this.attachmentService.getAttachmentsByExpense(
       query.expenseId
     );
-    return QueryResult.success(result.items);
+    return QueryResult.success(result.items.map((attachment) => attachment.toJSON()));
   }
 }

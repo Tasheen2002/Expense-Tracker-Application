@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
-import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 
 export interface GetSplitQuery extends IQuery {
   readonly splitId: string;
@@ -14,16 +14,16 @@ export interface GetSplitQuery extends IQuery {
 
 export class GetSplitHandler implements IQueryHandler<
   GetSplitQuery,
-  QueryResult<ExpenseSplit>
+  QueryResult<ExpenseSplitDTO>
 > {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(query: GetSplitQuery): Promise<QueryResult<ExpenseSplit>> {
+  async handle(query: GetSplitQuery): Promise<QueryResult<ExpenseSplitDTO>> {
     const split = await this.splitService.getSplitById(
       query.splitId,
       query.workspaceId,
       query.userId
     );
-    return QueryResult.success(split);
+    return QueryResult.success(split.toJSON());
   }
 }

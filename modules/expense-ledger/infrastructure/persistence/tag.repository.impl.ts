@@ -3,17 +3,20 @@ import { TagRepository } from "../../domain/repositories/tag.repository";
 import { Tag } from "../../domain/entities/tag.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export class TagRepositoryImpl implements TagRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly eventBus: IEventBus,
-  ) {}
+export class TagRepositoryImpl
+  extends PrismaRepository<Tag>
+  implements TagRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(tag: Tag): Promise<void> {
     await this.prisma.tag.create({
@@ -26,7 +29,7 @@ export class TagRepositoryImpl implements TagRepository {
       },
     });
 
-    // NOTE: Tag does not extend AggregateRoot - no domain events to dispatch
+    await this.dispatchEvents(tag);
   }
 
   async update(tag: Tag): Promise<void> {
@@ -41,7 +44,7 @@ export class TagRepositoryImpl implements TagRepository {
       },
     });
 
-    // NOTE: Tag does not extend AggregateRoot - no domain events to dispatch
+    await this.dispatchEvents(tag);
   }
 
   async findById(id: TagId, workspaceId: string): Promise<Tag | null> {

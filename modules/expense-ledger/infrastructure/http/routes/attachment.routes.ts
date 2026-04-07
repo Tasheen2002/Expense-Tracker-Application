@@ -7,6 +7,20 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
+const attachmentSchema = {
+  type: 'object',
+  properties: {
+    attachmentId: { type: 'string', format: 'uuid' },
+    expenseId: { type: 'string', format: 'uuid' },
+    fileName: { type: 'string' },
+    filePath: { type: 'string' },
+    fileSize: { type: 'number' },
+    mimeType: { type: 'string' },
+    uploadedBy: { type: 'string', format: 'uuid' },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
@@ -16,11 +30,12 @@ export async function attachmentRoutes(
   fastify: FastifyInstance,
   controller: AttachmentController
 ) {
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
+
   // Create attachment
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
@@ -28,6 +43,7 @@ export async function attachmentRoutes(
       schema: {
         tags: ['Attachment'],
         description: 'Upload and link attachment to expense',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -43,7 +59,7 @@ export async function attachmentRoutes(
           properties: {
             fileName: { type: 'string', minLength: 1, maxLength: 255 },
             filePath: { type: 'string', minLength: 1, maxLength: 500 },
-            fileSize: { type: 'number', minimum: 1, maximum: 10485760 }, // 10MB max
+            fileSize: { type: 'number', minimum: 1, maximum: 10485760 },
             mimeType: {
               type: 'string',
               enum: [
@@ -65,24 +81,13 @@ export async function attachmentRoutes(
         },
         response: {
           201: {
+            description: 'Attachment created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  attachmentId: { type: 'string' },
-                  expenseId: { type: 'string' },
-                  fileName: { type: 'string' },
-                  filePath: { type: 'string' },
-                  fileSize: { type: 'number' },
-                  mimeType: { type: 'string' },
-                  uploadedBy: { type: 'string' },
-                  createdAt: { type: 'string' },
-                },
-              },
+              data: attachmentSchema,
             },
           },
         },
@@ -99,6 +104,7 @@ export async function attachmentRoutes(
       schema: {
         tags: ['Attachment'],
         description: 'Delete an attachment',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId', 'attachmentId'],
@@ -109,13 +115,9 @@ export async function attachmentRoutes(
           },
         },
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
+          204: {
+            description: 'No Content',
+            type: 'null',
           },
         },
       },
@@ -131,6 +133,7 @@ export async function attachmentRoutes(
       schema: {
         tags: ['Attachment'],
         description: 'Get attachment by ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId', 'attachmentId'],
@@ -142,24 +145,13 @@ export async function attachmentRoutes(
         },
         response: {
           200: {
+            description: 'Attachment retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  attachmentId: { type: 'string' },
-                  expenseId: { type: 'string' },
-                  fileName: { type: 'string' },
-                  filePath: { type: 'string' },
-                  fileSize: { type: 'number' },
-                  mimeType: { type: 'string' },
-                  uploadedBy: { type: 'string' },
-                  createdAt: { type: 'string' },
-                },
-              },
+              data: attachmentSchema,
             },
           },
         },
@@ -176,6 +168,7 @@ export async function attachmentRoutes(
       schema: {
         tags: ['Attachment'],
         description: 'List all attachments for an expense',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'expenseId'],
@@ -186,6 +179,7 @@ export async function attachmentRoutes(
         },
         response: {
           200: {
+            description: 'Attachments retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -194,31 +188,7 @@ export async function attachmentRoutes(
               data: {
                 type: 'object',
                 properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        attachmentId: { type: 'string' },
-                        expenseId: { type: 'string' },
-                        fileName: { type: 'string' },
-                        filePath: { type: 'string' },
-                        fileSize: { type: 'number' },
-                        mimeType: { type: 'string' },
-                        uploadedBy: { type: 'string' },
-                        createdAt: { type: 'string' },
-                      },
-                    },
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
+                  items: { type: 'array', items: attachmentSchema },
                 },
               },
             },

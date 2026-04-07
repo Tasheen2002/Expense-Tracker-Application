@@ -6,7 +6,7 @@ import {
 import { RecurringExpenseService } from '../services/recurring-expense.service';
 import {
   ExpenseTemplate,
-  RecurringExpense,
+  RecurringExpenseDTO,
 } from '../../domain/entities/recurring-expense.entity';
 import { RecurrenceFrequency } from '../../domain/enums/recurrence-frequency';
 
@@ -22,7 +22,7 @@ export interface CreateRecurringExpenseCommand extends ICommand {
 
 export class CreateRecurringExpenseHandler implements ICommandHandler<
   CreateRecurringExpenseCommand,
-  CommandResult<RecurringExpense>
+  CommandResult<RecurringExpenseDTO>
 > {
   constructor(
     private readonly recurringExpenseService: RecurringExpenseService
@@ -30,7 +30,7 @@ export class CreateRecurringExpenseHandler implements ICommandHandler<
 
   async handle(
     command: CreateRecurringExpenseCommand
-  ): Promise<CommandResult<RecurringExpense>> {
+  ): Promise<CommandResult<RecurringExpenseDTO>> {
     try {
       const expense = await this.recurringExpenseService.createRecurringExpense(
         {
@@ -43,7 +43,7 @@ export class CreateRecurringExpenseHandler implements ICommandHandler<
           template: command.template,
         }
       );
-      return CommandResult.success(expense);
+      return CommandResult.success(expense.toJSON());
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

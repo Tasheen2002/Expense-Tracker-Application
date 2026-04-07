@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
-import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
+import { ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 import { SplitNotFoundError } from '../../domain/errors/split-expense.errors';
 
 export interface GetSplitByExpenseQuery extends IQuery {
@@ -15,13 +15,13 @@ export interface GetSplitByExpenseQuery extends IQuery {
 
 export class GetSplitByExpenseHandler implements IQueryHandler<
   GetSplitByExpenseQuery,
-  QueryResult<ExpenseSplit>
+  QueryResult<ExpenseSplitDTO>
 > {
   constructor(private readonly expenseSplitService: ExpenseSplitService) {}
 
   async handle(
     query: GetSplitByExpenseQuery
-  ): Promise<QueryResult<ExpenseSplit>> {
+  ): Promise<QueryResult<ExpenseSplitDTO>> {
     try {
       const split = await this.expenseSplitService.getSplitByExpenseId(
         query.expenseId,
@@ -31,7 +31,7 @@ export class GetSplitByExpenseHandler implements IQueryHandler<
       if (!split) {
         throw new SplitNotFoundError(query.expenseId);
       }
-      return QueryResult.success(split);
+      return QueryResult.success(split.toJSON());
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

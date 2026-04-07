@@ -2,8 +2,27 @@ import { SettlementId } from '../value-objects/settlement-id';
 import { SplitId } from '../value-objects/split-id';
 import { Money } from '../value-objects/money';
 import { SettlementStatus } from '../enums/settlement-status';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library';
+
+export class SettlementPaymentRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly settlementId: string,
+    public readonly splitId: string,
+    public readonly fromUserId: string,
+    public readonly toUserId: string,
+    public readonly amount: string,
+    public readonly newStatus: string
+  ) {
+    super(settlementId, 'SplitSettlement');
+  }
+  get eventType(): string { return 'settlement.payment_recorded'; }
+  getPayload(): Record<string, unknown> {
+    return { settlementId: this.settlementId, splitId: this.splitId, fromUserId: this.fromUserId, toUserId: this.toUserId, amount: this.amount, newStatus: this.newStatus };
+  }
+}
 
 export interface SplitSettlementProps {
   id: SettlementId;
@@ -18,8 +37,10 @@ export interface SplitSettlementProps {
   updatedAt: Date;
 }
 
-export class SplitSettlement {
-  private constructor(private props: SplitSettlementProps) {}
+export class SplitSettlement extends AggregateRoot {
+  private constructor(private props: SplitSettlementProps) {
+    super();
+  }
 
   static create(params: {
     splitId: SplitId;
@@ -119,6 +140,17 @@ export class SplitSettlement {
     }
 
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SettlementPaymentRecordedEvent(
+        this.getId().getValue(),
+        this.getSplitId().getValue(),
+        this.getFromUserId(),
+        this.getToUserId(),
+        amount.getAmount().toString(),
+        this.props.status
+      )
+    );
   }
 
   isSettled(): boolean {

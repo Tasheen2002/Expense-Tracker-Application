@@ -1,9 +1,8 @@
 import { RecurrenceFrequency } from '../enums/recurrence-frequency';
 import { RecurrenceStatus } from '../enums/recurrence-status';
-import { ExpenseId } from '../value-objects/expense-id';
-import { Money } from '../value-objects/money'; // Assuming Money is reusable or we use raw values in template
-// We might need to handle the template structure carefully.
-// For now, let's treat the template as a plain object or interface.
+import { RecurringExpenseId } from '../value-objects/recurring-expense-id';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 
 export interface ExpenseTemplate {
   title: string;
@@ -17,8 +16,37 @@ export interface ExpenseTemplate {
   tagIds?: string[];
 }
 
+export class RecurringExpenseCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly recurringExpenseId: string,
+    public readonly workspaceId: string,
+    public readonly frequency: string,
+    public readonly templateTitle: string
+  ) {
+    super(recurringExpenseId, 'RecurringExpense');
+  }
+  get eventType(): string { return 'recurring_expense.created'; }
+  getPayload(): Record<string, unknown> {
+    return { recurringExpenseId: this.recurringExpenseId, workspaceId: this.workspaceId, frequency: this.frequency, templateTitle: this.templateTitle };
+  }
+}
+
+export class RecurringExpenseStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly recurringExpenseId: string,
+    public readonly workspaceId: string,
+    public readonly newStatus: string
+  ) {
+    super(recurringExpenseId, 'RecurringExpense');
+  }
+  get eventType(): string { return 'recurring_expense.status_changed'; }
+  getPayload(): Record<string, unknown> {
+    return { recurringExpenseId: this.recurringExpenseId, workspaceId: this.workspaceId, newStatus: this.newStatus };
+  }
+}
+
 export interface RecurringExpenseProps {
-  id: string;
+  id: RecurringExpenseId;
   workspaceId: string;
   userId: string;
   frequency: RecurrenceFrequency;
@@ -32,10 +60,11 @@ export interface RecurringExpenseProps {
   updatedAt: Date;
 }
 
-export class RecurringExpense {
+export class RecurringExpense extends AggregateRoot {
   private readonly props: RecurringExpenseProps;
 
   private constructor(props: RecurringExpenseProps) {
+    super();
     this.props = props;
   }
 
@@ -46,19 +75,27 @@ export class RecurringExpense {
     > & { startDate: Date }
   ): RecurringExpense {
     const status = RecurrenceStatus.ACTIVE;
-    // Initial nextRunDate is usually start date or calculated from it
-    // If startDate is in the past, nextRunDate should probably be today or next interval
-    // For simplicity, let's assume startDate is the first run date
     const nextRunDate = new Date(props.startDate);
 
-    return new RecurringExpense({
+    const recurringExpense = new RecurringExpense({
       ...props,
-      id: crypto.randomUUID(),
+      id: RecurringExpenseId.create(),
       nextRunDate,
       status,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    recurringExpense.addDomainEvent(
+      new RecurringExpenseCreatedEvent(
+        recurringExpense.id.getValue(),
+        recurringExpense.workspaceId,
+        recurringExpense.frequency,
+        recurringExpense.template.title
+      )
+    );
+
+    return recurringExpense;
   }
 
   static fromPersistence(props: RecurringExpenseProps): RecurringExpense {
@@ -66,7 +103,7 @@ export class RecurringExpense {
   }
 
   // Getters
-  get id(): string {
+  get id(): RecurringExpenseId {
     return this.props.id;
   }
   get workspaceId(): string {
@@ -148,28 +185,27 @@ export class RecurringExpense {
     if (this.props.status === RecurrenceStatus.ACTIVE) {
       this.props.status = RecurrenceStatus.PAUSED;
       this.props.updatedAt = new Date();
+      this.addDomainEvent(new RecurringExpenseStatusChangedEvent(this.id.getValue(), this.workspaceId, this.props.status));
     }
   }
 
   resume(): void {
     if (this.props.status === RecurrenceStatus.PAUSED) {
       this.props.status = RecurrenceStatus.ACTIVE;
-
-      // If nextRunDate is in the past, we might want to skip missed runs or process them immediately
-      // For this MVP, let's just make sure nextRunDate is at least today if it was way in the past?
-      // Or we just let it be processed immediately. Let's start with simple logic.
       this.props.updatedAt = new Date();
+      this.addDomainEvent(new RecurringExpenseStatusChangedEvent(this.id.getValue(), this.workspaceId, this.props.status));
     }
   }
 
   stop(): void {
     this.props.status = RecurrenceStatus.COMPLETED;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new RecurringExpenseStatusChangedEvent(this.id.getValue(), this.workspaceId, this.props.status));
   }
 
   toJSON(): RecurringExpenseDTO {
     return {
-      id: this.id,
+      id: this.id.getValue(),
       workspaceId: this.workspaceId,
       userId: this.userId,
       frequency: this.frequency,

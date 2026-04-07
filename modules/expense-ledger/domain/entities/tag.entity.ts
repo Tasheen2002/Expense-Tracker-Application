@@ -1,9 +1,39 @@
 import { TagId } from '../value-objects/tag-id';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 import {
   TagNameRequiredError,
   TagNameTooLongError,
   InvalidHexColorError,
 } from '../errors/expense.errors';
+
+export class TagCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly tagId: string,
+    public readonly workspaceId: string,
+    public readonly name: string
+  ) {
+    super(tagId, 'Tag');
+  }
+  get eventType(): string { return 'tag.created'; }
+  getPayload(): Record<string, unknown> {
+    return { tagId: this.tagId, workspaceId: this.workspaceId, name: this.name };
+  }
+}
+
+export class TagUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly tagId: string,
+    public readonly workspaceId: string,
+    public readonly field: string
+  ) {
+    super(tagId, 'Tag');
+  }
+  get eventType(): string { return 'tag.updated'; }
+  getPayload(): Record<string, unknown> {
+    return { tagId: this.tagId, workspaceId: this.workspaceId, field: this.field };
+  }
+}
 
 export interface TagProps {
   id: TagId;
@@ -13,10 +43,11 @@ export interface TagProps {
   createdAt: Date;
 }
 
-export class Tag {
+export class Tag extends AggregateRoot {
   private readonly props: TagProps;
 
   private constructor(props: TagProps) {
+    super();
     this.props = props;
   }
 
@@ -24,11 +55,17 @@ export class Tag {
     this.validateName(props.name);
     this.validateColor(props.color);
 
-    return new Tag({
+    const tag = new Tag({
       ...props,
       id: TagId.create(),
       createdAt: new Date(),
     });
+
+    tag.addDomainEvent(
+      new TagCreatedEvent(tag.id.getValue(), tag.workspaceId, tag.name)
+    );
+
+    return tag;
   }
 
   static fromPersistence(props: TagProps): Tag {
@@ -79,11 +116,13 @@ export class Tag {
   updateName(name: string): void {
     Tag.validateName(name);
     this.props.name = name;
+    this.addDomainEvent(new TagUpdatedEvent(this.id.getValue(), this.workspaceId, 'name'));
   }
 
   updateColor(color?: string): void {
     Tag.validateColor(color);
     this.props.color = color;
+    this.addDomainEvent(new TagUpdatedEvent(this.id.getValue(), this.workspaceId, 'color'));
   }
 
   toJSON(): TagDTO {

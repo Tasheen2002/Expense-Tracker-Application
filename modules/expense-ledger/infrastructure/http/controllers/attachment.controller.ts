@@ -102,7 +102,7 @@ export class AttachmentController {
         reply,
         result,
         'Attachment retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -128,7 +128,7 @@ export class AttachmentController {
         result,
         'Attachments retrieved successfully',
         result.data
-          ? { items: result.data.map((attachment) => attachment.toJSON()) }
+          ? { items: result.data }
           : undefined
       );
     } catch (error: unknown) {

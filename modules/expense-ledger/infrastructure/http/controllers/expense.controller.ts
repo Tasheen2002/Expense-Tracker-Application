@@ -10,7 +10,6 @@ import { ReimburseExpenseHandler } from '../../../application/commands/reimburse
 import { GetExpenseHandler } from '../../../application/queries/get-expense.query';
 import { FilterExpensesHandler } from '../../../application/queries/filter-expenses.query';
 import { GetExpenseStatisticsHandler } from '../../../application/queries/get-expense-statistics.query';
-import { Expense } from '../../../domain/entities/expense.entity';
 import { PaymentMethod } from '../../../domain/enums/payment-method';
 import { ExpenseStatus } from '../../../domain/enums/expense-status';
 import { ResponseHelper } from '@shared/response.helper';
@@ -185,7 +184,7 @@ export class ExpenseController {
         reply,
         result,
         'Expense retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -220,9 +219,7 @@ export class ExpenseController {
         'Expenses retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((expense: Expense) =>
-                expense.toJSON()
-              ),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -285,9 +282,7 @@ export class ExpenseController {
         'Expenses filtered successfully',
         result.data
           ? {
-              items: result.data.items.map((expense: Expense) =>
-                expense.toJSON()
-              ),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,

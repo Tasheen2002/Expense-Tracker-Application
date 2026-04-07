@@ -9,6 +9,17 @@ import {
 import { validateBody } from '../validation/validator';
 import { createTagSchema, updateTagSchema } from '../validation/tag.schema';
 
+const tagSchema = {
+  type: 'object',
+  properties: {
+    tagId: { type: 'string', format: 'uuid' },
+    workspaceId: { type: 'string', format: 'uuid' },
+    name: { type: 'string' },
+    color: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+};
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
@@ -23,6 +34,7 @@ export async function tagRoutes(
       await writeRateLimiter(request, reply);
     }
   });
+
   // Create tag
   fastify.post(
     '/workspaces/:workspaceId/tags',
@@ -31,6 +43,7 @@ export async function tagRoutes(
       schema: {
         tags: ['Tag'],
         description: 'Create a new tag',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -49,21 +62,13 @@ export async function tagRoutes(
         },
         response: {
           201: {
+            description: 'Tag created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  tagId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  color: { type: 'string' },
-                  createdAt: { type: 'string' },
-                },
-              },
+              data: tagSchema,
             },
           },
         },
@@ -81,6 +86,7 @@ export async function tagRoutes(
       schema: {
         tags: ['Tag'],
         description: 'Update a tag',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'tagId'],
@@ -99,21 +105,13 @@ export async function tagRoutes(
         },
         response: {
           200: {
+            description: 'Tag updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  tagId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  color: { type: 'string' },
-                  createdAt: { type: 'string' },
-                },
-              },
+              data: tagSchema,
             },
           },
         },
@@ -130,6 +128,7 @@ export async function tagRoutes(
       schema: {
         tags: ['Tag'],
         description: 'Delete a tag',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'tagId'],
@@ -139,13 +138,9 @@ export async function tagRoutes(
           },
         },
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
+          204: {
+            description: 'No Content',
+            type: 'null',
           },
         },
       },
@@ -161,6 +156,7 @@ export async function tagRoutes(
       schema: {
         tags: ['Tag'],
         description: 'Get tag by ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'tagId'],
@@ -171,21 +167,13 @@ export async function tagRoutes(
         },
         response: {
           200: {
+            description: 'Tag retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  tagId: { type: 'string' },
-                  workspaceId: { type: 'string' },
-                  name: { type: 'string' },
-                  color: { type: 'string' },
-                  createdAt: { type: 'string' },
-                },
-              },
+              data: tagSchema,
             },
           },
         },
@@ -202,6 +190,7 @@ export async function tagRoutes(
       schema: {
         tags: ['Tag'],
         description: 'List all tags',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -211,6 +200,7 @@ export async function tagRoutes(
         },
         response: {
           200: {
+            description: 'Tags retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -219,19 +209,7 @@ export async function tagRoutes(
               data: {
                 type: 'object',
                 properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        tagId: { type: 'string' },
-                        workspaceId: { type: 'string' },
-                        name: { type: 'string' },
-                        color: { type: 'string' },
-                        createdAt: { type: 'string' },
-                      },
-                    },
-                  },
+                  items: { type: 'array', items: tagSchema },
                   pagination: {
                     type: 'object',
                     properties: {

@@ -1,6 +1,7 @@
 import { SplitParticipantId } from "../value-objects/split-participant-id";
 import { SplitId } from "../value-objects/split-id";
 import { Money } from "../value-objects/money";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { Decimal } from "@prisma/client/runtime/library";
 
 export interface SplitParticipantProps {
@@ -15,8 +16,10 @@ export interface SplitParticipantProps {
   updatedAt: Date;
 }
 
-export class SplitParticipant {
-  private constructor(private props: SplitParticipantProps) {}
+export class SplitParticipant extends AggregateRoot {
+  private constructor(private props: SplitParticipantProps) {
+    super();
+  }
 
   static create(params: {
     splitId: SplitId;

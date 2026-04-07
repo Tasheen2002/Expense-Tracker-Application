@@ -1,4 +1,6 @@
 import { AttachmentId } from '../value-objects/attachment-id';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
 import {
   FileNameRequiredError,
   FileNameTooLongError,
@@ -11,6 +13,21 @@ import {
   InvalidFileTypeError,
 } from '../errors/expense.errors';
 
+export class AttachmentUploadedEvent extends DomainEvent {
+  constructor(
+    public readonly attachmentId: string,
+    public readonly expenseId: string,
+    public readonly fileName: string,
+    public readonly uploadedBy: string
+  ) {
+    super(attachmentId, 'Attachment');
+  }
+  get eventType(): string { return 'attachment.uploaded'; }
+  getPayload(): Record<string, unknown> {
+    return { attachmentId: this.attachmentId, expenseId: this.expenseId, fileName: this.fileName, uploadedBy: this.uploadedBy };
+  }
+}
+
 export interface AttachmentProps {
   id: AttachmentId;
   expenseId: string;
@@ -22,10 +39,11 @@ export interface AttachmentProps {
   createdAt: Date;
 }
 
-export class Attachment {
+export class Attachment extends AggregateRoot {
   private readonly props: AttachmentProps;
 
   private constructor(props: AttachmentProps) {
+    super();
     this.props = props;
   }
 
@@ -35,11 +53,17 @@ export class Attachment {
     this.validateFileSize(props.fileSize);
     this.validateMimeType(props.mimeType);
 
-    return new Attachment({
+    const attachment = new Attachment({
       ...props,
       id: AttachmentId.create(),
       createdAt: new Date(),
     });
+
+    attachment.addDomainEvent(
+      new AttachmentUploadedEvent(attachment.id.getValue(), attachment.expenseId, attachment.fileName, attachment.uploadedBy)
+    );
+
+    return attachment;
   }
 
   static fromPersistence(props: AttachmentProps): Attachment {
