@@ -1,4 +1,5 @@
 import { WorkflowService } from '../services/workflow.service';
+import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -14,14 +15,14 @@ export interface DelegateStepInput extends ICommand {
 
 export class DelegateStepHandler implements ICommandHandler<
   DelegateStepInput,
-  CommandResult<void>
+  CommandResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: DelegateStepInput): Promise<CommandResult<void>> {
+  async handle(input: DelegateStepInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
     try {
-      await this.workflowService.delegateStep(input);
-      return CommandResult.success();
+      const workflow = await this.workflowService.delegateStep(input);
+      return CommandResult.success(workflow);
     } catch (error: unknown) {
       return CommandResult.fromError(error);
     }

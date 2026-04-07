@@ -1,8 +1,10 @@
 import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
+import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
-import { IAuditLogRepository } from '../../domain/repositories/audit-log.repository';
-import { AuditRetentionViolationError } from '../../domain/errors/audit.errors';
+import { IAuditLogRepository, AuditLogFilter } from '../../domain/repositories/audit-log.repository';
+import { AuditLogNotFoundError, AuditRetentionViolationError } from '../../domain/errors/audit.errors';
+import { PaginatedResult, PaginationOptions } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export type { AuditLogDTO };
 
@@ -18,13 +20,15 @@ export interface CreateAuditLogDTO {
   userAgent?: string;
 }
 
+export interface AuditSummary {
+  totalLogs: number;
+  actionBreakdown: { action: string; count: number }[];
+  period: { startDate: Date; endDate: Date };
+}
+
 export class AuditService {
   constructor(private readonly auditRepository: IAuditLogRepository) {}
 
-  /**
-   * Creates an audit log entry directly (for HTTP API usage).
-   * Returns the full DTO of the newly created audit log entry.
-   */
   async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLogDTO> {
     const action = AuditAction.create(data.action);
     const resource = AuditResource.create(data.entityType, data.entityId);
@@ -44,16 +48,53 @@ export class AuditService {
     return AuditLog.toDTO(auditLog);
   }
 
+  async getAuditLog(auditLogId: string, workspaceId: string): Promise<AuditLogDTO> {
+    const id = AuditLogId.fromString(auditLogId);
+    const auditLog = await this.auditRepository.findById(id);
+
+    if (!auditLog || auditLog.workspaceId !== workspaceId) {
+      throw new AuditLogNotFoundError(auditLogId);
+    }
+
+    return AuditLog.toDTO(auditLog);
+  }
+
+  async listAuditLogs(
+    workspaceId: string,
+    filters?: Omit<AuditLogFilter, 'workspaceId'>,
+    limit = 50,
+    offset = 0
+  ): Promise<PaginatedResult<AuditLogDTO>> {
+    const filter: AuditLogFilter = { workspaceId, limit, offset, ...filters };
+    const result = await this.auditRepository.findByFilter(filter);
+    return { ...result, items: result.items.map((log) => AuditLog.toDTO(log)) };
+  }
+
+  async getEntityAuditHistory(
+    workspaceId: string,
+    entityType: string,
+    entityId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<AuditLogDTO>> {
+    const result = await this.auditRepository.findByEntityId(workspaceId, entityType, entityId, options);
+    return { ...result, items: result.items.map((log) => AuditLog.toDTO(log)) };
+  }
+
+  async getAuditSummary(
+    workspaceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<AuditSummary> {
+    const [totalLogs, actionBreakdown] = await Promise.all([
+      this.auditRepository.countByWorkspace(workspaceId),
+      this.auditRepository.getActionSummary(workspaceId, startDate, endDate),
+    ]);
+    return { totalLogs, actionBreakdown, period: { startDate, endDate } };
+  }
+
   private static readonly MIN_RETENTION_DAYS = 30;
 
-  /**
-   * Purge audit logs older than a specific number of days.
-   * Minimum retention period is 30 days.
-   */
-  async purgeOldLogs(
-    workspaceId: string,
-    olderThanDays: number
-  ): Promise<number> {
+  async purgeOldLogs(workspaceId: string, olderThanDays: number): Promise<number> {
     if (olderThanDays < AuditService.MIN_RETENTION_DAYS) {
       throw new AuditRetentionViolationError(AuditService.MIN_RETENTION_DAYS, olderThanDays);
     }

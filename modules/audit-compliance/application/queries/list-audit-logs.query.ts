@@ -3,9 +3,9 @@ import {
   IQueryHandler,
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { IAuditLogRepository, AuditLogFilter } from '../../domain/repositories/audit-log.repository';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
+import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
+import { AuditService } from '../services/audit.service';
 
 export interface ListAuditLogsFilters {
   userId?: string;
@@ -27,24 +27,19 @@ export class ListAuditLogsHandler implements IQueryHandler<
   ListAuditLogsQuery,
   QueryResult<PaginatedResult<AuditLogDTO>>
 > {
-  constructor(private readonly auditRepository: IAuditLogRepository) {}
+  constructor(private readonly auditService: AuditService) {}
 
   async handle(
     input: ListAuditLogsQuery
   ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
     try {
-      const filter: AuditLogFilter = {
-        workspaceId: input.workspaceId,
-        limit: input.limit ?? 50,
-        offset: input.offset ?? 0,
-        ...input.filters,
-      };
-
-      const result = await this.auditRepository.findByFilter(filter);
-      return QueryResult.success({
-        ...result,
-        items: result.items.map((log) => AuditLog.toDTO(log)),
-      });
+      const result = await this.auditService.listAuditLogs(
+        input.workspaceId,
+        input.filters,
+        input.limit,
+        input.offset
+      );
+      return QueryResult.success(result);
     } catch (error: unknown) {
       return QueryResult.fromError(error);
     }

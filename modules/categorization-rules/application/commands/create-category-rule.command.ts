@@ -1,4 +1,5 @@
 import { CategoryRuleService } from '../services/category-rule.service';
+import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
 import { CategoryId } from '../../../expense-ledger';
@@ -26,13 +27,13 @@ export interface CreateCategoryRuleCommand extends ICommand {
 
 export class CreateCategoryRuleHandler implements ICommandHandler<
   CreateCategoryRuleCommand,
-  CommandResult<{ ruleId: string }>
+  CommandResult<CategoryRuleDTO>
 > {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async handle(
     command: CreateCategoryRuleCommand
-  ): Promise<CommandResult<{ ruleId: string }>> {
+  ): Promise<CommandResult<CategoryRuleDTO>> {
     if (!isValidRuleConditionType(command.conditionType)) {
       throw new InvalidRuleConditionError(
         `Invalid condition type: ${command.conditionType}`
@@ -52,6 +53,6 @@ export class CreateCategoryRuleHandler implements ICommandHandler<
       createdBy: UserId.fromString(command.createdBy),
     });
 
-    return CommandResult.success({ ruleId: rule.id });
+    return CommandResult.success(rule);
   }
 }

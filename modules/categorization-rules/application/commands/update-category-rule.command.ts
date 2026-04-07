@@ -1,4 +1,5 @@
 import { CategoryRuleService } from '../services/category-rule.service';
+import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import { RuleId } from '../../domain/value-objects/rule-id';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
 import { CategoryId } from '../../../expense-ledger';
@@ -27,13 +28,13 @@ export interface UpdateCategoryRuleCommand extends ICommand {
 
 export class UpdateCategoryRuleHandler implements ICommandHandler<
   UpdateCategoryRuleCommand,
-  CommandResult<void>
+  CommandResult<CategoryRuleDTO>
 > {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async handle(
     command: UpdateCategoryRuleCommand
-  ): Promise<CommandResult<void>> {
+  ): Promise<CommandResult<CategoryRuleDTO>> {
     let condition: RuleCondition | undefined;
     if (command.conditionType && command.conditionValue) {
       if (!isValidRuleConditionType(command.conditionType)) {
@@ -47,7 +48,7 @@ export class UpdateCategoryRuleHandler implements ICommandHandler<
       );
     }
 
-    await this.ruleService.updateRule({
+    const rule = await this.ruleService.updateRule({
       ruleId: RuleId.fromString(command.ruleId),
       workspaceId: command.workspaceId,
       userId: command.userId,
@@ -60,6 +61,6 @@ export class UpdateCategoryRuleHandler implements ICommandHandler<
         : undefined,
     });
 
-    return CommandResult.success();
+    return CommandResult.success(rule);
   }
 }

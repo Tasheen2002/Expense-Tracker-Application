@@ -1,4 +1,5 @@
 import { CategoryRuleService } from '../services/category-rule.service';
+import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import { RuleId } from '../../domain/value-objects/rule-id';
 import {
   ICommand,
@@ -14,19 +15,19 @@ export interface ActivateCategoryRuleCommand extends ICommand {
 
 export class ActivateCategoryRuleHandler implements ICommandHandler<
   ActivateCategoryRuleCommand,
-  CommandResult<void>
+  CommandResult<CategoryRuleDTO>
 > {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
   async handle(
     command: ActivateCategoryRuleCommand
-  ): Promise<CommandResult<void>> {
-    await this.ruleService.activateRule(
+  ): Promise<CommandResult<CategoryRuleDTO>> {
+    const rule = await this.ruleService.activateRule(
       RuleId.fromString(command.ruleId),
       command.workspaceId,
       command.userId
     );
 
-    return CommandResult.success();
+    return CommandResult.success(rule);
   }
 }
