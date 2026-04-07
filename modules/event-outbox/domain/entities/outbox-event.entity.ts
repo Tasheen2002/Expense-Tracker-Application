@@ -1,7 +1,7 @@
 import { OutboxEventId } from '../value-objects/outbox-event-id';
 import { AggregateId } from '../value-objects/aggregate-id';
 import { OutboxEventStatus } from '../enums/outbox-event-status.enum';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { InvalidOutboxEventError } from '../errors/outbox-event.errors';
 
 // ============================================================================
@@ -157,18 +157,31 @@ export class OutboxEvent {
     );
   }
 
-  toJSON() {
+  static toDTO(event: OutboxEvent): OutboxEventDTO {
     return {
-      id: this.props.id.getValue(),
-      aggregateType: this.props.aggregateType,
-      aggregateId: this.props.aggregateId.getValue(),
-      eventType: this.props.eventType,
-      payload: this.props.payload,
-      status: this.props.status,
-      createdAt: this.props.createdAt,
-      processedAt: this.props.processedAt,
-      retryCount: this.props.retryCount,
-      error: this.props.error,
+      id: event.props.id.getValue(),
+      aggregateType: event.props.aggregateType,
+      aggregateId: event.props.aggregateId.getValue(),
+      eventType: event.props.eventType,
+      payload: event.props.payload,
+      status: event.props.status,
+      createdAt: event.props.createdAt.toISOString(),
+      processedAt: event.props.processedAt?.toISOString() ?? null,
+      retryCount: event.props.retryCount,
+      error: event.props.error ?? null,
     };
   }
+}
+
+export interface OutboxEventDTO {
+  id: string;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
+  retryCount: number;
+  error: string | null;
 }

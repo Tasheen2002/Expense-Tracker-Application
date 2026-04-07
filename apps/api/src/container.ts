@@ -1874,10 +1874,9 @@ export class Container {
 
     // Command Handlers
     const storeOutboxEventHandler = new StoreOutboxEventHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const processOutboxEventHandler = new ProcessOutboxEventHandler(
-      outboxEventRepository,
       outboxEventService
     );
     const retryOutboxEventHandler = new RetryOutboxEventHandler(
@@ -1892,10 +1891,10 @@ export class Container {
 
     // Query Handlers
     const getPendingEventsHandler = new GetPendingEventsHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const getFailedEventsHandler = new GetFailedEventsHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const getDeadLetterCountHandler = new GetDeadLetterCountHandler(
       outboxEventService

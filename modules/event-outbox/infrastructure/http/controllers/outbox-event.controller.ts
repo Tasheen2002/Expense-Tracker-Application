@@ -126,7 +126,8 @@ export class OutboxEventController {
         reply,
         result,
         'Processed events cleaned up successfully',
-        result.data
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -152,7 +153,7 @@ export class OutboxEventController {
         'Pending events retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((e) => e.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -187,7 +188,7 @@ export class OutboxEventController {
         'Failed events retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((e) => e.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
