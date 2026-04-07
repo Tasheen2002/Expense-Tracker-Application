@@ -1,7 +1,5 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
-import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -22,25 +20,16 @@ export class GetSyncHistoryHandler implements IQueryHandler<
   GetSyncHistoryQuery,
   QueryResult<PaginatedResult<SyncSessionDTO>>
 > {
-  constructor(private readonly sessionRepository: ISyncSessionRepository) {}
+  constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
   async handle(
     query: GetSyncHistoryQuery
   ): Promise<QueryResult<PaginatedResult<SyncSessionDTO>>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const connectionId = BankConnectionId.fromString(query.connectionId);
-
-    const result = await this.sessionRepository.findByConnection(
-      workspaceId,
-      connectionId,
+    const result = await this.transactionSyncService.getSyncHistory(
+      query.workspaceId,
+      query.connectionId,
       query.options
     );
-
-    const dtoResult: PaginatedResult<SyncSessionDTO> = {
-      ...result,
-      items: result.items.map((session) => SyncSession.toDTO(session)),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

@@ -1790,45 +1790,45 @@ export class Container {
     // Command Handlers
     const connectBankHandler = new ConnectBankHandler(transactionSyncService);
     const disconnectBankHandler = new DisconnectBankHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const deleteConnectionHandler = new DeleteConnectionHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const syncTransactionsHandler = new SyncTransactionsHandler(
       transactionSyncService
     );
     const processTransactionHandler = new ProcessTransactionHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
 
     // Query Handlers
     const getBankConnectionsHandler = new GetBankConnectionsHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const getBankConnectionHandler = new GetBankConnectionHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const getSyncHistoryHandler = new GetSyncHistoryHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getSyncSessionHandler = new GetSyncSessionHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getActiveSyncsHandler = new GetActiveSyncsHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getPendingTransactionsHandler = new GetPendingTransactionsHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
     const getBankTransactionHandler = new GetBankTransactionHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
     const getTransactionsByConnectionHandler =
-      new GetTransactionsByConnectionHandler(bankTransactionRepository);
+      new GetTransactionsByConnectionHandler(transactionSyncService);
 
     // Controllers
     const bankConnectionController = new BankConnectionController(

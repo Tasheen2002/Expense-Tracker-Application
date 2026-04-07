@@ -1,7 +1,5 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
-import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -23,26 +21,17 @@ export class GetTransactionsByConnectionHandler implements IQueryHandler<
   QueryResult<PaginatedResult<BankTransactionDTO>>
 > {
   constructor(
-    private readonly transactionRepository: IBankTransactionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(
     query: GetTransactionsByConnectionQuery
   ): Promise<QueryResult<PaginatedResult<BankTransactionDTO>>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const connectionId = BankConnectionId.fromString(query.connectionId);
-
-    const result = await this.transactionRepository.findByConnection(
-      workspaceId,
-      connectionId,
+    const result = await this.transactionSyncService.getTransactionsByConnection(
+      query.workspaceId,
+      query.connectionId,
       query.options
     );
-
-    const dtoResult: PaginatedResult<BankTransactionDTO> = {
-      ...result,
-      items: result.items.map((tx) => BankTransaction.toDTO(tx)),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

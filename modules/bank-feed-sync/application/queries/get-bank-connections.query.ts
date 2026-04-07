@@ -1,15 +1,13 @@
-import { WorkspaceId, UserId } from '../../../identity-workspace';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 import {
   PaginatedResult,
-  PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 
 export interface GetBankConnectionsQuery extends IQuery {
   workspaceId: string;
@@ -23,39 +21,17 @@ export class GetBankConnectionsHandler implements IQueryHandler<
   QueryResult<PaginatedResult<BankConnectionDTO>>
 > {
   constructor(
-    private readonly connectionRepository: IBankConnectionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(
     query: GetBankConnectionsQuery
   ): Promise<QueryResult<PaginatedResult<BankConnectionDTO>>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const options: PaginationOptions = {
-      limit: query.limit,
-      offset: query.offset,
-    };
-
-    let result;
-
-    if (query.userId) {
-      const userId = UserId.fromString(query.userId);
-      result = await this.connectionRepository.findByUser(
-        workspaceId,
-        userId,
-        options
-      );
-    } else {
-      result = await this.connectionRepository.findByWorkspace(
-        workspaceId,
-        options
-      );
-    }
-
-    const dtoResult: PaginatedResult<BankConnectionDTO> = {
-      ...result,
-      items: result.items.map((connection) => BankConnection.toDTO(connection)),
-    };
-
-    return QueryResult.success(dtoResult);
+    const result = await this.transactionSyncService.getConnections(
+      query.workspaceId,
+      query.userId,
+      { limit: query.limit, offset: query.offset }
+    );
+    return QueryResult.success(result);
   }
 }

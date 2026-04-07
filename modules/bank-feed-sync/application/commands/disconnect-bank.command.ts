@@ -1,7 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnectionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import { TransactionSyncService } from '../services/transaction-sync.service';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
@@ -18,29 +15,14 @@ export class DisconnectBankHandler implements ICommandHandler<
   CommandResult<void>
 > {
   constructor(
-    private readonly connectionRepository: IBankConnectionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(command: DisconnectBankCommand): Promise<CommandResult<void>> {
-    try {
-      const workspaceId = WorkspaceId.fromString(command.workspaceId);
-      const connectionId = BankConnectionId.fromString(command.connectionId);
-
-      const connection = await this.connectionRepository.findById(
-        connectionId,
-        workspaceId
-      );
-
-      if (!connection) {
-        throw new BankConnectionNotFoundError(command.connectionId);
-      }
-
-      connection.disconnect();
-      await this.connectionRepository.save(connection);
-
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    await this.transactionSyncService.disconnectBank(
+      command.connectionId,
+      command.workspaceId
+    );
+    return CommandResult.success();
   }
 }

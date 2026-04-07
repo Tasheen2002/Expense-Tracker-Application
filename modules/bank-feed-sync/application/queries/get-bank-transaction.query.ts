@@ -1,8 +1,5 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
-import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
-import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
-import { BankTransactionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -19,24 +16,16 @@ export class GetBankTransactionHandler implements IQueryHandler<
   QueryResult<BankTransactionDTO>
 > {
   constructor(
-    private readonly transactionRepository: IBankTransactionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(
     query: GetBankTransactionQuery
   ): Promise<QueryResult<BankTransactionDTO>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const transactionId = BankTransactionId.fromString(query.transactionId);
-
-    const transaction = await this.transactionRepository.findById(
-      transactionId,
-      workspaceId
+    const dto = await this.transactionSyncService.getTransaction(
+      query.transactionId,
+      query.workspaceId
     );
-
-    if (!transaction) {
-      throw new BankTransactionNotFoundError(query.transactionId);
-    }
-
-    return QueryResult.success(BankTransaction.toDTO(transaction));
+    return QueryResult.success(dto);
   }
 }

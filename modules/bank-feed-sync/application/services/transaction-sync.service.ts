@@ -1,17 +1,29 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
+import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
 import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
-import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
+import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
+import { TransactionStatus } from '../../domain/enums/transaction-status.enum';
+import { SyncStatus } from '../../domain/enums/sync-status.enum';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import {
   BankConnectionNotFoundError,
   BankConnectionAlreadyExistsError,
+  BankTransactionNotFoundError,
+  SyncSessionNotFoundError,
   SyncAlreadyInProgressError,
   SyncTooFrequentError,
+  MissingExpenseIdError,
+  InvalidTransactionActionError,
 } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { ConnectBankCommand } from '../commands/connect-bank.command';
 import { SyncTransactionsCommand } from '../commands/sync-transactions.command';
 import {
@@ -217,5 +229,194 @@ export class TransactionSyncService {
 
       throw error;
     }
+  }
+
+  // ==========================================
+  // Connection read & mutation methods
+  // ==========================================
+
+  async getConnection(connectionId: string, workspaceId: string): Promise<BankConnectionDTO> {
+    const connection = await this.connectionRepository.findById(
+      BankConnectionId.fromString(connectionId),
+      WorkspaceId.fromString(workspaceId)
+    );
+    if (!connection) {
+      throw new BankConnectionNotFoundError(connectionId);
+    }
+    return BankConnection.toDTO(connection);
+  }
+
+  async getConnections(
+    workspaceId: string,
+    userId?: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<BankConnectionDTO>> {
+    const wsId = WorkspaceId.fromString(workspaceId);
+    let result;
+    if (userId) {
+      result = await this.connectionRepository.findByUser(wsId, UserId.fromString(userId), options);
+    } else {
+      result = await this.connectionRepository.findByWorkspace(wsId, options);
+    }
+    return { ...result, items: result.items.map((c) => BankConnection.toDTO(c)) };
+  }
+
+  async disconnectBank(connectionId: string, workspaceId: string): Promise<void> {
+    const connection = await this.connectionRepository.findById(
+      BankConnectionId.fromString(connectionId),
+      WorkspaceId.fromString(workspaceId)
+    );
+    if (!connection) {
+      throw new BankConnectionNotFoundError(connectionId);
+    }
+    connection.disconnect();
+    await this.connectionRepository.save(connection);
+  }
+
+  async deleteConnection(connectionId: string, workspaceId: string): Promise<void> {
+    const connId = BankConnectionId.fromString(connectionId);
+    const wsId = WorkspaceId.fromString(workspaceId);
+    const connection = await this.connectionRepository.findById(connId, wsId);
+    if (!connection) {
+      throw new BankConnectionNotFoundError(connectionId);
+    }
+    connection.markAsDeleted();
+    await this.connectionRepository.delete(connId, wsId);
+  }
+
+  async updateConnectionToken(
+    connectionId: string,
+    workspaceId: string,
+    accessToken: string,
+    tokenExpiresAt?: Date
+  ): Promise<void> {
+    const connection = await this.connectionRepository.findById(
+      BankConnectionId.fromString(connectionId),
+      WorkspaceId.fromString(workspaceId)
+    );
+    if (!connection) {
+      throw new BankConnectionNotFoundError(connectionId);
+    }
+    connection.updateAccessToken(accessToken, tokenExpiresAt);
+    await this.connectionRepository.save(connection);
+  }
+
+  // ==========================================
+  // Transaction read & mutation methods
+  // ==========================================
+
+  async getTransaction(transactionId: string, workspaceId: string): Promise<BankTransactionDTO> {
+    const transaction = await this.transactionRepository.findById(
+      BankTransactionId.fromString(transactionId),
+      WorkspaceId.fromString(workspaceId)
+    );
+    if (!transaction) {
+      throw new BankTransactionNotFoundError(transactionId);
+    }
+    return BankTransaction.toDTO(transaction);
+  }
+
+  async getTransactionsByConnection(
+    workspaceId: string,
+    connectionId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<BankTransactionDTO>> {
+    const result = await this.transactionRepository.findByConnection(
+      WorkspaceId.fromString(workspaceId),
+      BankConnectionId.fromString(connectionId),
+      options
+    );
+    return { ...result, items: result.items.map((tx) => BankTransaction.toDTO(tx)) };
+  }
+
+  async getPendingTransactions(
+    workspaceId: string,
+    connectionId?: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<BankTransactionDTO>> {
+    const wsId = WorkspaceId.fromString(workspaceId);
+    let result: PaginatedResult<BankTransaction>;
+    if (connectionId) {
+      result = await this.transactionRepository.findByConnectionAndStatus(
+        wsId,
+        BankConnectionId.fromString(connectionId),
+        TransactionStatus.PENDING,
+        options
+      );
+    } else {
+      result = await this.transactionRepository.findByStatus(wsId, TransactionStatus.PENDING, options);
+    }
+    return { ...result, items: result.items.map((tx) => BankTransaction.toDTO(tx)) };
+  }
+
+  async processTransaction(params: {
+    workspaceId: string;
+    transactionId: string;
+    action: 'import' | 'match' | 'ignore';
+    expenseId?: string;
+  }): Promise<void> {
+    const transaction = await this.transactionRepository.findById(
+      BankTransactionId.fromString(params.transactionId),
+      WorkspaceId.fromString(params.workspaceId)
+    );
+    if (!transaction) {
+      throw new BankTransactionNotFoundError(params.transactionId);
+    }
+    switch (params.action) {
+      case 'import':
+        if (!params.expenseId) throw new MissingExpenseIdError('import');
+        transaction.markAsImported(params.expenseId);
+        break;
+      case 'match':
+        if (!params.expenseId) throw new MissingExpenseIdError('match');
+        transaction.markAsMatched(params.expenseId);
+        break;
+      case 'ignore':
+        transaction.markAsIgnored();
+        break;
+      default:
+        throw new InvalidTransactionActionError(params.action);
+    }
+    await this.transactionRepository.save(transaction);
+  }
+
+  // ==========================================
+  // Sync session read methods
+  // ==========================================
+
+  async getSyncSession(sessionId: string, workspaceId: string): Promise<SyncSessionDTO> {
+    const session = await this.sessionRepository.findById(
+      SyncSessionId.fromString(sessionId),
+      WorkspaceId.fromString(workspaceId)
+    );
+    if (!session) {
+      throw new SyncSessionNotFoundError(sessionId);
+    }
+    return SyncSession.toDTO(session);
+  }
+
+  async getSyncHistory(
+    workspaceId: string,
+    connectionId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<SyncSessionDTO>> {
+    const result = await this.sessionRepository.findByConnection(
+      WorkspaceId.fromString(workspaceId),
+      BankConnectionId.fromString(connectionId),
+      options
+    );
+    return { ...result, items: result.items.map((s) => SyncSession.toDTO(s)) };
+  }
+
+  async getActiveSyncs(
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<SyncSessionDTO>> {
+    const result = await this.sessionRepository.findByStatus(
+      WorkspaceId.fromString(workspaceId),
+      SyncStatus.IN_PROGRESS,
+      options
+    );
+    return { ...result, items: result.items.map((s) => SyncSession.toDTO(s)) };
   }
 }
