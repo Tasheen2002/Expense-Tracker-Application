@@ -88,7 +88,7 @@ export class ReceiptController {
         reply,
         result,
         'Receipt retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -119,7 +119,7 @@ export class ReceiptController {
         result,
         'Receipts retrieved successfully',
         {
-          items: paginatedData?.items.map((r) => r.toJSON()) ?? [],
+          items: paginatedData?.items ?? [],
           pagination: {
             total: paginatedData?.total ?? 0,
             limit: paginatedData?.limit ?? 0,
@@ -153,7 +153,7 @@ export class ReceiptController {
         result,
         'Receipts retrieved successfully',
         {
-          receipts: paginatedData?.items.map((r) => r.toJSON()) ?? [],
+          receipts: paginatedData?.items ?? [],
           pagination: {
             total: paginatedData?.total ?? 0,
             limit: paginatedData?.limit ?? 0,
@@ -188,7 +188,8 @@ export class ReceiptController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Receipt linked to expense successfully'
+        'Receipt linked to expense successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -241,7 +242,8 @@ export class ReceiptController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Receipt processed successfully'
+        'Receipt processed successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -266,7 +268,8 @@ export class ReceiptController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Receipt verified successfully'
+        'Receipt verified successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -293,7 +296,8 @@ export class ReceiptController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Receipt rejected successfully'
+        'Receipt rejected successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -379,7 +383,8 @@ export class ReceiptController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Metadata updated successfully'
+        'Metadata updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -403,7 +408,7 @@ export class ReceiptController {
         reply,
         result,
         'Metadata retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

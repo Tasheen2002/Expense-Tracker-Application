@@ -13,7 +13,7 @@ import {
   MIN_OCR_CONFIDENCE,
   MAX_OCR_CONFIDENCE,
 } from '../constants/receipt.constants';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -117,6 +117,34 @@ export interface ReceiptProps {
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
+}
+
+export interface ReceiptDTO {
+  receiptId: string;
+  workspaceId: string;
+  expenseId?: string;
+  userId: string;
+  fileName: string;
+  originalName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  fileHash?: string;
+  receiptType: string;
+  status: string;
+  storageProvider: string;
+  storageBucket?: string;
+  storageKey?: string;
+  thumbnailPath?: string;
+  ocrText?: string;
+  ocrConfidence?: string;
+  processedAt?: string;
+  failureReason?: string;
+  isLinked: boolean;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface CreateReceiptData {
@@ -421,35 +449,35 @@ export class Receipt extends AggregateRoot {
     );
   }
 
-  toJSON() {
-    const fileInfo = this.getFileInfo();
-    const storageLocation = this.getStorageLocation();
+  static toDTO(receipt: Receipt): ReceiptDTO {
+    const fileInfo = receipt.getFileInfo();
+    const storageLocation = receipt.getStorageLocation();
     return {
-      receiptId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      expenseId: this.getExpenseId(),
-      userId: this.getUserId(),
+      receiptId: receipt.getId().getValue(),
+      workspaceId: receipt.getWorkspaceId(),
+      expenseId: receipt.getExpenseId(),
+      userId: receipt.getUserId(),
       fileName: fileInfo.getFileName(),
       originalName: fileInfo.getOriginalName(),
       filePath: fileInfo.getFilePath(),
       fileSize: fileInfo.getFileSize(),
       mimeType: fileInfo.getMimeType(),
       fileHash: fileInfo.getFileHash(),
-      receiptType: this.getReceiptType(),
-      status: this.getStatus(),
+      receiptType: receipt.getReceiptType(),
+      status: receipt.getStatus(),
       storageProvider: storageLocation.getProvider(),
       storageBucket: storageLocation.getBucket(),
       storageKey: storageLocation.getKey(),
-      thumbnailPath: this.getThumbnailPath(),
-      ocrText: this.getOcrText(),
-      ocrConfidence: this.getOcrConfidence()?.toString(),
-      processedAt: this.getProcessedAt()?.toISOString(),
-      failureReason: this.getFailureReason(),
-      isLinked: this.isLinkedToExpense(),
-      isDeleted: this.isDeleted(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
-      deletedAt: this.getDeletedAt()?.toISOString(),
+      thumbnailPath: receipt.getThumbnailPath(),
+      ocrText: receipt.getOcrText(),
+      ocrConfidence: receipt.getOcrConfidence()?.toString(),
+      processedAt: receipt.getProcessedAt()?.toISOString(),
+      failureReason: receipt.getFailureReason(),
+      isLinked: receipt.isLinkedToExpense(),
+      isDeleted: receipt.isDeleted(),
+      createdAt: receipt.getCreatedAt().toISOString(),
+      updatedAt: receipt.getUpdatedAt().toISOString(),
+      deletedAt: receipt.getDeletedAt()?.toISOString(),
     };
   }
 

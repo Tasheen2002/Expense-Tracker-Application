@@ -1,25 +1,33 @@
-import { TagService } from "../services/tag.service";
-import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definition.entity";
-
+import { TagService } from '../services/tag.service';
+import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-definition.entity';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../packages/core/src/application/cqrs';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ListTagsDto {
+export interface ListTagsQuery extends IQuery {
   workspaceId: string;
   options?: PaginationOptions;
 }
 
-export class ListTagsHandler {
+export class ListTagsHandler implements IQueryHandler<
+  ListTagsQuery,
+  QueryResult<PaginatedResult<ReceiptTagDefinitionDTO>>
+> {
   constructor(private readonly tagService: TagService) {}
 
   async handle(
-    dto: ListTagsDto,
-  ): Promise<PaginatedResult<ReceiptTagDefinition>> {
-    return await this.tagService.getTagsByWorkspace(
-      dto.workspaceId,
-      dto.options,
+    query: ListTagsQuery,
+  ): Promise<QueryResult<PaginatedResult<ReceiptTagDefinitionDTO>>> {
+    const result = await this.tagService.getTagsByWorkspace(
+      query.workspaceId,
+      query.options,
     );
+    return QueryResult.success(result);
   }
 }

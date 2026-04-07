@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -14,16 +14,16 @@ export interface VerifyReceiptCommand extends ICommand {
 
 export class VerifyReceiptHandler implements ICommandHandler<
   VerifyReceiptCommand,
-  CommandResult<void>
+  CommandResult<ReceiptDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(command: VerifyReceiptCommand): Promise<CommandResult<void>> {
-    await this.receiptService.verifyReceipt(
+  async handle(command: VerifyReceiptCommand): Promise<CommandResult<ReceiptDTO>> {
+    const receiptDTO = await this.receiptService.verifyReceipt(
       command.receiptId,
       command.workspaceId,
       command.userId
     );
-    return CommandResult.success();
+    return CommandResult.success(receiptDTO);
   }
 }

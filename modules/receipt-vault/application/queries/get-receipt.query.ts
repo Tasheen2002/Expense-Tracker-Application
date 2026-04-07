@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import { ReceiptNotFoundError } from '../../domain/errors/receipt.errors';
 import {
   IQuery,
@@ -14,18 +14,18 @@ export interface GetReceiptQuery extends IQuery {
 
 export class GetReceiptHandler implements IQueryHandler<
   GetReceiptQuery,
-  QueryResult<Receipt>
+  QueryResult<ReceiptDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(query: GetReceiptQuery): Promise<QueryResult<Receipt>> {
-    const receipt = await this.receiptService.getReceipt(
+  async handle(query: GetReceiptQuery): Promise<QueryResult<ReceiptDTO>> {
+    const receiptDTO = await this.receiptService.getReceipt(
       query.receiptId,
       query.workspaceId
     );
-    if (!receipt) {
+    if (!receiptDTO) {
       throw new ReceiptNotFoundError(query.receiptId, query.workspaceId);
     }
-    return QueryResult.success(receipt);
+    return QueryResult.success(receiptDTO);
   }
 }

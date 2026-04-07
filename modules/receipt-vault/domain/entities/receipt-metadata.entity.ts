@@ -36,6 +36,31 @@ export interface ReceiptMetadataProps {
   updatedAt: Date;
 }
 
+export interface ReceiptMetadataDTO {
+  metadataId: string;
+  receiptId: string;
+  merchantName?: string;
+  merchantAddress?: string;
+  merchantPhone?: string;
+  merchantTaxId?: string;
+  transactionDate?: string;
+  transactionTime?: string;
+  subtotal?: string;
+  taxAmount?: string;
+  tipAmount?: string;
+  totalAmount?: string;
+  currency?: string;
+  paymentMethod?: string;
+  lastFourDigits?: string;
+  invoiceNumber?: string;
+  poNumber?: string;
+  lineItems?: LineItem[];
+  notes?: string;
+  customFields?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateMetadataData {
   receiptId: string;
   merchantName?: string;
@@ -350,30 +375,30 @@ export class ReceiptMetadata extends AggregateRoot {
     return total;
   }
 
-  toJSON() {
+  static toDTO(metadata: ReceiptMetadata): ReceiptMetadataDTO {
     return {
-      metadataId: this.getId().getValue(),
-      receiptId: this.getReceiptId().getValue(),
-      merchantName: this.getMerchantName(),
-      merchantAddress: this.getMerchantAddress(),
-      merchantPhone: this.getMerchantPhone(),
-      merchantTaxId: this.getMerchantTaxId(),
-      transactionDate: this.getTransactionDate()?.toISOString(),
-      transactionTime: this.getTransactionTime(),
-      subtotal: this.getSubtotal()?.toString(),
-      taxAmount: this.getTaxAmount()?.toString(),
-      tipAmount: this.getTipAmount()?.toString(),
-      totalAmount: this.getTotalAmount()?.toString(),
-      currency: this.getCurrency(),
-      paymentMethod: this.getPaymentMethod(),
-      lastFourDigits: this.getLastFourDigits(),
-      invoiceNumber: this.getInvoiceNumber(),
-      poNumber: this.getPoNumber(),
-      lineItems: this.getLineItems(),
-      notes: this.getNotes(),
-      customFields: this.getCustomFields(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      metadataId: metadata.getId().getValue(),
+      receiptId: metadata.getReceiptId().getValue(),
+      merchantName: metadata.getMerchantName(),
+      merchantAddress: metadata.getMerchantAddress(),
+      merchantPhone: metadata.getMerchantPhone(),
+      merchantTaxId: metadata.getMerchantTaxId(),
+      transactionDate: metadata.getTransactionDate()?.toISOString(),
+      transactionTime: metadata.getTransactionTime(),
+      subtotal: metadata.getSubtotal()?.toString(),
+      taxAmount: metadata.getTaxAmount()?.toString(),
+      tipAmount: metadata.getTipAmount()?.toString(),
+      totalAmount: metadata.getTotalAmount()?.toString(),
+      currency: metadata.getCurrency(),
+      paymentMethod: metadata.getPaymentMethod(),
+      lastFourDigits: metadata.getLastFourDigits(),
+      invoiceNumber: metadata.getInvoiceNumber(),
+      poNumber: metadata.getPoNumber(),
+      lineItems: metadata.getLineItems(),
+      notes: metadata.getNotes(),
+      customFields: metadata.getCustomFields(),
+      createdAt: metadata.getCreatedAt().toISOString(),
+      updatedAt: metadata.getUpdatedAt().toISOString(),
     };
   }
 }

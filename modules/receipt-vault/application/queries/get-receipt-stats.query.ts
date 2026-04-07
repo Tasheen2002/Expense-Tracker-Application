@@ -27,13 +27,9 @@ export class GetReceiptStatsHandler implements IQueryHandler<
   async handle(
     query: GetReceiptStatsQuery
   ): Promise<QueryResult<ReceiptStats>> {
-    try {
-      const stats = await this.receiptService.getReceiptStats(
-        query.workspaceId
-      );
-      return QueryResult.success(stats);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const stats = await this.receiptService.getReceiptStats(
+      query.workspaceId
+    );
+    return QueryResult.success(stats);
   }
 }

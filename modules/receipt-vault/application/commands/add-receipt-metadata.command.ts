@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import { ReceiptMetadataDTO } from '../../domain/entities/receipt-metadata.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -30,14 +30,14 @@ export interface AddReceiptMetadataCommand extends ICommand {
 
 export class AddReceiptMetadataHandler implements ICommandHandler<
   AddReceiptMetadataCommand,
-  CommandResult<{ metadataId: string }>
+  CommandResult<ReceiptMetadataDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
   async handle(
     command: AddReceiptMetadataCommand
-  ): Promise<CommandResult<{ metadataId: string }>> {
-    const metadata = await this.receiptService.addMetadata(command);
-    return CommandResult.success({ metadataId: metadata.getId().getValue() });
+  ): Promise<CommandResult<ReceiptMetadataDTO>> {
+    const metadataDTO = await this.receiptService.addMetadata(command);
+    return CommandResult.success(metadataDTO);
   }
 }

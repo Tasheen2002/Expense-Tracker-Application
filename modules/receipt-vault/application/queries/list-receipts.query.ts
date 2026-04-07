@@ -1,9 +1,15 @@
-import { ReceiptService } from "../services/receipt.service";
-import { Receipt } from "../../domain/entities/receipt.entity";
-import { ReceiptStatus } from "../../domain/enums/receipt-status";
-import { ReceiptType } from "../../domain/enums/receipt-type";
+import { ReceiptService } from '../services/receipt.service';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
+import { ReceiptStatus } from '../../domain/enums/receipt-status';
+import { ReceiptType } from '../../domain/enums/receipt-type';
+import {
+  IQuery,
+  IQueryHandler,
+  QueryResult,
+} from '../../../../packages/core/src/application/cqrs';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ListReceiptsDto {
+export interface ListReceiptsQuery extends IQuery {
   workspaceId: string;
   userId?: string;
   expenseId?: string;
@@ -17,28 +23,30 @@ export interface ListReceiptsDto {
   offset?: number;
 }
 
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-
-export class ListReceiptsHandler {
+export class ListReceiptsHandler implements IQueryHandler<
+  ListReceiptsQuery,
+  QueryResult<PaginatedResult<ReceiptDTO>>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: ListReceiptsDto): Promise<PaginatedResult<Receipt>> {
-    return await this.receiptService.filterReceipts(
+  async handle(query: ListReceiptsQuery): Promise<QueryResult<PaginatedResult<ReceiptDTO>>> {
+    const result = await this.receiptService.filterReceipts(
       {
-        workspaceId: dto.workspaceId,
-        userId: dto.userId,
-        expenseId: dto.expenseId,
-        status: dto.status,
-        receiptType: dto.receiptType,
-        isLinked: dto.isLinked,
-        isDeleted: dto.isDeleted,
-        fromDate: dto.fromDate,
-        toDate: dto.toDate,
+        workspaceId: query.workspaceId,
+        userId: query.userId,
+        expenseId: query.expenseId,
+        status: query.status,
+        receiptType: query.receiptType,
+        isLinked: query.isLinked,
+        isDeleted: query.isDeleted,
+        fromDate: query.fromDate,
+        toDate: query.toDate,
       },
       {
-        limit: dto.limit,
-        offset: dto.offset,
+        limit: query.limit,
+        offset: query.offset,
       },
     );
+    return QueryResult.success(result);
   }
 }

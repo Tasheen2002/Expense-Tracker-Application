@@ -17,6 +17,15 @@ export interface ReceiptTagDefinitionProps {
   createdAt: Date;
 }
 
+export interface ReceiptTagDefinitionDTO {
+  tagId: string;
+  workspaceId: string;
+  name: string;
+  color?: string;
+  description?: string;
+  createdAt: string;
+}
+
 export interface CreateTagData {
   workspaceId: string;
   name: string;
@@ -148,14 +157,14 @@ export class ReceiptTagDefinition extends AggregateRoot {
     this.props.description = description;
   }
 
-  toJSON() {
+  static toDTO(tag: ReceiptTagDefinition): ReceiptTagDefinitionDTO {
     return {
-      tagId: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      name: this.getName(),
-      color: this.getColor(),
-      description: this.getDescription(),
-      createdAt: this.getCreatedAt().toISOString(),
+      tagId: tag.getId().getValue(),
+      workspaceId: tag.getWorkspaceId(),
+      name: tag.getName(),
+      color: tag.getColor(),
+      description: tag.getDescription(),
+      createdAt: tag.getCreatedAt().toISOString(),
     };
   }
 }
