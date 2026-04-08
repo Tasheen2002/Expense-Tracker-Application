@@ -1,4 +1,22 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+
+vi.mock(
+  '../../../apps/api/src/shared/middleware/rate-limiter.middleware',
+  () => ({
+    createRateLimiter: () => async () => {},
+    RateLimitPresets: {
+      auth: { windowMs: 15 * 60 * 1000, maxRequests: 100 },
+      api: { windowMs: 60 * 1000, maxRequests: 100 },
+      readOperations: { windowMs: 60 * 1000, maxRequests: 300 },
+      writeOperations: { windowMs: 60 * 1000, maxRequests: 300 },
+      exports: { windowMs: 60 * 60 * 1000, maxRequests: 10 },
+    },
+    defaultKeyGenerator: () => 'test-user',
+    endpointKeyGenerator: () => 'test-endpoint',
+    userKeyGenerator: () => 'test-user',
+  })
+);
+
 import { createServer } from '../../../apps/api/src/server';
 import { FastifyInstance } from 'fastify';
 
@@ -6,6 +24,7 @@ describe('Identity-Workspace Module - Authentication', () => {
   let server: FastifyInstance;
   let authToken: string;
   let userId: string;
+  const testEmail = `testuser-${Date.now()}@example.com`;
 
   beforeAll(async () => {
     server = await createServer();
@@ -14,7 +33,7 @@ describe('Identity-Workspace Module - Authentication', () => {
   afterAll(async () => {
     // Clean up test data
     await (server as any).prisma.$executeRawUnsafe(
-      `DELETE FROM identity_workspace.user_account WHERE email = 'testuser@example.com'`
+      `DELETE FROM identity_workspace.user_account WHERE email = '${testEmail}'`
     );
     await server.close();
   });
@@ -25,7 +44,7 @@ describe('Identity-Workspace Module - Authentication', () => {
         method: 'POST',
         url: '/api/v1/auth/register',
         payload: {
-          email: 'testuser@example.com',
+          email: testEmail,
           password: 'password123',
           fullName: 'Test User',
         },
@@ -45,7 +64,7 @@ describe('Identity-Workspace Module - Authentication', () => {
         method: 'POST',
         url: '/api/v1/auth/register',
         payload: {
-          email: 'testuser@example.com',
+          email: testEmail,
           password: 'password123',
           fullName: 'Test User Duplicate',
         },
@@ -113,7 +132,7 @@ describe('Identity-Workspace Module - Authentication', () => {
         method: 'POST',
         url: '/api/v1/auth/login',
         payload: {
-          email: 'testuser@example.com',
+          email: testEmail,
           password: 'password123',
         },
       });
@@ -124,7 +143,7 @@ describe('Identity-Workspace Module - Authentication', () => {
       expect(body.data).toHaveProperty('user');
       expect(body.data).toHaveProperty('token');
       expect(body.data.user).toHaveProperty('userId', userId);
-      expect(body.data.user).toHaveProperty('email', 'testuser@example.com');
+      expect(body.data.user).toHaveProperty('email', testEmail);
       expect(body.message).toBe('Login successful');
 
       authToken = body.data.token;
@@ -135,7 +154,7 @@ describe('Identity-Workspace Module - Authentication', () => {
         method: 'POST',
         url: '/api/v1/auth/login',
         payload: {
-          email: 'testuser@example.com',
+          email: testEmail,
           password: 'wrongpassword',
         },
       });
@@ -204,7 +223,7 @@ describe('Identity-Workspace Module - Authentication', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.data).toHaveProperty('userId', userId);
-      expect(body.data).toHaveProperty('email', 'testuser@example.com');
+      expect(body.data).toHaveProperty('email', testEmail);
     });
 
     it('should fail to get current user without token', async () => {
