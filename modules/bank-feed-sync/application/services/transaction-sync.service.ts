@@ -24,8 +24,6 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { ConnectBankCommand } from '../commands/connect-bank.command';
-import { SyncTransactionsCommand } from '../commands/sync-transactions.command';
 import {
   MIN_SYNC_INTERVAL_MINUTES,
   DEFAULT_LOOKBACK_DAYS,
@@ -59,7 +57,19 @@ export class TransactionSyncService {
     private readonly bankAPIClient: IBankAPIClient
   ) {}
 
-  async connectBank(command: ConnectBankCommand): Promise<BankConnectionDTO> {
+  async connectBank(command: {
+    workspaceId: string;
+    userId: string;
+    institutionId: string;
+    institutionName: string;
+    accountId: string;
+    accountName: string;
+    accountType: string;
+    currency: string;
+    accessToken: string;
+    accountMask?: string;
+    tokenExpiresAt?: Date;
+  }): Promise<BankConnectionDTO> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const userId = UserId.fromString(command.userId);
 
@@ -97,7 +107,12 @@ export class TransactionSyncService {
   }
 
   async syncTransactions(
-    command: SyncTransactionsCommand
+    command: {
+      workspaceId: string;
+      connectionId: string;
+      fromDate?: Date;
+      toDate?: Date;
+    }
   ): Promise<SyncSessionDTO> {
     const workspaceId = WorkspaceId.fromString(command.workspaceId);
     const connectionId = BankConnectionId.fromString(command.connectionId);

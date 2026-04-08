@@ -37,7 +37,7 @@ export class TransactionSyncController {
         reply,
         result,
         'Sync initiated successfully',
-        result.data ? { sessionId: result.data } : undefined,
+        result.data ? { sessionId: result.data.id } : undefined,
         202
       );
     } catch (error) {

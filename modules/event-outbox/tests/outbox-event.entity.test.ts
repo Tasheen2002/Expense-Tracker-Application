@@ -2,20 +2,21 @@ import { describe, it, expect } from "vitest";
 import { OutboxEvent } from "../domain/entities/outbox-event.entity";
 import { OutboxEventStatus } from "../domain/enums/outbox-event-status.enum";
 import { OutboxEventId } from "../domain/value-objects/outbox-event-id";
+import { AggregateId } from "../domain/value-objects/aggregate-id";
 
 describe("OutboxEvent Entity", () => {
   describe("create", () => {
     it("should create a new outbox event with PENDING status", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
       });
 
       expect(event.status).toBe(OutboxEventStatus.PENDING);
       expect(event.aggregateType).toBe("Expense");
-      expect(event.aggregateId).toBe("123");
+      expect(event.aggregateId.getValue()).toBe("123e4567-e89b-12d3-a456-426614174000");
       expect(event.eventType).toBe("ExpenseCreated");
       expect(event.payload).toEqual({ amount: 100 });
       expect(event.retryCount).toBe(0);
@@ -26,14 +27,14 @@ describe("OutboxEvent Entity", () => {
     it("should generate unique IDs for each event", () => {
       const event1 = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
 
       const event2 = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -46,7 +47,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status from PENDING to PROCESSING", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -58,7 +59,7 @@ describe("OutboxEvent Entity", () => {
     it("should throw error if event is already PROCESSED", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -76,7 +77,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status to PROCESSED and set processedAt", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -94,7 +95,7 @@ describe("OutboxEvent Entity", () => {
     it("should change status to FAILED and increment retry count", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -110,7 +111,7 @@ describe("OutboxEvent Entity", () => {
     it("should increment retry count on multiple failures", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -127,7 +128,7 @@ describe("OutboxEvent Entity", () => {
     it("should reset FAILED event to PENDING", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -141,7 +142,7 @@ describe("OutboxEvent Entity", () => {
     it("should throw error if trying to reset PROCESSED event", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -159,7 +160,7 @@ describe("OutboxEvent Entity", () => {
     it("should return true if retry count is below max retries", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -171,7 +172,7 @@ describe("OutboxEvent Entity", () => {
     it("should return false if retry count exceeds max retries", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -186,7 +187,7 @@ describe("OutboxEvent Entity", () => {
     it("should return false if status is not FAILED", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: {},
       });
@@ -195,27 +196,25 @@ describe("OutboxEvent Entity", () => {
     });
   });
 
-  describe("toJSON", () => {
-    it("should serialize event to JSON", () => {
+  describe("toDTO", () => {
+    it("should serialize event to DTO", () => {
       const event = OutboxEvent.create({
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: "123e4567-e89b-12d3-a456-426614174000",
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
       });
 
-      const json = event.toJSON();
+      const dto = OutboxEvent.toDTO(event);
 
-      expect(json).toMatchObject({
-        aggregateType: "Expense",
-        aggregateId: "123",
-        eventType: "ExpenseCreated",
-        payload: { amount: 100 },
-        status: OutboxEventStatus.PENDING,
-        retryCount: 0,
-      });
-      expect(json.id).toBeDefined();
-      expect(json.createdAt).toBeInstanceOf(Date);
+      expect(dto.aggregateType).toBe("Expense");
+      expect(dto.aggregateId).toBe("123e4567-e89b-12d3-a456-426614174000");
+      expect(dto.eventType).toBe("ExpenseCreated");
+      expect(dto.payload).toEqual({ amount: 100 });
+      expect(dto.status).toBe(OutboxEventStatus.PENDING);
+      expect(dto.retryCount).toBe(0);
+      expect(dto.id).toBeDefined();
+      expect(typeof dto.createdAt).toBe("string");
     });
   });
 
@@ -227,7 +226,7 @@ describe("OutboxEvent Entity", () => {
       const event = OutboxEvent.reconstitute({
         id,
         aggregateType: "Expense",
-        aggregateId: "123",
+        aggregateId: AggregateId.fromString("123e4567-e89b-12d3-a456-426614174000"),
         eventType: "ExpenseCreated",
         payload: { amount: 100 },
         status: OutboxEventStatus.PROCESSED,

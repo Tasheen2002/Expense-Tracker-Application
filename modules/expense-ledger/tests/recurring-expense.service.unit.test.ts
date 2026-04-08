@@ -44,7 +44,7 @@ describe("RecurringExpenseService", () => {
 
     const result = await service.createRecurringExpense(data);
 
-    expect(result).toBeInstanceOf(RecurringExpense);
+    expect(result).toBeDefined();
     expect(result.frequency).toBe(RecurrenceFrequency.MONTHLY);
     expect(mockRecurringRepo.save).toHaveBeenCalledTimes(1);
   });

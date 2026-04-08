@@ -60,8 +60,8 @@ describe('AuditService', () => {
       const result = await service.createAuditLog(data);
 
       expect(mockRepo.save).toHaveBeenCalledTimes(1);
-      expect(result).toBeInstanceOf(AuditLog);
-      expect(result.action.getValue()).toBe('EXPENSE_CREATED');
+      expect(result).toBeDefined();
+      expect(result.action).toBe('EXPENSE_CREATED');
     });
 
     it('should pass ipAddress and userAgent when provided', async () => {

@@ -29,14 +29,14 @@ describe('SupplierService', () => {
     it('should create and save a new supplier', async () => {
       vi.mocked(mockSupplierRepository.existsByName).mockResolvedValue(false);
 
-      const supplier = await service.createSupplier({
+      const supplierDTO = await service.createSupplier({
         workspaceId: 'workspace-123',
         name: 'Acme Corp',
       });
 
-      expect(supplier).toBeDefined();
-      expect(supplier.name).toBe('Acme Corp');
-      expect(mockSupplierRepository.save).toHaveBeenCalledWith(supplier);
+      expect(supplierDTO).toBeDefined();
+      expect(supplierDTO.name).toBe('Acme Corp');
+      expect(mockSupplierRepository.save).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error for duplicate name', async () => {
@@ -89,17 +89,20 @@ describe('SupplierService', () => {
 
   describe('deleteSupplier', () => {
     it('should delete existing supplier', async () => {
-      const supplierId = randomUUID();
-      vi.mocked(mockSupplierRepository.exists).mockResolvedValue(true);
+      const existingSupplier = Supplier.create({
+        workspaceId: 'workspace-123',
+        name: 'To Delete',
+      });
+      vi.mocked(mockSupplierRepository.findById).mockResolvedValue(existingSupplier);
 
-      await service.deleteSupplier(supplierId, 'workspace-123');
+      await service.deleteSupplier(existingSupplier.id.getValue(), 'workspace-123');
 
       expect(mockSupplierRepository.delete).toHaveBeenCalled();
     });
 
     it('should throw error when supplier not found', async () => {
       const supplierId = randomUUID();
-      vi.mocked(mockSupplierRepository.exists).mockResolvedValue(false);
+      vi.mocked(mockSupplierRepository.findById).mockResolvedValue(null);
 
       await expect(
         service.deleteSupplier(supplierId, 'workspace-123')

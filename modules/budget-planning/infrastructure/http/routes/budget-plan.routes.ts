@@ -79,12 +79,7 @@ export async function budgetPlanningRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  budgetPlanId: { type: 'string', format: 'uuid' },
-                },
-              },
+              data: budgetPlanResponseSchema,
             },
           },
         },

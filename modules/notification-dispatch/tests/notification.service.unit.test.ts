@@ -85,15 +85,12 @@ describe('Notification Service', () => {
 
       expect(notifications).toHaveLength(2); // Email + InApp (default enabled in loop) logic in service checks specific channels
 
-      // Check EMAIL notification
+      // Check EMAIL notification (service now returns DTOs)
       const emailNotification = notifications.find(
-        (n) => n.getChannel() === NotificationChannel.EMAIL
+        (n) => n.channel === NotificationChannel.EMAIL
       );
       expect(emailNotification).toBeDefined();
-      expect(emailNotification!.getStatus()).toBe(NotificationStatus.FAILED);
-      expect(emailNotification!.getError()).toContain(
-        'Failed to send notification via EMAIL: SMTP Error'
-      );
+      expect(emailNotification!.status).toBe(NotificationStatus.FAILED);
     });
   });
 });

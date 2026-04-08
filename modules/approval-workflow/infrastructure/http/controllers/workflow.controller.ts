@@ -48,7 +48,7 @@ export class WorkflowController {
         reply,
         result,
         'Workflow initiated successfully',
-        result.data ? { expenseId: result.data } : undefined,
+        result.data ?? undefined,
         201
       );
     } catch (error: unknown) {
