@@ -36,25 +36,25 @@ export const requestExemptionSchema = z
         EXEMPTION_REASON_MAX_LENGTH,
         `Reason cannot exceed ${EXEMPTION_REASON_MAX_LENGTH} characters`,
       ),
-    validFrom: z.coerce.date(),
-    validUntil: z.coerce.date(),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
     scope: exemptionScopeSchema.optional(),
   })
-  .refine((data) => data.validUntil > data.validFrom, {
-    message: "validUntil must be after validFrom",
-    path: ["validUntil"],
+  .refine((data) => data.endDate > data.startDate, {
+    message: "endDate must be after startDate",
+    path: ["endDate"],
   })
   .refine(
     (data) => {
       const durationDays = Math.ceil(
-        (data.validUntil.getTime() - data.validFrom.getTime()) /
+        (data.endDate.getTime() - data.startDate.getTime()) /
           (1000 * 60 * 60 * 24),
       );
       return durationDays <= EXEMPTION_MAX_DURATION_DAYS;
     },
     {
       message: `Exemption duration cannot exceed ${EXEMPTION_MAX_DURATION_DAYS} days`,
-      path: ["validUntil"],
+      path: ["endDate"],
     },
   );
 
