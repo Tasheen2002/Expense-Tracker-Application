@@ -125,11 +125,11 @@ export class CategoryRuleController {
 
       const result = await this.deleteRuleHandler.handle({ ruleId, workspaceId, userId });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category rule deleted successfully'
-      );
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Category rule deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

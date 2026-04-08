@@ -75,8 +75,8 @@ export class ScenarioController {
   ) {
     try {
       const userId = req.user.userId;
-      const { planId } = req.params;
-      const result = await this.listScenariosHandler.handle({ planId, userId });
+      const { workspaceId, planId } = req.params;
+      const result = await this.listScenariosHandler.handle({ planId, workspaceId, userId });
       return ResponseHelper.fromQuery(
         reply,
         result,

@@ -1,4 +1,4 @@
-import { ViolationRepository } from '../../domain/repositories/violation.repository';
+import { ViolationService } from '../services/violation.service';
 import { ViolationStatus } from '../../domain/enums/violation-status.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
 import {
@@ -24,48 +24,44 @@ export class GetViolationStatsHandler implements IQueryHandler<
   GetViolationStatsInput,
   QueryResult<ViolationStatsResult>
 > {
-  constructor(private readonly violationRepository: ViolationRepository) {}
+  constructor(private readonly violationService: ViolationService) {}
 
   async handle(
     input: GetViolationStatsInput
   ): Promise<QueryResult<ViolationStatsResult>> {
-    try {
-      const result = await this.violationRepository.findByWorkspace(
-        input.workspaceId,
-        { startDate: input.startDate, endDate: input.endDate }
-      );
+    const result = await this.violationService.listViolations(
+      input.workspaceId,
+      { startDate: input.startDate, endDate: input.endDate }
+    );
 
-      const violations = result.items;
+    const violations = result.items;
 
-      const byStatus: Record<ViolationStatus, number> = {
-        [ViolationStatus.PENDING]: 0,
-        [ViolationStatus.ACKNOWLEDGED]: 0,
-        [ViolationStatus.RESOLVED]: 0,
-        [ViolationStatus.EXEMPTED]: 0,
-        [ViolationStatus.OVERRIDDEN]: 0,
-      };
+    const byStatus: Record<ViolationStatus, number> = {
+      [ViolationStatus.PENDING]: 0,
+      [ViolationStatus.ACKNOWLEDGED]: 0,
+      [ViolationStatus.RESOLVED]: 0,
+      [ViolationStatus.EXEMPTED]: 0,
+      [ViolationStatus.OVERRIDDEN]: 0,
+    };
 
-      const bySeverity: Record<ViolationSeverity, number> = {
-        [ViolationSeverity.LOW]: 0,
-        [ViolationSeverity.MEDIUM]: 0,
-        [ViolationSeverity.HIGH]: 0,
-        [ViolationSeverity.CRITICAL]: 0,
-      };
+    const bySeverity: Record<ViolationSeverity, number> = {
+      [ViolationSeverity.LOW]: 0,
+      [ViolationSeverity.MEDIUM]: 0,
+      [ViolationSeverity.HIGH]: 0,
+      [ViolationSeverity.CRITICAL]: 0,
+    };
 
-      for (const violation of violations) {
-        byStatus[violation.getStatus()]++;
-        bySeverity[violation.getSeverity()]++;
-      }
-
-      return QueryResult.success({
-        total: result.total,
-        byStatus,
-        bySeverity,
-        pendingCount: byStatus[ViolationStatus.PENDING],
-        resolvedCount: byStatus[ViolationStatus.RESOLVED],
-      });
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
+    for (const violation of violations) {
+      byStatus[violation.status]++;
+      bySeverity[violation.severity]++;
     }
+
+    return QueryResult.success({
+      total: result.total,
+      byStatus,
+      bySeverity,
+      pendingCount: byStatus[ViolationStatus.PENDING],
+      resolvedCount: byStatus[ViolationStatus.RESOLVED],
+    });
   }
 }

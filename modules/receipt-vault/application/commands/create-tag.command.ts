@@ -1,5 +1,5 @@
 import { TagService } from '../services/tag.service';
-import { ReceiptTagDefinition } from '../../domain/entities/receipt-tag-definition.entity';
+import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-definition.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -15,14 +15,14 @@ export interface CreateTagCommand extends ICommand {
 
 export class CreateTagHandler implements ICommandHandler<
   CreateTagCommand,
-  CommandResult<{ tagId: string }>
+  CommandResult<ReceiptTagDefinitionDTO>
 > {
   constructor(private readonly tagService: TagService) {}
 
   async handle(
     command: CreateTagCommand
-  ): Promise<CommandResult<{ tagId: string }>> {
-    const tag = await this.tagService.createTag(command);
-    return CommandResult.success({ tagId: tag.getId().getValue() });
+  ): Promise<CommandResult<ReceiptTagDefinitionDTO>> {
+    const tagDTO = await this.tagService.createTag(command);
+    return CommandResult.success(tagDTO);
   }
 }

@@ -79,6 +79,26 @@ export class DepartmentDeactivatedEvent extends DomainEvent {
   }
 }
 
+export class DepartmentDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly departmentId: string,
+    public readonly workspaceId: string
+  ) {
+    super(departmentId, 'Department');
+  }
+
+  get eventType(): string {
+    return 'DepartmentDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      departmentId: this.departmentId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -250,6 +270,15 @@ export class Department extends AggregateRoot {
     this.isActive = true;
     this.updatedAt = new Date();
     this.addDomainEvent(new DepartmentActivatedEvent(this.id.getValue()));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new DepartmentDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue()
+      )
+    );
   }
 
   static toDTO(department: Department): DepartmentDTO {

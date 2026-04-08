@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
-import { Expense } from '../../domain/entities/expense.entity';
+import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseNotFoundError } from '../../domain/errors/expense.errors';
 
 export interface GetExpenseQuery extends IQuery {
@@ -14,11 +14,11 @@ export interface GetExpenseQuery extends IQuery {
 
 export class GetExpenseHandler implements IQueryHandler<
   GetExpenseQuery,
-  QueryResult<Expense>
+  QueryResult<ExpenseDTO>
 > {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(query: GetExpenseQuery): Promise<QueryResult<Expense>> {
+  async handle(query: GetExpenseQuery): Promise<QueryResult<ExpenseDTO>> {
     const expense = await this.expenseService.getExpenseById(
       query.expenseId,
       query.workspaceId

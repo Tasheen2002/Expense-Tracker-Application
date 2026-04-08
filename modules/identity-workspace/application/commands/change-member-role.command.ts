@@ -2,7 +2,7 @@ import { ICommand, ICommandHandler } from '../../../../packages/core/src/applica
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import {
-  WorkspaceMembership,
+  WorkspaceMembershipDTO,
   WorkspaceRole,
 } from '../../domain/entities/workspace-membership.entity';
 import { MembershipNotFoundError } from '../../domain/errors/identity.errors';
@@ -15,13 +15,13 @@ export interface ChangeMemberRoleCommand extends ICommand {
 
 export class ChangeMemberRoleHandler implements ICommandHandler<
   ChangeMemberRoleCommand,
-  CommandResult<WorkspaceMembership>
+  CommandResult<WorkspaceMembershipDTO>
 > {
   constructor(private readonly membershipService: WorkspaceMembershipService) {}
 
   async handle(
     command: ChangeMemberRoleCommand
-  ): Promise<CommandResult<WorkspaceMembership>> {
+  ): Promise<CommandResult<WorkspaceMembershipDTO>> {
     try {
       const membership = await this.membershipService.getUserMembership(
         command.userId,
@@ -32,11 +32,11 @@ export class ChangeMemberRoleHandler implements ICommandHandler<
         throw new MembershipNotFoundError(command.userId);
       }
 
-      const updated = await this.membershipService.changeMemberRole(
+      const updatedDTO = await this.membershipService.changeMemberRole(
         membership.getId().getValue(),
         command.role
       );
-      return CommandResult.success(updated);
+      return CommandResult.success(updatedDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

@@ -1,7 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { WorkspaceId } from '../../../identity-workspace';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
+import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -28,12 +28,6 @@ export class GetSuggestionsByWorkspaceHandler implements IQueryHandler<
       { limit: query.limit, offset: query.offset }
     );
 
-    return QueryResult.success({
-      items: result.items.map(CategorySuggestion.toDTO),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

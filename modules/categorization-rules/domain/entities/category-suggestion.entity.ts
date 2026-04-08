@@ -78,6 +78,20 @@ export class CategorySuggestionRejectedEvent extends DomainEvent {
   }
 }
 
+export class CategorySuggestionDeletedEvent extends DomainEvent {
+  constructor(public readonly suggestionId: string) {
+    super(suggestionId, 'CategorySuggestion');
+  }
+
+  get eventType(): string {
+    return 'CategorySuggestionDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { suggestionId: this.suggestionId };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -200,6 +214,10 @@ export class CategorySuggestion extends AggregateRoot {
         this.expenseId.getValue()
       )
     );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new CategorySuggestionDeletedEvent(this.id.getValue()));
   }
 
   // Query methods

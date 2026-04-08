@@ -40,35 +40,40 @@ describe('Approval Workflow Commands', () => {
       hasReceipt: true,
     };
 
-    it('should return failure result when workflow exists', async () => {
+    it('should throw when workflow exists', async () => {
       mockWorkflowService.initiateWorkflow.mockRejectedValueOnce(
         new WorkflowAlreadyExistsError('exp-1')
       );
-      const result = await handler.handle(input);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('already exists');
-      expect(result.statusCode).toBe(409);
+      await expect(handler.handle(input)).rejects.toThrow(
+        WorkflowAlreadyExistsError
+      );
     });
 
-    it('should return failure result when no chain found', async () => {
+    it('should throw when no chain found', async () => {
       mockWorkflowService.initiateWorkflow.mockRejectedValueOnce(
         new NoMatchingApprovalChainError('ws-1', 100)
       );
-      const result = await handler.handle(input);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('No applicable approval chain found');
-      expect(result.statusCode).toBe(400);
+      await expect(handler.handle(input)).rejects.toThrow(
+        NoMatchingApprovalChainError
+      );
     });
 
     it('should return success result on successful initiation', async () => {
-      mockWorkflowService.initiateWorkflow.mockResolvedValueOnce({
-        getExpenseId: () => ({
-          getValue: () => 'exp-1',
-        }),
-      } as any);
+      const mockDTO = {
+        workflowId: 'wf-1',
+        expenseId: 'exp-1',
+        workspaceId: 'ws-1',
+        userId: 'user-1',
+        status: 'PENDING',
+        currentStepNumber: 1,
+        steps: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      mockWorkflowService.initiateWorkflow.mockResolvedValueOnce(mockDTO);
       const result = await handler.handle(input);
       expect(result.success).toBe(true);
-      expect(result.data).toBe('exp-1');
+      expect(result.data).toEqual(mockDTO);
     });
   });
 
@@ -80,41 +85,49 @@ describe('Approval Workflow Commands', () => {
       approverId: 'user-2',
     };
 
-    it('should return failure result when workflow not found', async () => {
+    it('should throw when workflow not found', async () => {
       mockWorkflowService.approveStep.mockRejectedValueOnce(
         new WorkflowNotFoundError('exp-1')
       );
-      const result = await handler.handle(input);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('not found');
-      expect(result.statusCode).toBe(404);
+      await expect(handler.handle(input)).rejects.toThrow(
+        WorkflowNotFoundError
+      );
     });
 
-    it('should return failure result when no current step', async () => {
+    it('should throw when no current step', async () => {
       mockWorkflowService.approveStep.mockRejectedValueOnce(
         new CurrentStepNotFoundError('exp-1')
       );
-      const result = await handler.handle(input);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('No current step found');
-      expect(result.statusCode).toBe(404);
+      await expect(handler.handle(input)).rejects.toThrow(
+        CurrentStepNotFoundError
+      );
     });
 
-    it('should return failure result when approver mismatches', async () => {
+    it('should throw when approver mismatches', async () => {
       mockWorkflowService.approveStep.mockRejectedValueOnce(
         new UnauthorizedApproverError('user-2', 'step-1')
       );
-      const result = await handler.handle(input);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('not authorized');
-      expect(result.statusCode).toBe(403);
+      await expect(handler.handle(input)).rejects.toThrow(
+        UnauthorizedApproverError
+      );
     });
 
     it('should return success result on successful approve', async () => {
-      mockWorkflowService.approveStep.mockResolvedValueOnce({} as any);
+      const mockDTO = {
+        workflowId: 'wf-1',
+        expenseId: 'exp-1',
+        workspaceId: 'ws-1',
+        userId: 'user-1',
+        status: 'PENDING',
+        currentStepNumber: 2,
+        steps: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      mockWorkflowService.approveStep.mockResolvedValueOnce(mockDTO);
       const result = await handler.handle(input);
       expect(result.success).toBe(true);
-      expect(result.data).toBeUndefined();
+      expect(result.data).toEqual(mockDTO);
     });
   });
 
@@ -127,22 +140,32 @@ describe('Approval Workflow Commands', () => {
       comments: 'Bad expense',
     };
 
-    it('should return failure result when comments are missing', async () => {
+    it('should throw when comments are missing', async () => {
       mockWorkflowService.rejectStep.mockRejectedValueOnce(
         new RejectionReasonRequiredError()
       );
       const inputNoComments = { ...input, comments: '' };
-      const result = await handler.handle(inputNoComments);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Rejection reason is required');
-      expect(result.statusCode).toBe(400);
+      await expect(handler.handle(inputNoComments)).rejects.toThrow(
+        RejectionReasonRequiredError
+      );
     });
 
     it('should return success result on successful reject', async () => {
-      mockWorkflowService.rejectStep.mockResolvedValueOnce({} as any);
+      const mockDTO = {
+        workflowId: 'wf-1',
+        expenseId: 'exp-1',
+        workspaceId: 'ws-1',
+        userId: 'user-1',
+        status: 'REJECTED',
+        currentStepNumber: 1,
+        steps: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      mockWorkflowService.rejectStep.mockResolvedValueOnce(mockDTO);
       const result = await handler.handle(input);
       expect(result.success).toBe(true);
-      expect(result.data).toBeUndefined();
+      expect(result.data).toEqual(mockDTO);
     });
   });
 
@@ -155,22 +178,32 @@ describe('Approval Workflow Commands', () => {
       toUserId: 'user-3',
     };
 
-    it('should return failure result for self-delegation', async () => {
+    it('should throw for self-delegation', async () => {
       mockWorkflowService.delegateStep.mockRejectedValueOnce(
         new InvalidDelegationError('Self delegation')
       );
       const inputSelf = { ...input, toUserId: 'user-2' };
-      const result = await handler.handle(inputSelf);
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Self delegation');
-      expect(result.statusCode).toBe(400);
+      await expect(handler.handle(inputSelf)).rejects.toThrow(
+        InvalidDelegationError
+      );
     });
 
     it('should return success result on successful delegation', async () => {
-      mockWorkflowService.delegateStep.mockResolvedValueOnce({} as any);
+      const mockDTO = {
+        workflowId: 'wf-1',
+        expenseId: 'exp-1',
+        workspaceId: 'ws-1',
+        userId: 'user-1',
+        status: 'PENDING',
+        currentStepNumber: 1,
+        steps: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      mockWorkflowService.delegateStep.mockResolvedValueOnce(mockDTO);
       const result = await handler.handle(input);
       expect(result.success).toBe(true);
-      expect(result.data).toBeUndefined();
+      expect(result.data).toEqual(mockDTO);
     });
   });
 });

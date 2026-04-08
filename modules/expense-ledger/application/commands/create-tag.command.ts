@@ -4,7 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
-import { Tag } from '../../domain/entities/tag.entity';
+import { TagDTO } from '../../domain/entities/tag.entity';
 
 export interface CreateTagCommand extends ICommand {
   readonly workspaceId: string;
@@ -14,18 +14,18 @@ export interface CreateTagCommand extends ICommand {
 
 export class CreateTagHandler implements ICommandHandler<
   CreateTagCommand,
-  CommandResult<{ tagId: string }>
+  CommandResult<TagDTO>
 > {
   constructor(private readonly tagService: TagService) {}
 
   async handle(
     command: CreateTagCommand
-  ): Promise<CommandResult<{ tagId: string }>> {
-    const tag = await this.tagService.createTag({
+  ): Promise<CommandResult<TagDTO>> {
+    const dto = await this.tagService.createTag({
       workspaceId: command.workspaceId,
       name: command.name,
       color: command.color,
     });
-    return CommandResult.success({ tagId: tag.id.getValue() });
+    return CommandResult.success(dto);
   }
 }

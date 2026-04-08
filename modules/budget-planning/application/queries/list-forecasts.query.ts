@@ -1,6 +1,5 @@
-import { IForecastRepository } from '../../domain/repositories/forecast.repository';
-import { Forecast, ForecastDTO } from '../../domain/entities/forecast.entity';
-import { PlanId } from '../../domain/value-objects/plan-id';
+import { ForecastService } from '../services/forecast.service';
+import { ForecastDTO } from '../../domain/entities/forecast.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -10,6 +9,7 @@ import {
 
 export interface ListForecastsQuery extends IQuery {
   planId: string;
+  workspaceId: string;
   userId: string;
 }
 
@@ -17,20 +17,15 @@ export class ListForecastsHandler implements IQueryHandler<
   ListForecastsQuery,
   QueryResult<PaginatedResult<ForecastDTO>>
 > {
-  constructor(private readonly forecastRepository: IForecastRepository) {}
+  constructor(private readonly forecastService: ForecastService) {}
 
   async handle(
     query: ListForecastsQuery
   ): Promise<QueryResult<PaginatedResult<ForecastDTO>>> {
-    const result = await this.forecastRepository.findByPlanId(
-      PlanId.fromString(query.planId)
+    const result = await this.forecastService.getForecastsByPlan(
+      query.planId,
+      query.workspaceId,
     );
-    return QueryResult.success({
-      items: result.items.map((f) => Forecast.toDTO(f)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

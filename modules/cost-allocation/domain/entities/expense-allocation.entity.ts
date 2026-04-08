@@ -1,4 +1,5 @@
 import { AllocationAmount } from '../value-objects/allocation-amount';
+import { AllocationId } from '../value-objects/allocation-id';
 import { DepartmentId } from '../value-objects/department-id';
 import { CostCenterId } from '../value-objects/cost-center-id';
 import { ProjectId } from '../value-objects/project-id';
@@ -7,7 +8,6 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import * as crypto from 'crypto';
 
 // ============================================================================
 // Domain Events
@@ -43,13 +43,59 @@ export class ExpenseAllocationCreatedEvent extends DomainEvent {
   }
 }
 
+export class ExpenseAllocationDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly allocationId: string,
+    public readonly workspaceId: string,
+    public readonly expenseId: string
+  ) {
+    super(allocationId, 'ExpenseAllocation');
+  }
+
+  get eventType(): string {
+    return 'ExpenseAllocationDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      allocationId: this.allocationId,
+      workspaceId: this.workspaceId,
+      expenseId: this.expenseId,
+    };
+  }
+}
+
+export class ExpenseAllocationsReplacedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly newAllocationCount: number
+  ) {
+    // Uses the expenseId as the aggregate identifier since this event
+    // represents the replacement of ALL allocations for a given expense.
+    super(expenseId, 'ExpenseAllocation');
+  }
+
+  get eventType(): string {
+    return 'ExpenseAllocationsReplaced';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      newAllocationCount: this.newAllocationCount,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
 
 export class ExpenseAllocation extends AggregateRoot {
   private constructor(
-    private readonly id: string, // Using string UUID for simplicity in this entity
+    private readonly id: AllocationId,
     private readonly workspaceId: WorkspaceId,
     private readonly expenseId: string,
     private readonly amount: AllocationAmount,
@@ -102,7 +148,7 @@ export class ExpenseAllocation extends AggregateRoot {
     }
 
     const allocation = new ExpenseAllocation(
-      crypto.randomUUID(),
+      AllocationId.create(),
       params.workspaceId,
       params.expenseId,
       params.amount,
@@ -117,7 +163,7 @@ export class ExpenseAllocation extends AggregateRoot {
 
     allocation.addDomainEvent(
       new ExpenseAllocationCreatedEvent(
-        allocation.id,
+        allocation.id.getValue(),
         params.workspaceId.getValue(),
         params.expenseId,
         params.amount.getValue().toString(),
@@ -144,7 +190,7 @@ export class ExpenseAllocation extends AggregateRoot {
     createdAt: Date;
   }): ExpenseAllocation {
     return new ExpenseAllocation(
-      params.id,
+      AllocationId.fromString(params.id),
       WorkspaceId.fromString(params.workspaceId),
       params.expenseId,
       AllocationAmount.create(params.amount),
@@ -158,7 +204,7 @@ export class ExpenseAllocation extends AggregateRoot {
     );
   }
 
-  getId(): string {
+  getId(): AllocationId {
     return this.id;
   }
 
@@ -202,9 +248,35 @@ export class ExpenseAllocation extends AggregateRoot {
     return this.createdAt;
   }
 
+  /**
+   * Marks this allocation as deleted and emits a domain event.
+   * Call this before persisting the deletion so the event can be dispatched.
+   */
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ExpenseAllocationDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.expenseId
+      )
+    );
+  }
+
+  /**
+   * Records that all allocations for the given expense have been replaced.
+   * This is used as a single aggregate-level event when a bulk replace is
+   * performed and loading each old allocation entity individually is not
+   * practical.
+   */
+  recordReplacement(expenseId: string, workspaceId: string, newAllocationCount: number): void {
+    this.addDomainEvent(
+      new ExpenseAllocationsReplacedEvent(expenseId, workspaceId, newAllocationCount)
+    );
+  }
+
   static toDTO(allocation: ExpenseAllocation): ExpenseAllocationDTO {
     return {
-      id: allocation.getId(),
+      id: allocation.getId().getValue(),
       workspaceId: allocation.getWorkspaceId().getValue(),
       expenseId: allocation.getExpenseId(),
       amount: allocation.getAmount().getValue().toString(),

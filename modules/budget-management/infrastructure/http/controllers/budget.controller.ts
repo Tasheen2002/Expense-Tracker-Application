@@ -191,7 +191,9 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Budget deleted successfully'
+        'Budget deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -352,7 +354,9 @@ export class BudgetController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Allocation deleted successfully'
+        'Allocation deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

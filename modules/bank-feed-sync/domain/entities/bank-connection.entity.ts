@@ -164,6 +164,26 @@ export class BankConnectionTokenUpdatedEvent extends DomainEvent {
   }
 }
 
+export class BankConnectionDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly connectionId: string,
+    public readonly workspaceId: string
+  ) {
+    super(connectionId, 'BankConnection');
+  }
+
+  get eventType(): string {
+    return 'BankConnectionDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 export interface BankConnectionProps {
   id: BankConnectionId;
   workspaceId: WorkspaceId;
@@ -411,6 +431,15 @@ export class BankConnection extends AggregateRoot {
   isActive(): boolean {
     return (
       this.props.status === ConnectionStatus.CONNECTED && !this.isExpired()
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new BankConnectionDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue()
+      )
     );
   }
 

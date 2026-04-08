@@ -1,5 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { CostCenter, CostCenterDTO } from '../../domain/entities/cost-center.entity';
+import { CostCenterDTO } from '../../domain/entities/cost-center.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -22,6 +22,6 @@ export class GetCostCenterHandler implements IQueryHandler<
     const costCenter = await this.allocationManagementService.getCostCenter(
       query.id
     );
-    return QueryResult.success(CostCenter.toDTO(costCenter));
+    return QueryResult.success(costCenter);
   }
 }

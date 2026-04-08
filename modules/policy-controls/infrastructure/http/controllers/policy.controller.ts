@@ -108,7 +108,7 @@ export class PolicyController {
         reply,
         result,
         'Policy retrieved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -142,7 +142,7 @@ export class PolicyController {
 
       const data = result.data
         ? {
-            items: result.data.items.map((policy) => policy.toJSON()),
+            items: result.data.items,
             pagination: {
               total: result.data.total,
               limit: result.data.limit,

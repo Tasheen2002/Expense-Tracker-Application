@@ -60,7 +60,8 @@ export class BudgetPlanStatusChangedEvent extends DomainEvent {
 export class BudgetPlanUpdatedEvent extends DomainEvent {
   constructor(
     public readonly planId: string,
-    public readonly name: string
+    public readonly name: string,
+    public readonly description: string | null
   ) {
     super(planId, 'BudgetPlan');
   }
@@ -73,6 +74,255 @@ export class BudgetPlanUpdatedEvent extends DomainEvent {
     return {
       planId: this.planId,
       name: this.name,
+      description: this.description,
+    };
+  }
+}
+
+export class BudgetPlanDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'BudgetPlanDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly workspaceId: string,
+    public readonly name: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_created';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      workspaceId: this.workspaceId,
+      name: this.name,
+    };
+  }
+}
+
+export class ForecastUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_updated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastActivatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_activated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastDeactivatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_deactivated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ScenarioCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly scenarioId: string,
+    public readonly workspaceId: string,
+    public readonly name: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.scenario_created';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      scenarioId: this.scenarioId,
+      workspaceId: this.workspaceId,
+      name: this.name,
+    };
+  }
+}
+
+export class ScenarioUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly scenarioId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.scenario_updated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      scenarioId: this.scenarioId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastItemUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly itemId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_item_updated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      itemId: this.itemId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastItemDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly itemId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_item_deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      itemId: this.itemId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ForecastDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly forecastId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.forecast_deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      forecastId: this.forecastId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
+export class ScenarioDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly planId: string,
+    public readonly scenarioId: string,
+    public readonly workspaceId: string
+  ) {
+    super(planId, 'BudgetPlan');
+  }
+
+  get eventType(): string {
+    return 'budget_plan.scenario_deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      planId: this.planId,
+      scenarioId: this.scenarioId,
+      workspaceId: this.workspaceId,
     };
   }
 }
@@ -205,7 +455,7 @@ export class BudgetPlan extends AggregateRoot {
     this._updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name)
+      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name, this._description)
     );
   }
 
@@ -216,6 +466,119 @@ export class BudgetPlan extends AggregateRoot {
 
     this.addDomainEvent(
       new BudgetPlanStatusChangedEvent(this._id.getValue(), oldStatus, status)
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new BudgetPlanDeletedEvent(
+        this._id.getValue(),
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastCreated(forecastId: string, name: string): void {
+    this.addDomainEvent(
+      new ForecastCreatedEvent(
+        this._id.getValue(),
+        forecastId,
+        this._workspaceId.getValue(),
+        name
+      )
+    );
+  }
+
+  recordForecastUpdated(forecastId: string): void {
+    this.addDomainEvent(
+      new ForecastUpdatedEvent(
+        this._id.getValue(),
+        forecastId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastActivated(forecastId: string): void {
+    this.addDomainEvent(
+      new ForecastActivatedEvent(
+        this._id.getValue(),
+        forecastId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastDeactivated(forecastId: string): void {
+    this.addDomainEvent(
+      new ForecastDeactivatedEvent(
+        this._id.getValue(),
+        forecastId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordScenarioCreated(scenarioId: string, name: string): void {
+    this.addDomainEvent(
+      new ScenarioCreatedEvent(
+        this._id.getValue(),
+        scenarioId,
+        this._workspaceId.getValue(),
+        name
+      )
+    );
+  }
+
+  recordScenarioUpdated(scenarioId: string): void {
+    this.addDomainEvent(
+      new ScenarioUpdatedEvent(
+        this._id.getValue(),
+        scenarioId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastItemUpdated(forecastId: string, itemId: string): void {
+    this.addDomainEvent(
+      new ForecastItemUpdatedEvent(
+        this._id.getValue(),
+        forecastId,
+        itemId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastItemDeleted(forecastId: string, itemId: string): void {
+    this.addDomainEvent(
+      new ForecastItemDeletedEvent(
+        this._id.getValue(),
+        forecastId,
+        itemId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordForecastDeleted(forecastId: string): void {
+    this.addDomainEvent(
+      new ForecastDeletedEvent(
+        this._id.getValue(),
+        forecastId,
+        this._workspaceId.getValue()
+      )
+    );
+  }
+
+  recordScenarioDeleted(scenarioId: string): void {
+    this.addDomainEvent(
+      new ScenarioDeletedEvent(
+        this._id.getValue(),
+        scenarioId,
+        this._workspaceId.getValue()
+      )
     );
   }
 

@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
-import { Category } from '../../domain/entities/category.entity';
+import { CategoryDTO } from '../../domain/entities/category.entity';
 import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
 
 export interface GetCategoryQuery extends IQuery {
@@ -14,11 +14,11 @@ export interface GetCategoryQuery extends IQuery {
 
 export class GetCategoryHandler implements IQueryHandler<
   GetCategoryQuery,
-  QueryResult<Category>
+  QueryResult<CategoryDTO>
 > {
   constructor(private readonly categoryService: CategoryService) {}
 
-  async handle(query: GetCategoryQuery): Promise<QueryResult<Category>> {
+  async handle(query: GetCategoryQuery): Promise<QueryResult<CategoryDTO>> {
     const category = await this.categoryService.getCategoryById(
       query.categoryId,
       query.workspaceId

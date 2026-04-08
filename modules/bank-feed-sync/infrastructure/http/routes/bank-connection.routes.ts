@@ -71,9 +71,11 @@ export async function bankConnectionRoutes(
         },
         response: {
           201: {
+            description: 'Bank connection created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: bankConnectionResponseSchema,
             },
@@ -96,9 +98,11 @@ export async function bankConnectionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Bank connections retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: paginatedConnectionsResponseSchema,
             },
@@ -121,9 +125,11 @@ export async function bankConnectionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Bank connection retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: bankConnectionResponseSchema,
             },
@@ -159,9 +165,11 @@ export async function bankConnectionRoutes(
         },
         response: {
           200: {
+            description: 'Bank connection token updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: bankConnectionResponseSchema,
             },
@@ -184,8 +192,8 @@ export async function bankConnectionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           204: {
+            description: 'No Content',
             type: 'null',
-            description: 'Bank connection disconnected successfully',
           },
         },
       },
@@ -205,8 +213,8 @@ export async function bankConnectionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           204: {
+            description: 'No Content',
             type: 'null',
-            description: 'Bank connection deleted successfully',
           },
         },
       },

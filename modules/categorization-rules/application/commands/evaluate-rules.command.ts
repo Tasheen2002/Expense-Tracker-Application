@@ -1,4 +1,4 @@
-import { RuleExecutionService } from '../services/rule-execution.service';
+import { RuleExecutionService, EvaluationResult } from '../services/rule-execution.service';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId } from '../../../expense-ledger';
 import {
@@ -18,59 +18,21 @@ export interface EvaluateRulesCommand extends ICommand {
   };
 }
 
-export interface EvaluationResultDTO {
-  appliedRule: {
-    id: string;
-    name: string;
-    priority: number;
-  } | null;
-  suggestedCategoryId: string | null;
-  execution: {
-    id: string;
-    ruleId: string;
-    expenseId: string;
-    appliedCategoryId: string;
-    executedAt: Date;
-  } | null;
-}
-
 export class EvaluateRulesHandler implements ICommandHandler<
   EvaluateRulesCommand,
-  CommandResult<EvaluationResultDTO>
+  CommandResult<EvaluationResult>
 > {
   constructor(private readonly executionService: RuleExecutionService) {}
 
   async handle(
     command: EvaluateRulesCommand
-  ): Promise<CommandResult<EvaluationResultDTO>> {
+  ): Promise<CommandResult<EvaluationResult>> {
     const result = await this.executionService.evaluateAndApplyRules({
       workspaceId: WorkspaceId.fromString(command.workspaceId),
       expenseId: ExpenseId.fromString(command.expenseId),
       expenseData: command.expenseData,
     });
 
-    const evaluationResult: EvaluationResultDTO = {
-      appliedRule: result.appliedRule
-        ? {
-            id: result.appliedRule.getId().getValue(),
-            name: result.appliedRule.getName(),
-            priority: result.appliedRule.getPriority(),
-          }
-        : null,
-      suggestedCategoryId: result.suggestedCategoryId?.getValue() || null,
-      execution: result.execution
-        ? {
-            id: result.execution.getId().getValue(),
-            ruleId: result.execution.getRuleId().getValue(),
-            expenseId: result.execution.getExpenseId().getValue(),
-            appliedCategoryId: result.execution
-              .getAppliedCategoryId()
-              .getValue(),
-            executedAt: result.execution.getExecutedAt(),
-          }
-        : null,
-    };
-
-    return CommandResult.success(evaluationResult);
+    return CommandResult.success(result);
   }
 }

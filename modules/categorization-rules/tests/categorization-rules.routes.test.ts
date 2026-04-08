@@ -636,9 +636,7 @@ describe('Category Rule Routes', () => {
         url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.success).toBe(true);
+      expect(response.statusCode).toBe(204);
     });
 
     it('should return 404 for non-existent rule', async () => {
@@ -1131,9 +1129,7 @@ describe('Category Suggestion Routes', () => {
         url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
       });
 
-      expect(response.statusCode).toBe(200);
-      const body = JSON.parse(response.body);
-      expect(body.success).toBe(true);
+      expect(response.statusCode).toBe(204);
     });
 
     it('should return 404 for non-existent suggestion', async () => {

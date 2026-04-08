@@ -105,18 +105,18 @@ export class NotificationTemplate {
     return this.props.updatedAt;
   }
 
-  toJSON(): NotificationTemplateDTO {
+  static toDTO(template: NotificationTemplate): NotificationTemplateDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId()?.getValue() || null,
-      name: this.getName(),
-      type: this.getType(),
-      channel: this.getChannel(),
-      subjectTemplate: this.getSubjectTemplate(),
-      bodyTemplate: this.getBodyTemplate(),
-      isActive: this.isActiveTemplate(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: template.getId().getValue(),
+      workspaceId: template.getWorkspaceId()?.getValue() || null,
+      name: template.getName(),
+      type: template.getType(),
+      channel: template.getChannel(),
+      subjectTemplate: template.getSubjectTemplate(),
+      bodyTemplate: template.getBodyTemplate(),
+      isActive: template.isActiveTemplate(),
+      createdAt: template.getCreatedAt().toISOString(),
+      updatedAt: template.getUpdatedAt().toISOString(),
     };
   }
 }

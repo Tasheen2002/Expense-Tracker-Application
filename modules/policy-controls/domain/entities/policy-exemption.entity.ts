@@ -7,7 +7,7 @@ import {
   InvalidExemptionDateRangeError,
 } from '../errors/policy-controls.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -405,25 +405,25 @@ export class PolicyExemption extends AggregateRoot {
     this.props.updatedAt = new Date();
   }
 
-  toJSON(): PolicyExemptionDTO {
+  static toDTO(exemption: PolicyExemption): PolicyExemptionDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      policyId: this.getPolicyId().getValue(),
-      userId: this.getUserId(),
-      status: this.getStatus(),
-      reason: this.getReason(),
-      requestedBy: this.getRequestedBy(),
-      approvedBy: this.getApprovedBy(),
-      approvedAt: this.getApprovedAt()?.toISOString(),
-      rejectedBy: this.getRejectedBy(),
-      rejectedAt: this.getRejectedAt()?.toISOString(),
-      rejectionReason: this.getRejectionReason(),
-      startDate: this.getStartDate().toISOString(),
-      endDate: this.getEndDate().toISOString(),
-      isActive: this.isActive(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: exemption.getId().getValue(),
+      workspaceId: exemption.getWorkspaceId().getValue(),
+      policyId: exemption.getPolicyId().getValue(),
+      userId: exemption.getUserId(),
+      status: exemption.getStatus(),
+      reason: exemption.getReason(),
+      requestedBy: exemption.getRequestedBy(),
+      approvedBy: exemption.getApprovedBy(),
+      approvedAt: exemption.getApprovedAt()?.toISOString(),
+      rejectedBy: exemption.getRejectedBy(),
+      rejectedAt: exemption.getRejectedAt()?.toISOString(),
+      rejectionReason: exemption.getRejectionReason(),
+      startDate: exemption.getStartDate().toISOString(),
+      endDate: exemption.getEndDate().toISOString(),
+      isActive: exemption.isActive(),
+      createdAt: exemption.getCreatedAt().toISOString(),
+      updatedAt: exemption.getUpdatedAt().toISOString(),
     };
   }
 }

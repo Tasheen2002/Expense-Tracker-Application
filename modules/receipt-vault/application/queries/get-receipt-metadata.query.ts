@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import { ReceiptMetadataDTO } from '../../domain/entities/receipt-metadata.entity';
 import { ReceiptMetadataNotFoundError } from '../../domain/errors/receipt.errors';
 import {
   IQuery,
@@ -14,20 +14,20 @@ export interface GetReceiptMetadataQuery extends IQuery {
 
 export class GetReceiptMetadataHandler implements IQueryHandler<
   GetReceiptMetadataQuery,
-  QueryResult<ReceiptMetadata>
+  QueryResult<ReceiptMetadataDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
   async handle(
     query: GetReceiptMetadataQuery
-  ): Promise<QueryResult<ReceiptMetadata>> {
-    const metadata = await this.receiptService.getMetadata(
+  ): Promise<QueryResult<ReceiptMetadataDTO>> {
+    const metadataDTO = await this.receiptService.getMetadata(
       query.receiptId,
       query.workspaceId
     );
-    if (!metadata) {
+    if (!metadataDTO) {
       throw new ReceiptMetadataNotFoundError(query.receiptId);
     }
-    return QueryResult.success(metadata);
+    return QueryResult.success(metadataDTO);
   }
 }

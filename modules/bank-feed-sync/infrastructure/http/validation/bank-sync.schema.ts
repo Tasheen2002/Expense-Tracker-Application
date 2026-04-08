@@ -217,10 +217,9 @@ export const syncSessionResponseSchema = {
     startedAt: { type: 'string', format: 'date-time' },
     completedAt: { type: 'string', format: 'date-time', nullable: true },
     errorMessage: { type: 'string', nullable: true },
-    transactionsSynced: { type: 'number' },
-    metadata: { type: 'object', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
+    transactionsFetched: { type: 'number' },
+    transactionsImported: { type: 'number' },
+    transactionsDuplicate: { type: 'number' },
   },
 };
 

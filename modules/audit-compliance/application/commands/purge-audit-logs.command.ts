@@ -19,14 +19,10 @@ export class PurgeAuditLogsHandler implements ICommandHandler<
   async handle(
     input: PurgeAuditLogsCommand
   ): Promise<CommandResult<{ deletedCount: number }>> {
-    try {
-      const deletedCount = await this.auditService.purgeOldLogs(
-        input.workspaceId,
-        input.olderThanDays
-      );
-      return CommandResult.success({ deletedCount });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const deletedCount = await this.auditService.purgeOldLogs(
+      input.workspaceId,
+      input.olderThanDays
+    );
+    return CommandResult.success({ deletedCount });
   }
 }

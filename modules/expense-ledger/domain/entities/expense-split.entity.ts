@@ -3,12 +3,44 @@ import { ExpenseId } from '../value-objects/expense-id';
 import { Money } from '../value-objects/money';
 import { SplitType } from '../enums/split-type';
 import { SplitParticipant } from './split-participant.entity';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   InvalidSplitAmountError,
   InvalidSplitPercentageError,
   InsufficientParticipantsError,
 } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library';
+
+export class ExpenseSplitCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly splitId: string,
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly splitType: string,
+    public readonly participantCount: number
+  ) {
+    super(splitId, 'ExpenseSplit');
+  }
+  get eventType(): string { return 'expense_split.created'; }
+  getPayload(): Record<string, unknown> {
+    return { splitId: this.splitId, expenseId: this.expenseId, workspaceId: this.workspaceId, splitType: this.splitType, participantCount: this.participantCount };
+  }
+}
+
+export class ExpenseSplitDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly splitId: string,
+    public readonly expenseId: string,
+    public readonly workspaceId: string
+  ) {
+    super(splitId, 'ExpenseSplit');
+  }
+  get eventType(): string { return 'expense_split.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { splitId: this.splitId, expenseId: this.expenseId, workspaceId: this.workspaceId };
+  }
+}
 
 export interface ExpenseSplitProps {
   id: SplitId;
@@ -22,8 +54,10 @@ export interface ExpenseSplitProps {
   updatedAt: Date;
 }
 
-export class ExpenseSplit {
-  private constructor(private props: ExpenseSplitProps) {}
+export class ExpenseSplit extends AggregateRoot {
+  private constructor(private props: ExpenseSplitProps) {
+    super();
+  }
 
   static create(params: {
     expenseId: ExpenseId;
@@ -121,7 +155,7 @@ export class ExpenseSplit {
       });
     }
 
-    return new ExpenseSplit({
+    const split = new ExpenseSplit({
       id: splitId,
       expenseId: params.expenseId,
       workspaceId: params.workspaceId,
@@ -132,6 +166,18 @@ export class ExpenseSplit {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    split.addDomainEvent(
+      new ExpenseSplitCreatedEvent(
+        split.getId().getValue(),
+        split.getExpenseId().getValue(),
+        split.getWorkspaceId(),
+        split.getSplitType(),
+        split.getParticipants().length
+      )
+    );
+
+    return split;
   }
 
   static reconstitute(props: ExpenseSplitProps): ExpenseSplit {
@@ -180,6 +226,16 @@ export class ExpenseSplit {
 
   isParticipant(userId: string): boolean {
     return this.props.participants.some((p) => p.getUserId() === userId);
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ExpenseSplitDeletedEvent(
+        this.getId().getValue(),
+        this.getExpenseId().getValue(),
+        this.getWorkspaceId()
+      )
+    );
   }
 
   isFullySettled(): boolean {

@@ -55,7 +55,7 @@ export class ExpenseAllocationController {
         result,
         'Expense allocated successfully',
         undefined,
-        200
+        201
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -104,11 +104,11 @@ export class ExpenseAllocationController {
         userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Allocations deleted successfully'
-      );
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Allocations deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

@@ -1,5 +1,5 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
-import { ExpenseAllocation, ExpenseAllocationDTO } from '../../domain/entities/expense-allocation.entity';
+import { ExpenseAllocationDTO } from '../../domain/entities/expense-allocation.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -26,6 +26,6 @@ export class GetExpenseAllocationsHandler implements IQueryHandler<
       query.expenseId,
       query.workspaceId
     );
-    return QueryResult.success(allocations.map(ExpenseAllocation.toDTO));
+    return QueryResult.success(allocations);
   }
 }

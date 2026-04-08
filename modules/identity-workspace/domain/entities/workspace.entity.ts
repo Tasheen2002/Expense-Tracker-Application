@@ -1,7 +1,7 @@
 import { WorkspaceId } from '../value-objects/workspace-id.vo';
 import { UserId } from '../value-objects/user-id.vo';
 import { InvalidWorkspaceNameError } from '../errors/identity.errors';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -66,6 +66,20 @@ export class WorkspaceDeactivatedEvent extends DomainEvent {
   }
 }
 
+export class WorkspaceActivatedEvent extends DomainEvent {
+  constructor(public readonly workspaceId: string) {
+    super(workspaceId, 'Workspace');
+  }
+
+  get eventType(): string {
+    return 'WorkspaceActivated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { workspaceId: this.workspaceId };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -115,18 +129,6 @@ export class Workspace extends AggregateRoot {
       data.isActive,
       data.createdAt,
       data.updatedAt
-    );
-  }
-
-  static fromDatabaseRow(row: WorkspaceRow): Workspace {
-    return new Workspace(
-      WorkspaceId.fromString(row.id),
-      row.name,
-      row.slug,
-      UserId.fromString(row.owner_id),
-      row.is_active,
-      row.created_at,
-      row.updated_at
     );
   }
 
@@ -184,6 +186,7 @@ export class Workspace extends AggregateRoot {
   activate(): void {
     this.isActive = true;
     this.updatedAt = new Date();
+    this.addDomainEvent(new WorkspaceActivatedEvent(this.id.getValue()));
   }
 
   isOwner(userId: UserId): boolean {
@@ -200,44 +203,19 @@ export class Workspace extends AggregateRoot {
       .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   }
 
-  // Convert to data for persistence
-  toData(): WorkspaceData {
-    return {
-      id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      ownerId: this.ownerId.getValue(),
-      isActive: this.isActive,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): WorkspaceRow {
-    return {
-      id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      owner_id: this.ownerId.getValue(),
-      is_active: this.isActive,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
-  }
-
   equals(other: Workspace): boolean {
     return this.id.equals(other.id);
   }
 
-  toJSON(): WorkspaceDTO {
+  static toDTO(workspace: Workspace): WorkspaceDTO {
     return {
-      workspaceId: this.id.getValue(),
-      name: this.name,
-      slug: this.slug,
-      ownerId: this.ownerId.getValue(),
-      isActive: this.isActive,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      workspaceId: workspace.id.getValue(),
+      name: workspace.name,
+      slug: workspace.slug,
+      ownerId: workspace.ownerId.getValue(),
+      isActive: workspace.isActive,
+      createdAt: workspace.createdAt.toISOString(),
+      updatedAt: workspace.updatedAt.toISOString(),
     };
   }
 }
@@ -256,16 +234,6 @@ export interface WorkspaceData {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface WorkspaceRow {
-  id: string;
-  name: string;
-  slug: string;
-  owner_id: string;
-  is_active: boolean;
-  created_at: Date;
-  updated_at: Date;
 }
 
 export interface WorkspaceDTO {

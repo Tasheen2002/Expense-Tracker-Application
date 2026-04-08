@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
-import { AuthController } from '../controllers/auth.controller.js';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface.js';
+import { AuthController } from '../controllers/auth.controller';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
   createRateLimiter,
   RateLimitPresets,
-} from '@shared/middleware/rate-limiter.middleware.js';
+} from '@shared/middleware/rate-limiter.middleware';
 import { validateBody } from '../validation/validator';
 import { registerUserSchema, loginUserSchema } from '../validation/user.schema';
 
@@ -38,7 +38,8 @@ export async function registerAuthRoutes(
             description: 'User registered successfully',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               data: {
                 type: 'object',
                 properties: {
@@ -46,6 +47,9 @@ export async function registerAuthRoutes(
                   email: { type: 'string' },
                   fullName: { type: 'string', nullable: true },
                   emailVerified: { type: 'boolean' },
+                  isActive: { type: 'boolean' },
+                  createdAt: { type: 'string', format: 'date-time' },
+                  updatedAt: { type: 'string', format: 'date-time' },
                 },
               },
               message: { type: 'string' },
@@ -55,7 +59,8 @@ export async function registerAuthRoutes(
             description: 'Bad Request',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -64,7 +69,8 @@ export async function registerAuthRoutes(
             description: 'User already exists',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -98,7 +104,8 @@ export async function registerAuthRoutes(
             description: 'Login successful',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               data: {
                 type: 'object',
                 properties: {
@@ -122,7 +129,8 @@ export async function registerAuthRoutes(
             description: 'Unauthorized',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },
@@ -148,7 +156,9 @@ export async function registerAuthRoutes(
             description: 'Current user information',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: true },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
+              message: { type: 'string' },
               data: {
                 type: 'object',
                 properties: {
@@ -167,7 +177,8 @@ export async function registerAuthRoutes(
             description: 'Unauthorized',
             type: 'object',
             properties: {
-              success: { type: 'boolean', example: false },
+              success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               error: { type: 'string' },
               message: { type: 'string' },
             },

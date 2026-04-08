@@ -1,8 +1,5 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
-import { BankConnectionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -19,24 +16,16 @@ export class GetBankConnectionHandler implements IQueryHandler<
   QueryResult<BankConnectionDTO>
 > {
   constructor(
-    private readonly connectionRepository: IBankConnectionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(
     query: GetBankConnectionQuery
   ): Promise<QueryResult<BankConnectionDTO>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const connectionId = BankConnectionId.fromString(query.connectionId);
-
-    const connection = await this.connectionRepository.findById(
-      connectionId,
-      workspaceId
+    const dto = await this.transactionSyncService.getConnection(
+      query.connectionId,
+      query.workspaceId
     );
-
-    if (!connection) {
-      throw new BankConnectionNotFoundError(query.connectionId);
-    }
-
-    return QueryResult.success(BankConnection.toDTO(connection));
+    return QueryResult.success(dto);
   }
 }

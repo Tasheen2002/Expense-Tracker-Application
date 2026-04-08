@@ -69,8 +69,10 @@ export async function approvalChainRoutes(
         },
         response: {
           201: {
+            description: 'Approval chain created successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: chainResponseSchema,
@@ -95,9 +97,12 @@ export async function approvalChainRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Approval chains retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
+              message: { type: 'string' },
               data: paginatedChainsResponseSchema,
             },
           },
@@ -119,9 +124,12 @@ export async function approvalChainRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Approval chain retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
+              message: { type: 'string' },
               data: chainResponseSchema,
             },
           },
@@ -170,8 +178,10 @@ export async function approvalChainRoutes(
         },
         response: {
           200: {
+            description: 'Approval chain updated successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: chainResponseSchema,
@@ -195,8 +205,10 @@ export async function approvalChainRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Approval chain activated successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: chainResponseSchema,
@@ -220,8 +232,10 @@ export async function approvalChainRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Approval chain deactivated successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: chainResponseSchema,

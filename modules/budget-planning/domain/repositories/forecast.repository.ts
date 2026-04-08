@@ -11,6 +11,7 @@ export interface IForecastRepository {
   findById(id: ForecastId, workspaceId: string): Promise<Forecast | null>;
   findByPlanId(
     planId: PlanId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Forecast>>;
   delete(id: ForecastId): Promise<void>;

@@ -1,4 +1,5 @@
 import { TemplateService } from '../services/template.service';
+import { NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -11,16 +12,12 @@ export interface DeactivateTemplateCommand extends ICommand {
 
 export class DeactivateTemplateHandler implements ICommandHandler<
   DeactivateTemplateCommand,
-  CommandResult<void>
+  CommandResult<NotificationTemplateDTO>
 > {
   constructor(private readonly templateService: TemplateService) {}
 
-  async handle(input: DeactivateTemplateCommand): Promise<CommandResult<void>> {
-    try {
-      await this.templateService.deactivateTemplate(input.templateId);
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  async handle(input: DeactivateTemplateCommand): Promise<CommandResult<NotificationTemplateDTO>> {
+    const dto = await this.templateService.deactivateTemplate(input.templateId);
+    return CommandResult.success(dto);
   }
 }

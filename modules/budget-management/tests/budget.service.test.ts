@@ -69,11 +69,11 @@ describe("BudgetService", () => {
 
   describe("createBudget", () => {
     it("should create and save a new budget", async () => {
-      const budget = await service.createBudget(validBudgetParams);
+      const budgetDTO = await service.createBudget(validBudgetParams);
 
-      expect(budget).toBeDefined();
-      expect(budget.name).toBe("Test Budget");
-      expect(mockBudgetRepository.save).toHaveBeenCalledWith(budget);
+      expect(budgetDTO).toBeDefined();
+      expect(budgetDTO.name).toBe("Test Budget");
+      expect(mockBudgetRepository.save).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -88,16 +88,16 @@ describe("BudgetService", () => {
         "getTotalAllocatedAmount",
       ).mockResolvedValue(new Decimal(0));
 
-      const updatedBudget = await service.updateBudget(
+      const updatedBudgetDTO = await service.updateBudget(
         existingBudget.id.getValue(),
         "workspace-123",
         "user-123",
         { name: "Updated Name", totalAmount: "2000" },
       );
 
-      expect(updatedBudget.name).toBe("Updated Name");
-      expect(updatedBudget.totalAmount.toNumber()).toBe(2000);
-      expect(mockBudgetRepository.save).toHaveBeenCalledWith(updatedBudget);
+      expect(updatedBudgetDTO.name).toBe("Updated Name");
+      expect(Number(updatedBudgetDTO.totalAmount)).toBe(2000);
+      expect(mockBudgetRepository.save).toHaveBeenCalledTimes(1);
     });
 
     it("should throw BudgetNotFoundError if budget does not exist", async () => {
@@ -137,14 +137,14 @@ describe("BudgetService", () => {
         existingBudget,
       );
 
-      await service.activateBudget(
+      const dto = await service.activateBudget(
         existingBudget.id.getValue(),
         "workspace-123",
         "user-123",
       );
 
-      expect(existingBudget.status).toBe(BudgetStatus.ACTIVE);
-      expect(mockBudgetRepository.save).toHaveBeenCalledWith(existingBudget);
+      expect(dto.status).toBe(BudgetStatus.ACTIVE);
+      expect(mockBudgetRepository.save).toHaveBeenCalledTimes(1);
     });
   });
 });

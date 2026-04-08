@@ -69,7 +69,7 @@ describe("AllocationManagementService", () => {
         workspaceId,
       );
       expect(departmentRepo.save).toHaveBeenCalled();
-      expect(result.getName()).toBe("Engineering");
+      expect(result.name).toBe("Engineering");
     });
 
     it("should throw UnauthorizedAllocationAccessError if not admin/owner", async () => {

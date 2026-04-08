@@ -1,4 +1,5 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
+import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId, CategoryId } from '../../../expense-ledger';
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score';
@@ -18,14 +19,14 @@ export interface CreateSuggestionCommand extends ICommand {
 
 export class CreateSuggestionHandler implements ICommandHandler<
   CreateSuggestionCommand,
-  CommandResult<{ suggestionId: string }>
+  CommandResult<CategorySuggestionDTO>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
   async handle(
     command: CreateSuggestionCommand
-  ): Promise<CommandResult<{ suggestionId: string }>> {
-    const suggestion = await this.suggestionService.createSuggestion({
+  ): Promise<CommandResult<CategorySuggestionDTO>> {
+    const dto = await this.suggestionService.createSuggestion({
       workspaceId: WorkspaceId.fromString(command.workspaceId),
       expenseId: ExpenseId.fromString(command.expenseId),
       suggestedCategoryId: CategoryId.fromString(command.suggestedCategoryId),
@@ -33,8 +34,6 @@ export class CreateSuggestionHandler implements ICommandHandler<
       reason: command.reason,
     });
 
-    return CommandResult.success({
-      suggestionId: suggestion.getId().getValue(),
-    });
+    return CommandResult.success(dto);
   }
 }

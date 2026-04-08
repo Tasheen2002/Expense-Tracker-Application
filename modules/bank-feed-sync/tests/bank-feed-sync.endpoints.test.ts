@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestServer } from '../../../apps/api/src/test-server';
+import { createServer } from '../../../apps/api/src/server';
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
@@ -21,7 +21,7 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
   const testWorkspaceName = `Bank Sync Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
-    app = await createTestServer();
+    app = await createServer();
     await app.ready();
     prisma = new PrismaClient();
 

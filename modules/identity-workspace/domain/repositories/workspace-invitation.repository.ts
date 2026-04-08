@@ -19,6 +19,10 @@ export interface IWorkspaceInvitationRepository {
     email: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<WorkspaceInvitation>>;
+  findPendingByWorkspaceId(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<WorkspaceInvitation>>;
   findPendingByWorkspaceAndEmail(
     workspaceId: WorkspaceId,
     email: string,

@@ -192,21 +192,15 @@ export class SpendingLimitRepositoryImpl
   }
 
   async delete(id: SpendingLimitId, workspaceId: string): Promise<void> {
-    const limit = await this.findById(id, workspaceId);
-    if (limit) {
-      limit.markAsDeleted();
-    }
-
+    // Domain events for deletion are dispatched by the service layer:
+    // the service calls limit.markAsDeleted() + limitRepository.save(limit)
+    // before invoking this method, so events are already dispatched via save().
     await this.prisma.spendingLimit.delete({
       where: {
         id: id.getValue(),
         workspaceId,
       },
     });
-
-    if (limit) {
-      await this.dispatchEvents(limit);
-    }
   }
 
   private toDomain(row: Prisma.SpendingLimitGetPayload<object>): SpendingLimit {

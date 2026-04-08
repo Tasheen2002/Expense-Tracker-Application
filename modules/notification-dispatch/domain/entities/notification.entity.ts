@@ -6,7 +6,7 @@ import { NotificationId } from '../value-objects/notification-id';
 import { WorkspaceId } from '../value-objects';
 import { UserId } from '../value-objects';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 /**
  * Emitted when a notification is created.
@@ -304,20 +304,20 @@ export class Notification extends AggregateRoot {
     );
   }
 
-  toJSON(): NotificationDTO {
+  static toDTO(notification: Notification): NotificationDTO {
     return {
-      id: this.getId().getValue(),
-      type: this.getType(),
-      channel: this.getChannel(),
-      priority: this.getPriority(),
-      title: this.getTitle(),
-      content: this.getContent(),
-      data: this.getData(),
-      status: this.getStatus(),
-      isRead: this.isRead(),
-      readAt: this.getReadAt()?.toISOString() || null,
-      sentAt: this.getSentAt()?.toISOString() || null,
-      createdAt: this.getCreatedAt().toISOString(),
+      id: notification.getId().getValue(),
+      type: notification.getType(),
+      channel: notification.getChannel(),
+      priority: notification.getPriority(),
+      title: notification.getTitle(),
+      content: notification.getContent(),
+      data: notification.getData(),
+      status: notification.getStatus(),
+      isRead: notification.isRead(),
+      readAt: notification.getReadAt()?.toISOString() || null,
+      sentAt: notification.getSentAt()?.toISOString() || null,
+      createdAt: notification.getCreatedAt().toISOString(),
     };
   }
 }

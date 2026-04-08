@@ -79,7 +79,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(createRuleSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -115,9 +115,11 @@ export async function categoryRuleRoutes(
         },
         response: {
           201: {
+            description: 'Category rule created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categoryRuleSchema,
             },
@@ -136,7 +138,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(ruleQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -144,9 +146,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rules retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',
@@ -181,7 +185,7 @@ export async function categoryRuleRoutes(
     {
       preHandler: [
         validateParams(ruleParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -189,9 +193,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categoryRuleSchema,
             },
@@ -210,7 +216,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(ruleParamsSchema),
         validateBody(updateRuleSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -229,10 +235,13 @@ export async function categoryRuleRoutes(
         },
         response: {
           200: {
+            description: 'Category rule updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
+              data: categoryRuleSchema,
             },
           },
         },
@@ -255,12 +264,9 @@ export async function categoryRuleRoutes(
         description: 'Delete category rule',
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
@@ -275,7 +281,7 @@ export async function categoryRuleRoutes(
     {
       preHandler: [
         validateParams(ruleParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -283,10 +289,13 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule activated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
+              data: categoryRuleSchema,
             },
           },
         },
@@ -302,7 +311,7 @@ export async function categoryRuleRoutes(
     {
       preHandler: [
         validateParams(ruleParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -310,10 +319,13 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Category rule deactivated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
+              data: categoryRuleSchema,
             },
           },
         },
@@ -330,7 +342,7 @@ export async function categoryRuleRoutes(
       preHandler: [
         validateParams(ruleParamsSchema),
         validateQuery(executionQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -338,9 +350,11 @@ export async function categoryRuleRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Rule executions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',

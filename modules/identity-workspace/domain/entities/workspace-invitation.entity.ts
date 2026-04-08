@@ -6,7 +6,7 @@ import {
   InvitationAlreadyAcceptedError,
   InvitationExpiredError,
 } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../apps/api/src/shared/domain/events";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 // ============================================================================
@@ -27,7 +27,7 @@ export class InvitationCreatedEvent extends DomainEvent {
     return "InvitationCreated";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -50,7 +50,29 @@ export class InvitationAcceptedEvent extends DomainEvent {
     return "InvitationAccepted";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
+    return {
+      invitationId: this.invitationId,
+      workspaceId: this.workspaceId,
+      email: this.email,
+    };
+  }
+}
+
+export class InvitationCancelledEvent extends DomainEvent {
+  constructor(
+    public readonly invitationId: string,
+    public readonly workspaceId: string,
+    public readonly email: string,
+  ) {
+    super(invitationId, "WorkspaceInvitation");
+  }
+
+  get eventType(): string {
+    return "InvitationCancelled";
+  }
+
+  getPayload(): Record<string, unknown> {
     return {
       invitationId: this.invitationId,
       workspaceId: this.workspaceId,
@@ -122,19 +144,6 @@ export class WorkspaceInvitation extends AggregateRoot {
     );
   }
 
-  static fromDatabaseRow(row: WorkspaceInvitationRow): WorkspaceInvitation {
-    return new WorkspaceInvitation(
-      InvitationId.fromString(row.id),
-      WorkspaceId.fromString(row.workspace_id),
-      row.email,
-      row.role as WorkspaceRole,
-      row.token,
-      row.expires_at,
-      row.accepted_at,
-      row.created_at,
-    );
-  }
-
   // Getters
   getId(): InvitationId {
     return this.id;
@@ -199,42 +208,57 @@ export class WorkspaceInvitation extends AggregateRoot {
     );
   }
 
+  markAsCancelled(): void {
+    this.addDomainEvent(
+      new InvitationCancelledEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.email,
+      ),
+    );
+  }
+
   // Helper methods
   private static generateToken(): string {
     // Generate a secure random token (32 bytes = 64 hex characters)
     return randomBytes(32).toString("hex");
   }
 
-  // Convert to data for persistence
-  toData(): WorkspaceInvitationData {
-    return {
-      id: this.id.getValue(),
-      workspaceId: this.workspaceId.getValue(),
-      email: this.email,
-      role: this.role,
-      token: this.token,
-      expiresAt: this.expiresAt,
-      acceptedAt: this.acceptedAt,
-      createdAt: this.createdAt,
-    };
-  }
-
-  toDatabaseRow(): WorkspaceInvitationRow {
-    return {
-      id: this.id.getValue(),
-      workspace_id: this.workspaceId.getValue(),
-      email: this.email,
-      role: this.role,
-      token: this.token,
-      expires_at: this.expiresAt,
-      accepted_at: this.acceptedAt,
-      created_at: this.createdAt,
-    };
-  }
-
   equals(other: WorkspaceInvitation): boolean {
     return this.id.equals(other.id);
   }
+
+  static toDTO(invitation: WorkspaceInvitation): WorkspaceInvitationDTO {
+    return {
+      invitationId: invitation.id.getValue(),
+      workspaceId: invitation.workspaceId.getValue(),
+      email: invitation.email,
+      role: invitation.role,
+      token: invitation.token,
+      expiresAt: invitation.expiresAt.toISOString(),
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      isExpired: invitation.isExpired(),
+      isAccepted: invitation.isAccepted(),
+      createdAt: invitation.createdAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceInvitationDTO {
+  invitationId: string;
+  workspaceId: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  isExpired: boolean;
+  isAccepted: boolean;
+  createdAt: string;
 }
 
 // Supporting types and interfaces
@@ -256,13 +280,4 @@ export interface WorkspaceInvitationData {
   createdAt: Date;
 }
 
-export interface WorkspaceInvitationRow {
-  id: string;
-  workspace_id: string;
-  email: string;
-  role: string;
-  token: string;
-  expires_at: Date;
-  accepted_at: Date | null;
-  created_at: Date;
-}
+

@@ -59,7 +59,8 @@ export class TagController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Tag updated successfully'
+        'Tag updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -110,7 +111,7 @@ export class TagController {
         result,
         'Tags retrieved successfully',
         {
-          items: paginatedData?.items.map((t) => t.toJSON()) ?? [],
+          items: paginatedData?.items ?? [],
           pagination: {
             total: paginatedData?.total ?? 0,
             limit: paginatedData?.limit ?? 0,

@@ -6,7 +6,6 @@ import { DeleteWorkspaceHandler } from '../../../application/commands/delete-wor
 import { GetWorkspaceByIdHandler } from '../../../application/queries/get-workspace-by-id.query';
 import { GetUserWorkspacesHandler } from '../../../application/queries/get-user-workspaces.query';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
-import { Workspace } from '../../../domain/entities/workspace.entity';
 import { ResponseHelper } from '@shared/response.helper';
 
 export class WorkspaceController {
@@ -70,7 +69,7 @@ export class WorkspaceController {
         reply,
         result,
         'Workspace retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -104,9 +103,7 @@ export class WorkspaceController {
         'Workspaces retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((workspace: Workspace) =>
-                workspace.toJSON()
-              ),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -151,7 +148,8 @@ export class WorkspaceController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Workspace updated successfully'
+        'Workspace updated successfully',
+        result.data
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -183,7 +181,9 @@ export class WorkspaceController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Workspace deleted successfully'
+        'Workspace deleted successfully',
+        undefined,
+        204
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

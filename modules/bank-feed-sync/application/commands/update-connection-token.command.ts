@@ -1,7 +1,4 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnectionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import { TransactionSyncService } from '../services/transaction-sync.service';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
@@ -20,27 +17,18 @@ export class UpdateConnectionTokenHandler implements ICommandHandler<
   CommandResult<void>
 > {
   constructor(
-    private readonly connectionRepository: IBankConnectionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
   async handle(
     command: UpdateConnectionTokenCommand
   ): Promise<CommandResult<void>> {
-    const workspaceId = WorkspaceId.fromString(command.workspaceId);
-    const connectionId = BankConnectionId.fromString(command.connectionId);
-
-    const connection = await this.connectionRepository.findById(
-      connectionId,
-      workspaceId
+    await this.transactionSyncService.updateConnectionToken(
+      command.connectionId,
+      command.workspaceId,
+      command.accessToken,
+      command.tokenExpiresAt
     );
-
-    if (!connection) {
-      throw new BankConnectionNotFoundError(command.connectionId);
-    }
-
-    connection.updateAccessToken(command.accessToken, command.tokenExpiresAt);
-    await this.connectionRepository.save(connection);
-
     return CommandResult.success();
   }
 }

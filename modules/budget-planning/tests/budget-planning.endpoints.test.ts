@@ -430,8 +430,70 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
 
     describe('DELETE /api/v1/:workspaceId/forecasts/:id', () => {
       it('✅ should delete forecast', async () => {
-        const forecastId =
-          testForecastId || '00000000-0000-4000-8000-000000000001';
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        const createPlanRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
+          headers: { Authorization: `Bearer ${authToken}` },
+          payload: {
+            name: 'Forecast Delete Test Plan',
+            periodType: 'MONTHLY',
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+          },
+        });
+
+        expect(createPlanRes.statusCode).toBe(201);
+        const createPlanBody = JSON.parse(createPlanRes.payload);
+        let planId =
+          createPlanBody.data?.budgetPlanId ||
+          createPlanBody.data?.budgetPlan?.id ||
+          createPlanBody.budgetPlan?.id ||
+          createPlanBody.data?.id;
+        if (!planId) {
+          const createdPlan = await prisma.budgetPlan.findFirst({
+            where: {
+              workspaceId: testWorkspaceId,
+              name: 'Forecast Delete Test Plan',
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          planId = createdPlan?.id;
+        }
+        expect(planId).toBeDefined();
+
+        const createForecastRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/forecasts`,
+          headers: { Authorization: `Bearer ${authToken}` },
+          payload: {
+            name: 'Forecast To Delete',
+            type: 'BASELINE',
+          },
+        });
+
+        expect(createForecastRes.statusCode).toBe(201);
+        const createForecastBody = JSON.parse(createForecastRes.payload);
+        let forecastId =
+          createForecastBody.data?.forecastId ||
+          createForecastBody.data?.forecast?.id ||
+          createForecastBody.forecast?.id ||
+          createForecastBody.data?.id;
+        if (!forecastId) {
+          const createdForecast = await prisma.forecast.findFirst({
+            where: {
+              planId,
+              name: 'Forecast To Delete',
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          forecastId = createdForecast?.id;
+        }
+        expect(forecastId).toBeDefined();
+
         const res = await app.inject({
           method: 'DELETE',
           url: `/api/v1/workspaces/${testWorkspaceId}/forecasts/${forecastId}`,
@@ -478,7 +540,10 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           const data = JSON.parse(res.payload);
           testForecastItemId =
             data.data?.forecastItemId ||
-            data.data?.item?.id || data.item?.id || data.data?.id || data.id;
+            data.data?.item?.id ||
+            data.item?.id ||
+            data.data?.id ||
+            data.id;
         }
         expect([201, 400, 404, 500]).toContain(res.statusCode);
       });
@@ -676,8 +741,71 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
 
     describe('DELETE /api/v1/:workspaceId/scenarios/:id', () => {
       it('✅ should delete scenario', async () => {
-        const scenarioId =
-          testScenarioId || '00000000-0000-4000-8000-000000000001';
+        const startDate = new Date();
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+
+        const createPlanRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans`,
+          headers: { Authorization: `Bearer ${authToken}` },
+          payload: {
+            name: 'Scenario Delete Test Plan',
+            periodType: 'MONTHLY',
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+          },
+        });
+
+        expect(createPlanRes.statusCode).toBe(201);
+        const createPlanBody = JSON.parse(createPlanRes.payload);
+        let planId =
+          createPlanBody.data?.budgetPlanId ||
+          createPlanBody.data?.budgetPlan?.id ||
+          createPlanBody.budgetPlan?.id ||
+          createPlanBody.data?.id;
+        if (!planId) {
+          const createdPlan = await prisma.budgetPlan.findFirst({
+            where: {
+              workspaceId: testWorkspaceId,
+              name: 'Scenario Delete Test Plan',
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          planId = createdPlan?.id;
+        }
+        expect(planId).toBeDefined();
+
+        const createScenarioRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budget-plans/${planId}/scenarios`,
+          headers: { Authorization: `Bearer ${authToken}` },
+          payload: {
+            name: 'Scenario To Delete',
+            description: 'Scenario created only for delete test',
+            assumptions: { growthRate: 0.1 },
+          },
+        });
+
+        expect(createScenarioRes.statusCode).toBe(201);
+        const createScenarioBody = JSON.parse(createScenarioRes.payload);
+        let scenarioId =
+          createScenarioBody.data?.scenarioId ||
+          createScenarioBody.data?.scenario?.id ||
+          createScenarioBody.scenario?.id ||
+          createScenarioBody.data?.id;
+        if (!scenarioId) {
+          const createdScenario = await prisma.scenario.findFirst({
+            where: {
+              planId,
+              name: 'Scenario To Delete',
+            },
+            orderBy: { createdAt: 'desc' },
+          });
+          scenarioId = createdScenario?.id;
+        }
+        expect(scenarioId).toBeDefined();
+
         const res = await app.inject({
           method: 'DELETE',
           url: `/api/v1/workspaces/${testWorkspaceId}/scenarios/${scenarioId}`,

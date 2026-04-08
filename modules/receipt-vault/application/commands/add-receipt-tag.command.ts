@@ -1,21 +1,30 @@
-import { ReceiptService } from "../services/receipt.service";
+import { ReceiptService } from '../services/receipt.service';
+import {
+  ICommand,
+  ICommandHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface AddReceiptTagDto {
+export interface AddReceiptTagCommand extends ICommand {
   receiptId: string;
   tagId: string;
   workspaceId: string;
   userId: string;
 }
 
-export class AddReceiptTagHandler {
+export class AddReceiptTagHandler implements ICommandHandler<
+  AddReceiptTagCommand,
+  CommandResult<void>
+> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(dto: AddReceiptTagDto): Promise<void> {
-    return await this.receiptService.addTag(
-      dto.receiptId,
-      dto.tagId,
-      dto.workspaceId,
-      dto.userId,
+  async handle(command: AddReceiptTagCommand): Promise<CommandResult<void>> {
+    await this.receiptService.addTag(
+      command.receiptId,
+      command.tagId,
+      command.workspaceId,
+      command.userId,
     );
+    return CommandResult.success();
   }
 }

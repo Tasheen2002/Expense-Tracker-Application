@@ -1,4 +1,5 @@
 import { TransactionSyncService } from '../services/transaction-sync.service';
+import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
@@ -14,7 +15,7 @@ export interface SyncTransactionsCommand extends ICommand {
 
 export class SyncTransactionsHandler implements ICommandHandler<
   SyncTransactionsCommand,
-  CommandResult<string>
+  CommandResult<SyncSessionDTO>
 > {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
@@ -22,8 +23,8 @@ export class SyncTransactionsHandler implements ICommandHandler<
 
   async handle(
     command: SyncTransactionsCommand
-  ): Promise<CommandResult<string>> {
-    const session = await this.transactionSyncService.syncTransactions(command);
-    return CommandResult.success(session.id.getValue());
+  ): Promise<CommandResult<SyncSessionDTO>> {
+    const dto = await this.transactionSyncService.syncTransactions(command);
+    return CommandResult.success(dto);
   }
 }

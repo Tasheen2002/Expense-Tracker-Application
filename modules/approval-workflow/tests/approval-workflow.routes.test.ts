@@ -36,13 +36,6 @@ import { ListApprovalChainsHandler } from '../application/queries/list-approval-
 import { GetWorkflowHandler } from '../application/queries/get-workflow.query';
 import { ListPendingApprovalsHandler } from '../application/queries/list-pending-approvals.query';
 import { ListUserWorkflowsHandler } from '../application/queries/list-user-workflows.query';
-import { ApprovalChain } from '../domain/entities/approval-chain.entity';
-import { ExpenseWorkflow } from '../domain/entities/expense-workflow.entity';
-import { ApprovalChainId } from '../domain/value-objects/approval-chain-id';
-import { WorkflowId } from '../domain/value-objects/workflow-id';
-import { WorkspaceId } from '../../identity-workspace/domain/value-objects/workspace-id.vo';
-import { UserId } from '../../identity-workspace/domain/value-objects/user-id.vo';
-import { ExpenseId } from '../../expense-ledger/domain/value-objects/expense-id';
 import {
   ApprovalChainNotFoundError,
   WorkflowNotFoundError,
@@ -60,49 +53,44 @@ const mockWorkflowId = '123e4567-e89b-12d3-a456-426614174030';
 const mockApproverId1 = '123e4567-e89b-12d3-a456-426614174040';
 const mockApproverId2 = '123e4567-e89b-12d3-a456-426614174041';
 
-// Helper to create mock ApprovalChain
+// Helper to create mock ApprovalChain DTO (services now return DTOs)
 function createMockApprovalChain(
   id: string = mockChainId,
   name: string = 'Default Approval Chain',
   isActive: boolean = true
-): ApprovalChain {
-  return ApprovalChain.reconstitute({
-    chainId: ApprovalChainId.fromString(id),
-    workspaceId: WorkspaceId.fromString(mockWorkspaceId),
+) {
+  return {
+    chainId: id,
+    workspaceId: mockWorkspaceId,
     name,
     description: 'Test approval chain',
     minAmount: 100,
     maxAmount: 10000,
-    categoryIds: undefined,
     requiresReceipt: true,
-    approverSequence: [
-      UserId.fromString(mockApproverId1),
-      UserId.fromString(mockApproverId2),
-    ],
+    approverSequence: [mockApproverId1, mockApproverId2],
     isActive,
-    createdAt: new Date('2024-01-15T10:30:00Z'),
-    updatedAt: new Date('2024-01-15T10:30:00Z'),
-  });
+    createdAt: '2024-01-15T10:30:00.000Z',
+    updatedAt: '2024-01-15T10:30:00.000Z',
+  };
 }
 
-// Helper to create mock ExpenseWorkflow
+// Helper to create mock ExpenseWorkflow DTO (services now return DTOs)
 function createMockWorkflow(
   expenseId: string = mockExpenseId,
   status: string = 'PENDING'
-): ExpenseWorkflow {
-  const workflow = ExpenseWorkflow.reconstitute({
-    workflowId: WorkflowId.fromString(mockWorkflowId),
-    expenseId: ExpenseId.fromString(expenseId),
-    workspaceId: WorkspaceId.fromString(mockWorkspaceId),
-    userId: UserId.fromString(mockUserId),
-    chainId: ApprovalChainId.fromString(mockChainId),
-    steps: [],
-    status: status as any,
+) {
+  return {
+    workflowId: mockWorkflowId,
+    expenseId,
+    workspaceId: mockWorkspaceId,
+    userId: mockUserId,
+    chainId: mockChainId,
+    status,
     currentStepNumber: 1,
-    createdAt: new Date('2024-01-15T10:30:00Z'),
-    updatedAt: new Date('2024-01-15T10:30:00Z'),
-  });
-  return workflow;
+    steps: [],
+    createdAt: '2024-01-15T10:30:00.000Z',
+    updatedAt: '2024-01-15T10:30:00.000Z',
+  };
 }
 
 // Create mock services

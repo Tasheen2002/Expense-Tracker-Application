@@ -53,7 +53,7 @@ export class RecurringExpenseController {
         reply,
         result,
         'Recurring expense created successfully',
-        result.data?.toJSON(),
+        result.data,
         201
       );
     } catch (error: unknown) {

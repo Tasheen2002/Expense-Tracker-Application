@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["approval_workflow", "audit_compliance", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "event_outbox", "expense_ledger", "identity_workspace", "notification_dispatch", "policy_controls", "receipt_vault"]
+  schemas  = ["approval_workflow", "audit_compliance", "bank_feed_sync", "budget_management", "budget_planning", "categorization_rules", "cost_allocation", "event_outbox", "expense_ledger", "identity_workspace", "inventory_management", "notification_dispatch", "policy_controls", "receipt_vault"]
 }
 
 model UserAccount {
@@ -1248,4 +1248,151 @@ enum OutboxEventStatus {
   FAILED
 
   @@schema("event_outbox")
+}
+
+// ============================================
+// Inventory Management Module
+// ============================================
+
+model Supplier {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @map("workspace_id") @db.Uuid
+  name           String          @db.VarChar(255)
+  contactEmail   String?         @map("contact_email") @db.VarChar(255)
+  contactPhone   String?         @map("contact_phone") @db.VarChar(50)
+  address        String?
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  purchaseOrders PurchaseOrder[]
+
+  @@index([workspaceId])
+  @@map("supplier")
+  @@schema("inventory_management")
+}
+
+model Location {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  workspaceId           String                 @map("workspace_id") @db.Uuid
+  name                  String                 @db.VarChar(255)
+  type                  LocationType           @default(WAREHOUSE)
+  address               String?
+  isActive              Boolean                @default(true) @map("is_active")
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  stocks                Stock[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@index([workspaceId])
+  @@map("location")
+  @@schema("inventory_management")
+}
+
+enum LocationType {
+  WAREHOUSE
+  STORE
+  OTHER
+
+  @@schema("inventory_management")
+}
+
+model PurchaseOrder {
+  id           String              @id @default(uuid()) @db.Uuid
+  workspaceId  String              @map("workspace_id") @db.Uuid
+  supplierId   String              @map("supplier_id") @db.Uuid
+  status       PurchaseOrderStatus @default(DRAFT)
+  orderDate    DateTime            @map("order_date") @db.Date
+  expectedDate DateTime?           @map("expected_date") @db.Date
+  receivedDate DateTime?           @map("received_date") @db.Date
+  notes        String?
+  totalAmount  Decimal             @default(0) @map("total_amount") @db.Decimal(12, 2)
+  currency     String              @default("USD") @db.VarChar(3)
+  createdBy    String              @map("created_by") @db.Uuid
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  items        PurchaseOrderItem[]
+
+  @@index([workspaceId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_order")
+  @@schema("inventory_management")
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  RECEIVED
+  CANCELLED
+
+  @@schema("inventory_management")
+}
+
+model PurchaseOrderItem {
+  id               String        @id @default(uuid()) @db.Uuid
+  purchaseOrderId  String        @map("purchase_order_id") @db.Uuid
+  variantId        String        @map("variant_id") @db.VarChar(255)
+  variantName      String        @map("variant_name") @db.VarChar(255)
+  quantity         Int
+  unitPrice        Decimal       @map("unit_price") @db.Decimal(12, 2)
+  receivedQuantity Int           @default(0) @map("received_quantity")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+  @@map("purchase_order_item")
+  @@schema("inventory_management")
+}
+
+model Stock {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  variantId       String   @map("variant_id") @db.VarChar(255)
+  locationId      String   @map("location_id") @db.Uuid
+  quantity        Int      @default(0)
+  reservedQuantity Int     @default(0) @map("reserved_quantity")
+  reorderLevel    Int      @default(0) @map("reorder_level")
+  reorderQuantity Int      @default(0) @map("reorder_quantity")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  location        Location @relation(fields: [locationId], references: [id])
+
+  @@unique([variantId, locationId])
+  @@index([workspaceId])
+  @@index([locationId])
+  @@map("stock")
+  @@schema("inventory_management")
+}
+
+model InventoryTransaction {
+  id            String          @id @default(uuid()) @db.Uuid
+  workspaceId   String          @map("workspace_id") @db.Uuid
+  variantId     String          @map("variant_id") @db.VarChar(255)
+  locationId    String          @map("location_id") @db.Uuid
+  type          TransactionType
+  quantity      Int
+  referenceId   String?         @map("reference_id") @db.Uuid
+  referenceType String?         @map("reference_type") @db.VarChar(50)
+  notes         String?
+  createdBy     String          @map("created_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  location      Location        @relation(fields: [locationId], references: [id])
+
+  @@index([workspaceId])
+  @@index([variantId])
+  @@index([locationId])
+  @@map("inventory_transaction")
+  @@schema("inventory_management")
+}
+
+enum TransactionType {
+  IN
+  OUT
+  TRANSFER
+  ADJUSTMENT
+
+  @@schema("inventory_management")
 }

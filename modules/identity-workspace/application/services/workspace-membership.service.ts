@@ -1,6 +1,7 @@
 import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   WorkspaceMembership,
+  WorkspaceMembershipDTO,
   WorkspaceRole,
   CreateWorkspaceMembershipData,
 } from '../../domain/entities/workspace-membership.entity';
@@ -24,7 +25,7 @@ export class WorkspaceMembershipService {
 
   async addMember(
     data: CreateWorkspaceMembershipData
-  ): Promise<WorkspaceMembership> {
+  ): Promise<WorkspaceMembershipDTO> {
     const userId = UserId.fromString(data.userId);
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
 
@@ -44,12 +45,13 @@ export class WorkspaceMembershipService {
 
     const membership = WorkspaceMembership.create(data);
     await this.membershipRepository.save(membership);
-    return membership;
+    return WorkspaceMembership.toDTO(membership);
   }
 
-  async getMembershipById(id: string): Promise<WorkspaceMembership | null> {
+  async getMembershipById(id: string): Promise<WorkspaceMembershipDTO | null> {
     const membershipId = MembershipId.fromString(id);
-    return await this.membershipRepository.findById(membershipId);
+    const membership = await this.membershipRepository.findById(membershipId);
+    return membership ? WorkspaceMembership.toDTO(membership) : null;
   }
 
   async getUserMembership(
@@ -66,22 +68,24 @@ export class WorkspaceMembershipService {
 
   async getUserMemberships(
     userId: string
-  ): Promise<PaginatedResult<WorkspaceMembership>> {
+  ): Promise<PaginatedResult<WorkspaceMembershipDTO>> {
     const userIdVO = UserId.fromString(userId);
-    return await this.membershipRepository.findByUserId(userIdVO);
+    const result = await this.membershipRepository.findByUserId(userIdVO);
+    return { ...result, items: result.items.map((m) => WorkspaceMembership.toDTO(m)) };
   }
 
   async getWorkspaceMembers(
     workspaceId: string
-  ): Promise<PaginatedResult<WorkspaceMembership>> {
+  ): Promise<PaginatedResult<WorkspaceMembershipDTO>> {
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
-    return await this.membershipRepository.findByWorkspaceId(workspaceIdVO);
+    const result = await this.membershipRepository.findByWorkspaceId(workspaceIdVO);
+    return { ...result, items: result.items.map((m) => WorkspaceMembership.toDTO(m)) };
   }
 
   async changeMemberRole(
     membershipId: string,
     newRole: WorkspaceRole
-  ): Promise<WorkspaceMembership> {
+  ): Promise<WorkspaceMembershipDTO> {
     const id = MembershipId.fromString(membershipId);
     const membership = await this.membershipRepository.findById(id);
 
@@ -96,7 +100,7 @@ export class WorkspaceMembershipService {
 
     membership.changeRole(newRole);
     await this.membershipRepository.update(membership);
-    return membership;
+    return WorkspaceMembership.toDTO(membership);
   }
 
   async removeMember(membershipId: string): Promise<void> {
@@ -116,6 +120,8 @@ export class WorkspaceMembershipService {
       `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
     );
 
+    membership.markAsRemoved();
+    await this.membershipRepository.update(membership);
     await this.membershipRepository.delete(id);
   }
 

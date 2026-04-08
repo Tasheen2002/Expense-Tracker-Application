@@ -47,7 +47,7 @@ export async function forecastRoutes(
       preValidation: [validateParams(planIdParamsSchema)],
       preHandler: [
         validateBody(createForecastSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
@@ -74,6 +74,7 @@ export async function forecastRoutes(
         },
         response: {
           201: {
+            description: 'Forecast created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -99,7 +100,7 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/budget-plans/:planId/forecasts',
     {
       preValidation: [validateParams(planIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Forecasts'],
         description: 'List all forecasts for a budget plan',
@@ -114,6 +115,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecasts retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -134,7 +136,7 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecasts/:id',
     {
       preValidation: [validateParams(forecastParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Forecasts'],
         description: 'Get a specific forecast',
@@ -149,6 +151,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecast retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -205,7 +208,7 @@ export async function forecastRoutes(
       preValidation: [validateParams(forecastIdParamsSchema)],
       preHandler: [
         validateBody(addForecastItemSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
@@ -230,6 +233,7 @@ export async function forecastRoutes(
         },
         response: {
           201: {
+            description: 'Forecast item added successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -255,7 +259,7 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecasts/:forecastId/items',
     {
       preValidation: [validateParams(forecastIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
         description: 'List all items in a forecast',
@@ -270,6 +274,7 @@ export async function forecastRoutes(
         },
         response: {
           200: {
+            description: 'Forecast items retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -290,7 +295,7 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecast-items/:itemId',
     {
       preValidation: [validateParams(forecastItemParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
         description: 'Delete a forecast item',

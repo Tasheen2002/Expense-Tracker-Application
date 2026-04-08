@@ -1,5 +1,5 @@
-import { IBudgetRepository } from '../../domain/repositories/budget.repository';
-import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
+import { BudgetService } from '../services/budget.service';
+import { BudgetDTO } from '../../domain/entities/budget.entity';
 import { BudgetStatus } from '../../domain/enums/budget-status';
 import {
   PaginatedResult,
@@ -25,7 +25,7 @@ export class ListBudgetsHandler implements IQueryHandler<
   ListBudgetsQuery,
   QueryResult<PaginatedResult<BudgetDTO>>
 > {
-  constructor(private readonly budgetRepository: IBudgetRepository) {}
+  constructor(private readonly budgetService: BudgetService) {}
 
   async handle(
     query: ListBudgetsQuery
@@ -35,7 +35,7 @@ export class ListBudgetsHandler implements IQueryHandler<
       offset: query.offset || 0,
     };
 
-    let result;
+    let result: PaginatedResult<BudgetDTO>;
 
     if (
       query.status ||
@@ -43,7 +43,7 @@ export class ListBudgetsHandler implements IQueryHandler<
       query.createdBy ||
       query.currency
     ) {
-      result = await this.budgetRepository.findByFilters(
+      result = await this.budgetService.filterBudgets(
         {
           workspaceId: query.workspaceId,
           status: query.status,
@@ -54,17 +54,12 @@ export class ListBudgetsHandler implements IQueryHandler<
         options
       );
     } else {
-      result = await this.budgetRepository.findByWorkspace(
+      result = await this.budgetService.getBudgetsByWorkspace(
         query.workspaceId,
         options
       );
     }
 
-    const dtoResult: PaginatedResult<BudgetDTO> = {
-      ...result,
-      items: result.items.map((budget) => Budget.toDTO(budget)),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

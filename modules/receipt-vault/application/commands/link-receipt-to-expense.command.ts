@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -15,19 +15,19 @@ export interface LinkReceiptToExpenseCommand extends ICommand {
 
 export class LinkReceiptToExpenseHandler implements ICommandHandler<
   LinkReceiptToExpenseCommand,
-  CommandResult<void>
+  CommandResult<ReceiptDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
   async handle(
     command: LinkReceiptToExpenseCommand
-  ): Promise<CommandResult<void>> {
-    await this.receiptService.linkToExpense(
+  ): Promise<CommandResult<ReceiptDTO>> {
+    const receiptDTO = await this.receiptService.linkToExpense(
       command.receiptId,
       command.expenseId,
       command.workspaceId,
       command.userId
     );
-    return CommandResult.success();
+    return CommandResult.success(receiptDTO);
   }
 }

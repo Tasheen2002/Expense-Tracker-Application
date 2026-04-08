@@ -1,5 +1,5 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
-import { WorkspaceInvitation } from '../../domain/entities/workspace-invitation.entity';
+import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import {
@@ -14,19 +14,19 @@ export interface GetPendingInvitationsQuery extends IQuery {
 
 export class GetPendingInvitationsHandler implements IQueryHandler<
   GetPendingInvitationsQuery,
-  QueryResult<PaginatedResult<WorkspaceInvitation>>
+  QueryResult<PaginatedResult<WorkspaceInvitationDTO>>
 > {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
   async handle(
     query: GetPendingInvitationsQuery
-  ): Promise<QueryResult<PaginatedResult<WorkspaceInvitation>>> {
+  ): Promise<QueryResult<PaginatedResult<WorkspaceInvitationDTO>>> {
     try {
-      const invitations = await this.invitationService.getPendingInvitations(
+      const result = await this.invitationService.getPendingInvitationDTOs(
         query.workspaceId,
         query.options
       );
-      return QueryResult.success(invitations);
+      return QueryResult.success(result);
     } catch (error) {
       return QueryResult.fromError(error);
     }

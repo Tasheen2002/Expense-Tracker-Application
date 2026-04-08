@@ -19,7 +19,8 @@ export interface SplitSettlementProps {
 }
 
 export class SplitSettlement {
-  private constructor(private props: SplitSettlementProps) {}
+  private constructor(private props: SplitSettlementProps) {
+  }
 
   static create(params: {
     splitId: SplitId;

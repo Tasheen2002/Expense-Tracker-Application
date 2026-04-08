@@ -1,6 +1,6 @@
 import { IReceiptTagDefinitionRepository } from "../../domain/repositories/receipt-tag-definition.repository";
 import { IReceiptTagRepository } from "../../domain/repositories/receipt-tag.repository";
-import { ReceiptTagDefinition } from "../../domain/entities/receipt-tag-definition.entity";
+import { ReceiptTagDefinition, ReceiptTagDefinitionDTO } from "../../domain/entities/receipt-tag-definition.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
 import {
   ReceiptTagNotFoundError,
@@ -17,12 +17,28 @@ export class TagService {
     private readonly tagRepository: IReceiptTagRepository,
   ) {}
 
+  private async _getTagEntity(
+    tagId: string,
+    workspaceId: string,
+  ): Promise<ReceiptTagDefinition> {
+    const tag = await this.tagDefinitionRepository.findById(
+      TagId.fromString(tagId),
+      workspaceId,
+    );
+
+    if (!tag) {
+      throw new ReceiptTagNotFoundError(tagId, workspaceId);
+    }
+
+    return tag;
+  }
+
   async createTag(params: {
     workspaceId: string;
     name: string;
     color?: string;
     description?: string;
-  }): Promise<ReceiptTagDefinition> {
+  }): Promise<ReceiptTagDefinitionDTO> {
     // Check if tag with same name already exists
     const existing = await this.tagDefinitionRepository.findByName(
       params.name,
@@ -42,7 +58,7 @@ export class TagService {
 
     await this.tagDefinitionRepository.save(tag);
 
-    return tag;
+    return ReceiptTagDefinition.toDTO(tag);
   }
 
   async updateTag(
@@ -53,15 +69,8 @@ export class TagService {
       color?: string;
       description?: string;
     },
-  ): Promise<ReceiptTagDefinition> {
-    const tag = await this.tagDefinitionRepository.findById(
-      TagId.fromString(tagId),
-      workspaceId,
-    );
-
-    if (!tag) {
-      throw new ReceiptTagNotFoundError(tagId, workspaceId);
-    }
+  ): Promise<ReceiptTagDefinitionDTO> {
+    const tag = await this._getTagEntity(tagId, workspaceId);
 
     // Check name uniqueness if name is being updated
     if (updates.name && updates.name !== tag.getName()) {
@@ -87,7 +96,7 @@ export class TagService {
 
     await this.tagDefinitionRepository.save(tag);
 
-    return tag;
+    return ReceiptTagDefinition.toDTO(tag);
   }
 
   async deleteTag(tagId: string, workspaceId: string): Promise<void> {
@@ -109,27 +118,43 @@ export class TagService {
   async getTag(
     tagId: string,
     workspaceId: string,
-  ): Promise<ReceiptTagDefinition | null> {
-    return await this.tagDefinitionRepository.findById(
+  ): Promise<ReceiptTagDefinitionDTO | null> {
+    const tag = await this.tagDefinitionRepository.findById(
       TagId.fromString(tagId),
       workspaceId,
     );
+
+    if (!tag) {
+      return null;
+    }
+
+    return ReceiptTagDefinition.toDTO(tag);
   }
 
   async getTagsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions,
-  ): Promise<PaginatedResult<ReceiptTagDefinition>> {
-    return await this.tagDefinitionRepository.findByWorkspace(
+  ): Promise<PaginatedResult<ReceiptTagDefinitionDTO>> {
+    const result = await this.tagDefinitionRepository.findByWorkspace(
       workspaceId,
       options,
     );
+    return {
+      ...result,
+      items: result.items.map((t) => ReceiptTagDefinition.toDTO(t)),
+    };
   }
 
   async getTagByName(
     name: string,
     workspaceId: string,
-  ): Promise<ReceiptTagDefinition | null> {
-    return await this.tagDefinitionRepository.findByName(name, workspaceId);
+  ): Promise<ReceiptTagDefinitionDTO | null> {
+    const tag = await this.tagDefinitionRepository.findByName(name, workspaceId);
+
+    if (!tag) {
+      return null;
+    }
+
+    return ReceiptTagDefinition.toDTO(tag);
   }
 }

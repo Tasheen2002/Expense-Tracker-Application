@@ -1,5 +1,5 @@
 import { IUserRepository } from '../../domain/repositories/user.repository'
-import { User, CreateUserData } from '../../domain/entities/user.entity'
+import { User, UserDTO, CreateUserData } from '../../domain/entities/user.entity'
 import { UserId } from '../../domain/value-objects/user-id.vo'
 import { Email } from '../../domain/value-objects/email.vo'
 import bcrypt from 'bcryptjs'
@@ -20,6 +20,21 @@ export interface UserManagementServiceOptions {
 
 export class UserManagementService {
   constructor(private readonly userRepository: IUserRepository) {}
+
+  async createUserDTO(data: CreateUserData): Promise<UserDTO> {
+    const user = await this.createUser(data)
+    return User.toDTO(user)
+  }
+
+  async getUserDTOById(id: string): Promise<UserDTO | null> {
+    const user = await this.getUserById(id)
+    return user ? User.toDTO(user) : null
+  }
+
+  async getUserDTOByEmail(email: string): Promise<UserDTO | null> {
+    const user = await this.getUserByEmail(email)
+    return user ? User.toDTO(user) : null
+  }
 
   async createUser(data: CreateUserData): Promise<User> {
     // Check if email already exists

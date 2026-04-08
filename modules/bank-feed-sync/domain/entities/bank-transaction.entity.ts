@@ -102,6 +102,28 @@ export class BankTransactionIgnoredEvent extends DomainEvent {
   }
 }
 
+export class BankTransactionDuplicateDetectedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly externalId: string
+  ) {
+    super(transactionId, 'BankTransaction');
+  }
+
+  get eventType(): string {
+    return 'BankTransactionDuplicateDetected';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      externalId: this.externalId,
+    };
+  }
+}
+
 export interface BankTransactionProps {
   id: BankTransactionId;
   workspaceId: WorkspaceId;
@@ -291,6 +313,14 @@ export class BankTransaction extends AggregateRoot {
   markAsDuplicate(): void {
     this.props.status = TransactionStatus.DUPLICATE;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new BankTransactionDuplicateDetectedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.externalId
+      )
+    );
   }
 
   static toDTO(transaction: BankTransaction): BankTransactionDTO {

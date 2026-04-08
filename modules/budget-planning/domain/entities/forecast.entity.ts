@@ -1,90 +1,12 @@
 import { ForecastId } from '../value-objects/forecast-id';
 import { PlanId } from '../value-objects/plan-id';
 import { ForecastType } from '../enums/forecast-type.enum';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class ForecastCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly forecastId: string,
-    public readonly planId: string,
-    public readonly name: string,
-    public readonly type: ForecastType
-  ) {
-    super(forecastId, 'Forecast');
-  }
-
-  get eventType(): string {
-    return 'ForecastCreated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      forecastId: this.forecastId,
-      planId: this.planId,
-      name: this.name,
-      type: this.type,
-    };
-  }
-}
-
-export class ForecastNameUpdatedEvent extends DomainEvent {
-  constructor(
-    public readonly forecastId: string,
-    public readonly newName: string
-  ) {
-    super(forecastId, 'Forecast');
-  }
-
-  get eventType(): string {
-    return 'ForecastNameUpdated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      forecastId: this.forecastId,
-      newName: this.newName,
-    };
-  }
-}
-
-export class ForecastActivatedEvent extends DomainEvent {
-  constructor(public readonly forecastId: string) {
-    super(forecastId, 'Forecast');
-  }
-
-  get eventType(): string {
-    return 'ForecastActivated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return { forecastId: this.forecastId };
-  }
-}
-
-export class ForecastDeactivatedEvent extends DomainEvent {
-  constructor(public readonly forecastId: string) {
-    super(forecastId, 'Forecast');
-  }
-
-  get eventType(): string {
-    return 'ForecastDeactivated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return { forecastId: this.forecastId };
-  }
-}
 
 // ============================================================================
 // Entity
 // ============================================================================
 
-export class Forecast extends AggregateRoot {
+export class Forecast {
   private constructor(
     private readonly _id: ForecastId,
     private readonly _planId: PlanId,
@@ -93,9 +15,7 @@ export class Forecast extends AggregateRoot {
     private _isActive: boolean,
     private readonly _createdAt: Date,
     private _updatedAt: Date
-  ) {
-    super();
-  }
+  ) {}
 
   static create(params: {
     planId: PlanId;
@@ -110,15 +30,6 @@ export class Forecast extends AggregateRoot {
       true,
       new Date(),
       new Date()
-    );
-
-    forecast.addDomainEvent(
-      new ForecastCreatedEvent(
-        forecast._id.getValue(),
-        params.planId.getValue(),
-        params.name,
-        params.type
-      )
     );
 
     return forecast;
@@ -175,21 +86,18 @@ export class Forecast extends AggregateRoot {
   updateName(name: string): void {
     this._name = name;
     this._updatedAt = new Date();
-    this.addDomainEvent(new ForecastNameUpdatedEvent(this._id.getValue(), name));
   }
 
   activate(): void {
     if (this._isActive) return;
     this._isActive = true;
     this._updatedAt = new Date();
-    this.addDomainEvent(new ForecastActivatedEvent(this._id.getValue()));
   }
 
   deactivate(): void {
     if (!this._isActive) return;
     this._isActive = false;
     this._updatedAt = new Date();
-    this.addDomainEvent(new ForecastDeactivatedEvent(this._id.getValue()));
   }
 
   static toDTO(forecast: Forecast): ForecastDTO {

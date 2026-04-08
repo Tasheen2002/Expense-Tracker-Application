@@ -20,16 +20,12 @@ export class CheckChannelEnabledHandler implements IQueryHandler<
   constructor(private readonly preferenceService: PreferenceService) {}
 
   async handle(input: CheckChannelEnabledQuery): Promise<QueryResult<boolean>> {
-    try {
-      const isEnabled = await this.preferenceService.isChannelEnabled(
-        input.userId,
-        input.workspaceId,
-        input.type,
-        input.channel
-      );
-      return QueryResult.success(isEnabled);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+    const isEnabled = await this.preferenceService.isChannelEnabled(
+      input.userId,
+      input.workspaceId,
+      input.type,
+      input.channel
+    );
+    return QueryResult.success(isEnabled);
   }
 }

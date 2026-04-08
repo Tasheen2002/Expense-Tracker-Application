@@ -8,15 +8,14 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class ScenarioRepositoryImpl
-  extends PrismaRepository<Scenario>
   implements IScenarioRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  protected readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
   }
 
   async save(scenario: Scenario): Promise<void> {
@@ -25,7 +24,7 @@ export class ScenarioRepositoryImpl
       planId: scenario.planId.getValue(),
       name: scenario.name,
       description: scenario.description,
-      assumptions: scenario.assumptions ?? undefined,
+      assumptions: scenario.assumptions as Prisma.InputJsonValue | undefined,
       createdBy: scenario.createdBy.getValue(),
       createdAt: scenario.createdAt,
       updatedAt: scenario.updatedAt,
@@ -37,7 +36,6 @@ export class ScenarioRepositoryImpl
       create: data,
     });
 
-    await this.dispatchEvents(scenario);
   }
 
   async findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null> {
@@ -61,10 +59,12 @@ export class ScenarioRepositoryImpl
 
   async findByPlanId(
     planId: PlanId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Scenario>> {
     const where: Prisma.ScenarioWhereInput = {
       planId: planId.getValue(),
+      plan: { workspaceId },
     };
 
     return PrismaRepositoryHelper.paginate(

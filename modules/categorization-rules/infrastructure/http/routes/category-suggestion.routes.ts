@@ -58,7 +58,7 @@ export async function categorySuggestionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(createSuggestionSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -83,9 +83,11 @@ export async function categorySuggestionRoutes(
         },
         response: {
           201: {
+            description: 'Suggestion created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categorySuggestionSchema,
             },
@@ -104,7 +106,7 @@ export async function categorySuggestionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(suggestionQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -127,9 +129,11 @@ export async function categorySuggestionRoutes(
         },
         response: {
           200: {
+            description: 'Suggestions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',
@@ -164,7 +168,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -180,9 +184,11 @@ export async function categorySuggestionRoutes(
         },
         response: {
           200: {
+            description: 'Suggestion retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: categorySuggestionSchema,
             },
@@ -200,7 +206,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(expenseParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -216,9 +222,11 @@ export async function categorySuggestionRoutes(
         },
         response: {
           200: {
+            description: 'Suggestions for expense retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'array',
@@ -239,7 +247,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -255,10 +263,13 @@ export async function categorySuggestionRoutes(
         },
         response: {
           200: {
+            description: 'Suggestion accepted successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
+              data: { type: 'null' },
             },
           },
         },
@@ -274,7 +285,7 @@ export async function categorySuggestionRoutes(
     {
       preHandler: [
         validateParams(suggestionParamsSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -290,10 +301,13 @@ export async function categorySuggestionRoutes(
         },
         response: {
           200: {
+            description: 'Suggestion rejected successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
+              data: { type: 'null' },
             },
           },
         },
@@ -324,12 +338,9 @@ export async function categorySuggestionRoutes(
           },
         },
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
+          204: {
+            description: 'No Content',
+            type: 'null',
           },
         },
       },

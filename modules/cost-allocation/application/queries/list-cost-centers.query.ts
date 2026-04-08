@@ -1,5 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { CostCenter, CostCenterDTO } from '../../domain/entities/cost-center.entity';
+import { CostCenterDTO } from '../../domain/entities/cost-center.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -31,12 +31,6 @@ export class ListCostCentersHandler implements IQueryHandler<
         offset: query.offset || 0,
       }
     );
-    return QueryResult.success({
-      items: result.items.map(CostCenter.toDTO),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    });
+    return QueryResult.success(result);
   }
 }

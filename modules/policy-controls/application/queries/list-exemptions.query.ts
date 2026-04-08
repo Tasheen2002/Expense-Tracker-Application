@@ -1,8 +1,5 @@
-import {
-  ExemptionRepository,
-  ExemptionFilters,
-} from '../../domain/repositories/exemption.repository';
-import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { ExemptionService } from '../services/exemption.service';
+import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
 import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
@@ -19,27 +16,26 @@ export interface ListExemptionsInput {
 }
 
 export class ListExemptionsHandler {
-  constructor(private readonly exemptionRepository: ExemptionRepository) {}
+  constructor(private readonly exemptionService: ExemptionService) {}
 
   async handle(
     input: ListExemptionsInput
-  ): Promise<QueryResult<PaginatedResult<PolicyExemption>>> {
-    let result: PaginatedResult<PolicyExemption>;
+  ): Promise<QueryResult<PaginatedResult<PolicyExemptionDTO>>> {
+    let result: PaginatedResult<PolicyExemptionDTO>;
 
     if (input.userId) {
-      result = await this.exemptionRepository.findByUser(
+      result = await this.exemptionService.listExemptionsByUser(
         input.workspaceId,
         input.userId,
         input.pagination
       );
     } else {
-      const filters: ExemptionFilters = {
-        status: input.status,
-        policyId: input.policyId,
-      };
-      result = await this.exemptionRepository.findByWorkspace(
+      result = await this.exemptionService.listExemptions(
         input.workspaceId,
-        filters,
+        {
+          status: input.status,
+          policyId: input.policyId,
+        },
         input.pagination
       );
     }

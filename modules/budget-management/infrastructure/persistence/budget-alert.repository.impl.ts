@@ -13,16 +13,11 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class BudgetAlertRepositoryImpl
-  extends PrismaRepository<BudgetAlert>
   implements IBudgetAlertRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(protected readonly prisma: PrismaClient) {}
 
   async save(alert: BudgetAlert): Promise<void> {
     await this.prisma.budgetAlert.upsert({
@@ -45,8 +40,6 @@ export class BudgetAlertRepositoryImpl
         notifiedAt: alert.notifiedAt,
       },
     });
-
-    await this.dispatchEvents(alert);
   }
 
   async findById(id: AlertId): Promise<BudgetAlert | null> {
@@ -158,7 +151,7 @@ export class BudgetAlertRepositoryImpl
     });
   }
 
-  private toDomain(row: any): BudgetAlert {
+  private toDomain(row: Prisma.BudgetAlertGetPayload<object>): BudgetAlert {
     return BudgetAlert.fromPersistence({
       id: AlertId.fromString(row.id),
       budgetId: BudgetId.fromString(row.budgetId),

@@ -4,24 +4,27 @@ import {
   RecurringExpense,
   ExpenseTemplate,
 } from "../../domain/entities/recurring-expense.entity";
+import { RecurringExpenseId } from "../../domain/value-objects/recurring-expense-id";
 import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
 import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
-export class PrismaRecurringExpenseRepository implements RecurringExpenseRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly eventBus: IEventBus,
-  ) {}
+export class PrismaRecurringExpenseRepository
+  implements RecurringExpenseRepository
+{
+  protected readonly prisma: PrismaClient;
+
+  constructor(prisma: PrismaClient) {
+    this.prisma = prisma;
+  }
 
   async save(expense: RecurringExpense): Promise<void> {
     await this.prisma.recurringExpense.upsert({
-      where: { id: expense.id },
+      where: { id: expense.id.getValue() },
       update: {
         frequency: expense.frequency,
         interval: expense.interval,
@@ -33,7 +36,7 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
         updatedAt: expense.updatedAt,
       },
       create: {
-        id: expense.id,
+        id: expense.id.getValue(),
         workspaceId: expense.workspaceId,
         userId: expense.userId,
         frequency: expense.frequency,
@@ -48,7 +51,6 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
       },
     });
 
-    // NOTE: RecurringExpense does not extend AggregateRoot - no domain events to dispatch
   }
 
   async findById(id: string): Promise<RecurringExpense | null> {
@@ -94,7 +96,7 @@ export class PrismaRecurringExpenseRepository implements RecurringExpenseReposit
       data.template as unknown as ExpenseTemplate;
 
     return RecurringExpense.fromPersistence({
-      id: data.id,
+      id: RecurringExpenseId.fromString(data.id),
       workspaceId: data.workspaceId,
       userId: data.userId,
       frequency: data.frequency as RecurrenceFrequency,

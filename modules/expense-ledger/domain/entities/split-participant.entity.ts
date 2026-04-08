@@ -16,7 +16,8 @@ export interface SplitParticipantProps {
 }
 
 export class SplitParticipant {
-  private constructor(private props: SplitParticipantProps) {}
+  private constructor(private props: SplitParticipantProps) {
+  }
 
   static create(params: {
     splitId: SplitId;

@@ -1,5 +1,5 @@
 import { TemplateService } from '../services/template.service';
-import { NotificationTemplate } from '../../domain/entities/notification-template.entity';
+import { NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -12,20 +12,16 @@ export interface GetTemplateByIdQuery extends IQuery {
 
 export class GetTemplateByIdHandler implements IQueryHandler<
   GetTemplateByIdQuery,
-  QueryResult<NotificationTemplate>
+  QueryResult<NotificationTemplateDTO>
 > {
   constructor(private readonly templateService: TemplateService) {}
 
   async handle(
     input: GetTemplateByIdQuery
-  ): Promise<QueryResult<NotificationTemplate>> {
-    try {
-      const template = await this.templateService.getTemplateById(
-        input.templateId
-      );
-      return QueryResult.success(template);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<NotificationTemplateDTO>> {
+    const template = await this.templateService.getTemplateById(
+      input.templateId
+    );
+    return QueryResult.success(template);
   }
 }

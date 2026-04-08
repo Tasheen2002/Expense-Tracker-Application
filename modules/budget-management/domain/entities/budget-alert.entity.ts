@@ -8,8 +8,6 @@ import {
   InvalidAlertThresholdError,
   AlertAlreadyNotifiedError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-
 export interface BudgetAlertProps {
   id: AlertId;
   budgetId: BudgetId;
@@ -46,9 +44,8 @@ export interface BudgetAlertDTO {
   createdAt: string;
 }
 
-export class BudgetAlert extends AggregateRoot {
+export class BudgetAlert {
   private constructor(private props: BudgetAlertProps) {
-    super();
   }
 
   static create(data: CreateBudgetAlertData): BudgetAlert {

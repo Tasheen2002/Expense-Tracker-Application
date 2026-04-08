@@ -1,6 +1,3 @@
-import { UserId } from '../../../identity-workspace';
-import { WorkspaceId } from '../../../identity-workspace';
-
 export interface IWorkspaceAccessPort {
-  isAdminOrOwner(userId: UserId, workspaceId: WorkspaceId): Promise<boolean>;
+  isAdminOrOwner(userId: string, workspaceId: string): Promise<boolean>;
 }

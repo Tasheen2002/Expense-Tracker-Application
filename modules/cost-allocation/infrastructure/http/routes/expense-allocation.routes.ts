@@ -47,6 +47,7 @@ export async function expenseAllocationRoutes(
       success: { type: 'boolean' },
       statusCode: { type: 'number' },
       message: { type: 'string' },
+      data: { type: 'null' },
     },
   };
 
@@ -54,7 +55,7 @@ export async function expenseAllocationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description:
@@ -91,7 +92,7 @@ export async function expenseAllocationRoutes(
           },
         },
         response: {
-          200: {
+          201: {
             description: 'Expense allocated successfully',
             type: 'object',
             properties: {
@@ -115,7 +116,7 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get all allocations for an expense',
@@ -167,9 +168,9 @@ export async function expenseAllocationRoutes(
           },
         },
         response: {
-          200: {
-            description: 'Allocations deleted successfully',
-            ...commandResponseSchema,
+          204: {
+            type: 'null',
+            description: 'No Content',
           },
         },
       },
@@ -182,7 +183,7 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/allocations/summary',
     {
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get allocation summary statistics for workspace',
@@ -202,7 +203,48 @@ export async function expenseAllocationRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: { type: 'object' },
+              data: {
+                type: 'object',
+                properties: {
+                  totalAllocations: { type: 'number' },
+                  byDepartment: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        departmentId: { type: 'string' },
+                        departmentName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                  byCostCenter: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        costCenterId: { type: 'string' },
+                        costCenterName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                  byProject: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        projectId: { type: 'string' },
+                        projectName: { type: 'string' },
+                        total: { type: 'number' },
+                        count: { type: 'number' },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },

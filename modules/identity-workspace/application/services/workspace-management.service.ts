@@ -2,6 +2,7 @@ import { IWorkspaceRepository } from '../../domain/repositories/workspace.reposi
 import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   Workspace,
+  WorkspaceDTO,
   CreateWorkspaceData,
 } from '../../domain/entities/workspace.entity';
 import {
@@ -29,6 +30,32 @@ export class WorkspaceManagementService {
     private readonly workspaceRepository: IWorkspaceRepository,
     private readonly membershipRepository: IWorkspaceMembershipRepository
   ) {}
+
+  async createWorkspaceDTO(data: CreateWorkspaceData): Promise<WorkspaceDTO> {
+    const workspace = await this.createWorkspace(data);
+    return Workspace.toDTO(workspace);
+  }
+
+  async getWorkspaceDTOById(id: string): Promise<WorkspaceDTO | null> {
+    const workspace = await this.getWorkspaceById(id);
+    return workspace ? Workspace.toDTO(workspace) : null;
+  }
+
+  async updateWorkspaceDTO(
+    id: string,
+    updateData: Partial<CreateWorkspaceData>
+  ): Promise<WorkspaceDTO | null> {
+    const workspace = await this.updateWorkspace(id, updateData);
+    return workspace ? Workspace.toDTO(workspace) : null;
+  }
+
+  async getWorkspacesDTOByMembership(
+    userId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<WorkspaceDTO>> {
+    const result = await this.getWorkspacesByMembership(userId, options);
+    return { ...result, items: result.items.map((w) => Workspace.toDTO(w)) };
+  }
 
   async createWorkspace(data: CreateWorkspaceData): Promise<Workspace> {
     const slug = Workspace.generateSlug(data.name);

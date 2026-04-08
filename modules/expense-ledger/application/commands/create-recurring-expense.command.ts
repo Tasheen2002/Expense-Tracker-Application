@@ -4,10 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { RecurringExpenseService } from '../services/recurring-expense.service';
-import {
-  ExpenseTemplate,
-  RecurringExpense,
-} from '../../domain/entities/recurring-expense.entity';
+import { ExpenseTemplate, RecurringExpenseDTO } from '../../domain/entities/recurring-expense.entity';
 import { RecurrenceFrequency } from '../../domain/enums/recurrence-frequency';
 
 export interface CreateRecurringExpenseCommand extends ICommand {
@@ -22,7 +19,7 @@ export interface CreateRecurringExpenseCommand extends ICommand {
 
 export class CreateRecurringExpenseHandler implements ICommandHandler<
   CreateRecurringExpenseCommand,
-  CommandResult<RecurringExpense>
+  CommandResult<RecurringExpenseDTO>
 > {
   constructor(
     private readonly recurringExpenseService: RecurringExpenseService
@@ -30,22 +27,16 @@ export class CreateRecurringExpenseHandler implements ICommandHandler<
 
   async handle(
     command: CreateRecurringExpenseCommand
-  ): Promise<CommandResult<RecurringExpense>> {
-    try {
-      const expense = await this.recurringExpenseService.createRecurringExpense(
-        {
-          workspaceId: command.workspaceId,
-          userId: command.userId,
-          frequency: command.frequency,
-          interval: command.interval,
-          startDate: command.startDate,
-          endDate: command.endDate,
-          template: command.template,
-        }
-      );
-      return CommandResult.success(expense);
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  ): Promise<CommandResult<RecurringExpenseDTO>> {
+    const dto = await this.recurringExpenseService.createRecurringExpense({
+      workspaceId: command.workspaceId,
+      userId: command.userId,
+      frequency: command.frequency,
+      interval: command.interval,
+      startDate: command.startDate,
+      endDate: command.endDate,
+      template: command.template,
+    });
+    return CommandResult.success(dto);
   }
 }

@@ -83,7 +83,7 @@ export class ExpenseSplitController {
         reply,
         result,
         'Split retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -110,7 +110,7 @@ export class ExpenseSplitController {
         reply,
         result,
         'Split retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -142,7 +142,7 @@ export class ExpenseSplitController {
         'Splits retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((split) => split.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -245,7 +245,7 @@ export class ExpenseSplitController {
         'Settlements retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((s) => s.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,
@@ -282,7 +282,7 @@ export class ExpenseSplitController {
         'Split settlements retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((s) => s.toJSON()),
+              items: result.data.items,
             }
           : undefined
       );

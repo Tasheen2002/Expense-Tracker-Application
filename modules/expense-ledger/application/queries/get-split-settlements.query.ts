@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
-import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
+import { SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetSplitSettlementsQuery extends IQuery {
@@ -15,22 +15,18 @@ export interface GetSplitSettlementsQuery extends IQuery {
 
 export class GetSplitSettlementsHandler implements IQueryHandler<
   GetSplitSettlementsQuery,
-  QueryResult<PaginatedResult<SplitSettlement>>
+  QueryResult<PaginatedResult<SplitSettlementDTO>>
 > {
   constructor(private readonly expenseSplitService: ExpenseSplitService) {}
 
   async handle(
     query: GetSplitSettlementsQuery
-  ): Promise<QueryResult<PaginatedResult<SplitSettlement>>> {
-    try {
-      const settlements = await this.expenseSplitService.getSplitSettlements(
-        query.splitId,
-        query.workspaceId,
-        query.userId
-      );
-      return QueryResult.success(settlements);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<PaginatedResult<SplitSettlementDTO>>> {
+    const settlements = await this.expenseSplitService.getSplitSettlements(
+      query.splitId,
+      query.workspaceId,
+      query.userId
+    );
+    return QueryResult.success(settlements);
   }
 }

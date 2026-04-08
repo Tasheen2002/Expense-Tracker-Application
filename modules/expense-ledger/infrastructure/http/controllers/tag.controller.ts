@@ -122,7 +122,7 @@ export class TagController {
         reply,
         result,
         'Tag retrieved successfully',
-        result.data?.toJSON()
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -152,7 +152,7 @@ export class TagController {
         'Tags retrieved successfully',
         result.data
           ? {
-              items: result.data.items.map((tag) => tag.toJSON()),
+              items: result.data.items,
               pagination: {
                 total: result.data.total,
                 limit: result.data.limit,

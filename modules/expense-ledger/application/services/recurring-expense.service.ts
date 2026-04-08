@@ -1,6 +1,7 @@
 import { RecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
 import {
   RecurringExpense,
+  RecurringExpenseDTO,
   ExpenseTemplate,
 } from "../../domain/entities/recurring-expense.entity";
 import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
@@ -23,7 +24,7 @@ export class RecurringExpenseService {
     startDate: Date;
     endDate?: Date;
     template: ExpenseTemplate;
-  }): Promise<RecurringExpense> {
+  }): Promise<RecurringExpenseDTO> {
     const expense = RecurringExpense.create({
       workspaceId: params.workspaceId,
       userId: params.userId,
@@ -35,7 +36,7 @@ export class RecurringExpenseService {
     });
 
     await this.recurringExpenseRepository.save(expense);
-    return expense;
+    return expense.toJSON();
   }
 
   async processDueExpenses(limit = 100): Promise<number> {

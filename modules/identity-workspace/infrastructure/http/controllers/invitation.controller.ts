@@ -9,7 +9,6 @@ import { GetPendingInvitationsHandler } from '../../../application/queries/get-p
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
-import { WorkspaceInvitation } from '../../../domain/entities/workspace-invitation.entity';
 
 export class InvitationController {
   constructor(
@@ -87,11 +86,11 @@ export class InvitationController {
 
       const invitation = result.data;
 
-      if (invitation.isExpired()) {
+      if (invitation.isExpired) {
         return ResponseHelper.gone(reply, 'Invitation has expired');
       }
 
-      if (invitation.isAccepted()) {
+      if (invitation.isAccepted) {
         return ResponseHelper.gone(
           reply,
           'Invitation has already been accepted'
@@ -102,7 +101,7 @@ export class InvitationController {
         reply,
         result,
         'Invitation retrieved successfully',
-        invitation.toJSON()
+        invitation
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -174,9 +173,7 @@ export class InvitationController {
         'Invitations retrieved successfully',
         paginatedResult
           ? {
-              items: paginatedResult.items.map((inv: WorkspaceInvitation) =>
-                inv.toJSON()
-              ),
+              items: paginatedResult.items,
               pagination: {
                 total: paginatedResult.total,
                 limit: paginatedResult.limit,
@@ -218,7 +215,9 @@ export class InvitationController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Invitation cancelled successfully'
+        'Invitation cancelled successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

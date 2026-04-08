@@ -82,6 +82,26 @@ export class ProjectDeactivatedEvent extends DomainEvent {
   }
 }
 
+export class ProjectDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly projectId: string,
+    public readonly workspaceId: string
+  ) {
+    super(projectId, 'Project');
+  }
+
+  get eventType(): string {
+    return 'ProjectDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      projectId: this.projectId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -277,6 +297,15 @@ export class Project extends AggregateRoot {
     this.isActive = true;
     this.updatedAt = new Date();
     this.addDomainEvent(new ProjectActivatedEvent(this.id.getValue()));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(
+      new ProjectDeletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue()
+      )
+    );
   }
 
   static toDTO(project: Project): ProjectDTO {

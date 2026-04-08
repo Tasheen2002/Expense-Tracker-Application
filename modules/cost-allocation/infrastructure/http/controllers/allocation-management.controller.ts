@@ -241,11 +241,11 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Department deleted successfully'
-      );
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Department deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -422,11 +422,11 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Cost Center deleted successfully'
-      );
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Cost Center deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -616,11 +616,11 @@ export class AllocationManagementController {
         actorId: userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Project deleted successfully'
-      );
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Project deletion failed');
+      }
+
+      return reply.status(204).send();
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

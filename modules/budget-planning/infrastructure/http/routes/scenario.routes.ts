@@ -40,7 +40,7 @@ export async function scenarioRoutes(
       preValidation: [validateParams(planIdParamsSchema)],
       preHandler: [
         validateBody(createScenarioSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -65,6 +65,7 @@ export async function scenarioRoutes(
         },
         response: {
           201: {
+            description: 'Scenario created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -90,7 +91,7 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/budget-plans/:planId/scenarios',
     {
       preValidation: [validateParams(planIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'List all scenarios for a budget plan',
@@ -105,6 +106,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenarios retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -125,7 +127,7 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/scenarios/:id',
     {
       preValidation: [validateParams(scenarioParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'Get a specific scenario',
@@ -140,6 +142,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenario retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -162,7 +165,7 @@ export async function scenarioRoutes(
       preValidation: [validateParams(scenarioParamsSchema)],
       preHandler: [
         validateBody(updateScenarioSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -186,6 +189,7 @@ export async function scenarioRoutes(
         },
         response: {
           200: {
+            description: 'Scenario updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },

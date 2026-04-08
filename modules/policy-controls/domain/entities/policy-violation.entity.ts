@@ -5,7 +5,7 @@ import { ViolationSeverity } from '../enums/violation-severity.enum';
 import { ViolationStatus } from '../enums/violation-status.enum';
 import { ViolationAlreadyResolvedError } from '../errors/policy-controls.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
@@ -360,25 +360,25 @@ export class PolicyViolation extends AggregateRoot {
     );
   }
 
-  toJSON(): PolicyViolationDTO {
+  static toDTO(violation: PolicyViolation): PolicyViolationDTO {
     return {
-      id: this.getId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      policyId: this.getPolicyId().getValue(),
-      expenseId: this.getExpenseId(),
-      userId: this.getUserId(),
-      status: this.getStatus(),
-      severity: this.getSeverity(),
-      violationDetails: this.getViolationDetails(),
-      expenseAmount: this.getExpenseAmount(),
-      currency: this.getCurrency(),
-      acknowledgedAt: this.getAcknowledgedAt()?.toISOString(),
-      acknowledgedBy: this.getAcknowledgedBy(),
-      resolvedAt: this.getResolvedAt()?.toISOString(),
-      resolvedBy: this.getResolvedBy(),
-      resolutionNotes: this.getResolutionNotes(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      id: violation.getId().getValue(),
+      workspaceId: violation.getWorkspaceId().getValue(),
+      policyId: violation.getPolicyId().getValue(),
+      expenseId: violation.getExpenseId(),
+      userId: violation.getUserId(),
+      status: violation.getStatus(),
+      severity: violation.getSeverity(),
+      violationDetails: violation.getViolationDetails(),
+      expenseAmount: violation.getExpenseAmount(),
+      currency: violation.getCurrency(),
+      acknowledgedAt: violation.getAcknowledgedAt()?.toISOString(),
+      acknowledgedBy: violation.getAcknowledgedBy(),
+      resolvedAt: violation.getResolvedAt()?.toISOString(),
+      resolvedBy: violation.getResolvedBy(),
+      resolutionNotes: violation.getResolutionNotes(),
+      createdAt: violation.getCreatedAt().toISOString(),
+      updatedAt: violation.getUpdatedAt().toISOString(),
     };
   }
 }

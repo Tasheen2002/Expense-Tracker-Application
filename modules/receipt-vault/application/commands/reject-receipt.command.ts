@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -15,17 +15,17 @@ export interface RejectReceiptCommand extends ICommand {
 
 export class RejectReceiptHandler implements ICommandHandler<
   RejectReceiptCommand,
-  CommandResult<void>
+  CommandResult<ReceiptDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(command: RejectReceiptCommand): Promise<CommandResult<void>> {
-    await this.receiptService.rejectReceipt(
+  async handle(command: RejectReceiptCommand): Promise<CommandResult<ReceiptDTO>> {
+    const receiptDTO = await this.receiptService.rejectReceipt(
       command.receiptId,
       command.workspaceId,
       command.userId,
       command.reason
     );
-    return CommandResult.success();
+    return CommandResult.success(receiptDTO);
   }
 }

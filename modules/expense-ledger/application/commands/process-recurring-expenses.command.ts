@@ -20,13 +20,9 @@ export class ProcessRecurringExpensesHandler implements ICommandHandler<
   async handle(
     command: ProcessRecurringExpensesCommand
   ): Promise<CommandResult<{ count: number }>> {
-    try {
-      const count = await this.recurringExpenseService.processDueExpenses(
-        command.limit ?? 100
-      );
-      return CommandResult.success({ count });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    const count = await this.recurringExpenseService.processDueExpenses(
+      command.limit ?? 100
+    );
+    return CommandResult.success({ count });
   }
 }

@@ -1,6 +1,7 @@
 import { IOutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
 import {
   OutboxEvent,
+  OutboxEventDTO,
   OutboxDomainEvent,
 } from '../../domain/entities/outbox-event.entity';
 import { OutboxEventId } from '../../domain/value-objects/outbox-event-id';
@@ -9,8 +10,9 @@ import {
   OutboxEventProcessingError,
 } from '../../domain/errors/outbox-event.errors';
 import { OutboxEventStatus } from '../../domain/enums/outbox-event-status.enum';
-import { IEventBus } from '../../../../apps/api/src/shared/domain/events';
-import { MAX_RETRY_COUNT } from '../../domain/constants/outbox.constants';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { MAX_RETRY_COUNT, BATCH_SIZE } from '../../domain/constants/outbox.constants';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class OutboxEventService {
   constructor(
@@ -111,5 +113,49 @@ export class OutboxEventService {
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
     return await this.repository.deleteProcessedEvents(cutoffDate);
+  }
+
+  async storeEvent(params: {
+    aggregateType: string;
+    aggregateId: string;
+    eventType: string;
+    payload: Record<string, unknown>;
+  }): Promise<OutboxEventDTO> {
+    const event = OutboxEvent.create(params);
+    await this.repository.save(event);
+    return OutboxEvent.toDTO(event);
+  }
+
+  async processEventById(eventId: string): Promise<void> {
+    const event = await this.repository.findById(
+      OutboxEventId.fromString(eventId)
+    );
+    if (!event) {
+      throw new OutboxEventNotFoundError(eventId);
+    }
+    await this.processEvent(event);
+  }
+
+  async getPendingEvents(
+    limit?: number,
+    offset?: number
+  ): Promise<PaginatedResult<OutboxEventDTO>> {
+    const result = await this.repository.findPendingEvents({
+      limit: limit ?? BATCH_SIZE,
+      offset: offset ?? 0,
+    });
+    return { ...result, items: result.items.map((e) => OutboxEvent.toDTO(e)) };
+  }
+
+  async getFailedEvents(
+    maxRetries?: number,
+    limit?: number,
+    offset?: number
+  ): Promise<PaginatedResult<OutboxEventDTO>> {
+    const result = await this.repository.findFailedEventsForRetry(
+      maxRetries ?? MAX_RETRY_COUNT,
+      { limit: limit ?? BATCH_SIZE, offset: offset ?? 0 }
+    );
+    return { ...result, items: result.items.map((e) => OutboxEvent.toDTO(e)) };
   }
 }

@@ -3,8 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { IOutboxEventRepository } from '../../domain/repositories/outbox-event.repository';
-import { OutboxEvent } from '../../domain/entities/outbox-event.entity';
+import { OutboxEventService } from '../services/outbox-event.service';
+import { OutboxEventDTO } from '../../domain/entities/outbox-event.entity';
 
 export interface StoreOutboxEventCommand extends ICommand {
   aggregateType: string;
@@ -15,22 +15,19 @@ export interface StoreOutboxEventCommand extends ICommand {
 
 export class StoreOutboxEventHandler implements ICommandHandler<
   StoreOutboxEventCommand,
-  CommandResult<{ eventId: string }>
+  CommandResult<OutboxEventDTO>
 > {
-  constructor(private readonly repository: IOutboxEventRepository) {}
+  constructor(private readonly service: OutboxEventService) {}
 
   async handle(
     command: StoreOutboxEventCommand
-  ): Promise<CommandResult<{ eventId: string }>> {
-    const event = OutboxEvent.create({
+  ): Promise<CommandResult<OutboxEventDTO>> {
+    const dto = await this.service.storeEvent({
       aggregateType: command.aggregateType,
       aggregateId: command.aggregateId,
       eventType: command.eventType,
       payload: command.payload,
     });
-
-    await this.repository.save(event);
-
-    return CommandResult.success({ eventId: event.id.getValue() });
+    return CommandResult.success(dto);
   }
 }

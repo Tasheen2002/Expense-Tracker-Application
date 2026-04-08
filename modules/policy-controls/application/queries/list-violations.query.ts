@@ -1,8 +1,5 @@
-import {
-  ViolationRepository,
-  ViolationFilters,
-} from '../../domain/repositories/violation.repository';
-import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { ViolationService } from '../services/violation.service';
+import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
 import { ViolationStatus } from '../../domain/enums/violation-status.enum';
 import {
   PaginatedResult,
@@ -20,15 +17,15 @@ export interface ListViolationsInput {
 }
 
 export class ListViolationsHandler {
-  constructor(private readonly violationRepository: ViolationRepository) {}
+  constructor(private readonly violationService: ViolationService) {}
 
   async handle(
     input: ListViolationsInput
-  ): Promise<QueryResult<PaginatedResult<PolicyViolation>>> {
-    let result: PaginatedResult<PolicyViolation>;
+  ): Promise<QueryResult<PaginatedResult<PolicyViolationDTO>>> {
+    let result: PaginatedResult<PolicyViolationDTO>;
 
     if (input.expenseId) {
-      const items = await this.violationRepository.findByExpense(
+      const items = await this.violationService.listViolationsByExpense(
         input.expenseId
       );
       result = {
@@ -39,19 +36,18 @@ export class ListViolationsHandler {
         hasMore: false,
       };
     } else if (input.userId) {
-      result = await this.violationRepository.findByUser(
+      result = await this.violationService.listViolationsByUser(
         input.workspaceId,
         input.userId,
         input.pagination
       );
     } else {
-      const filters: ViolationFilters = {
-        status: input.status,
-        policyId: input.policyId,
-      };
-      result = await this.violationRepository.findByWorkspace(
+      result = await this.violationService.listViolations(
         input.workspaceId,
-        filters,
+        {
+          status: input.status,
+          policyId: input.policyId,
+        },
         input.pagination
       );
     }

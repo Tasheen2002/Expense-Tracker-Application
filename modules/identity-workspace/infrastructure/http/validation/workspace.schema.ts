@@ -5,6 +5,35 @@ import {
 } from '../../../domain/constants/identity.constants';
 
 /**
+ * Params Schemas
+ */
+export const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID'),
+});
+
+export const memberParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID'),
+  userId: z.string().uuid('Invalid user ID'),
+});
+
+export const invitationParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID'),
+  invitationId: z.string().uuid('Invalid invitation ID'),
+});
+
+export const tokenParamsSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+});
+
+/**
+ * Query Schemas
+ */
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+});
+
+/**
  * Create Workspace Schema
  */
 export const createWorkspaceSchema = z.object({
@@ -58,6 +87,7 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email format'),
   role: z.enum(['admin', 'member']), // Cannot invite as owner
+  expiryHours: z.number().int().min(1).max(720).optional(),
 });
 
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;

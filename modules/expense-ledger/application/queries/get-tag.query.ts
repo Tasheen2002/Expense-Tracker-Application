@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
-import { Tag } from '../../domain/entities/tag.entity';
+import { TagDTO } from '../../domain/entities/tag.entity';
 import { TagNotFoundError } from '../../domain/errors/expense.errors';
 
 export interface GetTagQuery extends IQuery {
@@ -14,11 +14,11 @@ export interface GetTagQuery extends IQuery {
 
 export class GetTagHandler implements IQueryHandler<
   GetTagQuery,
-  QueryResult<Tag>
+  QueryResult<TagDTO>
 > {
   constructor(private readonly tagService: TagService) {}
 
-  async handle(query: GetTagQuery): Promise<QueryResult<Tag>> {
+  async handle(query: GetTagQuery): Promise<QueryResult<TagDTO>> {
     const tag = await this.tagService.getTagById(
       query.tagId,
       query.workspaceId

@@ -1,4 +1,6 @@
 import { CategoryId } from '../value-objects/category-id';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   CategoryNameRequiredError,
   CategoryNameTooLongError,
@@ -6,6 +8,44 @@ import {
   InvalidHexColorError,
   IconNameTooLongError,
 } from '../errors/expense.errors';
+
+export class CategoryCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly categoryId: string,
+    public readonly workspaceId: string,
+    public readonly name: string
+  ) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.created'; }
+  getPayload(): Record<string, unknown> {
+    return { categoryId: this.categoryId, workspaceId: this.workspaceId, name: this.name };
+  }
+}
+
+export class CategoryUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly categoryId: string,
+    public readonly workspaceId: string,
+    public readonly field: string
+  ) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.updated'; }
+  getPayload(): Record<string, unknown> {
+    return { categoryId: this.categoryId, workspaceId: this.workspaceId, field: this.field };
+  }
+}
+
+export class CategoryDeletedEvent extends DomainEvent {
+  constructor(public readonly categoryId: string) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { categoryId: this.categoryId };
+  }
+}
 
 export interface CategoryProps {
   id: CategoryId;
@@ -19,10 +59,11 @@ export interface CategoryProps {
   updatedAt: Date;
 }
 
-export class Category {
+export class Category extends AggregateRoot {
   private readonly props: CategoryProps;
 
   private constructor(props: CategoryProps) {
+    super();
     this.props = props;
   }
 
@@ -34,12 +75,18 @@ export class Category {
     this.validateColor(props.color);
     this.validateIcon(props.icon);
 
-    return new Category({
+    const category = new Category({
       ...props,
       id: CategoryId.create(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    category.addDomainEvent(
+      new CategoryCreatedEvent(category.id.getValue(), category.workspaceId, category.name)
+    );
+
+    return category;
   }
 
   static fromPersistence(props: CategoryProps): Category {
@@ -119,34 +166,44 @@ export class Category {
     Category.validateName(name);
     this.props.name = name;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'name'));
   }
 
   updateDescription(description?: string): void {
     Category.validateDescription(description);
     this.props.description = description;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'description'));
   }
 
   updateColor(color?: string): void {
     Category.validateColor(color);
     this.props.color = color;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'color'));
   }
 
   updateIcon(icon?: string): void {
     Category.validateIcon(icon);
     this.props.icon = icon;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'icon'));
   }
 
   activate(): void {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'isActive'));
   }
 
   deactivate(): void {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'isActive'));
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new CategoryDeletedEvent(this.id.getValue()));
   }
 
   toJSON(): CategoryDTO {

@@ -53,7 +53,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateBody(evaluateRulesSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -78,9 +78,11 @@ export async function ruleExecutionRoutes(
         },
         response: {
           200: {
+            description: 'Rules evaluated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',
@@ -121,7 +123,7 @@ export async function ruleExecutionRoutes(
     {
       preHandler: [
         validateParams(expenseParamsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -129,9 +131,11 @@ export async function ruleExecutionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Executions for expense retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'array',
@@ -153,7 +157,7 @@ export async function ruleExecutionRoutes(
       preHandler: [
         validateParams(workspaceParamsSchema),
         validateQuery(executionQuerySchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -161,9 +165,11 @@ export async function ruleExecutionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Workspace executions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: {
                 type: 'object',

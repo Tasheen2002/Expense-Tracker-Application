@@ -1,6 +1,6 @@
-export * from './forecast-amount';
-export * from './forecast-id';
-export * from './forecast-item-id';
-export * from './plan-id';
-export * from './plan-period';
-export * from './scenario-id';
+export { ForecastAmount } from './forecast-amount';
+export { ForecastId } from './forecast-id';
+export { ForecastItemId } from './forecast-item-id';
+export { PlanId } from './plan-id';
+export { PlanPeriod } from './plan-period';
+export { ScenarioId } from './scenario-id';

@@ -4,9 +4,9 @@ import {
 } from '../../domain/repositories/budget.repository';
 import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
 import { IBudgetAlertRepository } from '../../domain/repositories/budget-alert.repository';
-import { Budget } from '../../domain/entities/budget.entity';
-import { BudgetAllocation } from '../../domain/entities/budget-allocation.entity';
-import { BudgetAlert } from '../../domain/entities/budget-alert.entity';
+import { Budget, BudgetDTO } from '../../domain/entities/budget.entity';
+import { BudgetAllocation, BudgetAllocationDTO } from '../../domain/entities/budget-allocation.entity';
+import { BudgetAlert, BudgetAlertDTO } from '../../domain/entities/budget-alert.entity';
 import { BudgetId } from '../../domain/value-objects/budget-id';
 import { AllocationId } from '../../domain/value-objects/allocation-id';
 import { AlertId } from '../../domain/value-objects/alert-id';
@@ -46,7 +46,7 @@ export class BudgetService {
     createdBy: string;
     isRecurring?: boolean;
     rolloverUnused?: boolean;
-  }): Promise<Budget> {
+  }): Promise<BudgetDTO> {
     // Check for duplicate budget name in workspace
     const nameExists = await this.budgetRepository.existsByName(
       params.name,
@@ -72,7 +72,7 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async updateBudget(
@@ -84,7 +84,7 @@ export class BudgetService {
       description?: string | null;
       totalAmount?: number | string;
     }
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -123,14 +123,14 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async activateBudget(
     budgetId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -148,14 +148,14 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async archiveBudget(
     budgetId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Budget> {
+  ): Promise<BudgetDTO> {
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
@@ -173,7 +173,7 @@ export class BudgetService {
 
     await this.budgetRepository.save(budget);
 
-    return budget;
+    return Budget.toDTO(budget);
   }
 
   async deleteBudget(
@@ -183,18 +183,21 @@ export class BudgetService {
   ): Promise<void> {
     const budgetIdObj = BudgetId.fromString(budgetId);
 
-    const exists = await this.budgetRepository.exists(budgetIdObj, workspaceId);
-    if (!exists) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
     const budget = await this.budgetRepository.findById(
       budgetIdObj,
       workspaceId
     );
-    if (budget && budget.createdBy !== userId) {
+    if (!budget) {
+      throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+
+    if (budget.createdBy !== userId) {
       throw new UnauthorizedBudgetAccessError('delete');
     }
+
+    // Emit the deleted domain event before removing the record
+    budget.markAsDeleted();
+    await this.budgetRepository.save(budget);
 
     // Delete budget (cascade will handle allocations and alerts)
     await this.budgetRepository.delete(budgetIdObj, workspaceId);
@@ -203,32 +206,36 @@ export class BudgetService {
   async getBudgetById(
     budgetId: string,
     workspaceId: string
-  ): Promise<Budget | null> {
-    return await this.budgetRepository.findById(
+  ): Promise<BudgetDTO | null> {
+    const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
       workspaceId
     );
+    return budget ? Budget.toDTO(budget) : null;
   }
 
   async getBudgetsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findByWorkspace(workspaceId, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   async getActiveBudgets(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findActiveBudgets(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findActiveBudgets(workspaceId, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   async filterBudgets(
     filters: BudgetFilters,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Budget>> {
-    return await this.budgetRepository.findByFilters(filters, options);
+  ): Promise<PaginatedResult<BudgetDTO>> {
+    const result = await this.budgetRepository.findByFilters(filters, options);
+    return { ...result, items: result.items.map((b) => Budget.toDTO(b)) };
   }
 
   // Allocation methods
@@ -239,7 +246,7 @@ export class BudgetService {
     categoryId?: string;
     allocatedAmount: number | string;
     description?: string;
-  }): Promise<BudgetAllocation> {
+  }): Promise<BudgetAllocationDTO> {
     // Verify parent budget ownership first
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(params.budgetId),
@@ -267,7 +274,7 @@ export class BudgetService {
       budget.totalAmount
     );
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async updateAllocation(
@@ -278,7 +285,7 @@ export class BudgetService {
       allocatedAmount?: number | string;
       description?: string | null;
     }
-  ): Promise<BudgetAllocation> {
+  ): Promise<BudgetAllocationDTO> {
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId)
     );
@@ -324,13 +331,13 @@ export class BudgetService {
       await this.allocationRepository.save(allocation);
     }
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async updateAllocationSpent(
     allocationId: string,
     spentAmount: number | string
-  ): Promise<BudgetAllocation> {
+  ): Promise<BudgetAllocationDTO> {
     const allocation = await this.allocationRepository.findById(
       AllocationId.fromString(allocationId)
     );
@@ -346,23 +353,33 @@ export class BudgetService {
 
     await this.allocationRepository.saveWithAlerts(allocation, alerts);
 
-    // If spending has reached or exceeded the allocated amount, mark the parent
-    // budget as EXCEEDED so its status accurately reflects its state.
-    if (allocation.isOverBudget()) {
-      const budget = await this.budgetRepository.findByIdInternal(
-        allocation.budgetId
-      );
-      if (budget && budget.isActive()) {
+    // Load the parent budget to emit child-entity events on the aggregate root
+    const budget = await this.budgetRepository.findByIdInternal(
+      allocation.budgetId
+    );
+
+    if (budget) {
+      // Emit alert_generated events on the Budget aggregate for each alert raised
+      for (const alert of alerts) {
+        budget.recordAlertGenerated(alert.id.getValue(), alert.level);
+      }
+
+      // If spending has reached or exceeded the allocated amount, mark the parent
+      // budget as EXCEEDED so its status accurately reflects its state.
+      if (allocation.isOverBudget() && budget.isActive()) {
         try {
           budget.markAsExceeded(allocation.spentAmount.toNumber());
-          await this.budgetRepository.save(budget);
         } catch {
           // Status transition may already be EXCEEDED; ignore duplicate transitions
         }
       }
+
+      if (budget.domainEvents.length > 0) {
+        await this.budgetRepository.save(budget);
+      }
     }
 
-    return allocation;
+    return BudgetAllocation.toDTO(allocation);
   }
 
   async deleteAllocation(
@@ -371,7 +388,7 @@ export class BudgetService {
     userId: string
   ): Promise<void> {
     const allocation = await this.allocationRepository.findById(
-      AllocationId.fromString(allocationId) // Assuming we need to fetch to check auth
+      AllocationId.fromString(allocationId)
     );
 
     if (!allocation) {
@@ -387,6 +404,12 @@ export class BudgetService {
       throw new UnauthorizedBudgetAccessError('delete allocation in');
     }
 
+    // Emit allocation_deleted on the parent Budget aggregate
+    if (budget) {
+      budget.recordAllocationDeleted(allocationId);
+      await this.budgetRepository.save(budget);
+    }
+
     await this.allocationRepository.delete(
       AllocationId.fromString(allocationId)
     );
@@ -396,7 +419,7 @@ export class BudgetService {
     budgetId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<BudgetAllocation>> {
+  ): Promise<PaginatedResult<BudgetAllocationDTO>> {
     // Verify the budget belongs to the workspace before returning its allocations
     const budget = await this.budgetRepository.findById(
       BudgetId.fromString(budgetId),
@@ -405,21 +428,23 @@ export class BudgetService {
     if (!budget) {
       throw new BudgetNotFoundError(budgetId, workspaceId);
     }
-    return await this.allocationRepository.findByBudget(
+    const result = await this.allocationRepository.findByBudget(
       BudgetId.fromString(budgetId),
       options
     );
+    return { ...result, items: result.items.map((alloc) => BudgetAllocation.toDTO(alloc)) };
   }
 
   // Alert management
   async getUnreadAlerts(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<BudgetAlert>> {
-    return await this.alertRepository.findUnreadAlerts(workspaceId, options);
+  ): Promise<PaginatedResult<BudgetAlertDTO>> {
+    const result = await this.alertRepository.findUnreadAlerts(workspaceId, options);
+    return { ...result, items: result.items.map((alert) => BudgetAlert.toDTO(alert)) };
   }
 
-  async markAlertAsRead(alertId: string): Promise<BudgetAlert> {
+  async markAlertAsRead(alertId: string): Promise<BudgetAlertDTO> {
     const alert = await this.alertRepository.findById(
       AlertId.fromString(alertId)
     );
@@ -432,7 +457,7 @@ export class BudgetService {
 
     await this.alertRepository.save(alert);
 
-    return alert;
+    return BudgetAlert.toDTO(alert);
   }
 
   // Budget period management

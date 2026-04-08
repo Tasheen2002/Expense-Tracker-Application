@@ -5,8 +5,8 @@ import {
 import { IReceiptMetadataRepository } from '../../domain/repositories/receipt-metadata.repository';
 import { IReceiptTagRepository } from '../../domain/repositories/receipt-tag.repository';
 import { IFileStorageService } from '../../domain/ports/file-storage.port';
-import { Receipt } from '../../domain/entities/receipt.entity';
-import { ReceiptMetadata } from '../../domain/entities/receipt-metadata.entity';
+import { Receipt, ReceiptDTO } from '../../domain/entities/receipt.entity';
+import { ReceiptMetadata, ReceiptMetadataDTO } from '../../domain/entities/receipt-metadata.entity';
 import { ReceiptId } from '../../domain/value-objects/receipt-id';
 import { TagId } from '../../domain/value-objects/tag-id';
 import { StorageLocation } from '../../domain/value-objects/storage-location';
@@ -35,6 +35,27 @@ export class ReceiptService {
     private readonly fileStorage: IFileStorageService
   ) {}
 
+  private async _getReceiptEntity(
+    receiptId: string,
+    workspaceId: string,
+    userId?: string
+  ): Promise<Receipt> {
+    const receipt = await this.receiptRepository.findById(
+      ReceiptId.fromString(receiptId),
+      workspaceId
+    );
+
+    if (!receipt) {
+      throw new ReceiptNotFoundError(receiptId, workspaceId);
+    }
+
+    if (userId && receipt.getUserId() !== userId) {
+      throw new UnauthorizedAccessError(userId, receiptId);
+    }
+
+    return receipt;
+  }
+
   async uploadReceipt(params: {
     workspaceId: string;
     userId: string;
@@ -46,7 +67,7 @@ export class ReceiptService {
     fileHash?: string;
     receiptType?: ReceiptType;
     storageLocation: StorageLocation;
-  }): Promise<Receipt> {
+  }): Promise<ReceiptDTO> {
     // Check for duplicate by file hash
     if (params.fileHash) {
       const existing = await this.receiptRepository.findByFileHash(
@@ -74,55 +95,77 @@ export class ReceiptService {
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async getReceipt(
     receiptId: string,
     workspaceId: string
-  ): Promise<Receipt | null> {
-    return await this.receiptRepository.findById(
+  ): Promise<ReceiptDTO | null> {
+    const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
       workspaceId
     );
+
+    if (!receipt) {
+      return null;
+    }
+
+    return Receipt.toDTO(receipt);
   }
 
   async getReceiptsByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Receipt>> {
-    return await this.receiptRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<ReceiptDTO>> {
+    const result = await this.receiptRepository.findByWorkspace(workspaceId, options);
+    return {
+      ...result,
+      items: result.items.map((r) => Receipt.toDTO(r)),
+    };
   }
 
   async getReceiptsByExpense(
     expenseId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Receipt>> {
-    return await this.receiptRepository.findByExpenseId(
+  ): Promise<PaginatedResult<ReceiptDTO>> {
+    const result = await this.receiptRepository.findByExpenseId(
       expenseId,
       workspaceId,
       options
     );
+    return {
+      ...result,
+      items: result.items.map((r) => Receipt.toDTO(r)),
+    };
   }
 
   async getReceiptsByUser(
     userId: string,
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Receipt>> {
-    return await this.receiptRepository.findByUserId(
+  ): Promise<PaginatedResult<ReceiptDTO>> {
+    const result = await this.receiptRepository.findByUserId(
       userId,
       workspaceId,
       options
     );
+    return {
+      ...result,
+      items: result.items.map((r) => Receipt.toDTO(r)),
+    };
   }
 
   async filterReceipts(
     filters: ReceiptFilters,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Receipt>> {
-    return await this.receiptRepository.findByFilters(filters, options);
+  ): Promise<PaginatedResult<ReceiptDTO>> {
+    const result = await this.receiptRepository.findByFilters(filters, options);
+    return {
+      ...result,
+      items: result.items.map((r) => Receipt.toDTO(r)),
+    };
   }
 
   async linkToExpense(
@@ -130,19 +173,8 @@ export class ReceiptService {
     expenseId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     if (receipt.isDeleted()) {
       throw new DeletedReceiptError(receiptId);
@@ -152,32 +184,21 @@ export class ReceiptService {
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async unlinkFromExpense(
     receiptId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.unlinkFromExpense();
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async processReceipt(
@@ -186,19 +207,8 @@ export class ReceiptService {
     userId: string,
     ocrText?: string,
     ocrConfidence?: number
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     if (receipt.isPending()) {
       receipt.startProcessing();
@@ -210,7 +220,7 @@ export class ReceiptService {
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async markProcessingFailed(
@@ -218,50 +228,28 @@ export class ReceiptService {
     workspaceId: string,
     userId: string,
     reason: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.markAsFailed(reason);
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async verifyReceipt(
     receiptId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.verify();
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async rejectReceipt(
@@ -269,46 +257,28 @@ export class ReceiptService {
     workspaceId: string,
     userId: string,
     reason?: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.reject(reason);
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async setThumbnail(
     receiptId: string,
     thumbnailPath: string,
     workspaceId: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId);
 
     receipt.setThumbnailPath(thumbnailPath);
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   async deleteReceipt(
@@ -317,18 +287,7 @@ export class ReceiptService {
     userId: string,
     permanent: boolean = false
   ): Promise<void> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     if (permanent) {
       // Transactional delete of receipt and dependencies
@@ -364,25 +323,14 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string
-  ): Promise<Receipt> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.restore();
 
     await this.receiptRepository.save(receipt);
 
-    return receipt;
+    return Receipt.toDTO(receipt);
   }
 
   // Metadata management
@@ -396,19 +344,8 @@ export class ReceiptService {
     totalAmount?: number | string;
     currency?: string;
     invoiceNumber?: string;
-  }): Promise<ReceiptMetadata> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(params.receiptId),
-      params.workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(params.receiptId, params.workspaceId);
-    }
-
-    if (receipt.getUserId() !== params.userId) {
-      throw new UnauthorizedAccessError(params.userId, params.receiptId);
-    }
+  }): Promise<ReceiptMetadataDTO> {
+    const receipt = await this._getReceiptEntity(params.receiptId, params.workspaceId, params.userId);
 
     // Check if metadata already exists
     const existing = await this.metadataRepository.findByReceiptId(
@@ -422,7 +359,7 @@ export class ReceiptService {
 
     await this.metadataRepository.save(metadata);
 
-    return metadata;
+    return ReceiptMetadata.toDTO(metadata);
   }
 
   async updateMetadata(
@@ -430,19 +367,8 @@ export class ReceiptService {
     workspaceId: string,
     userId: string,
     updates: UpdateReceiptMetadataDto
-  ): Promise<ReceiptMetadata> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+  ): Promise<ReceiptMetadataDTO> {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const metadata = await this.metadataRepository.findByReceiptId(
       receipt.getId()
@@ -499,13 +425,13 @@ export class ReceiptService {
 
     await this.metadataRepository.save(metadata);
 
-    return metadata;
+    return ReceiptMetadata.toDTO(metadata);
   }
 
   async getMetadata(
     receiptId: string,
     workspaceId: string
-  ): Promise<ReceiptMetadata | null> {
+  ): Promise<ReceiptMetadataDTO | null> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
       workspaceId
@@ -515,7 +441,12 @@ export class ReceiptService {
       return null;
     }
 
-    return await this.metadataRepository.findByReceiptId(receipt.getId());
+    const metadata = await this.metadataRepository.findByReceiptId(receipt.getId());
+    if (!metadata) {
+      return null;
+    }
+
+    return ReceiptMetadata.toDTO(metadata);
   }
 
   // Tag management
@@ -525,18 +456,7 @@ export class ReceiptService {
     workspaceId: string,
     userId: string
   ): Promise<void> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const hasTag = await this.tagRepository.hasTag(
       receipt.getId(),
@@ -556,18 +476,7 @@ export class ReceiptService {
     workspaceId: string,
     userId: string
   ): Promise<void> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     await this.tagRepository.removeTag(
       receipt.getId(),
@@ -579,14 +488,7 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string
   ): Promise<TagId[]> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId);
 
     return await this.tagRepository.findTagsByReceipt(receipt.getId());
   }
@@ -617,18 +519,7 @@ export class ReceiptService {
     workspaceId: string,
     userId: string
   ): Promise<string> {
-    const receipt = await this.receiptRepository.findById(
-      ReceiptId.fromString(receiptId),
-      workspaceId
-    );
-
-    if (!receipt) {
-      throw new ReceiptNotFoundError(receiptId, workspaceId);
-    }
-
-    if (receipt.getUserId() !== userId) {
-      throw new UnauthorizedAccessError(userId, receiptId);
-    }
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const storageLocation = receipt.getStorageLocation();
     const bucket = storageLocation.getBucket() || 'local';

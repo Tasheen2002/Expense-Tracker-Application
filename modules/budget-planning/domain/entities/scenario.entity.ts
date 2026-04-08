@@ -1,62 +1,12 @@
 import { ScenarioId } from '../value-objects/scenario-id';
 import { PlanId } from '../value-objects/plan-id';
 import { UserId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-export class ScenarioCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly scenarioId: string,
-    public readonly planId: string,
-    public readonly name: string,
-    public readonly createdBy: string
-  ) {
-    super(scenarioId, 'Scenario');
-  }
-
-  get eventType(): string {
-    return 'ScenarioCreated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      scenarioId: this.scenarioId,
-      planId: this.planId,
-      name: this.name,
-      createdBy: this.createdBy,
-    };
-  }
-}
-
-export class ScenarioUpdatedEvent extends DomainEvent {
-  constructor(
-    public readonly scenarioId: string,
-    public readonly changes: Record<string, unknown>
-  ) {
-    super(scenarioId, 'Scenario');
-  }
-
-  get eventType(): string {
-    return 'ScenarioUpdated';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      scenarioId: this.scenarioId,
-      changes: this.changes,
-    };
-  }
-}
 
 // ============================================================================
 // Entity
 // ============================================================================
 
-export class Scenario extends AggregateRoot {
+export class Scenario {
   private constructor(
     private readonly _id: ScenarioId,
     private readonly _planId: PlanId,
@@ -66,9 +16,7 @@ export class Scenario extends AggregateRoot {
     private readonly _createdBy: UserId,
     private readonly _createdAt: Date,
     private _updatedAt: Date
-  ) {
-    super();
-  }
+  ) {}
 
   static create(params: {
     planId: PlanId;
@@ -86,15 +34,6 @@ export class Scenario extends AggregateRoot {
       params.createdBy,
       new Date(),
       new Date()
-    );
-
-    scenario.addDomainEvent(
-      new ScenarioCreatedEvent(
-        scenario._id.getValue(),
-        params.planId.getValue(),
-        params.name,
-        params.createdBy.getValue()
-      )
     );
 
     return scenario;
@@ -173,12 +112,6 @@ export class Scenario extends AggregateRoot {
       changes.assumptions = params.assumptions;
     }
     this._updatedAt = new Date();
-
-    if (Object.keys(changes).length > 0) {
-      this.addDomainEvent(
-        new ScenarioUpdatedEvent(this._id.getValue(), changes)
-      );
-    }
   }
 
   static toDTO(scenario: Scenario): ScenarioDTO {

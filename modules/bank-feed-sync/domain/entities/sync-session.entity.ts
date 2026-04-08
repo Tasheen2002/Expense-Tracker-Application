@@ -9,6 +9,28 @@ import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-ro
 // Domain Events
 // ============================================================================
 
+export class SyncSessionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly connectionId: string,
+    public readonly workspaceId: string
+  ) {
+    super(sessionId, 'SyncSession');
+  }
+
+  get eventType(): string {
+    return 'sync_session.created';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      connectionId: this.connectionId,
+      workspaceId: this.workspaceId,
+    };
+  }
+}
+
 export class SyncSessionStartedEvent extends DomainEvent {
   constructor(
     public readonly sessionId: string,
@@ -83,6 +105,36 @@ export class SyncSessionFailedEvent extends DomainEvent {
   }
 }
 
+export class SyncSessionPartiallyCompletedEvent extends DomainEvent {
+  constructor(
+    public readonly sessionId: string,
+    public readonly workspaceId: string,
+    public readonly connectionId: string,
+    public readonly transactionsFetched: number,
+    public readonly transactionsImported: number,
+    public readonly transactionsDuplicate: number,
+    public readonly errorMessage: string
+  ) {
+    super(sessionId, 'SyncSession');
+  }
+
+  get eventType(): string {
+    return 'SyncSessionPartiallyCompleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+      connectionId: this.connectionId,
+      transactionsFetched: this.transactionsFetched,
+      transactionsImported: this.transactionsImported,
+      transactionsDuplicate: this.transactionsDuplicate,
+      errorMessage: this.errorMessage,
+    };
+  }
+}
+
 export interface SyncSessionProps {
   id: SyncSessionId;
   workspaceId: WorkspaceId;
@@ -109,7 +161,7 @@ export class SyncSession extends AggregateRoot {
     connectionId: BankConnectionId,
     metadata?: Record<string, unknown>
   ): SyncSession {
-    return new SyncSession({
+    const session = new SyncSession({
       id: SyncSessionId.create(),
       workspaceId,
       connectionId,
@@ -122,6 +174,16 @@ export class SyncSession extends AggregateRoot {
       createdAt: new Date(),
       updatedAt: new Date(),
     });
+
+    session.addDomainEvent(
+      new SyncSessionCreatedEvent(
+        session.id.getValue(),
+        session.connectionId.getValue(),
+        session.workspaceId.getValue()
+      )
+    );
+
+    return session;
   }
 
   static reconstitute(props: SyncSessionProps): SyncSession {
@@ -248,6 +310,18 @@ export class SyncSession extends AggregateRoot {
     this.props.transactionsDuplicate = transactionsDuplicate;
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SyncSessionPartiallyCompletedEvent(
+        this.id.getValue(),
+        this.workspaceId.getValue(),
+        this.connectionId.getValue(),
+        transactionsFetched,
+        transactionsImported,
+        transactionsDuplicate,
+        errorMessage
+      )
+    );
   }
 
   static toDTO(session: SyncSession): SyncSessionDTO {

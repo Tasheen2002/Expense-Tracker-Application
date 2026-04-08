@@ -118,14 +118,14 @@ export class NotificationPreference {
     this.props.updatedAt = new Date();
   }
 
-  toJSON(): NotificationPreferenceDTO {
+  static toDTO(pref: NotificationPreference): NotificationPreferenceDTO {
     return {
-      id: this.getId().getValue(),
-      userId: this.getUserId().getValue(),
-      workspaceId: this.getWorkspaceId().getValue(),
-      emailEnabled: this.isEmailEnabled(),
-      inAppEnabled: this.isInAppEnabled(),
-      pushEnabled: this.isPushEnabled(),
+      id: pref.getId().getValue(),
+      userId: pref.getUserId().getValue(),
+      workspaceId: pref.getWorkspaceId().getValue(),
+      emailEnabled: pref.isEmailEnabled(),
+      inAppEnabled: pref.isInAppEnabled(),
+      pushEnabled: pref.isPushEnabled(),
     };
   }
 }

@@ -1,11 +1,5 @@
-import { IBudgetRepository } from '../../domain/repositories/budget.repository';
-import { IBudgetAllocationRepository } from '../../domain/repositories/budget-allocation.repository';
-import {
-  BudgetAllocation,
-  BudgetAllocationDTO,
-} from '../../domain/entities/budget-allocation.entity';
-import { BudgetId } from '../../domain/value-objects/budget-id';
-import { BudgetNotFoundError } from '../../domain/errors/budget.errors';
+import { BudgetService } from '../services/budget.service';
+import { BudgetAllocationDTO } from '../../domain/entities/budget-allocation.entity';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -30,41 +24,22 @@ export class GetAllocationsHandler
       QueryResult<PaginatedResult<BudgetAllocationDTO>>
     >
 {
-  constructor(
-    private readonly budgetRepository: IBudgetRepository,
-    private readonly allocationRepository: IBudgetAllocationRepository
-  ) {}
+  constructor(private readonly budgetService: BudgetService) {}
 
   async handle(
     query: GetAllocationsQuery
   ): Promise<QueryResult<PaginatedResult<BudgetAllocationDTO>>> {
-    const budgetId = BudgetId.fromString(query.budgetId);
-
-    const budget = await this.budgetRepository.findById(
-      budgetId,
-      query.workspaceId
-    );
-    if (!budget) {
-      throw new BudgetNotFoundError(query.budgetId, query.workspaceId);
-    }
-
     const options: PaginationOptions = {
       limit: query.limit,
       offset: query.offset,
     };
 
-    const result = await this.allocationRepository.findByBudget(
-      budgetId,
+    const result = await this.budgetService.getAllocationsByBudget(
+      query.budgetId,
+      query.workspaceId,
       options
     );
 
-    const dtoResult: PaginatedResult<BudgetAllocationDTO> = {
-      ...result,
-      items: result.items.map((allocation) =>
-        BudgetAllocation.toDTO(allocation)
-      ),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

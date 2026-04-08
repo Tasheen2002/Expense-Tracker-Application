@@ -184,6 +184,9 @@ export class BudgetRepositoryImpl
   }
 
   async delete(id: BudgetId, workspaceId: string): Promise<void> {
+    // Domain events for deletion are dispatched by the service layer:
+    // the service calls budget.markAsDeleted() + budgetRepository.save(budget)
+    // before invoking this method, so events are already dispatched via save().
     await this.prisma.budget.delete({
       where: {
         id: id.getValue(),

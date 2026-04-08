@@ -1,5 +1,5 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
-import { Department, DepartmentDTO } from '../../domain/entities/department.entity';
+import { DepartmentDTO } from '../../domain/entities/department.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -22,6 +22,6 @@ export class GetDepartmentHandler implements IQueryHandler<
     const department = await this.allocationManagementService.getDepartment(
       query.id
     );
-    return QueryResult.success(Department.toDTO(department));
+    return QueryResult.success(department);
   }
 }

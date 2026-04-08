@@ -1,7 +1,7 @@
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import { ExpenseId } from '../../../expense-ledger';
 import { WorkspaceId } from '../../../identity-workspace';
-import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
+import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -22,11 +22,11 @@ export class GetSuggestionsByExpenseHandler implements IQueryHandler<
   async handle(
     query: GetSuggestionsByExpenseQuery
   ): Promise<QueryResult<CategorySuggestionDTO[]>> {
-    const suggestions = await this.suggestionService.getSuggestionsByExpenseId(
+    const result = await this.suggestionService.getSuggestionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
       WorkspaceId.fromString(query.workspaceId)
     );
 
-    return QueryResult.success(suggestions.items.map(CategorySuggestion.toDTO));
+    return QueryResult.success(result.items);
   }
 }

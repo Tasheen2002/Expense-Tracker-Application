@@ -1,4 +1,4 @@
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
+import { BudgetPlan, BudgetPlanDTO } from "../../domain/entities/budget-plan.entity";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
 import { WorkspaceId, UserId } from "../../../identity-workspace";
@@ -10,6 +10,10 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 export class BudgetPlanService {
   constructor(
@@ -32,7 +36,7 @@ export class BudgetPlanService {
     startDate: Date;
     endDate: Date;
     createdBy: string;
-  }): Promise<BudgetPlan> {
+  }): Promise<BudgetPlanDTO> {
     const hasAccess = await this.checkWorkspaceAccess(
       params.createdBy,
       params.workspaceId,
@@ -55,7 +59,7 @@ export class BudgetPlanService {
     });
 
     await this.budgetPlanRepository.save(plan);
-    return plan;
+    return BudgetPlan.toDTO(plan);
   }
 
   async updatePlan(params: {
@@ -64,7 +68,7 @@ export class BudgetPlanService {
     userId: string;
     name?: string;
     description?: string;
-  }): Promise<BudgetPlan> {
+  }): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(params.id);
     const plan = await this.budgetPlanRepository.findById(planId, params.workspaceId);
 
@@ -84,10 +88,10 @@ export class BudgetPlanService {
 
     plan.updateDetails(params.name, params.description);
     await this.budgetPlanRepository.save(plan);
-    return plan;
+    return BudgetPlan.toDTO(plan);
   }
 
-  async activatePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlan> {
+  async activatePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(id);
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
 
@@ -107,7 +111,7 @@ export class BudgetPlanService {
 
     plan.updateStatus(PlanStatus.ACTIVE);
     await this.budgetPlanRepository.save(plan);
-    return plan;
+    return BudgetPlan.toDTO(plan);
   }
 
   async deletePlan(id: string, workspaceId: string, userId: string): Promise<void> {
@@ -131,6 +135,24 @@ export class BudgetPlanService {
     // Add validation: Cannot delete active plans? Or specific status checks.
 
     await this.budgetPlanRepository.delete(planId);
+  }
+
+  async getPlanById(id: string, workspaceId: string): Promise<BudgetPlanDTO | null> {
+    const plan = await this.budgetPlanRepository.findById(PlanId.fromString(id), workspaceId);
+    return plan ? BudgetPlan.toDTO(plan) : null;
+  }
+
+  async getPlans(
+    workspaceId: string,
+    status?: PlanStatus,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<BudgetPlanDTO>> {
+    const result = await this.budgetPlanRepository.findAll(
+      WorkspaceId.fromString(workspaceId),
+      status,
+      options,
+    );
+    return { ...result, items: result.items.map((p) => BudgetPlan.toDTO(p)) };
   }
 
 }

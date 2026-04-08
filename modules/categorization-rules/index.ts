@@ -18,3 +18,8 @@ export {
 
 // Domain enums
 export { RuleConditionType, isValidRuleConditionType } from './domain/enums/rule-condition-type';
+
+// DTOs
+export type { CategoryRuleDTO } from './domain/entities/category-rule.entity';
+export type { CategorySuggestionDTO } from './domain/entities/category-suggestion.entity';
+export type { RuleExecutionDTO } from './domain/entities/rule-execution.entity';

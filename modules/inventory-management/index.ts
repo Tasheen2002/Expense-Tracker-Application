@@ -1,48 +1,36 @@
-/**
- * Inventory Management Module
- * 
- * This module handles stock management, purchase orders, suppliers, locations,
- * stock alerts, and pickup reservations for the e-commerce platform.
- * 
- * Following DDD architecture:
- * - application/: Use cases (commands, queries, services)
- * - domain/: Business logic (entities, value objects, repositories)
- * - infrastructure/: Technical implementation (HTTP, persistence)
- * - tests/: Module tests
- */
+// HTTP entry-point (used by the API app to mount routes)
+export { registerInventoryRoutes } from './infrastructure/http/routes';
 
-// Domain Exports
-export * from "./domain/entities/purchase-order.entity";
-export * from "./domain/entities/purchase-order-item.entity";
-export * from "./domain/entities/stock.entity";
-export * from "./domain/entities/location.entity";
-export * from "./domain/entities/supplier.entity";
-export * from "./domain/entities/stock-alert.entity";
-export * from "./domain/entities/pickup-reservation.entity";
-export * from "./domain/entities/inventory-transaction.entity";
+// Domain error types (used by cross-cutting error handlers)
+export {
+  PurchaseOrderNotFoundError,
+  SupplierNotFoundError,
+  LocationNotFoundError,
+  StockNotFoundError,
+  InsufficientStockError,
+  InvalidQuantityError,
+  InvalidPurchaseOrderStatusError,
+  PurchaseOrderCannotBeEditedError,
+  SupplierAlreadyExistsError,
+  LocationAlreadyExistsError,
+  InvalidInventoryDataError,
+  UnauthorizedInventoryAccessError,
+} from './domain/errors/inventory.errors';
 
-export * from "./domain/value-objects/purchase-order-id.vo";
-export * from "./domain/value-objects/supplier-id.vo";
-export * from "./domain/value-objects/purchase-order-status.vo";
-export * from "./domain/value-objects/alert-type.vo";
+// Domain enums (safe to share — value objects, not entities)
+export { PurchaseOrderStatus } from './domain/enums/purchase-order-status';
+export { LocationType } from './domain/enums/location-type';
+export { TransactionType } from './domain/enums/transaction-type';
 
-export * from "./domain/repositories/purchase-order.repository";
-export * from "./domain/repositories/purchase-order-item.repository";
-export * from "./domain/repositories/stock.repository";
-export * from "./domain/repositories/location.repository";
-export * from "./domain/repositories/supplier.repository";
+// Domain value objects (for cross-module identity references)
+export { StockId } from './domain/value-objects/stock-id.vo';
+export { PurchaseOrderId } from './domain/value-objects/purchase-order-id.vo';
+export { SupplierId } from './domain/value-objects/supplier-id.vo';
+export { LocationId } from './domain/value-objects/location-id.vo';
 
-export * from "./domain/errors/inventory.errors";
-
-// Application Exports
-export * from "./application/services/purchase-order-management.service";
-export * from "./application/services/stock-management.service";
-export * from "./application/services/location-management.service";
-export * from "./application/services/supplier-management.service";
-export * from "./application/services/stock-alert.service";
-export * from "./application/services/pickup-reservation.service";
-
-// Infrastructure Exports
-export * from "./infrastructure/http/routes/inventory.routes";
-export * from "./infrastructure/persistence/purchase-order.repository.impl";
-export * from "./infrastructure/persistence/purchase-order-item.repository.impl";
+// DTO types (for cross-module type sharing)
+export type { SupplierDTO } from './domain/entities/supplier.entity';
+export type { LocationDTO } from './domain/entities/location.entity';
+export type { PurchaseOrderDTO } from './domain/entities/purchase-order.entity';
+export type { StockDTO } from './domain/entities/stock.entity';
+export type { InventoryTransactionDTO } from './domain/entities/inventory-transaction.entity';

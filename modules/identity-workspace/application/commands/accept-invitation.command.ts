@@ -1,4 +1,5 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
+import { WorkspaceMembershipDTO } from '../../domain/entities/workspace-membership.entity';
 import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
@@ -7,34 +8,22 @@ export interface AcceptInvitationCommand extends ICommand {
   userId: string;
 }
 
-export type AcceptInvitationResultType = {
-  membershipId: string;
-  workspaceId: string;
-  userId: string;
-  role: string;
-};
-
 export class AcceptInvitationHandler implements ICommandHandler<
   AcceptInvitationCommand,
-  CommandResult<AcceptInvitationResultType>
+  CommandResult<WorkspaceMembershipDTO>
 > {
   constructor(private readonly invitationService: WorkspaceInvitationService) {}
 
   async handle(
     command: AcceptInvitationCommand
-  ): Promise<CommandResult<AcceptInvitationResultType>> {
+  ): Promise<CommandResult<WorkspaceMembershipDTO>> {
     try {
-      const membership = await this.invitationService.acceptInvitation(
+      const membershipDTO = await this.invitationService.acceptInvitationDTO(
         command.token,
         command.userId
       );
 
-      return CommandResult.success({
-        membershipId: membership.getId().getValue(),
-        workspaceId: membership.getWorkspaceId().getValue(),
-        userId: membership.getUserId().getValue(),
-        role: membership.getRole(),
-      });
+      return CommandResult.success(membershipDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

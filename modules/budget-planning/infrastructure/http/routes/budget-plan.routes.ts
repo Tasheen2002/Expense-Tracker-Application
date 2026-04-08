@@ -44,7 +44,7 @@ export async function budgetPlanningRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createBudgetPlanSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Plans'],
@@ -73,17 +73,13 @@ export async function budgetPlanningRoutes(
         },
         response: {
           201: {
+            description: 'Budget plan created successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  budgetPlanId: { type: 'string', format: 'uuid' },
-                },
-              },
+              data: budgetPlanResponseSchema,
             },
           },
         },
@@ -101,7 +97,7 @@ export async function budgetPlanningRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(budgetPlanQuerySchema),
       ],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'List all budget plans in workspace',
@@ -126,6 +122,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plans retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -146,7 +143,7 @@ export async function budgetPlanningRoutes(
     '/workspaces/:workspaceId/budget-plans/:id',
     {
       preValidation: [validateParams(planParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'Get a specific budget plan',
@@ -161,6 +158,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -183,7 +181,7 @@ export async function budgetPlanningRoutes(
       preValidation: [validateParams(planParamsSchema)],
       preHandler: [
         validateBody(updateBudgetPlanSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Planning - Plans'],
@@ -206,6 +204,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan updated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -255,7 +254,7 @@ export async function budgetPlanningRoutes(
     '/workspaces/:workspaceId/budget-plans/:id/activate',
     {
       preValidation: [validateParams(planParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'Activate a budget plan',
@@ -270,6 +269,7 @@ export async function budgetPlanningRoutes(
         },
         response: {
           200: {
+            description: 'Budget plan activated successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },

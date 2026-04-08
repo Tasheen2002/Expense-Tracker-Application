@@ -1,5 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { Workspace } from '../../domain/entities/workspace.entity';
+import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import {
@@ -14,7 +14,7 @@ export interface GetUserWorkspacesQuery extends IQuery {
 
 export class GetUserWorkspacesHandler implements IQueryHandler<
   GetUserWorkspacesQuery,
-  QueryResult<PaginatedResult<Workspace>>
+  QueryResult<PaginatedResult<WorkspaceDTO>>
 > {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService
@@ -22,13 +22,15 @@ export class GetUserWorkspacesHandler implements IQueryHandler<
 
   async handle(
     query: GetUserWorkspacesQuery
-  ): Promise<QueryResult<PaginatedResult<Workspace>>> {
-    // FIXED: Get ALL workspaces user is a member of, not just owned workspaces
-    const workspaces =
-      await this.workspaceManagementService.getWorkspacesByMembership(
+  ): Promise<QueryResult<PaginatedResult<WorkspaceDTO>>> {
+    try {
+      const result = await this.workspaceManagementService.getWorkspacesDTOByMembership(
         query.userId,
         query.options
       );
-    return QueryResult.success(workspaces);
+      return QueryResult.success(result);
+    } catch (error) {
+      return QueryResult.fromError(error);
+    }
   }
 }

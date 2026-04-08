@@ -1,4 +1,5 @@
 import { SpendingLimitService } from '../services/spending-limit.service';
+import { SpendingLimitDTO } from '../../domain/entities/spending-limit.entity';
 
 import {
   ICommand,
@@ -15,20 +16,20 @@ export interface UpdateSpendingLimitCommand extends ICommand {
 
 export class UpdateSpendingLimitHandler implements ICommandHandler<
   UpdateSpendingLimitCommand,
-  CommandResult<void>
+  CommandResult<SpendingLimitDTO>
 > {
   constructor(private readonly limitService: SpendingLimitService) {}
 
   async handle(
     command: UpdateSpendingLimitCommand
-  ): Promise<CommandResult<void>> {
-    await this.limitService.updateSpendingLimit(
+  ): Promise<CommandResult<SpendingLimitDTO>> {
+    const dto = await this.limitService.updateSpendingLimit(
       command.limitId,
       command.workspaceId,
       {
         limitAmount: command.limitAmount,
       }
     );
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

@@ -1,12 +1,10 @@
-import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { BankConnection } from '../../domain/entities/bank-connection.entity';
-import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
-import { BankConnectionAlreadyExistsError } from '../../domain/errors/bank-feed-sync.errors';
 import {
   ICommand,
   ICommandHandler,
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 
 export interface ConnectBankCommand extends ICommand {
   workspaceId: string;
@@ -24,47 +22,14 @@ export interface ConnectBankCommand extends ICommand {
 
 export class ConnectBankHandler implements ICommandHandler<
   ConnectBankCommand,
-  CommandResult<string>
+  CommandResult<BankConnectionDTO>
 > {
   constructor(
-    private readonly connectionRepository: IBankConnectionRepository
+    private readonly transactionSyncService: TransactionSyncService
   ) {}
 
-  async handle(command: ConnectBankCommand): Promise<CommandResult<string>> {
-    const workspaceId = WorkspaceId.fromString(command.workspaceId);
-    const userId = UserId.fromString(command.userId);
-
-    const existing =
-      await this.connectionRepository.findByInstitutionAndAccount(
-        workspaceId,
-        command.institutionId,
-        command.accountId
-      );
-
-    if (existing) {
-      throw new BankConnectionAlreadyExistsError(
-        command.institutionId,
-        command.accountId
-      );
-    }
-
-    const connection = BankConnection.create(
-      workspaceId,
-      userId,
-      command.institutionId,
-      command.institutionName,
-      command.accountId,
-      command.accountName,
-      command.accountType,
-      command.currency,
-      command.accessToken,
-      command.accountMask,
-      command.tokenExpiresAt
-    );
-
-    connection.activate();
-    await this.connectionRepository.save(connection);
-
-    return CommandResult.success(connection.id.getValue());
+  async handle(command: ConnectBankCommand): Promise<CommandResult<BankConnectionDTO>> {
+    const dto = await this.transactionSyncService.connectBank(command);
+    return CommandResult.success(dto);
   }
 }

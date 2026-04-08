@@ -1,5 +1,5 @@
-import { PolicyRepository } from '../../domain/repositories/policy.repository';
-import { ExpensePolicy } from '../../domain/entities/expense-policy.entity';
+import { PolicyService } from '../services/policy.service';
+import { ExpensePolicyDTO } from '../../domain/entities/expense-policy.entity';
 import { PolicyType } from '../../domain/enums/policy-type.enum';
 import {
   PaginatedResult,
@@ -15,23 +15,16 @@ export interface ListPoliciesInput {
 }
 
 export class ListPoliciesHandler {
-  constructor(private readonly policyRepository: PolicyRepository) {}
+  constructor(private readonly policyService: PolicyService) {}
 
   async handle(
     input: ListPoliciesInput
-  ): Promise<QueryResult<PaginatedResult<ExpensePolicy>>> {
-    let result: PaginatedResult<ExpensePolicy>;
-    if (input.activeOnly) {
-      result = await this.policyRepository.findActiveByWorkspace(
-        input.workspaceId,
-        input.pagination
-      );
-    } else {
-      result = await this.policyRepository.findByWorkspace(
-        input.workspaceId,
-        input.pagination
-      );
-    }
+  ): Promise<QueryResult<PaginatedResult<ExpensePolicyDTO>>> {
+    const result = await this.policyService.listPolicies(
+      input.workspaceId,
+      input.activeOnly,
+      input.pagination
+    );
     return QueryResult.success(result);
   }
 }

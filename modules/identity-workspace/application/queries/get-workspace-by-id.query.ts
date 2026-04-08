@@ -1,5 +1,5 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { Workspace } from '../../domain/entities/workspace.entity';
+import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
@@ -9,7 +9,7 @@ export interface GetWorkspaceByIdQuery extends IQuery {
 
 export class GetWorkspaceByIdHandler implements IQueryHandler<
   GetWorkspaceByIdQuery,
-  QueryResult<Workspace | null>
+  QueryResult<WorkspaceDTO | null>
 > {
   constructor(
     private readonly workspaceManagementService: WorkspaceManagementService
@@ -17,12 +17,12 @@ export class GetWorkspaceByIdHandler implements IQueryHandler<
 
   async handle(
     query: GetWorkspaceByIdQuery
-  ): Promise<QueryResult<Workspace | null>> {
+  ): Promise<QueryResult<WorkspaceDTO | null>> {
     try {
-      const workspace = await this.workspaceManagementService.getWorkspaceById(
+      const workspaceDTO = await this.workspaceManagementService.getWorkspaceDTOById(
         query.workspaceId
       );
-      return QueryResult.success(workspace);
+      return QueryResult.success(workspaceDTO);
     } catch (error) {
       return QueryResult.fromError(error);
     }

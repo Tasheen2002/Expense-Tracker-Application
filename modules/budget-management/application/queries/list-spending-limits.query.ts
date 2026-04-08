@@ -1,8 +1,5 @@
-import { ISpendingLimitRepository } from '../../domain/repositories/spending-limit.repository';
-import {
-  SpendingLimit,
-  SpendingLimitDTO,
-} from '../../domain/entities/spending-limit.entity';
+import { SpendingLimitService } from '../services/spending-limit.service';
+import { SpendingLimitDTO } from '../../domain/entities/spending-limit.entity';
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   PaginatedResult,
@@ -31,9 +28,7 @@ export class ListSpendingLimitsHandler
       QueryResult<PaginatedResult<SpendingLimitDTO>>
     >
 {
-  constructor(
-    private readonly spendingLimitRepository: ISpendingLimitRepository
-  ) {}
+  constructor(private readonly spendingLimitService: SpendingLimitService) {}
 
   async handle(
     query: ListSpendingLimitsQuery
@@ -43,7 +38,7 @@ export class ListSpendingLimitsHandler
       offset: query.offset,
     };
 
-    let result: PaginatedResult<SpendingLimit>;
+    let result: PaginatedResult<SpendingLimitDTO>;
 
     if (
       query.userId !== undefined ||
@@ -51,7 +46,7 @@ export class ListSpendingLimitsHandler
       query.isActive !== undefined ||
       query.periodType
     ) {
-      result = await this.spendingLimitRepository.findByFilters(
+      result = await this.spendingLimitService.filterSpendingLimits(
         {
           workspaceId: query.workspaceId,
           userId: query.userId,
@@ -62,17 +57,12 @@ export class ListSpendingLimitsHandler
         options
       );
     } else {
-      result = await this.spendingLimitRepository.findByWorkspace(
+      result = await this.spendingLimitService.getSpendingLimitsByWorkspace(
         query.workspaceId,
         options
       );
     }
 
-    const dtoResult: PaginatedResult<SpendingLimitDTO> = {
-      ...result,
-      items: result.items.map((limit) => SpendingLimit.toDTO(limit)),
-    };
-
-    return QueryResult.success(dtoResult);
+    return QueryResult.success(result);
   }
 }

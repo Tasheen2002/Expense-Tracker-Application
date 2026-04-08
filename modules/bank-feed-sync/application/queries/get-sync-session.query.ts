@@ -1,8 +1,5 @@
-import { WorkspaceId } from '../../../identity-workspace';
-import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
-import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
-import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
-import { SyncSessionNotFoundError } from '../../domain/errors/bank-feed-sync.errors';
+import { TransactionSyncService } from '../services/transaction-sync.service';
+import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   IQuery,
   IQueryHandler,
@@ -18,23 +15,15 @@ export class GetSyncSessionHandler implements IQueryHandler<
   GetSyncSessionQuery,
   QueryResult<SyncSessionDTO>
 > {
-  constructor(private readonly sessionRepository: ISyncSessionRepository) {}
+  constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
   async handle(
     query: GetSyncSessionQuery
   ): Promise<QueryResult<SyncSessionDTO>> {
-    const workspaceId = WorkspaceId.fromString(query.workspaceId);
-    const sessionId = SyncSessionId.fromString(query.sessionId);
-
-    const session = await this.sessionRepository.findById(
-      sessionId,
-      workspaceId
+    const dto = await this.transactionSyncService.getSyncSession(
+      query.sessionId,
+      query.workspaceId
     );
-
-    if (!session) {
-      throw new SyncSessionNotFoundError(query.sessionId);
-    }
-
-    return QueryResult.success(SyncSession.toDTO(session));
+    return QueryResult.success(dto);
   }
 }

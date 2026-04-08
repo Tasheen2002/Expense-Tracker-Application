@@ -1,5 +1,5 @@
 import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
-import { Attachment } from '../../domain/entities/attachment.entity';
+import { Attachment, AttachmentDTO } from '../../domain/entities/attachment.entity';
 import { AttachmentId } from '../../domain/value-objects/attachment-id';
 import {
   AttachmentNotFoundError,
@@ -72,9 +72,26 @@ export class AttachmentService {
     );
   }
 
+  async getAttachmentDTOById(attachmentId: string): Promise<AttachmentDTO | null> {
+    const attachment = await this.attachmentRepository.findById(
+      AttachmentId.fromString(attachmentId)
+    );
+    return attachment ? attachment.toJSON() : null;
+  }
+
   async getAttachmentsByExpense(
     expenseId: string
   ): Promise<PaginatedResult<Attachment>> {
     return await this.attachmentRepository.findByExpense(expenseId);
+  }
+
+  async getAttachmentDTOsByExpense(
+    expenseId: string
+  ): Promise<PaginatedResult<AttachmentDTO>> {
+    const result = await this.attachmentRepository.findByExpense(expenseId);
+    return {
+      ...result,
+      items: result.items.map((a) => a.toJSON()),
+    };
   }
 }

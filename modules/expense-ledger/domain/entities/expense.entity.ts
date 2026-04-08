@@ -7,7 +7,7 @@ import { ExpenseDate } from '../value-objects/expense-date';
 import { PaymentMethod } from '../enums/payment-method';
 import { ExpenseStatus, canTransitionTo } from '../enums/expense-status';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../apps/api/src/shared/domain/events';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import {
   ExpenseTitleRequiredError,
   ExpenseTitleTooLongError,
@@ -193,6 +193,98 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
   }
 }
 
+/**
+ * Emitted when an expense is deleted.
+ */
+export class ExpenseDeletedEvent extends DomainEvent {
+  constructor(public readonly expenseId: string) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { expenseId: this.expenseId };
+  }
+}
+
+/**
+ * Emitted when an attachment is added to an expense.
+ */
+export class AttachmentAddedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly attachmentId: string
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.attachment_added';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      attachmentId: this.attachmentId,
+    };
+  }
+}
+
+/**
+ * Emitted when a settlement payment is recorded against an expense split.
+ */
+export class SettlementRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly settlementId: string
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.settlement_recorded';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      settlementId: this.settlementId,
+    };
+  }
+}
+
+/**
+ * Emitted when one or more fields of an expense are updated.
+ */
+export class ExpenseUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly updatedFields: string[]
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return 'expense.updated';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      updatedFields: this.updatedFields,
+    };
+  }
+}
+
 // ============================================================================
 // ENTITY
 // ============================================================================
@@ -368,43 +460,51 @@ export class Expense extends AggregateRoot {
     Expense.validateTitle(title);
     this.props.title = title;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['title']));
   }
 
   updateDescription(description?: string): void {
     Expense.validateDescription(description);
     this.props.description = description;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['description']));
   }
 
   updateAmount(amount: Money): void {
     this.props.amount = amount;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['amount']));
   }
 
   updateExpenseDate(expenseDate: ExpenseDate): void {
     this.props.expenseDate = expenseDate;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['expenseDate']));
   }
 
   updateCategory(categoryId?: CategoryId): void {
     this.props.categoryId = categoryId;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['categoryId']));
   }
 
   updateMerchant(merchant?: string): void {
     Expense.validateMerchant(merchant);
     this.props.merchant = merchant;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['merchant']));
   }
 
   updatePaymentMethod(paymentMethod: PaymentMethod): void {
     this.props.paymentMethod = paymentMethod;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['paymentMethod']));
   }
 
   setReimbursable(isReimbursable: boolean): void {
     this.props.isReimbursable = isReimbursable;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['isReimbursable']));
   }
 
   // Tag management
@@ -432,6 +532,13 @@ export class Expense extends AggregateRoot {
     if (!this.hasAttachment(attachmentId)) {
       this.props.attachmentIds.push(attachmentId);
       this.props.updatedAt = new Date();
+      this.addDomainEvent(
+        new AttachmentAddedEvent(
+          this.id.getValue(),
+          this.workspaceId,
+          attachmentId.getValue()
+        )
+      );
     }
   }
 
@@ -655,6 +762,20 @@ export class Expense extends AggregateRoot {
       this.props.status === ExpenseStatus.DRAFT ||
       this.props.status === ExpenseStatus.REJECTED
     );
+  }
+
+  recordSettlement(settlementId: string): void {
+    this.addDomainEvent(
+      new SettlementRecordedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        settlementId
+      )
+    );
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new ExpenseDeletedEvent(this.id.getValue()));
   }
 
   toJSON(): ExpenseDTO {

@@ -67,8 +67,10 @@ export async function workflowRoutes(
         },
         response: {
           201: {
+            description: 'Workflow initiated successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -100,8 +102,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Workflow retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -140,8 +144,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Workflow step approved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -181,8 +187,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Workflow step rejected successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -222,8 +230,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Workflow step delegated successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -255,8 +265,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Workflow cancelled successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: workflowSchema,
@@ -295,8 +307,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'Pending approvals retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: paginatedWorkflowsResponseSchema,
@@ -335,8 +349,10 @@ export async function workflowRoutes(
         },
         response: {
           200: {
+            description: 'User workflows retrieved successfully',
             type: 'object',
             properties: {
+              statusCode: { type: 'number' },
               success: { type: 'boolean' },
               message: { type: 'string' },
               data: paginatedWorkflowsResponseSchema,

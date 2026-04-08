@@ -26,16 +26,12 @@ export class EvaluateExpenseHandler implements ICommandHandler<
   async handle(
     input: EvaluateExpenseInput
   ): Promise<CommandResult<EvaluateExpenseResult>> {
-    try {
-      const result = await this.policyEvaluationService.evaluateExpense(input);
+    const result = await this.policyEvaluationService.evaluateExpense(input);
 
-      return CommandResult.success({
-        passed: result.passed,
-        violationIds: result.violations.map((v) => v.getId().getValue()),
-        blockedByPolicyId: result.blockedByPolicy?.getId().getValue(),
-      });
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+    return CommandResult.success({
+      passed: result.passed,
+      violationIds: result.violations.map((v) => v.getId().getValue()),
+      blockedByPolicyId: result.blockedByPolicy?.getId().getValue(),
+    });
   }
 }

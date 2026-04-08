@@ -35,11 +35,13 @@ export class Attachment {
     this.validateFileSize(props.fileSize);
     this.validateMimeType(props.mimeType);
 
-    return new Attachment({
+    const attachment = new Attachment({
       ...props,
       id: AttachmentId.create(),
       createdAt: new Date(),
     });
+
+    return attachment;
   }
 
   static fromPersistence(props: AttachmentProps): Attachment {

@@ -1,4 +1,5 @@
 import { UserManagementService } from '../services/user-management.service';
+import { UserDTO } from '../../domain/entities/user.entity';
 import bcrypt from 'bcryptjs';
 
 import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
@@ -13,23 +14,23 @@ export interface RegisterUserCommand extends ICommand {
 
 export class RegisterUserHandler implements ICommandHandler<
   RegisterUserCommand,
-  CommandResult<{ userId: string }>
+  CommandResult<UserDTO>
 > {
   constructor(private readonly userManagementService: UserManagementService) {}
 
   async handle(
     command: RegisterUserCommand
-  ): Promise<CommandResult<{ userId: string }>> {
+  ): Promise<CommandResult<UserDTO>> {
     try {
       const bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS || '10');
       const passwordHash = await bcrypt.hash(command.password, bcryptRounds);
 
-      const user = await this.userManagementService.createUser({
+      const userDTO = await this.userManagementService.createUserDTO({
         email: command.email,
         passwordHash,
         fullName: command.fullName,
       });
-      return CommandResult.success({ userId: user.getId().getValue() });
+      return CommandResult.success(userDTO);
     } catch (error) {
       return CommandResult.fromError(error);
     }

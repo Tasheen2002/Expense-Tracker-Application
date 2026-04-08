@@ -41,6 +41,9 @@ import { CancelInvitationHandler } from '../../../modules/identity-workspace/app
 import { GetInvitationByTokenHandler } from '../../../modules/identity-workspace/application/queries/get-invitation-by-token.query';
 import { GetWorkspaceInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-workspace-invitations.query';
 import { GetPendingInvitationsHandler } from '../../../modules/identity-workspace/application/queries/get-pending-invitations.query';
+import { ListWorkspaceMembersHandler } from '../../../modules/identity-workspace/application/queries/list-workspace-members.query';
+import { RemoveMemberHandler } from '../../../modules/identity-workspace/application/commands/remove-member.command';
+import { ChangeMemberRoleHandler } from '../../../modules/identity-workspace/application/commands/change-member-role.command';
 import { WorkspaceAuthHelper } from '../../../modules/identity-workspace/infrastructure/http/middleware/workspace-auth.helper';
 import { AuthController } from '../../../modules/identity-workspace/infrastructure/http/controllers/auth.controller';
 import { WorkspaceController } from '../../../modules/identity-workspace/infrastructure/http/controllers/workspace.controller';
@@ -362,6 +365,7 @@ import { ActivateBudgetPlanHandler } from '../../../modules/budget-planning/appl
 import { CreateForecastHandler } from '../../../modules/budget-planning/application/commands/create-forecast.command';
 import { AddForecastItemHandler } from '../../../modules/budget-planning/application/commands/add-forecast-item.command';
 import { CreateScenarioHandler } from '../../../modules/budget-planning/application/commands/create-scenario.command';
+import { UpdateScenarioHandler } from '../../../modules/budget-planning/application/commands/update-scenario.command';
 import { DeleteBudgetPlanHandler } from '../../../modules/budget-planning/application/commands/delete-budget-plan.command';
 import {
   DeleteForecastHandler,
@@ -389,6 +393,9 @@ import { PrismaViolationRepository } from '../../../modules/policy-controls/infr
 import { PrismaExemptionRepository } from '../../../modules/policy-controls/infrastructure/persistence/exemption.repository.impl';
 
 // Policy Controls Module - Services
+import { PolicyService } from '../../../modules/policy-controls/application/services/policy.service';
+import { ViolationService } from '../../../modules/policy-controls/application/services/violation.service';
+import { ExemptionService } from '../../../modules/policy-controls/application/services/exemption.service';
 import { PolicyEvaluationService } from '../../../modules/policy-controls/application/services/policy-evaluation.service';
 
 // Policy Controls Module - Command Handlers
@@ -472,6 +479,53 @@ import { GetDeadLetterCountHandler } from '../../../modules/event-outbox/applica
 
 // Event Outbox Module - Controllers
 import { OutboxEventController } from '../../../modules/event-outbox/infrastructure/http/controllers/outbox-event.controller';
+
+// Inventory Management Module - Repositories
+import { SupplierRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/supplier.repository.impl';
+import { LocationRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/location.repository.impl';
+import { PurchaseOrderRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/purchase-order.repository.impl';
+import { StockRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/stock.repository.impl';
+import { InventoryTransactionRepositoryImpl } from '../../../modules/inventory-management/infrastructure/persistence/inventory-transaction.repository.impl';
+
+// Inventory Management Module - Services
+import { SupplierService } from '../../../modules/inventory-management/application/services/supplier.service';
+import { LocationService as InventoryLocationService } from '../../../modules/inventory-management/application/services/location.service';
+import { PurchaseOrderService } from '../../../modules/inventory-management/application/services/purchase-order.service';
+import { StockService } from '../../../modules/inventory-management/application/services/stock.service';
+
+// Inventory Management Module - Command Handlers
+import { CreateSupplierHandler } from '../../../modules/inventory-management/application/commands/create-supplier.command';
+import { UpdateSupplierHandler } from '../../../modules/inventory-management/application/commands/update-supplier.command';
+import { DeleteSupplierHandler } from '../../../modules/inventory-management/application/commands/delete-supplier.command';
+import { CreateLocationHandler as CreateInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/create-location.command';
+import { UpdateLocationHandler as UpdateInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/update-location.command';
+import { DeleteLocationHandler as DeleteInventoryLocationHandler } from '../../../modules/inventory-management/application/commands/delete-location.command';
+import { CreatePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/create-purchase-order.command';
+import { UpdatePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/update-purchase-order.command';
+import { DeletePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/delete-purchase-order.command';
+import { SubmitPurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/submit-purchase-order.command';
+import { ApprovePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/approve-purchase-order.command';
+import { ReceivePurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/receive-purchase-order.command';
+import { CancelPurchaseOrderHandler } from '../../../modules/inventory-management/application/commands/cancel-purchase-order.command';
+import { AddPurchaseOrderItemHandler } from '../../../modules/inventory-management/application/commands/add-purchase-order-item.command';
+import { RemovePurchaseOrderItemHandler } from '../../../modules/inventory-management/application/commands/remove-purchase-order-item.command';
+import { AdjustStockHandler } from '../../../modules/inventory-management/application/commands/adjust-stock.command';
+
+// Inventory Management Module - Query Handlers
+import { GetSupplierHandler } from '../../../modules/inventory-management/application/queries/get-supplier.query';
+import { ListSuppliersHandler } from '../../../modules/inventory-management/application/queries/list-suppliers.query';
+import { GetLocationHandler as GetInventoryLocationHandler } from '../../../modules/inventory-management/application/queries/get-location.query';
+import { ListLocationsHandler as ListInventoryLocationsHandler } from '../../../modules/inventory-management/application/queries/list-locations.query';
+import { GetPurchaseOrderHandler } from '../../../modules/inventory-management/application/queries/get-purchase-order.query';
+import { ListPurchaseOrdersHandler } from '../../../modules/inventory-management/application/queries/list-purchase-orders.query';
+import { GetStockHandler } from '../../../modules/inventory-management/application/queries/get-stock.query';
+import { ListTransactionsHandler } from '../../../modules/inventory-management/application/queries/list-transactions.query';
+
+// Inventory Management Module - Controllers
+import { SupplierController } from '../../../modules/inventory-management/infrastructure/http/controllers/supplier.controller';
+import { LocationController as InventoryLocationController } from '../../../modules/inventory-management/infrastructure/http/controllers/location.controller';
+import { PurchaseOrderController } from '../../../modules/inventory-management/infrastructure/http/controllers/purchase-order.controller';
+import { StockController } from '../../../modules/inventory-management/infrastructure/http/controllers/stock.controller';
 
 /**
  * Dependency Injection Container
@@ -573,7 +627,9 @@ export class Container {
       workspaceAuthHelper
     );
     const memberController = new MemberController(
-      workspaceMembershipService,
+      new ListWorkspaceMembersHandler(workspaceMembershipService),
+      new RemoveMemberHandler(workspaceMembershipService),
+      new ChangeMemberRoleHandler(workspaceMembershipService),
       workspaceAuthHelper
     );
 
@@ -590,18 +646,14 @@ export class Container {
     const expenseRepository = new ExpenseRepositoryImpl(prisma, eventBus);
     const categoryRepository = new CategoryRepositoryImpl(prisma, eventBus);
     const tagRepository = new TagRepositoryImpl(prisma, eventBus);
-    const attachmentRepository = new AttachmentRepositoryImpl(prisma, eventBus);
-    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(
-      prisma,
-      eventBus
-    );
+    const attachmentRepository = new AttachmentRepositoryImpl(prisma);
+    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(prisma);
     const expenseSplitRepository = new ExpenseSplitRepositoryImpl(
       prisma,
       eventBus
     );
     const splitSettlementRepository = new SplitSettlementRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
 
     this.services.set('expenseRepository', expenseRepository);
@@ -797,12 +849,10 @@ export class Container {
     // Repositories
     const budgetRepository = new BudgetRepositoryImpl(prisma, eventBus);
     const budgetAllocationRepository = new BudgetAllocationRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
     const budgetAlertRepository = new BudgetAlertRepositoryImpl(
-      prisma,
-      eventBus
+      prisma
     );
     const spendingLimitRepository = new SpendingLimitRepositoryImpl(
       prisma,
@@ -847,20 +897,15 @@ export class Container {
     );
 
     // Query Handlers
-    const getBudgetHandler = new GetBudgetHandler(budgetRepository);
-    const listBudgetsHandler = new ListBudgetsHandler(budgetRepository);
-    const getAllocationsHandler = new GetAllocationsHandler(
-      budgetRepository,
-      budgetAllocationRepository
-    );
-    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(
-      budgetAlertRepository
-    );
+    const getBudgetHandler = new GetBudgetHandler(budgetService);
+    const listBudgetsHandler = new ListBudgetsHandler(budgetService);
+    const getAllocationsHandler = new GetAllocationsHandler(budgetService);
+    const getUnreadAlertsHandler = new GetUnreadAlertsHandler(budgetService);
     const getSpendingLimitHandler = new GetSpendingLimitHandler(
-      spendingLimitRepository
+      spendingLimitService
     );
     const listSpendingLimitsHandler = new ListSpendingLimitsHandler(
-      spendingLimitRepository
+      spendingLimitService
     );
 
     // Controllers
@@ -1155,12 +1200,10 @@ export class Container {
     // Command & Query Handlers - Audit
     const createAuditLogHandler = new CreateAuditLogHandler(auditService);
     const purgeAuditLogsHandler = new PurgeAuditLogsHandler(auditService);
-    const getAuditLogHandler = new GetAuditLogHandler(auditRepository);
-    const listAuditLogsHandler = new ListAuditLogsHandler(auditRepository);
-    const getEntityAuditHistoryHandler = new GetEntityAuditHistoryHandler(
-      auditRepository
-    );
-    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditRepository);
+    const getAuditLogHandler = new GetAuditLogHandler(auditService);
+    const listAuditLogsHandler = new ListAuditLogsHandler(auditService);
+    const getEntityAuditHistoryHandler = new GetEntityAuditHistoryHandler(auditService);
+    const getAuditSummaryHandler = new GetAuditSummaryHandler(auditService);
 
     // Controllers
     const notificationController = new NotificationController(
@@ -1419,12 +1462,9 @@ export class Container {
 
     // Repositories
     const budgetPlanRepository = new BudgetPlanRepositoryImpl(prisma, eventBus);
-    const forecastRepository = new ForecastRepositoryImpl(prisma, eventBus);
-    const scenarioRepository = new ScenarioRepositoryImpl(prisma, eventBus);
-    const forecastItemRepository = new ForecastItemRepositoryImpl(
-      prisma,
-      eventBus
-    );
+    const forecastRepository = new ForecastRepositoryImpl(prisma);
+    const scenarioRepository = new ScenarioRepositoryImpl(prisma);
+    const forecastItemRepository = new ForecastItemRepositoryImpl(prisma);
 
     // Adapters
     const workspaceAccessPlanning = new PrismaWorkspaceAccessAdapter(prisma);
@@ -1475,20 +1515,17 @@ export class Container {
       forecastService
     );
     const createScenarioHandler = new CreateScenarioHandler(scenarioService);
+    const updateScenarioHandler = new UpdateScenarioHandler(scenarioService);
     const deleteScenarioHandler = new DeleteScenarioHandler(scenarioService);
 
     // Query Handlers (depend on repositories directly per CQRS)
-    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanRepository);
-    const listBudgetPlansHandler = new ListBudgetPlansHandler(
-      budgetPlanRepository
-    );
-    const getForecastHandler = new GetForecastHandler(forecastRepository);
-    const listForecastsHandler = new ListForecastsHandler(forecastRepository);
-    const getForecastItemsHandler = new GetForecastItemsHandler(
-      forecastItemRepository
-    );
-    const getScenarioHandler = new GetScenarioHandler(scenarioRepository);
-    const listScenariosHandler = new ListScenariosHandler(scenarioRepository);
+    const getBudgetPlanHandler = new GetBudgetPlanHandler(budgetPlanService);
+    const listBudgetPlansHandler = new ListBudgetPlansHandler(budgetPlanService);
+    const getForecastHandler = new GetForecastHandler(forecastService);
+    const listForecastsHandler = new ListForecastsHandler(forecastService);
+    const getForecastItemsHandler = new GetForecastItemsHandler(forecastService);
+    const getScenarioHandler = new GetScenarioHandler(scenarioService);
+    const listScenariosHandler = new ListScenariosHandler(scenarioService);
 
     // Controllers
     const budgetPlanController = new BudgetPlanController(
@@ -1512,6 +1549,7 @@ export class Container {
 
     const scenarioController = new ScenarioController(
       createScenarioHandler,
+      updateScenarioHandler,
       deleteScenarioHandler,
       getScenarioHandler,
       listScenariosHandler
@@ -1531,8 +1569,7 @@ export class Container {
       eventBus
     );
     const ruleExecutionRepository = new PrismaRuleExecutionRepository(
-      prisma,
-      eventBus
+      prisma
     );
     const categorySuggestionRepository = new PrismaCategorySuggestionRepository(
       prisma,
@@ -1669,40 +1706,46 @@ export class Container {
     this.services.set('exemptionRepository', exemptionRepository);
 
     // Services
+    const policyService = new PolicyService(policyRepository);
+    const violationService = new ViolationService(violationRepository);
+    const exemptionService = new ExemptionService(exemptionRepository);
     const policyEvaluationService = new PolicyEvaluationService(
       policyRepository,
       violationRepository,
       exemptionRepository
     );
 
+    this.services.set('policyService', policyService);
+    this.services.set('violationService', violationService);
+    this.services.set('exemptionService', exemptionService);
     this.services.set('policyEvaluationService', policyEvaluationService);
 
     // Controllers
     const policyController = new PolicyController(
-      new CreatePolicyHandler(policyRepository),
-      new UpdatePolicyHandler(policyRepository),
-      new ActivatePolicyHandler(policyRepository),
-      new DeactivatePolicyHandler(policyRepository),
-      new DeletePolicyHandler(policyRepository),
-      new GetPolicyHandler(policyRepository),
-      new ListPoliciesHandler(policyRepository)
+      new CreatePolicyHandler(policyService),
+      new UpdatePolicyHandler(policyService),
+      new ActivatePolicyHandler(policyService),
+      new DeactivatePolicyHandler(policyService),
+      new DeletePolicyHandler(policyService),
+      new GetPolicyHandler(policyService),
+      new ListPoliciesHandler(policyService)
     );
     const violationController = new ViolationController(
-      new GetViolationHandler(violationRepository),
-      new ListViolationsHandler(violationRepository),
-      new GetViolationStatsHandler(violationRepository),
-      new AcknowledgeViolationHandler(violationRepository),
-      new ResolveViolationHandler(violationRepository),
-      new ExemptViolationHandler(violationRepository),
-      new OverrideViolationHandler(violationRepository)
+      new GetViolationHandler(violationService),
+      new ListViolationsHandler(violationService),
+      new GetViolationStatsHandler(violationService),
+      new AcknowledgeViolationHandler(violationService),
+      new ResolveViolationHandler(violationService),
+      new ExemptViolationHandler(violationService),
+      new OverrideViolationHandler(violationService)
     );
     const exemptionController = new ExemptionController(
-      new GetExemptionHandler(exemptionRepository),
-      new ListExemptionsHandler(exemptionRepository),
-      new CheckActiveExemptionHandler(exemptionRepository),
-      new RequestExemptionHandler(exemptionRepository, policyRepository),
-      new ApproveExemptionHandler(exemptionRepository),
-      new RejectExemptionHandler(exemptionRepository)
+      new GetExemptionHandler(exemptionService),
+      new ListExemptionsHandler(exemptionService),
+      new CheckActiveExemptionHandler(exemptionService),
+      new RequestExemptionHandler(exemptionService),
+      new ApproveExemptionHandler(exemptionService),
+      new RejectExemptionHandler(exemptionService)
     );
 
     this.services.set('policyController', policyController);
@@ -1754,47 +1797,47 @@ export class Container {
     this.services.set('transactionSyncService', transactionSyncService);
 
     // Command Handlers
-    const connectBankHandler = new ConnectBankHandler(bankConnectionRepository);
+    const connectBankHandler = new ConnectBankHandler(transactionSyncService);
     const disconnectBankHandler = new DisconnectBankHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const updateConnectionTokenHandler = new UpdateConnectionTokenHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const deleteConnectionHandler = new DeleteConnectionHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const syncTransactionsHandler = new SyncTransactionsHandler(
       transactionSyncService
     );
     const processTransactionHandler = new ProcessTransactionHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
 
     // Query Handlers
     const getBankConnectionsHandler = new GetBankConnectionsHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const getBankConnectionHandler = new GetBankConnectionHandler(
-      bankConnectionRepository
+      transactionSyncService
     );
     const getSyncHistoryHandler = new GetSyncHistoryHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getSyncSessionHandler = new GetSyncSessionHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getActiveSyncsHandler = new GetActiveSyncsHandler(
-      syncSessionRepository
+      transactionSyncService
     );
     const getPendingTransactionsHandler = new GetPendingTransactionsHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
     const getBankTransactionHandler = new GetBankTransactionHandler(
-      bankTransactionRepository
+      transactionSyncService
     );
     const getTransactionsByConnectionHandler =
-      new GetTransactionsByConnectionHandler(bankTransactionRepository);
+      new GetTransactionsByConnectionHandler(transactionSyncService);
 
     // Controllers
     const bankConnectionController = new BankConnectionController(
@@ -1840,10 +1883,9 @@ export class Container {
 
     // Command Handlers
     const storeOutboxEventHandler = new StoreOutboxEventHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const processOutboxEventHandler = new ProcessOutboxEventHandler(
-      outboxEventRepository,
       outboxEventService
     );
     const retryOutboxEventHandler = new RetryOutboxEventHandler(
@@ -1858,10 +1900,10 @@ export class Container {
 
     // Query Handlers
     const getPendingEventsHandler = new GetPendingEventsHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const getFailedEventsHandler = new GetFailedEventsHandler(
-      outboxEventRepository
+      outboxEventService
     );
     const getDeadLetterCountHandler = new GetDeadLetterCountHandler(
       outboxEventService
@@ -1879,6 +1921,96 @@ export class Container {
       getDeadLetterCountHandler
     );
     this.services.set('outboxEventController', outboxEventController);
+
+    // ============================================
+    // Inventory Management Module
+    // ============================================
+
+    // Repositories
+    const supplierRepository = new SupplierRepositoryImpl(prisma, eventBus);
+    const inventoryLocationRepository = new LocationRepositoryImpl(prisma, eventBus);
+    const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma, eventBus);
+    const stockRepository = new StockRepositoryImpl(prisma, eventBus);
+    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma);
+
+    // Services
+    const supplierService = new SupplierService(supplierRepository);
+    const inventoryLocationService = new InventoryLocationService(inventoryLocationRepository);
+    const purchaseOrderService = new PurchaseOrderService(
+      purchaseOrderRepository,
+      supplierRepository
+    );
+    const stockService = new StockService(
+      stockRepository,
+      inventoryTransactionRepository,
+      inventoryLocationRepository
+    );
+
+    // Command Handlers
+    const createSupplierHandler = new CreateSupplierHandler(supplierService);
+    const updateSupplierHandler = new UpdateSupplierHandler(supplierService);
+    const deleteSupplierHandler = new DeleteSupplierHandler(supplierService);
+    const createInventoryLocationHandler = new CreateInventoryLocationHandler(inventoryLocationService);
+    const updateInventoryLocationHandler = new UpdateInventoryLocationHandler(inventoryLocationService);
+    const deleteInventoryLocationHandler = new DeleteInventoryLocationHandler(inventoryLocationService);
+    const createPurchaseOrderHandler = new CreatePurchaseOrderHandler(purchaseOrderService);
+    const updatePurchaseOrderHandler = new UpdatePurchaseOrderHandler(purchaseOrderService);
+    const deletePurchaseOrderHandler = new DeletePurchaseOrderHandler(purchaseOrderService);
+    const submitPurchaseOrderHandler = new SubmitPurchaseOrderHandler(purchaseOrderService);
+    const approvePurchaseOrderHandler = new ApprovePurchaseOrderHandler(purchaseOrderService);
+    const receivePurchaseOrderHandler = new ReceivePurchaseOrderHandler(purchaseOrderService);
+    const cancelPurchaseOrderHandler = new CancelPurchaseOrderHandler(purchaseOrderService);
+    const addPurchaseOrderItemHandler = new AddPurchaseOrderItemHandler(purchaseOrderService);
+    const removePurchaseOrderItemHandler = new RemovePurchaseOrderItemHandler(purchaseOrderService);
+    const adjustStockHandler = new AdjustStockHandler(stockService);
+
+    // Query Handlers
+    const getSupplierHandler = new GetSupplierHandler(supplierService);
+    const listSuppliersHandler = new ListSuppliersHandler(supplierService);
+    const getInventoryLocationHandler = new GetInventoryLocationHandler(inventoryLocationService);
+    const listInventoryLocationsHandler = new ListInventoryLocationsHandler(inventoryLocationService);
+    const getPurchaseOrderHandler = new GetPurchaseOrderHandler(purchaseOrderService);
+    const listPurchaseOrdersHandler = new ListPurchaseOrdersHandler(purchaseOrderService);
+    const getStockHandler = new GetStockHandler(stockService);
+    const listTransactionsHandler = new ListTransactionsHandler(stockService);
+
+    // Controllers
+    const supplierController = new SupplierController(
+      createSupplierHandler,
+      updateSupplierHandler,
+      deleteSupplierHandler,
+      getSupplierHandler,
+      listSuppliersHandler
+    );
+    const inventoryLocationController = new InventoryLocationController(
+      createInventoryLocationHandler,
+      updateInventoryLocationHandler,
+      deleteInventoryLocationHandler,
+      getInventoryLocationHandler,
+      listInventoryLocationsHandler
+    );
+    const purchaseOrderController = new PurchaseOrderController(
+      createPurchaseOrderHandler,
+      updatePurchaseOrderHandler,
+      deletePurchaseOrderHandler,
+      submitPurchaseOrderHandler,
+      approvePurchaseOrderHandler,
+      receivePurchaseOrderHandler,
+      cancelPurchaseOrderHandler,
+      addPurchaseOrderItemHandler,
+      removePurchaseOrderItemHandler,
+      getPurchaseOrderHandler,
+      listPurchaseOrdersHandler
+    );
+    const stockController = new StockController(
+      adjustStockHandler,
+      getStockHandler,
+      listTransactionsHandler
+    );
+    this.services.set('supplierController', supplierController);
+    this.services.set('inventoryLocationController', inventoryLocationController);
+    this.services.set('purchaseOrderController', purchaseOrderController);
+    this.services.set('stockController', stockController);
 
     // Store Prisma for module route registration
     this.services.set('prisma', prisma);
@@ -1913,6 +2045,7 @@ export class Container {
         'invitationController'
       ),
       memberController: this.get<MemberController>('memberController'),
+      prisma: this.get<PrismaClient>('prisma'),
     };
   }
 
@@ -2087,6 +2220,19 @@ export class Container {
       outboxEventController: this.get<OutboxEventController>(
         'outboxEventController'
       ),
+      prisma: this.get<PrismaClient>('prisma'),
+    };
+  }
+
+  /**
+   * Get all inventory-management services for route registration
+   */
+  getInventoryManagementServices() {
+    return {
+      supplierController: this.get<SupplierController>('supplierController'),
+      locationController: this.get<InventoryLocationController>('inventoryLocationController'),
+      purchaseOrderController: this.get<PurchaseOrderController>('purchaseOrderController'),
+      stockController: this.get<StockController>('stockController'),
       prisma: this.get<PrismaClient>('prisma'),
     };
   }

@@ -1,5 +1,5 @@
 import { CategoryRepository } from '../../domain/repositories/category.repository';
-import { Category } from '../../domain/entities/category.entity';
+import { Category, CategoryDTO } from '../../domain/entities/category.entity';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import {
   CategoryNotFoundError,
@@ -23,7 +23,7 @@ export class CategoryService {
     description?: string;
     color?: string;
     icon?: string;
-  }): Promise<Category> {
+  }): Promise<CategoryDTO> {
     // Check if category with the same name already exists
     const existingCategory = await this.categoryRepository.findByName(
       params.name,
@@ -50,7 +50,7 @@ export class CategoryService {
       `workspace:${params.workspaceId}:categories*`
     );
 
-    return category;
+    return category.toJSON();
   }
 
   async updateCategory(
@@ -62,7 +62,7 @@ export class CategoryService {
       color?: string;
       icon?: string;
     }
-  ): Promise<Category> {
+  ): Promise<CategoryDTO> {
     const category = await this.categoryRepository.findById(
       CategoryId.fromString(categoryId),
       workspaceId
@@ -104,7 +104,7 @@ export class CategoryService {
       `workspace:${workspaceId}:categories*`
     );
 
-    return category;
+    return category.toJSON();
   }
 
   async deleteCategory(categoryId: string, workspaceId: string): Promise<void> {
@@ -117,6 +117,7 @@ export class CategoryService {
       throw new CategoryNotFoundError(categoryId, workspaceId);
     }
 
+    category.markAsDeleted();
     await this.categoryRepository.delete(
       CategoryId.fromString(categoryId),
       workspaceId
@@ -132,10 +133,10 @@ export class CategoryService {
   async getCategoryById(
     categoryId: string,
     workspaceId: string
-  ): Promise<Category | null> {
+  ): Promise<CategoryDTO | null> {
     const cacheKey = `category:${categoryId}`;
 
-    return await this.cacheService.getOrSet(
+    const category = await this.cacheService.getOrSet(
       cacheKey,
       async () => {
         return await this.categoryRepository.findById(
@@ -145,22 +146,32 @@ export class CategoryService {
       },
       300 // 5 minutes TTL
     );
+
+    return category ? category.toJSON() : null;
   }
 
   async getCategoriesByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Category>> {
-    return await this.categoryRepository.findByWorkspace(workspaceId, options);
+  ): Promise<PaginatedResult<CategoryDTO>> {
+    const result = await this.categoryRepository.findByWorkspace(workspaceId, options);
+    return {
+      ...result,
+      items: result.items.map((category) => category.toJSON()),
+    };
   }
 
   async getActiveCategoriesByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
-  ): Promise<PaginatedResult<Category>> {
-    return await this.categoryRepository.findActiveByWorkspace(
+  ): Promise<PaginatedResult<CategoryDTO>> {
+    const result = await this.categoryRepository.findActiveByWorkspace(
       workspaceId,
       options
     );
+    return {
+      ...result,
+      items: result.items.map((category) => category.toJSON()),
+    };
   }
 }

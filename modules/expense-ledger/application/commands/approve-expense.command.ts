@@ -4,6 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
+import { ExpenseDTO } from '../../domain/entities/expense.entity';
 
 export interface ApproveExpenseCommand extends ICommand {
   readonly expenseId: string;
@@ -13,16 +14,16 @@ export interface ApproveExpenseCommand extends ICommand {
 
 export class ApproveExpenseHandler implements ICommandHandler<
   ApproveExpenseCommand,
-  CommandResult<void>
+  CommandResult<ExpenseDTO>
 > {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(command: ApproveExpenseCommand): Promise<CommandResult<void>> {
-    await this.expenseService.approveExpense(
+  async handle(command: ApproveExpenseCommand): Promise<CommandResult<ExpenseDTO>> {
+    const dto = await this.expenseService.approveExpense(
       command.expenseId,
       command.workspaceId,
       command.approverId
     );
-    return CommandResult.success();
+    return CommandResult.success(dto);
   }
 }

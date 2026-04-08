@@ -42,7 +42,7 @@ export class NotificationController {
         listResult,
         'Notifications retrieved successfully',
         {
-          notifications: paginatedData?.items.map((n) => n.toJSON()) ?? [],
+          notifications: paginatedData?.items ?? [],
           unreadCount: countResult.data ?? 0,
           pagination: {
             total: paginatedData?.total ?? 0,
@@ -75,7 +75,7 @@ export class NotificationController {
         result,
         'Unread notifications retrieved successfully',
         {
-          notifications: paginatedData?.items.map((n) => n.toJSON()) ?? [],
+          notifications: paginatedData?.items ?? [],
           pagination: {
             total: paginatedData?.total ?? 0,
             limit: paginatedData?.limit ?? 0,

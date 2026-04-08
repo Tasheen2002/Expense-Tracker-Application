@@ -1,5 +1,5 @@
 import { INotificationTemplateRepository } from "../../domain/repositories/notification-template.repository";
-import { NotificationTemplate } from "../../domain/entities/notification-template.entity";
+import { NotificationTemplate, NotificationTemplateDTO } from "../../domain/entities/notification-template.entity";
 import { NotificationType } from "../../domain/enums/notification-type.enum";
 import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
 import { TemplateId } from "../../domain/value-objects/template-id";
@@ -28,7 +28,7 @@ export class TemplateService {
 
   async createTemplate(
     params: CreateTemplateParams,
-  ): Promise<NotificationTemplate> {
+  ): Promise<NotificationTemplateDTO> {
     const workspaceId = params.workspaceId
       ? WorkspaceId.fromString(params.workspaceId)
       : undefined;
@@ -57,10 +57,10 @@ export class TemplateService {
     });
 
     await this.templateRepository.save(template);
-    return template;
+    return NotificationTemplate.toDTO(template);
   }
 
-  async getTemplateById(id: string): Promise<NotificationTemplate> {
+  async getTemplateById(id: string): Promise<NotificationTemplateDTO> {
     const templateId = TemplateId.fromString(id);
     const template = await this.templateRepository.findById(templateId);
 
@@ -68,23 +68,24 @@ export class TemplateService {
       throw new TemplateNotFoundByIdError(id);
     }
 
-    return template;
+    return NotificationTemplate.toDTO(template);
   }
 
   async getActiveTemplate(
     workspaceId: string | undefined,
     type: NotificationType,
     channel: NotificationChannel,
-  ): Promise<NotificationTemplate | null> {
+  ): Promise<NotificationTemplateDTO | null> {
     const wsId = workspaceId ? WorkspaceId.fromString(workspaceId) : undefined;
-    return this.templateRepository.findActiveTemplate(wsId, type, channel);
+    const template = await this.templateRepository.findActiveTemplate(wsId, type, channel);
+    return template ? NotificationTemplate.toDTO(template) : null;
   }
 
   async updateTemplate(
     id: string,
     params: UpdateTemplateParams,
-  ): Promise<NotificationTemplate> {
-    const template = await this.getTemplateById(id);
+  ): Promise<NotificationTemplateDTO> {
+    const template = await this._getTemplateEntity(id);
 
     // SECURITY: Sanitize HTML content to prevent XSS
     if (params.subjectTemplate !== undefined) {
@@ -107,20 +108,29 @@ export class TemplateService {
     }
 
     await this.templateRepository.save(template);
-    return template;
+    return NotificationTemplate.toDTO(template);
   }
 
-  async activateTemplate(id: string): Promise<NotificationTemplate> {
-    const template = await this.getTemplateById(id);
+  async activateTemplate(id: string): Promise<NotificationTemplateDTO> {
+    const template = await this._getTemplateEntity(id);
     template.activate();
     await this.templateRepository.save(template);
-    return template;
+    return NotificationTemplate.toDTO(template);
   }
 
-  async deactivateTemplate(id: string): Promise<NotificationTemplate> {
-    const template = await this.getTemplateById(id);
+  async deactivateTemplate(id: string): Promise<NotificationTemplateDTO> {
+    const template = await this._getTemplateEntity(id);
     template.deactivate();
     await this.templateRepository.save(template);
+    return NotificationTemplate.toDTO(template);
+  }
+
+  private async _getTemplateEntity(id: string): Promise<NotificationTemplate> {
+    const templateId = TemplateId.fromString(id);
+    const template = await this.templateRepository.findById(templateId);
+    if (!template) {
+      throw new TemplateNotFoundByIdError(id);
+    }
     return template;
   }
 }

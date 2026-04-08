@@ -1,4 +1,5 @@
-import { Scenario } from "../../domain/entities/scenario.entity";
+import { Scenario, ScenarioDTO } from "../../domain/entities/scenario.entity";
+import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
 import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
@@ -11,6 +12,10 @@ import {
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 export class ScenarioService {
   constructor(
@@ -24,7 +29,7 @@ export class ScenarioService {
     planId: PlanId,
     workspaceId: string,
     action: string,
-  ): Promise<void> {
+  ): Promise<BudgetPlan> {
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
       throw new BudgetPlanNotFoundError(planId.getValue());
@@ -39,6 +44,8 @@ export class ScenarioService {
     if (!isCreator && !isAdminOrOwner) {
       throw new UnauthorizedBudgetPlanAccessError(action);
     }
+
+    return plan;
   }
 
   async createScenario(params: {
@@ -48,10 +55,10 @@ export class ScenarioService {
     description?: string;
     assumptions?: Record<string, unknown>;
     createdBy: string;
-  }): Promise<Scenario> {
+  }): Promise<ScenarioDTO> {
     const planId = PlanId.fromString(params.planId);
 
-    await this.checkPlanAccess(params.createdBy, planId, params.workspaceId, "create scenario");
+    const plan = await this.checkPlanAccess(params.createdBy, planId, params.workspaceId, "create scenario");
 
     const existing = await this.scenarioRepository.findByName(
       planId,
@@ -70,7 +77,11 @@ export class ScenarioService {
     });
 
     await this.scenarioRepository.save(scenario);
-    return scenario;
+
+    plan.recordScenarioCreated(scenario.id.getValue(), scenario.name);
+    await this.budgetPlanRepository.save(plan);
+
+    return Scenario.toDTO(scenario);
   }
 
   async updateScenario(params: {
@@ -80,7 +91,7 @@ export class ScenarioService {
     name?: string;
     description?: string;
     assumptions?: Record<string, unknown>;
-  }): Promise<Scenario> {
+  }): Promise<ScenarioDTO> {
     const scenarioId = ScenarioId.fromString(params.id);
     const scenario = await this.scenarioRepository.findById(scenarioId, params.workspaceId);
 
@@ -88,7 +99,7 @@ export class ScenarioService {
       throw new ScenarioNotFoundError(params.id);
     }
 
-    await this.checkPlanAccess(
+    const plan = await this.checkPlanAccess(
       params.userId,
       scenario.planId,
       params.workspaceId,
@@ -113,7 +124,11 @@ export class ScenarioService {
     });
 
     await this.scenarioRepository.save(scenario);
-    return scenario;
+
+    plan.recordScenarioUpdated(scenario.id.getValue());
+    await this.budgetPlanRepository.save(plan);
+
+    return Scenario.toDTO(scenario);
   }
 
   async deleteScenario(id: string, workspaceId: string, userId: string): Promise<void> {
@@ -124,9 +139,30 @@ export class ScenarioService {
       throw new ScenarioNotFoundError(id);
     }
 
-    await this.checkPlanAccess(userId, scenario.planId, workspaceId, "delete scenario");
+    const plan = await this.checkPlanAccess(userId, scenario.planId, workspaceId, "delete scenario");
+
+    plan.recordScenarioDeleted(scenarioId.getValue());
+    await this.budgetPlanRepository.save(plan);
 
     await this.scenarioRepository.delete(scenarioId);
+  }
+
+  async getScenarioById(id: string, workspaceId: string): Promise<ScenarioDTO | null> {
+    const scenario = await this.scenarioRepository.findById(ScenarioId.fromString(id), workspaceId);
+    return scenario ? Scenario.toDTO(scenario) : null;
+  }
+
+  async getScenariosByPlan(
+    planId: string,
+    workspaceId: string,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<ScenarioDTO>> {
+    const result = await this.scenarioRepository.findByPlanId(
+      PlanId.fromString(planId),
+      workspaceId,
+      options,
+    );
+    return { ...result, items: result.items.map((s) => Scenario.toDTO(s)) };
   }
 
 }

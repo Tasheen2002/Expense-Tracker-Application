@@ -26,6 +26,10 @@ export class AuditResource {
     });
   }
 
+  static fromPersistence(entityType: string, entityId: string): AuditResource {
+    return new AuditResource({ entityType, entityId });
+  }
+
   get entityType(): string {
     return this.props.entityType;
   }

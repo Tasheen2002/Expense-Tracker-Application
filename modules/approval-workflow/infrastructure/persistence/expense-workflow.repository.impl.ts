@@ -18,6 +18,7 @@ import { ApprovalChainId } from '../../domain/value-objects/approval-chain-id';
 import { ExpenseId } from '../../../expense-ledger';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaExpenseWorkflowRepository
@@ -52,6 +53,15 @@ export class PrismaExpenseWorkflowRepository
     await this.dispatchEvents(workflow);
   }
 
+  async findById(workflowId: WorkflowId): Promise<ExpenseWorkflow | null> {
+    const row = await this.prisma.expenseWorkflow.findUnique({
+      where: { id: workflowId.getValue() },
+      include: { steps: { orderBy: { stepNumber: 'asc' } } },
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
   async findByExpenseId(expenseId: string): Promise<ExpenseWorkflow | null> {
     const row = await this.prisma.expenseWorkflow.findUnique({
       where: { expenseId },
@@ -65,27 +75,18 @@ export class PrismaExpenseWorkflowRepository
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const where: Prisma.ExpenseWorkflowWhereInput = { workspaceId };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.expenseWorkflow.findMany({
-        where: { workspaceId },
-        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expenseWorkflow,
+      {
+        where,
         orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.expenseWorkflow.count({ where: { workspaceId } }),
-    ]);
-
-    return {
-      items: rows.map((row) => this.toDomain(row)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+      },
+      (record) => this.toDomain(record as Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>),
+      options
+    );
   }
 
   async findPendingByApprover(
@@ -106,27 +107,16 @@ export class PrismaExpenseWorkflowRepository
       },
     };
 
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
-
-    const [rows, total] = await Promise.all([
-      this.prisma.expenseWorkflow.findMany({
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expenseWorkflow,
+      {
         where,
-        include: { steps: { orderBy: { stepNumber: 'asc' } } },
         orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.expenseWorkflow.count({ where }),
-    ]);
-
-    return {
-      items: rows.map((row) => this.toDomain(row)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+      },
+      (record) => this.toDomain(record as Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>),
+      options
+    );
   }
 
   async findByUser(
@@ -134,30 +124,18 @@ export class PrismaExpenseWorkflowRepository
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>> {
-    const limit = options?.limit || 50;
-    const offset = options?.offset || 0;
+    const where: Prisma.ExpenseWorkflowWhereInput = { userId, workspaceId };
 
-    const [rows, total] = await Promise.all([
-      this.prisma.expenseWorkflow.findMany({
-        where: {
-          userId,
-          workspaceId,
-        },
-        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.expenseWorkflow,
+      {
+        where,
         orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
-      this.prisma.expenseWorkflow.count({ where: { userId, workspaceId } }),
-    ]);
-
-    return {
-      items: rows.map((row) => this.toDomain(row)),
-      total,
-      limit,
-      offset,
-      hasMore: offset + rows.length < total,
-    };
+        include: { steps: { orderBy: { stepNumber: 'asc' } } },
+      },
+      (record) => this.toDomain(record as Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>),
+      options
+    );
   }
 
   private toPersistence(workflow: ExpenseWorkflow): {

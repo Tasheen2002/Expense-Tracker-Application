@@ -1,5 +1,5 @@
 import { ReceiptService } from '../services/receipt.service';
-import { Receipt } from '../../domain/entities/receipt.entity';
+import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import { StorageLocation } from '../../domain/value-objects/storage-location';
 import { ReceiptType } from '../../domain/enums/receipt-type';
 import { StorageProvider } from '../../domain/enums/storage-provider';
@@ -26,20 +26,20 @@ export interface UploadReceiptCommand extends ICommand {
 
 export class UploadReceiptHandler implements ICommandHandler<
   UploadReceiptCommand,
-  CommandResult<{ receiptId: string }>
+  CommandResult<ReceiptDTO>
 > {
   constructor(private readonly receiptService: ReceiptService) {}
 
   async handle(
     command: UploadReceiptCommand
-  ): Promise<CommandResult<{ receiptId: string }>> {
+  ): Promise<CommandResult<ReceiptDTO>> {
     const storageLocation = StorageLocation.create({
       provider: command.storageProvider as StorageProvider,
       bucket: command.storageBucket,
       key: command.storageKey,
     });
 
-    const receipt = await this.receiptService.uploadReceipt({
+    const receiptDTO = await this.receiptService.uploadReceipt({
       workspaceId: command.workspaceId,
       userId: command.userId,
       fileName: command.fileName,
@@ -51,6 +51,6 @@ export class UploadReceiptHandler implements ICommandHandler<
       receiptType: command.receiptType,
       storageLocation,
     });
-    return CommandResult.success({ receiptId: receipt.getId().getValue() });
+    return CommandResult.success(receiptDTO);
   }
 }

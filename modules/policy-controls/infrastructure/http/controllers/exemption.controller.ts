@@ -37,7 +37,7 @@ export class ExemptionController {
         reply,
         result,
         'Exemption retrieved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -74,7 +74,7 @@ export class ExemptionController {
 
       const data = result.data
         ? {
-            items: result.data.items.map((e) => e.toJSON()),
+            items: result.data.items,
             pagination: {
               total: result.data.total,
               limit: result.data.limit,
@@ -116,7 +116,7 @@ export class ExemptionController {
         reply,
         result,
         'Exemption status checked successfully',
-        result.data ? result.data.toJSON() : null
+        result.data ?? null
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -152,7 +152,7 @@ export class ExemptionController {
         reply,
         result,
         'Exemption requested successfully',
-        result.data ? result.data.toJSON() : undefined,
+        result.data,
         201
       );
     } catch (error: unknown) {
@@ -175,14 +175,13 @@ export class ExemptionController {
         exemptionId,
         workspaceId,
         approvedBy,
-        approvalNote: request.body.approvalNote,
       });
 
       return ResponseHelper.fromCommand(
         reply,
         result,
         'Exemption approved successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -211,7 +210,7 @@ export class ExemptionController {
         reply,
         result,
         'Exemption rejected successfully',
-        result.data ? result.data.toJSON() : undefined
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,5 +1,5 @@
 import { NotificationService } from '../services/notification.service';
-import { Notification } from '../../domain/entities/notification.entity';
+import { NotificationDTO } from '../../domain/entities/notification.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
@@ -16,22 +16,18 @@ export interface ListNotificationsQuery extends IQuery {
 
 export class ListNotificationsHandler implements IQueryHandler<
   ListNotificationsQuery,
-  QueryResult<PaginatedResult<Notification>>
+  QueryResult<PaginatedResult<NotificationDTO>>
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(
     input: ListNotificationsQuery
-  ): Promise<QueryResult<PaginatedResult<Notification>>> {
-    try {
-      const result = await this.notificationService.getNotifications(
-        input.recipientId,
-        input.workspaceId,
-        { limit: input.limit, offset: input.offset }
-      );
-      return QueryResult.success(result);
-    } catch (error: unknown) {
-      return QueryResult.fromError(error);
-    }
+  ): Promise<QueryResult<PaginatedResult<NotificationDTO>>> {
+    const result = await this.notificationService.getNotifications(
+      input.recipientId,
+      input.workspaceId,
+      { limit: input.limit, offset: input.offset }
+    );
+    return QueryResult.success(result);
   }
 }

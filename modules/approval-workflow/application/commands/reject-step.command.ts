@@ -1,4 +1,5 @@
 import { WorkflowService } from '../services/workflow.service';
+import { ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -14,16 +15,12 @@ export interface RejectStepInput extends ICommand {
 
 export class RejectStepHandler implements ICommandHandler<
   RejectStepInput,
-  CommandResult<void>
+  CommandResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: RejectStepInput): Promise<CommandResult<void>> {
-    try {
-      await this.workflowService.rejectStep(input);
-      return CommandResult.success();
-    } catch (error: unknown) {
-      return CommandResult.fromError(error);
-    }
+  async handle(input: RejectStepInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
+    const workflow = await this.workflowService.rejectStep(input);
+    return CommandResult.success(workflow);
   }
 }

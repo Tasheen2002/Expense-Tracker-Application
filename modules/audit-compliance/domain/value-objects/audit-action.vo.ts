@@ -17,6 +17,10 @@ export class AuditAction {
     return new AuditAction(action.trim());
   }
 
+  static fromPersistence(value: string): AuditAction {
+    return new AuditAction(value);
+  }
+
   getValue(): string {
     return this.value;
   }

@@ -167,11 +167,11 @@ describe('Event Outbox Module - Endpoint Tests', () => {
         expect([201, 500]).toContain(response.statusCode);
 
         if (response.statusCode === 201) {
-          expect(body).toHaveProperty('data.eventId');
-          expect(body.data.eventId).toMatch(
+          const id = body.data?.id || body.data?.eventId;
+          expect(id).toMatch(
             /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
           );
-          testEventId = body.data.eventId;
+          testEventId = id;
         }
       });
 

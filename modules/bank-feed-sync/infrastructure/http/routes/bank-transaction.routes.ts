@@ -20,7 +20,7 @@ import {
   processTransactionBodySchema,
   connectionParamsSchema,
   paginationQuerySchema,
-} from '../validation/bank-sync.schema.js';
+} from '../validation/bank-sync.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -51,9 +51,11 @@ export async function bankTransactionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Pending bank transactions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: paginatedTransactionsResponseSchema,
             },
@@ -76,9 +78,11 @@ export async function bankTransactionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Bank transaction retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: bankTransactionResponseSchema,
             },
@@ -112,11 +116,13 @@ export async function bankTransactionRoutes(
         },
         response: {
           200: {
+            description: 'Bank transaction processed successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: bankTransactionResponseSchema,
+              data: { type: 'null' },
             },
           },
         },
@@ -140,9 +146,11 @@ export async function bankTransactionRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
+            description: 'Bank transactions retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
+              statusCode: { type: 'number' },
               message: { type: 'string' },
               data: paginatedTransactionsResponseSchema,
             },

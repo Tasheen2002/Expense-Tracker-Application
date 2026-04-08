@@ -1,0 +1,12 @@
+export const SUPPLIER_NAME_MIN_LENGTH = 1;
+export const SUPPLIER_NAME_MAX_LENGTH = 255;
+export const LOCATION_NAME_MIN_LENGTH = 1;
+export const LOCATION_NAME_MAX_LENGTH = 255;
+export const VARIANT_NAME_MAX_LENGTH = 255;
+export const VARIANT_ID_MAX_LENGTH = 255;
+export const NOTES_MAX_LENGTH = 2000;
+export const MIN_QUANTITY = 0;
+export const MAX_QUANTITY = 999999;
+export const MIN_UNIT_PRICE = 0;
+export const MAX_UNIT_PRICE = 9999999999.99;
+export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'INR'];

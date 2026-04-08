@@ -1,8 +1,5 @@
-import { ExemptionRepository } from '../../domain/repositories/exemption.repository';
-import { PolicyRepository } from '../../domain/repositories/policy.repository';
-import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
-import { PolicyId } from '../../domain/value-objects/policy-id';
-import { PolicyNotFoundError } from '../../domain/errors/policy-controls.errors';
+import { ExemptionService } from '../services/exemption.service';
+import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
 export interface RequestExemptionInput {
@@ -16,34 +13,12 @@ export interface RequestExemptionInput {
 }
 
 export class RequestExemptionHandler {
-  constructor(
-    private readonly exemptionRepository: ExemptionRepository,
-    private readonly policyRepository: PolicyRepository
-  ) {}
+  constructor(private readonly exemptionService: ExemptionService) {}
 
   async handle(
     input: RequestExemptionInput
-  ): Promise<CommandResult<{ exemptionId: string }>> {
-    // Verify policy exists
-    const policy = await this.policyRepository.findById(
-      PolicyId.fromString(input.policyId)
-    );
-    if (!policy) {
-      throw new PolicyNotFoundError(input.policyId);
-    }
-
-    const exemption = PolicyExemption.create({
-      workspaceId: input.workspaceId,
-      policyId: input.policyId,
-      userId: input.userId,
-      requestedBy: input.requestedBy,
-      reason: input.reason,
-      startDate: input.startDate,
-      endDate: input.endDate,
-    });
-
-    await this.exemptionRepository.save(exemption);
-
-    return CommandResult.success({ exemptionId: exemption.getId().getValue() });
+  ): Promise<CommandResult<PolicyExemptionDTO>> {
+    const dto = await this.exemptionService.requestExemption(input);
+    return CommandResult.success(dto);
   }
 }

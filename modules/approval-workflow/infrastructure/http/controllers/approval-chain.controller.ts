@@ -47,7 +47,7 @@ export class ApprovalChainController {
         reply,
         result,
         'Approval chain created successfully',
-        result.data ? { chainId: result.data } : undefined,
+        result.data ?? undefined,
         201
       );
     } catch (error: unknown) {

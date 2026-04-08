@@ -85,14 +85,16 @@ export async function budgetRoutes(
   const alertSchema = {
     type: 'object',
     properties: {
-      alertId: { type: 'string', format: 'uuid' },
-      budgetId: { type: 'string' },
-      allocationId: { type: 'string', nullable: true },
-      type: { type: 'string' },
-      threshold: { type: 'number' },
-      currentAmount: { type: 'string' },
+      id: { type: 'string', format: 'uuid' },
+      budgetId: { type: 'string', format: 'uuid' },
+      allocationId: { type: 'string', format: 'uuid', nullable: true },
+      level: { type: 'string' },
+      threshold: { type: 'string' },
+      currentSpent: { type: 'string' },
+      allocatedAmount: { type: 'string' },
       message: { type: 'string' },
       isRead: { type: 'boolean' },
+      notifiedAt: { type: 'string', format: 'date-time', nullable: true },
       createdAt: { type: 'string', format: 'date-time' },
     },
   };
@@ -104,7 +106,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateBody(createBudgetSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget'],
@@ -159,7 +161,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
         validateQuery(listBudgetsSchema),
-        requireRole(['owner', 'admin', 'manager', 'viewer']),
+        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget'],
@@ -177,10 +179,15 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: budgetSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -197,7 +204,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget'],
         description: 'Get budget by ID',
@@ -227,7 +234,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(budgetParamsSchema)],
       preHandler: [
         validateBody(updateBudgetSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget'],
@@ -269,7 +276,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/activate',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget'],
         description: 'Activate budget',
@@ -297,7 +304,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/archive',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget'],
         description: 'Archive budget',
@@ -349,7 +356,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(budgetParamsSchema)],
       preHandler: [
         validateBody(addAllocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -387,7 +394,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
       preValidation: [validateParams(budgetParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Get budget allocations',
@@ -404,10 +411,15 @@ export async function budgetRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: allocationSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -426,7 +438,7 @@ export async function budgetRoutes(
       preValidation: [validateParams(allocationParamsSchema)],
       preHandler: [
         validateBody(updateAllocationSchema),
-        requireRole(['owner', 'admin', 'manager']),
+        requireRole(['owner', 'admin']),
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -463,7 +475,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
       preValidation: [validateParams(allocationParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager'])],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Budget Allocation'],
         description: 'Delete allocation',
@@ -485,7 +497,7 @@ export async function budgetRoutes(
     '/workspaces/:workspaceId/budgets/alerts/unread',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'manager', 'viewer'])],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Budget Alert'],
         description: 'Get unread budget alerts',
@@ -498,7 +510,21 @@ export async function budgetRoutes(
               success: { type: 'boolean' },
               statusCode: { type: 'number' },
               message: { type: 'string' },
-              data: alertSchema,
+              data: {
+                type: 'object',
+                properties: {
+                  items: { type: 'array', items: alertSchema },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
+                },
+              },
             },
           },
         },

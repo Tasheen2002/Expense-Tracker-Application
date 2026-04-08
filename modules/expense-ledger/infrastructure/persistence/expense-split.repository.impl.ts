@@ -17,12 +17,15 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 
-export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly eventBus: IEventBus
-  ) {}
+export class ExpenseSplitRepositoryImpl
+  extends PrismaRepository<ExpenseSplit>
+  implements ExpenseSplitRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(split: ExpenseSplit): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -68,7 +71,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
       }
     });
 
-    // NOTE: ExpenseSplit does not extend AggregateRoot - no domain events to dispatch
+    await this.dispatchEvents(split);
   }
 
   async findById(
@@ -233,7 +236,7 @@ export class ExpenseSplitRepositoryImpl implements ExpenseSplitRepository {
         userId: p.userId,
         shareAmount: Money.create(Number(p.shareAmount), data.currency),
         sharePercentage: p.sharePercentage
-          ? new Decimal(p.sharePercentage).toNumber()
+          ? new Decimal(p.sharePercentage)
           : undefined,
         isPaid: p.isPaid,
         paidAt: p.paidAt ?? undefined,

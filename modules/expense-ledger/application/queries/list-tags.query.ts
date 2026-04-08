@@ -4,7 +4,7 @@ import {
   QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
-import { Tag } from '../../domain/entities/tag.entity';
+import { TagDTO } from '../../domain/entities/tag.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListTagsQuery extends IQuery {
@@ -15,13 +15,13 @@ export interface ListTagsQuery extends IQuery {
 
 export class ListTagsHandler implements IQueryHandler<
   ListTagsQuery,
-  QueryResult<PaginatedResult<Tag>>
+  QueryResult<PaginatedResult<TagDTO>>
 > {
   constructor(private readonly tagService: TagService) {}
 
   async handle(
     query: ListTagsQuery
-  ): Promise<QueryResult<PaginatedResult<Tag>>> {
+  ): Promise<QueryResult<PaginatedResult<TagDTO>>> {
     const result = await this.tagService.getTagsByWorkspace(query.workspaceId, {
       limit: query.limit,
       offset: query.offset,

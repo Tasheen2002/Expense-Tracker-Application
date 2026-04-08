@@ -6,11 +6,14 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody } from '../validation/validator';
+import { validateBody, validateParams } from '../validation/validator';
 import {
   createSpendingLimitSchema,
   updateSpendingLimitSchema,
+  spendingLimitWorkspaceParamsSchema,
+  spendingLimitParamsSchema,
 } from '../validation/spending-limit.schema';
+import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -33,8 +36,9 @@ const spendingLimitDataSchema = {
   },
 };
 
-const singleResponse = (statusCode: number, dataSchema?: object) => ({
+const singleResponse = (statusCode: number, dataSchema?: object, description?: string) => ({
   [statusCode]: {
+    description: description || 'Successful response',
     type: 'object',
     properties: {
       success: { type: 'boolean' },
@@ -59,10 +63,15 @@ export async function spendingLimitRoutes(
   fastify.post(
     '/workspaces/:workspaceId/spending-limits',
     {
-      preValidation: [validateBody(createSpendingLimitSchema)],
+      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      preHandler: [
+        validateBody(createSpendingLimitSchema),
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Create a new spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -84,7 +93,7 @@ export async function spendingLimitRoutes(
             },
           },
         },
-        response: singleResponse(201, spendingLimitDataSchema),
+        response: singleResponse(201, spendingLimitDataSchema, 'Spending limit created successfully'),
       },
     },
     (request, reply) =>
@@ -95,9 +104,12 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits',
     {
+      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'List all spending limits in workspace',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId'],
@@ -121,6 +133,7 @@ export async function spendingLimitRoutes(
         },
         response: {
           200: {
+            description: 'Spending limits retrieved successfully',
             type: 'object',
             properties: {
               success: { type: 'boolean' },
@@ -130,10 +143,15 @@ export async function spendingLimitRoutes(
                 type: 'object',
                 properties: {
                   items: { type: 'array', items: spendingLimitDataSchema },
-                  total: { type: 'number' },
-                  limit: { type: 'number' },
-                  offset: { type: 'number' },
-                  hasMore: { type: 'boolean' },
+                  pagination: {
+                    type: 'object',
+                    properties: {
+                      total: { type: 'number' },
+                      limit: { type: 'number' },
+                      offset: { type: 'number' },
+                      hasMore: { type: 'boolean' },
+                    },
+                  },
                 },
               },
             },
@@ -149,9 +167,12 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin', 'member'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'Get spending limit by ID',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],
@@ -160,7 +181,7 @@ export async function spendingLimitRoutes(
             limitId: { type: 'string', format: 'uuid' },
           },
         },
-        response: singleResponse(200, spendingLimitDataSchema),
+        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit retrieved successfully'),
       },
     },
     (request, reply) =>
@@ -171,10 +192,15 @@ export async function spendingLimitRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      preValidation: [validateBody(updateSpendingLimitSchema)],
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [
+        validateBody(updateSpendingLimitSchema),
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Update spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],
@@ -189,7 +215,7 @@ export async function spendingLimitRoutes(
             limitAmount: { type: 'number', minimum: 0.01 },
           },
         },
-        response: singleResponse(200, spendingLimitDataSchema),
+        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit updated successfully'),
       },
     },
     (request, reply) =>
@@ -200,9 +226,12 @@ export async function spendingLimitRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
+      preValidation: [validateParams(spendingLimitParamsSchema)],
+      preHandler: [requireRole(['owner', 'admin'])],
       schema: {
         tags: ['Spending Limit'],
         description: 'Delete spending limit',
+        security: [{ bearerAuth: [] }],
         params: {
           type: 'object',
           required: ['workspaceId', 'limitId'],
@@ -211,7 +240,12 @@ export async function spendingLimitRoutes(
             limitId: { type: 'string', format: 'uuid' },
           },
         },
-        response: singleResponse(200),
+        response: {
+          204: {
+            description: 'No Content',
+            type: 'null',
+          },
+        },
       },
     },
     (request, reply) =>
