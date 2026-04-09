@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetWorkflowInput extends IQuery {
   expenseId: string;
@@ -13,15 +12,11 @@ export interface GetWorkflowInput extends IQuery {
 
 export class GetWorkflowHandler implements IQueryHandler<
   GetWorkflowInput,
-  QueryResult<ExpenseWorkflowDTO>
+  ExpenseWorkflowDTO
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: GetWorkflowInput): Promise<QueryResult<ExpenseWorkflowDTO>> {
-    const workflow = await this.workflowService.getWorkflow(
-      input.expenseId,
-      input.workspaceId
-    );
-    return QueryResult.success(workflow);
+  async handle(input: GetWorkflowInput): Promise<ExpenseWorkflowDTO> {
+    return this.workflowService.getWorkflow(input.expenseId, input.workspaceId);
   }
 }

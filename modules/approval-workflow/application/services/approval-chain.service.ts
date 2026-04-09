@@ -50,7 +50,7 @@ export class ApprovalChainService {
     const chainId = ApprovalChainId.fromString(params.chainId);
     const chain = await this.chainRepository.findById(chainId);
 
-    if (!chain || chain.getWorkspaceId().getValue() !== params.workspaceId) {
+    if (!chain || chain.workspaceId.getValue() !== params.workspaceId) {
       throw new ApprovalChainNotFoundError(params.chainId);
     }
 
@@ -88,7 +88,7 @@ export class ApprovalChainService {
       ApprovalChainId.fromString(chainId)
     );
 
-    if (!chain || chain.getWorkspaceId().getValue() !== workspaceId) {
+    if (!chain || chain.workspaceId.getValue() !== workspaceId) {
       throw new ApprovalChainNotFoundError(chainId);
     }
 
@@ -121,7 +121,7 @@ export class ApprovalChainService {
     const chainIdObj = ApprovalChainId.fromString(chainId);
     const chain = await this.chainRepository.findById(chainIdObj);
 
-    if (!chain || chain.getWorkspaceId().getValue() !== workspaceId) {
+    if (!chain || chain.workspaceId.getValue() !== workspaceId) {
       throw new ApprovalChainNotFoundError(chainId);
     }
 
@@ -137,7 +137,7 @@ export class ApprovalChainService {
     const chainIdObj = ApprovalChainId.fromString(chainId);
     const chain = await this.chainRepository.findById(chainIdObj);
 
-    if (!chain || chain.getWorkspaceId().getValue() !== workspaceId) {
+    if (!chain || chain.workspaceId.getValue() !== workspaceId) {
       throw new ApprovalChainNotFoundError(chainId);
     }
 
@@ -150,12 +150,12 @@ export class ApprovalChainService {
     const chainIdObj = ApprovalChainId.fromString(chainId);
     const chain = await this.chainRepository.findById(chainIdObj);
 
-    if (!chain || chain.getWorkspaceId().getValue() !== workspaceId) {
+    if (!chain || chain.workspaceId.getValue() !== workspaceId) {
       throw new ApprovalChainNotFoundError(chainId);
     }
 
     chain.markAsDeleted();
-    await this.chainRepository.delete(chain.getId());
+    await this.chainRepository.delete(chain.id);
   }
 
   async findApplicableChain(params: {

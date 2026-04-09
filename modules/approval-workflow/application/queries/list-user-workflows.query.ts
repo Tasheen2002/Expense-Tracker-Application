@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListUserWorkflowsInput extends IQuery {
   userId: string;
@@ -16,18 +15,15 @@ export interface ListUserWorkflowsInput extends IQuery {
 
 export class ListUserWorkflowsHandler implements IQueryHandler<
   ListUserWorkflowsInput,
-  QueryResult<PaginatedResult<ExpenseWorkflowDTO>>
+  PaginatedResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(
-    input: ListUserWorkflowsInput
-  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
-    const result = await this.workflowService.listUserWorkflows(
+  async handle(input: ListUserWorkflowsInput): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+    return this.workflowService.listUserWorkflows(
       input.userId,
       input.workspaceId,
       { limit: input.limit, offset: input.offset }
     );
-    return QueryResult.success(result);
   }
 }

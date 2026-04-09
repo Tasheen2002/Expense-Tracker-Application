@@ -95,17 +95,12 @@ export class ApprovalChainController {
         chainId: string;
       };
 
-      const result = await this.getChainHandler.handle({
+      const chain = await this.getChainHandler.handle({
         chainId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Approval chain retrieved successfully',
-        result.data ?? undefined
-      );
+      return ResponseHelper.ok(reply, 'Approval chain retrieved successfully', chain);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -127,22 +122,15 @@ export class ApprovalChainController {
         offset: offset ?? 0,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Approval chains retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Approval chains retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

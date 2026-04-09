@@ -65,17 +65,12 @@ export class WorkflowController {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const result = await this.getWorkflowHandler.handle({
+      const workflow = await this.getWorkflowHandler.handle({
         expenseId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Workflow retrieved successfully',
-        result.data ?? undefined
-      );
+      return ResponseHelper.ok(reply, 'Workflow retrieved successfully', workflow);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -220,22 +215,15 @@ export class WorkflowController {
         offset: offset ?? 0,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Pending approvals retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Pending approvals retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -260,22 +248,15 @@ export class WorkflowController {
         offset: offset ?? 0,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'User workflows retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'User workflows retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

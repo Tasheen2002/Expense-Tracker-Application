@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListPendingApprovalsInput extends IQuery {
   approverId: string;
@@ -16,18 +15,15 @@ export interface ListPendingApprovalsInput extends IQuery {
 
 export class ListPendingApprovalsHandler implements IQueryHandler<
   ListPendingApprovalsInput,
-  QueryResult<PaginatedResult<ExpenseWorkflowDTO>>
+  PaginatedResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(
-    input: ListPendingApprovalsInput
-  ): Promise<QueryResult<PaginatedResult<ExpenseWorkflowDTO>>> {
-    const result = await this.workflowService.listPendingApprovals(
+  async handle(input: ListPendingApprovalsInput): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+    return this.workflowService.listPendingApprovals(
       input.approverId,
       input.workspaceId,
       { limit: input.limit, offset: input.offset }
     );
-    return QueryResult.success(result);
   }
 }

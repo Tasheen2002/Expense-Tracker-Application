@@ -152,10 +152,21 @@ export interface ApprovalChainProps {
   maxAmount?: number;
   categoryIds?: CategoryId[];
   requiresReceipt: boolean;
-  approverSequence: UserId[]; // Array of userId in order
+  approverSequence: UserId[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface CreateApprovalChainData {
+  workspaceId: string;
+  name: string;
+  description?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  categoryIds?: string[];
+  requiresReceipt: boolean;
+  approverSequence: string[];
 }
 
 export class ApprovalChain extends AggregateRoot {
@@ -166,38 +177,29 @@ export class ApprovalChain extends AggregateRoot {
     this.props = props;
   }
 
-  static create(params: {
-    workspaceId: string;
-    name: string;
-    description?: string;
-    minAmount?: number;
-    maxAmount?: number;
-    categoryIds?: string[];
-    requiresReceipt: boolean;
-    approverSequence: string[];
-  }): ApprovalChain {
-    if (params.approverSequence.length === 0) {
+  static create(data: CreateApprovalChainData): ApprovalChain {
+    if (data.approverSequence.length === 0) {
       throw new EmptyApproverSequenceError();
     }
 
     if (
-      params.minAmount &&
-      params.maxAmount &&
-      params.minAmount > params.maxAmount
+      data.minAmount &&
+      data.maxAmount &&
+      data.minAmount > data.maxAmount
     ) {
       throw new InvalidAmountRangeError();
     }
 
     const chain = new ApprovalChain({
       chainId: ApprovalChainId.create(),
-      workspaceId: WorkspaceId.fromString(params.workspaceId),
-      name: params.name,
-      description: params.description,
-      minAmount: params.minAmount,
-      maxAmount: params.maxAmount,
-      categoryIds: params.categoryIds?.map((id) => CategoryId.fromString(id)),
-      requiresReceipt: params.requiresReceipt,
-      approverSequence: params.approverSequence.map((id) =>
+      workspaceId: WorkspaceId.fromString(data.workspaceId),
+      name: data.name,
+      description: data.description,
+      minAmount: data.minAmount,
+      maxAmount: data.maxAmount,
+      categoryIds: data.categoryIds?.map((id) => CategoryId.fromString(id)),
+      requiresReceipt: data.requiresReceipt,
+      approverSequence: data.approverSequence.map((id) =>
         UserId.fromString(id)
       ),
       isActive: true,
@@ -207,64 +209,64 @@ export class ApprovalChain extends AggregateRoot {
 
     chain.addDomainEvent(
       new ApprovalChainCreatedEvent(
-        chain.getId().getValue(),
-        chain.getWorkspaceId().getValue(),
-        chain.getName()
+        chain.id.getValue(),
+        chain.workspaceId.getValue(),
+        chain.name
       )
     );
 
     return chain;
   }
 
-  static reconstitute(props: ApprovalChainProps): ApprovalChain {
+  static fromPersistence(props: ApprovalChainProps): ApprovalChain {
     return new ApprovalChain(props);
   }
 
-  getId(): ApprovalChainId {
+  get id(): ApprovalChainId {
     return this.props.chainId;
   }
 
-  getWorkspaceId(): WorkspaceId {
+  get workspaceId(): WorkspaceId {
     return this.props.workspaceId;
   }
 
-  getName(): string {
+  get name(): string {
     return this.props.name;
   }
 
-  getDescription(): string | undefined {
+  get description(): string | undefined {
     return this.props.description;
   }
 
-  getMinAmount(): number | undefined {
+  get minAmount(): number | undefined {
     return this.props.minAmount;
   }
 
-  getMaxAmount(): number | undefined {
+  get maxAmount(): number | undefined {
     return this.props.maxAmount;
   }
 
-  getCategoryIds(): CategoryId[] | undefined {
+  get categoryIds(): CategoryId[] | undefined {
     return this.props.categoryIds;
   }
 
-  requiresReceipt(): boolean {
+  get requiresReceipt(): boolean {
     return this.props.requiresReceipt;
   }
 
-  getApproverSequence(): UserId[] {
+  get approverSequence(): UserId[] {
     return this.props.approverSequence;
   }
 
-  isActive(): boolean {
+  get isActive(): boolean {
     return this.props.isActive;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -276,8 +278,8 @@ export class ApprovalChain extends AggregateRoot {
     if (oldName !== name) {
       this.addDomainEvent(
         new ApprovalChainUpdatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId().getValue(),
+          this.id.getValue(),
+          this.workspaceId.getValue(),
           { name }
         )
       );
@@ -292,8 +294,8 @@ export class ApprovalChain extends AggregateRoot {
     if (oldDescription !== description) {
       this.addDomainEvent(
         new ApprovalChainUpdatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId().getValue(),
+          this.id.getValue(),
+          this.workspaceId.getValue(),
           { description }
         )
       );
@@ -308,8 +310,8 @@ export class ApprovalChain extends AggregateRoot {
 
     this.addDomainEvent(
       new ApprovalChainUpdatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         { categoryIds }
       )
     );
@@ -323,8 +325,8 @@ export class ApprovalChain extends AggregateRoot {
     if (oldRequiresReceipt !== requiresReceipt) {
       this.addDomainEvent(
         new ApprovalChainUpdatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId().getValue(),
+          this.id.getValue(),
+          this.workspaceId.getValue(),
           { requiresReceipt }
         )
       );
@@ -341,8 +343,8 @@ export class ApprovalChain extends AggregateRoot {
 
     this.addDomainEvent(
       new ApprovalChainUpdatedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         { minAmount, maxAmount }
       )
     );
@@ -361,8 +363,8 @@ export class ApprovalChain extends AggregateRoot {
 
     this.addDomainEvent(
       new ApproverSequenceChangedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
+        this.id.getValue(),
+        this.workspaceId.getValue(),
         oldSequence,
         approverSequence
       )
@@ -376,8 +378,8 @@ export class ApprovalChain extends AggregateRoot {
 
       this.addDomainEvent(
         new ApprovalChainActivatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId().getValue()
+          this.id.getValue(),
+          this.workspaceId.getValue()
         )
       );
     }
@@ -390,8 +392,8 @@ export class ApprovalChain extends AggregateRoot {
 
       this.addDomainEvent(
         new ApprovalChainDeactivatedEvent(
-          this.getId().getValue(),
-          this.getWorkspaceId().getValue()
+          this.id.getValue(),
+          this.workspaceId.getValue()
         )
       );
     }
@@ -400,8 +402,8 @@ export class ApprovalChain extends AggregateRoot {
   markAsDeleted(): void {
     this.addDomainEvent(
       new ApprovalChainDeletedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue()
+        this.id.getValue(),
+        this.workspaceId.getValue()
       )
     );
   }
@@ -442,24 +444,20 @@ export class ApprovalChain extends AggregateRoot {
     return true;
   }
 
-  /**
-   * Serialize ApprovalChain to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(chain: ApprovalChain): ApprovalChainDTO {
     return {
-      chainId: chain.getId().getValue(),
-      workspaceId: chain.getWorkspaceId().getValue(),
-      name: chain.getName(),
-      description: chain.getDescription(),
-      minAmount: chain.getMinAmount(),
-      maxAmount: chain.getMaxAmount(),
-      categoryIds: chain.getCategoryIds()?.map((id) => id.getValue()),
-      requiresReceipt: chain.requiresReceipt(),
-      approverSequence: chain.getApproverSequence().map((id) => id.getValue()),
-      isActive: chain.isActive(),
-      createdAt: chain.getCreatedAt().toISOString(),
-      updatedAt: chain.getUpdatedAt().toISOString(),
+      chainId: chain.id.getValue(),
+      workspaceId: chain.workspaceId.getValue(),
+      name: chain.name,
+      description: chain.description,
+      minAmount: chain.minAmount,
+      maxAmount: chain.maxAmount,
+      categoryIds: chain.categoryIds?.map((id) => id.getValue()),
+      requiresReceipt: chain.requiresReceipt,
+      approverSequence: chain.approverSequence.map((id) => id.getValue()),
+      isActive: chain.isActive,
+      createdAt: chain.createdAt.toISOString(),
+      updatedAt: chain.updatedAt.toISOString(),
     };
   }
 }

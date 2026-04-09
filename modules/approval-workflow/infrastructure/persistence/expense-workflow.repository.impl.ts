@@ -34,17 +34,17 @@ export class PrismaExpenseWorkflowRepository
 
     await this.prisma.$transaction(async (tx) => {
       await tx.expenseWorkflow.upsert({
-        where: { id: workflow.getId().getValue() },
+        where: { id: workflow.id.getValue() },
         create: workflowData.create,
         update: workflowData.update,
       });
 
       // Save steps
-      for (const step of workflow.getSteps()) {
+      for (const step of workflow.steps) {
         const stepData = this.toPersistence(step);
 
         await tx.approvalStep.upsert({
-          where: { id: step.getId().getValue() },
+          where: { id: step.id.getValue() },
           create: stepData.create,
           update: stepData.update,
         });
@@ -157,45 +157,45 @@ export class PrismaExpenseWorkflowRepository
     if (entity instanceof ExpenseWorkflow) {
       return {
         create: {
-          id: entity.getId().getValue(),
-          expenseId: entity.getExpenseId().getValue(),
-          workspaceId: entity.getWorkspaceId().getValue(),
-          userId: entity.getUserId().getValue(),
-          chainId: entity.getChainId().getValue(),
-          status: toDbWorkflowStatus(entity.getStatus()),
-          currentStepNumber: entity.getCurrentStepNumber(),
-          createdAt: entity.getCreatedAt(),
-          updatedAt: entity.getUpdatedAt(),
-          completedAt: entity.getCompletedAt(),
+          id: entity.id.getValue(),
+          expenseId: entity.expenseId.getValue(),
+          workspaceId: entity.workspaceId.getValue(),
+          userId: entity.userId.getValue(),
+          chainId: entity.chainId.getValue(),
+          status: toDbWorkflowStatus(entity.status),
+          currentStepNumber: entity.currentStepNumber,
+          createdAt: entity.createdAt,
+          updatedAt: entity.updatedAt,
+          completedAt: entity.completedAt,
         },
         update: {
-          status: toDbWorkflowStatus(entity.getStatus()),
-          currentStepNumber: entity.getCurrentStepNumber(),
-          updatedAt: entity.getUpdatedAt(),
-          completedAt: entity.getCompletedAt(),
+          status: toDbWorkflowStatus(entity.status),
+          currentStepNumber: entity.currentStepNumber,
+          updatedAt: entity.updatedAt,
+          completedAt: entity.completedAt,
         },
       };
     }
 
     return {
       create: {
-        id: entity.getId().getValue(),
-        workflowId: entity.getWorkflowId().getValue(),
-        stepNumber: entity.getStepNumber(),
-        approverId: entity.getApproverId().getValue(),
-        delegatedTo: entity.getDelegatedTo()?.getValue(),
-        status: toDbApprovalStatus(entity.getStatus()),
-        comments: entity.getComments(),
-        processedAt: entity.getProcessedAt(),
-        createdAt: entity.getCreatedAt(),
-        updatedAt: entity.getUpdatedAt(),
+        id: entity.id.getValue(),
+        workflowId: entity.workflowId.getValue(),
+        stepNumber: entity.stepNumber,
+        approverId: entity.approverId.getValue(),
+        delegatedTo: entity.delegatedTo?.getValue(),
+        status: toDbApprovalStatus(entity.status),
+        comments: entity.comments,
+        processedAt: entity.processedAt,
+        createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt,
       },
       update: {
-        delegatedTo: entity.getDelegatedTo()?.getValue(),
-        status: toDbApprovalStatus(entity.getStatus()),
-        comments: entity.getComments(),
-        processedAt: entity.getProcessedAt(),
-        updatedAt: entity.getUpdatedAt(),
+        delegatedTo: entity.delegatedTo?.getValue(),
+        status: toDbApprovalStatus(entity.status),
+        comments: entity.comments,
+        processedAt: entity.processedAt,
+        updatedAt: entity.updatedAt,
       },
     };
   }
@@ -204,7 +204,7 @@ export class PrismaExpenseWorkflowRepository
     row: Prisma.ExpenseWorkflowGetPayload<{ include: { steps: true } }>
   ): ExpenseWorkflow {
     const steps = row.steps.map((stepRow) =>
-      ApprovalStep.reconstitute({
+      ApprovalStep.fromPersistence({
         stepId: ApprovalStepId.fromString(stepRow.id),
         workflowId: WorkflowId.fromString(stepRow.workflowId),
         stepNumber: stepRow.stepNumber,
@@ -220,7 +220,7 @@ export class PrismaExpenseWorkflowRepository
       })
     );
 
-    return ExpenseWorkflow.reconstitute({
+    return ExpenseWorkflow.fromPersistence({
       workflowId: WorkflowId.fromString(row.id),
       expenseId: ExpenseId.fromString(row.expenseId),
       workspaceId: WorkspaceId.fromString(row.workspaceId),

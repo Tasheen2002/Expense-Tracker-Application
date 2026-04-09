@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListApprovalChainsInput extends IQuery {
   workspaceId: string;
@@ -16,18 +15,15 @@ export interface ListApprovalChainsInput extends IQuery {
 
 export class ListApprovalChainsHandler implements IQueryHandler<
   ListApprovalChainsInput,
-  QueryResult<PaginatedResult<ApprovalChainDTO>>
+  PaginatedResult<ApprovalChainDTO>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(
-    input: ListApprovalChainsInput
-  ): Promise<QueryResult<PaginatedResult<ApprovalChainDTO>>> {
-    const result = await this.approvalChainService.listChains(
+  async handle(input: ListApprovalChainsInput): Promise<PaginatedResult<ApprovalChainDTO>> {
+    return this.approvalChainService.listChains(
       input.workspaceId,
       input.activeOnly,
       { limit: input.limit, offset: input.offset }
     );
-    return QueryResult.success(result);
   }
 }
