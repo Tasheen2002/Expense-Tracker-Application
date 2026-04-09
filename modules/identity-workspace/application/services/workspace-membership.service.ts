@@ -95,7 +95,7 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
+      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
     );
 
     membership.changeRole(newRole);
@@ -117,7 +117,7 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
+      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
     );
 
     membership.markAsRemoved();
@@ -149,7 +149,7 @@ export class WorkspaceMembershipService {
       return false;
     }
 
-    const role = membership.getRole();
+    const role = membership.role;
 
     // Owner has all privileges
     if (role === WorkspaceRole.OWNER) {

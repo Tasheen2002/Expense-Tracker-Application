@@ -84,16 +84,18 @@ export class WorkspaceActivatedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+export interface WorkspaceProps {
+  id: WorkspaceId;
+  name: string;
+  slug: string;
+  ownerId: UserId;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class Workspace extends AggregateRoot {
-  private constructor(
-    private readonly id: WorkspaceId,
-    private name: string,
-    private slug: string,
-    private readonly ownerId: UserId,
-    private isActive: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date
-  ) {
+  private constructor(private props: WorkspaceProps) {
     super();
   }
 
@@ -103,15 +105,15 @@ export class Workspace extends AggregateRoot {
     const slug = Workspace.generateSlug(data.name);
     const now = new Date();
 
-    const workspace = new Workspace(
-      workspaceId,
-      data.name,
+    const workspace = new Workspace({
+      id: workspaceId,
+      name: data.name,
       slug,
       ownerId,
-      true, // Active by default
-      now,
-      now
-    );
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     workspace.addDomainEvent(
       new WorkspaceCreatedEvent(workspaceId.getValue(), data.name, data.ownerId)
@@ -120,45 +122,39 @@ export class Workspace extends AggregateRoot {
     return workspace;
   }
 
-  static reconstitute(data: WorkspaceData): Workspace {
-    return new Workspace(
-      WorkspaceId.fromString(data.id),
-      data.name,
-      data.slug,
-      UserId.fromString(data.ownerId),
-      data.isActive,
-      data.createdAt,
-      data.updatedAt
-    );
+  static fromPersistence(data: WorkspaceData): Workspace {
+    return new Workspace({
+      id: WorkspaceId.fromString(data.id),
+      name: data.name,
+      slug: data.slug,
+      ownerId: UserId.fromString(data.ownerId),
+      isActive: data.isActive,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    });
   }
 
   // Getters
-  getId(): WorkspaceId {
-    return this.id;
+  get id(): WorkspaceId {
+    return this.props.id;
   }
-
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this.props.name;
   }
-
-  getSlug(): string {
-    return this.slug;
+  get slug(): string {
+    return this.props.slug;
   }
-
-  getOwnerId(): UserId {
-    return this.ownerId;
+  get ownerId(): UserId {
+    return this.props.ownerId;
   }
-
-  getIsActive(): boolean {
-    return this.isActive;
+  get isActive(): boolean {
+    return this.props.isActive;
   }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
   }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Business logic methods
@@ -167,30 +163,36 @@ export class Workspace extends AggregateRoot {
       throw new InvalidWorkspaceNameError();
     }
 
-    const oldName = this.name;
-    this.name = newName.trim();
-    this.slug = Workspace.generateSlug(newName);
-    this.updatedAt = new Date();
+    const oldName = this.props.name;
+    this.props.name = newName.trim();
+    this.props.slug = Workspace.generateSlug(newName);
+    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new WorkspaceRenamedEvent(this.id.getValue(), oldName, this.name)
+      new WorkspaceRenamedEvent(
+        this.props.id.getValue(),
+        oldName,
+        this.props.name
+      )
     );
   }
 
   deactivate(): void {
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new WorkspaceDeactivatedEvent(this.id.getValue()));
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new WorkspaceDeactivatedEvent(this.props.id.getValue())
+    );
   }
 
   activate(): void {
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new WorkspaceActivatedEvent(this.id.getValue()));
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new WorkspaceActivatedEvent(this.props.id.getValue()));
   }
 
   isOwner(userId: UserId): boolean {
-    return this.ownerId.equals(userId);
+    return this.props.ownerId.equals(userId);
   }
 
   // Slug generation
@@ -204,18 +206,18 @@ export class Workspace extends AggregateRoot {
   }
 
   equals(other: Workspace): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
   }
 
   static toDTO(workspace: Workspace): WorkspaceDTO {
     return {
-      workspaceId: workspace.id.getValue(),
-      name: workspace.name,
-      slug: workspace.slug,
-      ownerId: workspace.ownerId.getValue(),
-      isActive: workspace.isActive,
-      createdAt: workspace.createdAt.toISOString(),
-      updatedAt: workspace.updatedAt.toISOString(),
+      workspaceId: workspace.props.id.getValue(),
+      name: workspace.props.name,
+      slug: workspace.props.slug,
+      ownerId: workspace.props.ownerId.getValue(),
+      isActive: workspace.props.isActive,
+      createdAt: workspace.props.createdAt.toISOString(),
+      updatedAt: workspace.props.updatedAt.toISOString(),
     };
   }
 }

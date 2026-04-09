@@ -87,7 +87,7 @@ export class UserManagementService {
     if (updateData.email !== undefined) {
       const newEmail = Email.create(updateData.email)
       const existingUser = await this.userRepository.findByEmail(newEmail)
-      if (existingUser && !existingUser.getId().equals(userId)) {
+      if (existingUser && !existingUser.id.equals(userId)) {
         throw new UserAlreadyExistsError(updateData.email)
       }
       user.updateEmail(updateData.email)
@@ -178,7 +178,7 @@ export class UserManagementService {
       return null
     }
 
-    const isValid = await bcrypt.compare(password, user.getPasswordHash())
+    const isValid = await bcrypt.compare(password, user.passwordHash)
     if (!isValid) {
       return null
     }

@@ -136,17 +136,19 @@ export class UserProfileUpdatedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+export interface UserProps {
+  id: UserId;
+  email: Email;
+  passwordHash: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class User extends AggregateRoot {
-  private constructor(
-    private readonly id: UserId,
-    private email: Email,
-    private passwordHash: string,
-    private fullName: string | null,
-    private isActive: boolean,
-    private emailVerified: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date
-  ) {
+  private constructor(private props: UserProps) {
     super();
   }
 
@@ -155,16 +157,16 @@ export class User extends AggregateRoot {
     const email = Email.create(data.email);
     const now = new Date();
 
-    const user = new User(
-      userId,
+    const user = new User({
+      id: userId,
       email,
-      data.passwordHash,
-      data.fullName || null,
-      true, // Active by default
-      false, // Email not verified by default
-      now,
-      now
-    );
+      passwordHash: data.passwordHash,
+      fullName: data.fullName || null,
+      isActive: true,
+      emailVerified: false,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     user.addDomainEvent(
       new UserCreatedEvent(
@@ -177,7 +179,7 @@ export class User extends AggregateRoot {
     return user;
   }
 
-  static reconstitute(data: {
+  static fromPersistence(data: {
     id: UserId;
     email: Email;
     passwordHash: string;
@@ -187,107 +189,75 @@ export class User extends AggregateRoot {
     createdAt: Date;
     updatedAt: Date;
   }): User {
-    return new User(
-      data.id,
-      data.email,
-      data.passwordHash,
-      data.fullName,
-      data.isActive,
-      data.emailVerified,
-      data.createdAt,
-      data.updatedAt
-    );
+    return new User({ ...data });
   }
 
   // Getters
-  getId(): UserId {
-    return this.id;
-  }
-
-  getEmail(): Email {
-    return this.email;
-  }
-
-  getPasswordHash(): string {
-    return this.passwordHash;
-  }
-
-  getFullName(): string | null {
-    return this.fullName;
-  }
-
-  getIsActive(): boolean {
-    return this.isActive;
-  }
-
-  getEmailVerified(): boolean {
-    return this.emailVerified;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
+  get id(): UserId { return this.props.id; }
+  get email(): Email { return this.props.email; }
+  get passwordHash(): string { return this.props.passwordHash; }
+  get fullName(): string | null { return this.props.fullName; }
+  get isActive(): boolean { return this.props.isActive; }
+  get emailVerified(): boolean { return this.props.emailVerified; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // Business logic methods
   updateFullName(fullName: string | null): void {
-    this.fullName = fullName ? fullName.trim() : null;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new UserProfileUpdatedEvent(this.id.getValue(), this.fullName));
+    this.props.fullName = fullName ? fullName.trim() : null;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserProfileUpdatedEvent(this.props.id.getValue(), this.props.fullName));
   }
 
   updateEmail(email: string): void {
-    this.email = Email.create(email);
-    this.emailVerified = false; // Reset verification when email changes
-    this.updatedAt = new Date();
-    this.addDomainEvent(new UserEmailChangedEvent(this.id.getValue(), this.email.getValue()));
+    this.props.email = Email.create(email);
+    this.props.emailVerified = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserEmailChangedEvent(this.props.id.getValue(), this.props.email.getValue()));
   }
 
   updatePassword(passwordHash: string): void {
     if (!passwordHash) {
       throw new InvalidPasswordHashError();
     }
-    this.passwordHash = passwordHash;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new UserPasswordChangedEvent(this.id.getValue()));
+    this.props.passwordHash = passwordHash;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserPasswordChangedEvent(this.props.id.getValue()));
   }
 
   verifyEmail(): void {
-    this.emailVerified = true;
-    this.updatedAt = new Date();
+    this.props.emailVerified = true;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
-      new UserEmailVerifiedEvent(this.id.getValue(), this.email.getValue())
+      new UserEmailVerifiedEvent(this.props.id.getValue(), this.props.email.getValue())
     );
   }
 
   deactivate(): void {
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new UserDeactivatedEvent(this.id.getValue()));
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserDeactivatedEvent(this.props.id.getValue()));
   }
 
   activate(): void {
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new UserActivatedEvent(this.id.getValue()));
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserActivatedEvent(this.props.id.getValue()));
   }
 
   equals(other: User): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
   }
 
   static toDTO(user: User): UserDTO {
     return {
-      userId: user.id.getValue(),
-      email: user.email.getValue(),
-      fullName: user.fullName,
-      isActive: user.isActive,
-      emailVerified: user.emailVerified,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
+      userId: user.props.id.getValue(),
+      email: user.props.email.getValue(),
+      fullName: user.props.fullName,
+      isActive: user.props.isActive,
+      emailVerified: user.props.emailVerified,
+      createdAt: user.props.createdAt.toISOString(),
+      updatedAt: user.props.updatedAt.toISOString(),
     };
   }
 }

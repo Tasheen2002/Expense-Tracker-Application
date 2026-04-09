@@ -85,17 +85,19 @@ export class InvitationCancelledEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+export interface WorkspaceInvitationProps {
+  id: InvitationId;
+  workspaceId: WorkspaceId;
+  email: string;
+  role: WorkspaceRole;
+  token: string;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  createdAt: Date;
+}
+
 export class WorkspaceInvitation extends AggregateRoot {
-  private constructor(
-    private readonly id: InvitationId,
-    private readonly workspaceId: WorkspaceId,
-    private readonly email: string,
-    private readonly role: WorkspaceRole,
-    private readonly token: string,
-    private readonly expiresAt: Date,
-    private acceptedAt: Date | null,
-    private readonly createdAt: Date,
-  ) {
+  private constructor(private props: WorkspaceInvitationProps) {
     super();
   }
 
@@ -108,16 +110,16 @@ export class WorkspaceInvitation extends AggregateRoot {
       now.getTime() + data.expiryHours * 60 * 60 * 1000,
     );
 
-    const invitation = new WorkspaceInvitation(
-      invitationId,
+    const invitation = new WorkspaceInvitation({
+      id: invitationId,
       workspaceId,
-      data.email.toLowerCase(),
-      data.role,
+      email: data.email.toLowerCase(),
+      role: data.role,
       token,
       expiresAt,
-      null,
-      now,
-    );
+      acceptedAt: null,
+      createdAt: now,
+    });
 
     invitation.addDomainEvent(
       new InvitationCreatedEvent(
@@ -131,59 +133,36 @@ export class WorkspaceInvitation extends AggregateRoot {
     return invitation;
   }
 
-  static reconstitute(data: WorkspaceInvitationData): WorkspaceInvitation {
-    return new WorkspaceInvitation(
-      InvitationId.fromString(data.id),
-      WorkspaceId.fromString(data.workspaceId),
-      data.email,
-      data.role,
-      data.token,
-      data.expiresAt,
-      data.acceptedAt,
-      data.createdAt,
-    );
+  static fromPersistence(data: WorkspaceInvitationData): WorkspaceInvitation {
+    return new WorkspaceInvitation({
+      id: InvitationId.fromString(data.id),
+      workspaceId: WorkspaceId.fromString(data.workspaceId),
+      email: data.email,
+      role: data.role,
+      token: data.token,
+      expiresAt: data.expiresAt,
+      acceptedAt: data.acceptedAt,
+      createdAt: data.createdAt,
+    });
   }
 
   // Getters
-  getId(): InvitationId {
-    return this.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getEmail(): string {
-    return this.email;
-  }
-
-  getRole(): WorkspaceRole {
-    return this.role;
-  }
-
-  getToken(): string {
-    return this.token;
-  }
-
-  getExpiresAt(): Date {
-    return this.expiresAt;
-  }
-
-  getAcceptedAt(): Date | null {
-    return this.acceptedAt;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
+  get id(): InvitationId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get email(): string { return this.props.email; }
+  get role(): WorkspaceRole { return this.props.role; }
+  get token(): string { return this.props.token; }
+  get expiresAt(): Date { return this.props.expiresAt; }
+  get acceptedAt(): Date | null { return this.props.acceptedAt; }
+  get createdAt(): Date { return this.props.createdAt; }
 
   // Business logic methods
   isExpired(): boolean {
-    return new Date() > this.expiresAt;
+    return new Date() > this.props.expiresAt;
   }
 
   isAccepted(): boolean {
-    return this.acceptedAt !== null;
+    return this.props.acceptedAt !== null;
   }
 
   isPending(): boolean {
@@ -197,13 +176,13 @@ export class WorkspaceInvitation extends AggregateRoot {
     if (this.isExpired()) {
       throw new InvitationExpiredError();
     }
-    this.acceptedAt = new Date();
+    this.props.acceptedAt = new Date();
 
     this.addDomainEvent(
       new InvitationAcceptedEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue(),
-        this.email,
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.email,
       ),
     );
   }
@@ -211,35 +190,34 @@ export class WorkspaceInvitation extends AggregateRoot {
   markAsCancelled(): void {
     this.addDomainEvent(
       new InvitationCancelledEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue(),
-        this.email,
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.email,
       ),
     );
   }
 
   // Helper methods
   private static generateToken(): string {
-    // Generate a secure random token (32 bytes = 64 hex characters)
     return randomBytes(32).toString("hex");
   }
 
   equals(other: WorkspaceInvitation): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
   }
 
   static toDTO(invitation: WorkspaceInvitation): WorkspaceInvitationDTO {
     return {
-      invitationId: invitation.id.getValue(),
-      workspaceId: invitation.workspaceId.getValue(),
-      email: invitation.email,
-      role: invitation.role,
-      token: invitation.token,
-      expiresAt: invitation.expiresAt.toISOString(),
-      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      invitationId: invitation.props.id.getValue(),
+      workspaceId: invitation.props.workspaceId.getValue(),
+      email: invitation.props.email,
+      role: invitation.props.role,
+      token: invitation.props.token,
+      expiresAt: invitation.props.expiresAt.toISOString(),
+      acceptedAt: invitation.props.acceptedAt?.toISOString() ?? null,
       isExpired: invitation.isExpired(),
       isAccepted: invitation.isAccepted(),
-      createdAt: invitation.createdAt.toISOString(),
+      createdAt: invitation.props.createdAt.toISOString(),
     };
   }
 }
@@ -266,7 +244,7 @@ export interface CreateWorkspaceInvitationData {
   workspaceId: string;
   email: string;
   role: WorkspaceRole;
-  expiryHours: number; // Default: 168 hours (7 days)
+  expiryHours: number;
 }
 
 export interface WorkspaceInvitationData {
@@ -279,5 +257,3 @@ export interface WorkspaceInvitationData {
   acceptedAt: Date | null;
   createdAt: Date;
 }
-
-

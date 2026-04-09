@@ -4,7 +4,6 @@ import {
   UserInactiveError,
 } from '../../domain/errors/identity.errors';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 // Login User Query
 export interface LoginUserQuery extends IQuery {
@@ -22,34 +21,30 @@ export interface LoginUserResult {
 
 export class LoginUserHandler implements IQueryHandler<
   LoginUserQuery,
-  QueryResult<LoginUserResult>
+  LoginUserResult
 > {
   constructor(private readonly userManagementService: UserManagementService) {}
 
-  async handle(query: LoginUserQuery): Promise<QueryResult<LoginUserResult>> {
-    try {
-      const user = await this.userManagementService.verifyPassword(
-        query.email,
-        query.password
-      );
+  async handle(query: LoginUserQuery): Promise<LoginUserResult> {
+    const user = await this.userManagementService.verifyPassword(
+      query.email,
+      query.password
+    );
 
-      if (!user) {
-        throw new InvalidCredentialsError();
-      }
-
-      if (!user.getIsActive()) {
-        throw new UserInactiveError();
-      }
-
-      return QueryResult.success<LoginUserResult>({
-        userId: user.getId().getValue(),
-        email: user.getEmail().getValue(),
-        fullName: user.getFullName(),
-        isActive: user.getIsActive(),
-        emailVerified: user.getEmailVerified(),
-      });
-    } catch (error) {
-      return QueryResult.fromError(error);
+    if (!user) {
+      throw new InvalidCredentialsError();
     }
+
+    if (!user.isActive) {
+      throw new UserInactiveError();
+    }
+
+    return {
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      fullName: user.fullName,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+    };
   }
 }

@@ -23,8 +23,8 @@ export class WorkspaceMembershipRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private reconstitute(row: Prisma.WorkspaceMembershipGetPayload<{}>): WorkspaceMembership {
-    return WorkspaceMembership.reconstitute({
+  private toDomain(row: Prisma.WorkspaceMembershipGetPayload<{}>): WorkspaceMembership {
+    return WorkspaceMembership.fromPersistence({
       id: row.id,
       userId: row.userId,
       workspaceId: row.workspaceId,
@@ -36,18 +36,18 @@ export class WorkspaceMembershipRepositoryImpl
 
   async save(membership: WorkspaceMembership): Promise<void> {
     await this.prisma.workspaceMembership.upsert({
-      where: { id: membership.getId().getValue() },
+      where: { id: membership.id.getValue() },
       create: {
-        id: membership.getId().getValue(),
-        userId: membership.getUserId().getValue(),
-        workspaceId: membership.getWorkspaceId().getValue(),
-        role: membership.getRole(),
-        createdAt: membership.getCreatedAt(),
-        updatedAt: membership.getUpdatedAt(),
+        id: membership.id.getValue(),
+        userId: membership.userId.getValue(),
+        workspaceId: membership.workspaceId.getValue(),
+        role: membership.role,
+        createdAt: membership.createdAt,
+        updatedAt: membership.updatedAt,
       },
       update: {
-        role: membership.getRole(),
-        updatedAt: membership.getUpdatedAt(),
+        role: membership.role,
+        updatedAt: membership.updatedAt,
       },
     });
     await this.dispatchEvents(membership);
@@ -55,10 +55,10 @@ export class WorkspaceMembershipRepositoryImpl
 
   async update(membership: WorkspaceMembership): Promise<void> {
     await this.prisma.workspaceMembership.update({
-      where: { id: membership.getId().getValue() },
+      where: { id: membership.id.getValue() },
       data: {
-        role: membership.getRole(),
-        updatedAt: membership.getUpdatedAt(),
+        role: membership.role,
+        updatedAt: membership.updatedAt,
       },
     });
     await this.dispatchEvents(membership);
@@ -69,7 +69,7 @@ export class WorkspaceMembershipRepositoryImpl
       where: { id: id.getValue() },
     });
 
-    return row ? this.reconstitute(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findByUserAndWorkspace(
@@ -86,7 +86,7 @@ export class WorkspaceMembershipRepositoryImpl
     });
 
     return row
-      ? this.reconstitute(row)
+      ? this.toDomain(row)
       : null;
   }
 
@@ -100,7 +100,7 @@ export class WorkspaceMembershipRepositoryImpl
         where: { userId: userId.getValue() },
         orderBy: { createdAt: "desc" },
       },
-      (row) => this.reconstitute(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -115,7 +115,7 @@ export class WorkspaceMembershipRepositoryImpl
         where: { workspaceId: workspaceId.getValue() },
         orderBy: { createdAt: "asc" },
       },
-      (row) => this.reconstitute(row),
+      (row) => this.toDomain(row),
       options,
     );
   }

@@ -67,13 +67,13 @@ describe('WorkspaceInvitationService', () => {
       const result = await service.createInvitation(data);
 
       expect(result).toBeInstanceOf(WorkspaceInvitation);
-      expect(result.getEmail()).toBe(EMAIL);
+      expect(result.email).toBe(EMAIL);
       expect(mockInvitationRepo.save).toHaveBeenCalledTimes(1);
     });
 
     it('should throw error if user is already a member', async () => {
       // Mock existing user and membership
-      const mockUser = { getId: () => ({ getValue: () => USER_ID }) };
+      const mockUser = { id: { getValue: () => USER_ID } };
       vi.mocked(mockUserRepo.findByEmail).mockResolvedValue(mockUser as any);
       vi.mocked(mockMembershipRepo.findByUserAndWorkspace).mockResolvedValue(
         {} as any
@@ -120,9 +120,9 @@ describe('WorkspaceInvitationService', () => {
       const mockInvitation = {
         isExpired: () => false,
         isAccepted: () => false,
-        getEmail: () => EMAIL,
-        getWorkspaceId: () => ({ getValue: () => WORKSPACE_ID }),
-        getRole: () => WorkspaceRole.MEMBER,
+        email: EMAIL,
+        workspaceId: { getValue: () => WORKSPACE_ID },
+        role: WorkspaceRole.MEMBER,
         accept: vi.fn(),
       };
       vi.mocked(mockInvitationRepo.findByToken).mockResolvedValue(
@@ -131,8 +131,8 @@ describe('WorkspaceInvitationService', () => {
 
       // Mock user finding
       const mockUser = {
-        getId: () => ({ getValue: () => USER_ID }),
-        getEmail: () => ({ getValue: () => EMAIL }),
+        id: { getValue: () => USER_ID },
+        email: { getValue: () => EMAIL },
       };
       vi.mocked(mockUserRepo.findById).mockResolvedValue(mockUser as any);
 
