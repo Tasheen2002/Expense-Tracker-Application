@@ -1,9 +1,5 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
 export interface AllocationSummaryData {
   totalAllocations: number;
@@ -31,20 +27,12 @@ export interface GetAllocationSummaryQuery extends IQuery {
   workspaceId: string;
 }
 
-export class GetAllocationSummaryHandler implements IQueryHandler<
-  GetAllocationSummaryQuery,
-  QueryResult<AllocationSummaryData>
-> {
+export class GetAllocationSummaryHandler implements IQueryHandler<GetAllocationSummaryQuery, AllocationSummaryData> {
   constructor(
     private readonly expenseAllocationService: ExpenseAllocationService
   ) {}
 
-  async handle(
-    query: GetAllocationSummaryQuery
-  ): Promise<QueryResult<AllocationSummaryData>> {
-    const summary = await this.expenseAllocationService.getAllocationSummary(
-      query.workspaceId
-    );
-    return QueryResult.success(summary);
+  async handle(query: GetAllocationSummaryQuery): Promise<AllocationSummaryData> {
+    return this.expenseAllocationService.getAllocationSummary(query.workspaceId);
   }
 }

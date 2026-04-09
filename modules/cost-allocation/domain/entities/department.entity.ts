@@ -103,19 +103,21 @@ export class DepartmentDeletedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+interface DepartmentProps {
+  id: DepartmentId;
+  workspaceId: WorkspaceId;
+  name: string;
+  code: string;
+  description: string | null;
+  managerId: UserId | null;
+  parentDepartmentId: DepartmentId | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class Department extends AggregateRoot {
-  private constructor(
-    private readonly id: DepartmentId,
-    private readonly workspaceId: WorkspaceId,
-    private name: string,
-    private code: string,
-    private description: string | null,
-    private managerId: UserId | null,
-    private parentDepartmentId: DepartmentId | null,
-    private isActive: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date
-  ) {
+  private constructor(private props: DepartmentProps) {
     super();
   }
 
@@ -127,22 +129,22 @@ export class Department extends AggregateRoot {
     managerId?: UserId | null;
     parentDepartmentId?: DepartmentId | null;
   }): Department {
-    const department = new Department(
-      DepartmentId.create(),
-      params.workspaceId,
-      params.name,
-      params.code,
-      params.description || null,
-      params.managerId || null,
-      params.parentDepartmentId || null,
-      true,
-      new Date(),
-      new Date()
-    );
+    const department = new Department({
+      id: DepartmentId.create(),
+      workspaceId: params.workspaceId,
+      name: params.name,
+      code: params.code,
+      description: params.description || null,
+      managerId: params.managerId || null,
+      parentDepartmentId: params.parentDepartmentId || null,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     department.addDomainEvent(
       new DepartmentCreatedEvent(
-        department.id.getValue(),
+        department.props.id.getValue(),
         params.workspaceId.getValue(),
         params.name,
         params.code
@@ -152,7 +154,7 @@ export class Department extends AggregateRoot {
     return department;
   }
 
-  static reconstitute(params: {
+  static fromPersistence(params: {
     id: string;
     workspaceId: string;
     name: string;
@@ -164,61 +166,32 @@ export class Department extends AggregateRoot {
     createdAt: Date;
     updatedAt: Date;
   }): Department {
-    return new Department(
-      DepartmentId.fromString(params.id),
-      WorkspaceId.fromString(params.workspaceId),
-      params.name,
-      params.code,
-      params.description,
-      params.managerId ? UserId.fromString(params.managerId) : null,
-      params.parentDepartmentId
+    return new Department({
+      id: DepartmentId.fromString(params.id),
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
+      name: params.name,
+      code: params.code,
+      description: params.description,
+      managerId: params.managerId ? UserId.fromString(params.managerId) : null,
+      parentDepartmentId: params.parentDepartmentId
         ? DepartmentId.fromString(params.parentDepartmentId)
         : null,
-      params.isActive,
-      params.createdAt,
-      params.updatedAt
-    );
+      isActive: params.isActive,
+      createdAt: params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
-  getId(): DepartmentId {
-    return this.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getName(): string {
-    return this.name;
-  }
-
-  getCode(): string {
-    return this.code;
-  }
-
-  getDescription(): string | null {
-    return this.description;
-  }
-
-  getManagerId(): UserId | null {
-    return this.managerId;
-  }
-
-  getParentDepartmentId(): DepartmentId | null {
-    return this.parentDepartmentId;
-  }
-
-  getIsActive(): boolean {
-    return this.isActive;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
+  get id(): DepartmentId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get code(): string { return this.props.code; }
+  get description(): string | null { return this.props.description; }
+  get managerId(): UserId | null { return this.props.managerId; }
+  get parentDepartmentId(): DepartmentId | null { return this.props.parentDepartmentId; }
+  get isActive(): boolean { return this.props.isActive; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateDetails(params: {
     name?: string;
@@ -229,70 +202,69 @@ export class Department extends AggregateRoot {
   }): void {
     const changes: Record<string, unknown> = {};
     if (params.name !== undefined) {
-      this.name = params.name;
+      this.props.name = params.name;
       changes.name = params.name;
     }
     if (params.code !== undefined) {
-      this.code = params.code;
+      this.props.code = params.code;
       changes.code = params.code;
     }
     if (params.description !== undefined) {
-      this.description = params.description;
+      this.props.description = params.description;
       changes.description = params.description;
     }
     if (params.managerId !== undefined) {
-      this.managerId = params.managerId;
+      this.props.managerId = params.managerId;
       changes.managerId = params.managerId?.getValue() ?? null;
     }
     if (params.parentDepartmentId !== undefined) {
-      this.parentDepartmentId = params.parentDepartmentId;
-      changes.parentDepartmentId =
-        params.parentDepartmentId?.getValue() ?? null;
+      this.props.parentDepartmentId = params.parentDepartmentId;
+      changes.parentDepartmentId = params.parentDepartmentId?.getValue() ?? null;
     }
-    this.updatedAt = new Date();
+    this.props.updatedAt = new Date();
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new DepartmentUpdatedEvent(this.id.getValue(), changes)
+        new DepartmentUpdatedEvent(this.props.id.getValue(), changes)
       );
     }
   }
 
   deactivate(): void {
-    if (!this.isActive) return;
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new DepartmentDeactivatedEvent(this.id.getValue()));
+    if (!this.props.isActive) return;
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new DepartmentDeactivatedEvent(this.props.id.getValue()));
   }
 
   activate(): void {
-    if (this.isActive) return;
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new DepartmentActivatedEvent(this.id.getValue()));
+    if (this.props.isActive) return;
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new DepartmentActivatedEvent(this.props.id.getValue()));
   }
 
   markAsDeleted(): void {
     this.addDomainEvent(
       new DepartmentDeletedEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue()
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue()
       )
     );
   }
 
   static toDTO(department: Department): DepartmentDTO {
     return {
-      id: department.getId().getValue(),
-      workspaceId: department.getWorkspaceId().getValue(),
-      name: department.getName(),
-      code: department.getCode(),
-      description: department.getDescription(),
-      managerId: department.getManagerId()?.getValue() ?? null,
-      parentDepartmentId: department.getParentDepartmentId()?.getValue() ?? null,
-      isActive: department.getIsActive(),
-      createdAt: department.getCreatedAt().toISOString(),
-      updatedAt: department.getUpdatedAt().toISOString(),
+      id: department.props.id.getValue(),
+      workspaceId: department.props.workspaceId.getValue(),
+      name: department.props.name,
+      code: department.props.code,
+      description: department.props.description,
+      managerId: department.props.managerId?.getValue() ?? null,
+      parentDepartmentId: department.props.parentDepartmentId?.getValue() ?? null,
+      isActive: department.props.isActive,
+      createdAt: department.props.createdAt.toISOString(),
+      updatedAt: department.props.updatedAt.toISOString(),
     };
   }
 }
