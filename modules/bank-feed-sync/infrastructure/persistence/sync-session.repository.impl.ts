@@ -146,7 +146,7 @@ export class PrismaSyncSessionRepository
   }
 
   private toDomain(record: Prisma.SyncSessionGetPayload<object>): SyncSession {
-    return SyncSession.reconstitute({
+    return SyncSession.fromPersistence({
       id: SyncSessionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),

@@ -65,20 +65,13 @@ export class TransactionSyncController {
         },
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Sync history retrieved successfully',
-        result.data
-          ? {
-              sessions: result.data.items,
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Sync history retrieved successfully', {
+        sessions: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -91,17 +84,12 @@ export class TransactionSyncController {
         sessionId: string;
       };
 
-      const result = await this.getSyncSessionHandler.handle({
+      const session = await this.getSyncSessionHandler.handle({
         workspaceId,
         sessionId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Sync session retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Sync session retrieved successfully', session);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -123,20 +111,13 @@ export class TransactionSyncController {
         },
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Active syncs retrieved successfully',
-        result.data
-          ? {
-              sessions: result.data.items,
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Active syncs retrieved successfully', {
+        sessions: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetBankTransactionQuery extends IQuery {
   workspaceId: string;
@@ -13,19 +12,16 @@ export interface GetBankTransactionQuery extends IQuery {
 
 export class GetBankTransactionHandler implements IQueryHandler<
   GetBankTransactionQuery,
-  QueryResult<BankTransactionDTO>
+  BankTransactionDTO
 > {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
   ) {}
 
-  async handle(
-    query: GetBankTransactionQuery
-  ): Promise<QueryResult<BankTransactionDTO>> {
-    const dto = await this.transactionSyncService.getTransaction(
+  async handle(query: GetBankTransactionQuery): Promise<BankTransactionDTO> {
+    return this.transactionSyncService.getTransaction(
       query.transactionId,
       query.workspaceId
     );
-    return QueryResult.success(dto);
   }
 }

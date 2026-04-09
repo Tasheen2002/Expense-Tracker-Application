@@ -82,20 +82,13 @@ export class BankConnectionController {
         offset: Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset),
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Bank connections retrieved successfully',
-        result.data
-          ? {
-              connections: result.data.items,
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Bank connections retrieved successfully', {
+        connections: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -108,17 +101,12 @@ export class BankConnectionController {
         connectionId: string;
       };
 
-      const result = await this.getBankConnectionHandler.handle({
+      const connection = await this.getBankConnectionHandler.handle({
         workspaceId,
         connectionId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Bank connection retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Bank connection retrieved successfully', connection);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

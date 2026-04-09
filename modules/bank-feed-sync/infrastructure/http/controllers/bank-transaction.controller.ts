@@ -47,20 +47,13 @@ export class BankTransactionController {
         },
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Pending transactions retrieved successfully',
-        result.data
-          ? {
-              transactions: result.data.items,
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Pending transactions retrieved successfully', {
+        transactions: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -73,17 +66,12 @@ export class BankTransactionController {
         transactionId: string;
       };
 
-      const result = await this.getBankTransactionHandler.handle({
+      const transaction = await this.getBankTransactionHandler.handle({
         workspaceId,
         transactionId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Bank transaction retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Bank transaction retrieved successfully', transaction);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -153,23 +141,15 @@ export class BankTransactionController {
         },
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Transactions by connection retrieved successfully',
-        result.data
-          ? {
-              transactions: result.data.items,
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Transactions by connection retrieved successfully', {
+        transactions: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 }
-

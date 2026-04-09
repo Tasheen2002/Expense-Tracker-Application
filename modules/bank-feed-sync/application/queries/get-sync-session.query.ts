@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetSyncSessionQuery extends IQuery {
   workspaceId: string;
@@ -13,17 +12,14 @@ export interface GetSyncSessionQuery extends IQuery {
 
 export class GetSyncSessionHandler implements IQueryHandler<
   GetSyncSessionQuery,
-  QueryResult<SyncSessionDTO>
+  SyncSessionDTO
 > {
   constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
-  async handle(
-    query: GetSyncSessionQuery
-  ): Promise<QueryResult<SyncSessionDTO>> {
-    const dto = await this.transactionSyncService.getSyncSession(
+  async handle(query: GetSyncSessionQuery): Promise<SyncSessionDTO> {
+    return this.transactionSyncService.getSyncSession(
       query.sessionId,
       query.workspaceId
     );
-    return QueryResult.success(dto);
   }
 }

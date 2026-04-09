@@ -235,7 +235,7 @@ export class PrismaBankTransactionRepository
   private toDomain(
     record: Prisma.BankTransactionGetPayload<object>
   ): BankTransaction {
-    return BankTransaction.reconstitute({
+    return BankTransaction.fromPersistence({
       id: BankTransactionId.fromString(record.id),
       workspaceId: WorkspaceId.fromString(record.workspaceId),
       connectionId: BankConnectionId.fromString(record.connectionId),

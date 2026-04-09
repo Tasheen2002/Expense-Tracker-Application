@@ -196,7 +196,7 @@ export class BankTransaction extends AggregateRoot {
     return transaction;
   }
 
-  static reconstitute(props: BankTransactionProps): BankTransaction {
+  static fromPersistence(props: BankTransactionProps): BankTransaction {
     return new BankTransaction(props);
   }
 

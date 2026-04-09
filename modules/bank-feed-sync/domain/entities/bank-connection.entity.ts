@@ -255,7 +255,7 @@ export class BankConnection extends AggregateRoot {
     return connection;
   }
 
-  static reconstitute(props: BankConnectionProps): BankConnection {
+  static fromPersistence(props: BankConnectionProps): BankConnection {
     return new BankConnection(props);
   }
 

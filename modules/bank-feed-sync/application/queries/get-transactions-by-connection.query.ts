@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetTransactionsByConnectionQuery extends IQuery {
   workspaceId: string;
@@ -18,20 +17,17 @@ export interface GetTransactionsByConnectionQuery extends IQuery {
 
 export class GetTransactionsByConnectionHandler implements IQueryHandler<
   GetTransactionsByConnectionQuery,
-  QueryResult<PaginatedResult<BankTransactionDTO>>
+  PaginatedResult<BankTransactionDTO>
 > {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
   ) {}
 
-  async handle(
-    query: GetTransactionsByConnectionQuery
-  ): Promise<QueryResult<PaginatedResult<BankTransactionDTO>>> {
-    const result = await this.transactionSyncService.getTransactionsByConnection(
+  async handle(query: GetTransactionsByConnectionQuery): Promise<PaginatedResult<BankTransactionDTO>> {
+    return this.transactionSyncService.getTransactionsByConnection(
       query.workspaceId,
       query.connectionId,
       query.options
     );
-    return QueryResult.success(result);
   }
 }

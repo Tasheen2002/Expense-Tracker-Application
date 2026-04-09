@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetActiveSyncsQuery extends IQuery {
   workspaceId: string;
@@ -17,17 +16,14 @@ export interface GetActiveSyncsQuery extends IQuery {
 
 export class GetActiveSyncsHandler implements IQueryHandler<
   GetActiveSyncsQuery,
-  QueryResult<PaginatedResult<SyncSessionDTO>>
+  PaginatedResult<SyncSessionDTO>
 > {
   constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
-  async handle(
-    query: GetActiveSyncsQuery
-  ): Promise<QueryResult<PaginatedResult<SyncSessionDTO>>> {
-    const result = await this.transactionSyncService.getActiveSyncs(
+  async handle(query: GetActiveSyncsQuery): Promise<PaginatedResult<SyncSessionDTO>> {
+    return this.transactionSyncService.getActiveSyncs(
       query.workspaceId,
       query.options
     );
-    return QueryResult.success(result);
   }
 }
