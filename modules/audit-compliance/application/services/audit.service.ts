@@ -1,7 +1,5 @@
 import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
-import { AuditAction } from '../../domain/value-objects/audit-action.vo';
-import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
 import { IAuditLogRepository, AuditLogFilter } from '../../domain/repositories/audit-log.repository';
 import { AuditLogNotFoundError, AuditRetentionViolationError } from '../../domain/errors/audit.errors';
 import { PaginatedResult, PaginationOptions } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
@@ -30,14 +28,12 @@ export class AuditService {
   constructor(private readonly auditRepository: IAuditLogRepository) {}
 
   async createAuditLog(data: CreateAuditLogDTO): Promise<AuditLogDTO> {
-    const action = AuditAction.create(data.action);
-    const resource = AuditResource.create(data.entityType, data.entityId);
-
     const auditLog = AuditLog.create({
       workspaceId: data.workspaceId,
       userId: data.userId,
-      action: action,
-      resource: resource,
+      action: data.action,
+      entityType: data.entityType,
+      entityId: data.entityId,
       details: data.details || null,
       metadata: data.metadata || null,
       ipAddress: data.ipAddress || null,

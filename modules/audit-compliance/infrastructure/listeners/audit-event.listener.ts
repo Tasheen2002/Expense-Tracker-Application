@@ -28,20 +28,18 @@ export class AuditEventListener implements DomainEventHandler {
     const userId = payload.triggeredBy || payload.userId || null;
 
     const result = await this.createAuditLogHandler.handle({
-      data: {
-        workspaceId: String(workspaceId),
-        userId: userId ? String(userId) : null,
-        action: event.eventType,
-        entityType: event.aggregateType,
-        entityId: event.aggregateId,
-        details: payload,
-        metadata: {
-          timestamp: event.occurredAt,
-          eventId: event.eventId,
-        },
-        ipAddress: undefined,
-        userAgent: undefined,
+      workspaceId: String(workspaceId),
+      userId: userId ? String(userId) : null,
+      action: event.eventType,
+      entityType: event.aggregateType,
+      entityId: event.aggregateId,
+      details: payload,
+      metadata: {
+        timestamp: event.occurredAt,
+        eventId: event.eventId,
       },
+      ipAddress: undefined,
+      userAgent: undefined,
     });
 
     if (!result.success) {

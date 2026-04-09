@@ -32,7 +32,7 @@ function createMockAuditLog(
   entityType: string = 'EXPENSE',
   entityId: string = 'expense-123'
 ): AuditLog {
-  return AuditLog.reconstitute({
+  return AuditLog.fromPersistence({
     id: AuditLogId.fromString(id),
     workspaceId: mockWorkspaceId,
     userId: mockUserId,
@@ -122,14 +122,11 @@ describe('Audit Compliance Endpoints', () => {
         ),
       ];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: mockLogs,
-          total: 2,
-          limit: 50,
-          offset: 0,
-        },
+        items: mockLogs,
+        total: 2,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -149,14 +146,11 @@ describe('Audit Compliance Endpoints', () => {
     it('should list audit logs with filters', async () => {
       const mockLogs = [createMockAuditLog()];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: mockLogs,
-          total: 1,
-          limit: 10,
-          offset: 0,
-        },
+        items: mockLogs,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -180,14 +174,11 @@ describe('Audit Compliance Endpoints', () => {
 
     it('should list audit logs with date range filter', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-        },
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const startDate = '2024-01-01T00:00:00Z';
@@ -204,14 +195,11 @@ describe('Audit Compliance Endpoints', () => {
 
     it('should handle pagination', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 100,
-          limit: 20,
-          offset: 40,
-        },
+        items: [],
+        total: 100,
+        limit: 20,
+        offset: 40,
+        hasMore: true,
       });
 
       const response = await app.inject({
@@ -227,14 +215,11 @@ describe('Audit Compliance Endpoints', () => {
 
     it('should return empty list when no audit logs found', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-        },
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -253,11 +238,9 @@ describe('Audit Compliance Endpoints', () => {
   describe('GET /api/v1/workspaces/:workspaceId/audit-logs/:auditLogId', () => {
     it('should get a specific audit log', async () => {
       const mockLog = createMockAuditLog();
-      (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: AuditLog.toDTO(mockLog),
-      });
+      (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue(
+        AuditLog.toDTO(mockLog)
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -272,11 +255,9 @@ describe('Audit Compliance Endpoints', () => {
     });
 
     it('should return 404 when audit log not found', async () => {
-      (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue({
-        success: false,
-        statusCode: 404,
-        error: 'AUDIT_LOG_NOT_FOUND',
-      });
+      (mockHandlers.getAuditLogHandler.handle as any).mockRejectedValue(
+        Object.assign(new Error('AUDIT_LOG_NOT_FOUND'), { statusCode: 404 })
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -306,17 +287,13 @@ describe('Audit Compliance Endpoints', () => {
       const endDate = new Date('2024-12-31');
 
       (mockHandlers.getAuditSummaryHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          totalLogs: 150,
-          actionBreakdown: [
-            { action: 'EXPENSE_CREATED', count: 80 },
-            { action: 'EXPENSE_UPDATED', count: 40 },
-            { action: 'RECEIPT_UPLOADED', count: 30 },
-          ],
-          period: { startDate, endDate },
-        },
+        totalLogs: 150,
+        actionBreakdown: [
+          { action: 'EXPENSE_CREATED', count: 80 },
+          { action: 'EXPENSE_UPDATED', count: 40 },
+          { action: 'RECEIPT_UPLOADED', count: 30 },
+        ],
+        period: { startDate, endDate },
       });
 
       const response = await app.inject({
@@ -370,15 +347,11 @@ describe('Audit Compliance Endpoints', () => {
       (
         mockHandlers.getEntityAuditHistoryHandler.handle as any
       ).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: mockLogs,
-          total: 2,
-          limit: 50,
-          offset: 0,
-          hasMore: false,
-        },
+        items: mockLogs,
+        total: 2,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -416,15 +389,11 @@ describe('Audit Compliance Endpoints', () => {
       (
         mockHandlers.getEntityAuditHistoryHandler.handle as any
       ).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-          hasMore: false,
-        },
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -526,10 +495,8 @@ describe('Audit Compliance Endpoints', () => {
       expect(response.statusCode).toBe(201);
       expect(mockHandlers.createAuditLogHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            details: { amount: 100, currency: 'USD' },
-            metadata: { source: 'mobile_app', version: '1.0.0' },
-          }),
+          details: { amount: 100, currency: 'USD' },
+          metadata: { source: 'mobile_app', version: '1.0.0' },
         })
       );
     });
@@ -538,14 +505,11 @@ describe('Audit Compliance Endpoints', () => {
   describe('Filter combinations', () => {
     it('should filter by user ID', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-        },
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -570,14 +534,11 @@ describe('Audit Compliance Endpoints', () => {
 
     it('should filter by entity ID', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-        },
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -598,14 +559,11 @@ describe('Audit Compliance Endpoints', () => {
 
     it('should combine multiple filters', async () => {
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: [],
-          total: 0,
-          limit: 25,
-          offset: 10,
-        },
+        items: [],
+        total: 0,
+        limit: 25,
+        offset: 10,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -632,11 +590,9 @@ describe('Audit Compliance Endpoints', () => {
   describe('Response format validation', () => {
     it('should return properly formatted audit log response', async () => {
       const mockLog = createMockAuditLog();
-      (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: AuditLog.toDTO(mockLog),
-      });
+      (mockHandlers.getAuditLogHandler.handle as any).mockResolvedValue(
+        AuditLog.toDTO(mockLog)
+      );
 
       const response = await app.inject({
         method: 'GET',
@@ -646,7 +602,6 @@ describe('Audit Compliance Endpoints', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
 
-      // Verify response structure
       expect(body.data).toHaveProperty('id');
       expect(body.data).toHaveProperty('workspaceId');
       expect(body.data).toHaveProperty('userId');
@@ -663,14 +618,11 @@ describe('Audit Compliance Endpoints', () => {
     it('should return properly formatted paginated response', async () => {
       const mockLogs = [createMockAuditLog()];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        success: true,
-        statusCode: 200,
-        data: {
-          items: mockLogs,
-          total: 1,
-          limit: 50,
-          offset: 0,
-        },
+        items: mockLogs,
+        total: 1,
+        limit: 50,
+        offset: 0,
+        hasMore: false,
       });
 
       const response = await app.inject({
@@ -681,7 +633,6 @@ describe('Audit Compliance Endpoints', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
 
-      // Verify pagination structure
       expect(body.data).toHaveProperty('items');
       expect(body.data).toHaveProperty('pagination');
       expect(body.data.pagination).toHaveProperty('total');
@@ -746,11 +697,6 @@ describe('Audit Compliance Endpoints', () => {
     ];
 
     it.each(entityTypes)('should handle %s entity type', async (entityType) => {
-      const mockLog = createMockAuditLog(
-        mockAuditLogId,
-        'ENTITY_CREATED',
-        entityType
-      );
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
         data: mockAuditLogId,
@@ -774,8 +720,7 @@ describe('Audit Compliance Endpoints', () => {
     it('should purge audit logs successfully', async () => {
       (mockHandlers.purgeAuditLogsHandler.handle as any).mockResolvedValue({
         success: true,
-        statusCode: 200,
-        data: 50,
+        data: { deletedCount: 50 },
       });
 
       const response = await app.inject({

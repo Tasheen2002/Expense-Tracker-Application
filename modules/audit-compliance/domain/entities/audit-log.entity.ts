@@ -94,6 +94,18 @@ export interface AuditLogProps {
   createdAt: Date;
 }
 
+export interface CreateAuditLogData {
+  workspaceId: string;
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  details: Record<string, unknown> | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+}
+
 export class AuditLog extends AggregateRoot {
   private readonly props: AuditLogProps;
 
@@ -102,30 +114,37 @@ export class AuditLog extends AggregateRoot {
     this.props = props;
   }
 
-  static create(props: Omit<AuditLogProps, 'id' | 'createdAt'>): AuditLog {
+  static create(data: CreateAuditLogData): AuditLog {
     const auditLogId = AuditLogId.create();
 
     const auditLog = new AuditLog({
-      ...props,
       id: auditLogId,
+      workspaceId: data.workspaceId,
+      userId: data.userId,
+      action: AuditAction.create(data.action),
+      resource: AuditResource.create(data.entityType, data.entityId),
+      details: data.details,
+      metadata: data.metadata,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
       createdAt: new Date(),
     });
 
     auditLog.addDomainEvent(
       new AuditLogCreatedEvent(
         auditLogId.getValue(),
-        props.workspaceId,
-        props.userId,
-        props.action.getValue(),
-        props.resource.entityType,
-        props.resource.entityId
+        data.workspaceId,
+        data.userId,
+        data.action,
+        data.entityType,
+        data.entityId
       )
     );
 
     return auditLog;
   }
 
-  static reconstitute(props: AuditLogProps): AuditLog {
+  static fromPersistence(props: AuditLogProps): AuditLog {
     return new AuditLog(props);
   }
 
