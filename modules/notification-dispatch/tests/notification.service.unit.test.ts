@@ -67,8 +67,8 @@ describe('Notification Service', () => {
 
       // Mock Template (Found)
       const mockTemplate = {
-        getSubjectTemplate: () => 'Alert: {{message}}',
-        getBodyTemplate: () => 'Body: {{message}}',
+        subjectTemplate: 'Alert: {{message}}',
+        bodyTemplate: 'Body: {{message}}',
       };
       mockTemplateRepository.findActiveTemplate.mockResolvedValue(mockTemplate);
 

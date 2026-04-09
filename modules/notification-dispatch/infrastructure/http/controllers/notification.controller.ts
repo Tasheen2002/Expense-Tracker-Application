@@ -25,30 +25,28 @@ export class NotificationController {
       };
       const userId = request.user.userId;
 
-      const listResult = await this.listNotificationsHandler.handle({
+      const paginatedData = await this.listNotificationsHandler.handle({
         recipientId: userId,
         workspaceId,
         limit: limit ?? 50,
         offset: offset ?? 0,
       });
-      const countResult = await this.getUnreadCountHandler.handle({
+      const unreadCount = await this.getUnreadCountHandler.handle({
         recipientId: userId,
         workspaceId,
       });
 
-      const paginatedData = listResult.data;
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        listResult,
         'Notifications retrieved successfully',
         {
-          notifications: paginatedData?.items ?? [],
-          unreadCount: countResult.data ?? 0,
+          notifications: paginatedData.items,
+          unreadCount,
           pagination: {
-            total: paginatedData?.total ?? 0,
-            limit: paginatedData?.limit ?? 0,
-            offset: paginatedData?.offset ?? 0,
-            hasMore: paginatedData?.hasMore ?? false,
+            total: paginatedData.total,
+            limit: paginatedData.limit,
+            offset: paginatedData.offset,
+            hasMore: paginatedData.hasMore,
           },
         }
       );
@@ -65,22 +63,20 @@ export class NotificationController {
       const { workspaceId } = request.params as { workspaceId: string };
       const userId = request.user.userId;
 
-      const result = await this.getUnreadNotificationsHandler.handle({
+      const paginatedData = await this.getUnreadNotificationsHandler.handle({
         recipientId: userId,
         workspaceId,
       });
-      const paginatedData = result.data;
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Unread notifications retrieved successfully',
         {
-          notifications: paginatedData?.items ?? [],
+          notifications: paginatedData.items,
           pagination: {
-            total: paginatedData?.total ?? 0,
-            limit: paginatedData?.limit ?? 0,
-            offset: paginatedData?.offset ?? 0,
-            hasMore: paginatedData?.hasMore ?? false,
+            total: paginatedData.total,
+            limit: paginatedData.limit,
+            offset: paginatedData.offset,
+            hasMore: paginatedData.hasMore,
           },
         }
       );

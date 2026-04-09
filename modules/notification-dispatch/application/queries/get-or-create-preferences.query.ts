@@ -3,7 +3,6 @@ import { NotificationPreferenceDTO } from '../../domain/entities/notification-pr
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export class GetOrCreatePreferencesQuery implements IQuery {
@@ -18,17 +17,16 @@ export class GetOrCreatePreferencesQuery implements IQuery {
 
 export class GetOrCreatePreferencesHandler implements IQueryHandler<
   GetOrCreatePreferencesQuery,
-  QueryResult<NotificationPreferenceDTO | null>
+  NotificationPreferenceDTO | null
 > {
   constructor(private readonly preferenceService: PreferenceService) {}
 
   async handle(
     query: GetOrCreatePreferencesQuery
-  ): Promise<QueryResult<NotificationPreferenceDTO | null>> {
-    const preferences = await this.preferenceService.getPreferences(
+  ): Promise<NotificationPreferenceDTO | null> {
+    return this.preferenceService.getPreferences(
       query.userId,
       query.workspaceId
     );
-    return QueryResult.success(preferences);
   }
 }

@@ -62,12 +62,11 @@ export class TemplateController {
     try {
       const { templateId } = request.params as { templateId: string };
 
-      const result = await this.getTemplateByIdHandler.handle({ templateId });
-      return ResponseHelper.fromQuery(
+      const template = await this.getTemplateByIdHandler.handle({ templateId });
+      return ResponseHelper.ok(
         reply,
-        result,
         'Template retrieved successfully',
-        result.data ?? undefined
+        template
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -82,24 +81,23 @@ export class TemplateController {
         channel: string;
       };
 
-      const result = await this.getActiveTemplateHandler.handle({
+      const template = await this.getActiveTemplateHandler.handle({
         workspaceId,
         type: type as NotificationType,
         channel: channel as NotificationChannel,
       });
 
-      if (!result.data) {
+      if (!template) {
         return ResponseHelper.notFound(
           reply,
           'No active template found for this type and channel'
         );
       }
 
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Active template retrieved successfully',
-        result.data
+        template
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

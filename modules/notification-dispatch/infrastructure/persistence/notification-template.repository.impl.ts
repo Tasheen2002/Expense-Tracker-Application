@@ -18,17 +18,16 @@ export class NotificationTemplateRepositoryImpl implements INotificationTemplate
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(template: NotificationTemplate): Promise<void> {
-    const id = template.getId().getValue();
-    const workspaceId = template.getWorkspaceId();
+    const id = template.id.getValue();
 
     const data = {
-      workspaceId: workspaceId?.getValue() || null,
-      name: template.getName(),
-      type: template.getType() as unknown as PrismaNotificationType,
-      channel: template.getChannel() as unknown as PrismaNotificationChannel,
-      subjectTemplate: template.getSubjectTemplate(),
-      bodyTemplate: template.getBodyTemplate(),
-      isActive: template.isActiveTemplate(),
+      workspaceId: template.workspaceId?.getValue() || null,
+      name: template.name,
+      type: template.type as unknown as PrismaNotificationType,
+      channel: template.channel as unknown as PrismaNotificationChannel,
+      subjectTemplate: template.subjectTemplate,
+      bodyTemplate: template.bodyTemplate,
+      isActive: template.isActive,
     };
 
     await this.prisma.notificationTemplate.upsert({
@@ -102,6 +101,6 @@ export class NotificationTemplateRepositoryImpl implements INotificationTemplate
       updatedAt: record.updatedAt,
     };
 
-    return NotificationTemplate.reconstitute(props);
+    return NotificationTemplate.fromPersistence(props);
   }
 }

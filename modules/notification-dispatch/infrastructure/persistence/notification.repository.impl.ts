@@ -35,26 +35,24 @@ export class NotificationRepositoryImpl
   }
 
   async save(notification: Notification): Promise<void> {
-    const id = notification.getId().getValue();
-    const notificationData = notification.getData();
+    const id = notification.id.getValue();
+    const notificationData = notification.data;
 
     const data = {
-      workspaceId: notification.getWorkspaceId().getValue(),
-      recipientId: notification.getRecipientId().getValue(),
-      type: notification.getType() as unknown as PrismaNotificationType,
-      channel:
-        notification.getChannel() as unknown as PrismaNotificationChannel,
-      priority:
-        notification.getPriority() as unknown as PrismaNotificationPriority,
-      title: notification.getTitle(),
-      content: notification.getContent(),
+      workspaceId: notification.workspaceId.getValue(),
+      recipientId: notification.recipientId.getValue(),
+      type: notification.type as unknown as PrismaNotificationType,
+      channel: notification.channel as unknown as PrismaNotificationChannel,
+      priority: notification.priority as unknown as PrismaNotificationPriority,
+      title: notification.title,
+      content: notification.content,
       data: notificationData
         ? (notificationData as Prisma.InputJsonValue)
         : Prisma.JsonNull,
-      status: notification.getStatus() as unknown as PrismaNotificationStatus,
-      error: notification.getError() || null,
-      readAt: notification.getReadAt() || null,
-      sentAt: notification.getSentAt() || null,
+      status: notification.status as unknown as PrismaNotificationStatus,
+      error: notification.error || null,
+      readAt: notification.readAt || null,
+      sentAt: notification.sentAt || null,
     };
 
     await this.prisma.notification.upsert({
@@ -166,6 +164,6 @@ export class NotificationRepositoryImpl
       updatedAt: record.updatedAt,
     };
 
-    return Notification.reconstitute(props);
+    return Notification.fromPersistence(props);
   }
 }

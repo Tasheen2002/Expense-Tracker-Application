@@ -3,7 +3,6 @@ import { NotificationTemplateDTO } from '../../domain/entities/notification-temp
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetTemplateByIdQuery extends IQuery {
@@ -12,16 +11,13 @@ export interface GetTemplateByIdQuery extends IQuery {
 
 export class GetTemplateByIdHandler implements IQueryHandler<
   GetTemplateByIdQuery,
-  QueryResult<NotificationTemplateDTO>
+  NotificationTemplateDTO
 > {
   constructor(private readonly templateService: TemplateService) {}
 
   async handle(
     input: GetTemplateByIdQuery
-  ): Promise<QueryResult<NotificationTemplateDTO>> {
-    const template = await this.templateService.getTemplateById(
-      input.templateId
-    );
-    return QueryResult.success(template);
+  ): Promise<NotificationTemplateDTO> {
+    return this.templateService.getTemplateById(input.templateId);
   }
 }

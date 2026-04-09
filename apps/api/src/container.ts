@@ -1177,7 +1177,7 @@ export class Container {
     );
 
     // Services - Notification
-    const recipientLookup = new PrismaRecipientLookupAdapter(userRepository);
+    const recipientLookup = new PrismaRecipientLookupAdapter(prisma);
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,
