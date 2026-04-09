@@ -44,19 +44,19 @@ export class RuleExecutionService {
       if (rule.matches(params.expenseData)) {
         // Create execution record
         const execution = RuleExecution.create({
-          ruleId: rule.getId(),
+          ruleId: rule.id,
           expenseId: params.expenseId,
           workspaceId: params.workspaceId,
-          appliedCategoryId: rule.getTargetCategoryId(),
+          appliedCategoryId: rule.targetCategoryId,
         });
 
         // Create suggestion record (Atomic with execution)
         const suggestion = CategorySuggestion.create({
           workspaceId: params.workspaceId,
           expenseId: params.expenseId,
-          suggestedCategoryId: rule.getTargetCategoryId(),
+          suggestedCategoryId: rule.targetCategoryId,
           confidence: ConfidenceScore.high(),
-          reason: `Matched rule: ${rule.getName()}`,
+          reason: `Matched rule: ${rule.name}`,
         });
 
         await this.executionRepository.saveWithSuggestion(
@@ -66,7 +66,7 @@ export class RuleExecutionService {
 
         // Emit RuleExecutedEvent from the CategoryRule aggregate root
         rule.recordExecution(
-          execution.getId().getValue(),
+          execution.id.getValue(),
           params.expenseId.getValue(),
           true,
         );
@@ -74,7 +74,7 @@ export class RuleExecutionService {
 
         return {
           appliedRule: CategoryRule.toDTO(rule),
-          suggestedCategoryId: rule.getTargetCategoryId().getValue(),
+          suggestedCategoryId: rule.targetCategoryId.getValue(),
           execution: RuleExecution.toDTO(execution),
           suggestion: CategorySuggestion.toDTO(suggestion),
         };

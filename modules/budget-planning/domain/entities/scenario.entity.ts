@@ -6,17 +6,19 @@ import { UserId } from '../../../identity-workspace';
 // Entity
 // ============================================================================
 
+interface ScenarioProps {
+  id: ScenarioId;
+  planId: PlanId;
+  name: string;
+  description: string | null;
+  assumptions: Record<string, unknown> | null;
+  createdBy: UserId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class Scenario {
-  private constructor(
-    private readonly _id: ScenarioId,
-    private readonly _planId: PlanId,
-    private _name: string,
-    private _description: string | null,
-    private _assumptions: Record<string, unknown> | null,
-    private readonly _createdBy: UserId,
-    private readonly _createdAt: Date,
-    private _updatedAt: Date
-  ) {}
+  private constructor(private props: ScenarioProps) {}
 
   static create(params: {
     planId: PlanId;
@@ -25,18 +27,16 @@ export class Scenario {
     assumptions?: Record<string, unknown> | null;
     createdBy: UserId;
   }): Scenario {
-    const scenario = new Scenario(
-      ScenarioId.create(),
-      params.planId,
-      params.name,
-      params.description || null,
-      params.assumptions || null,
-      params.createdBy,
-      new Date(),
-      new Date()
-    );
-
-    return scenario;
+    return new Scenario({
+      id: ScenarioId.create(),
+      planId: params.planId,
+      name: params.name,
+      description: params.description || null,
+      assumptions: params.assumptions || null,
+      createdBy: params.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   static fromPersistence(params: {
@@ -49,81 +49,48 @@ export class Scenario {
     createdAt: Date;
     updatedAt: Date;
   }): Scenario {
-    return new Scenario(
-      ScenarioId.fromString(params.id),
-      PlanId.fromString(params.planId),
-      params.name,
-      params.description,
-      params.assumptions,
-      UserId.fromString(params.createdBy),
-      params.createdAt,
-      params.updatedAt
-    );
+    return new Scenario({
+      id: ScenarioId.fromString(params.id),
+      planId: PlanId.fromString(params.planId),
+      name: params.name,
+      description: params.description,
+      assumptions: params.assumptions,
+      createdBy: UserId.fromString(params.createdBy),
+      createdAt: params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
-  get id(): ScenarioId {
-    return this._id;
-  }
-
-  get planId(): PlanId {
-    return this._planId;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-
-  get description(): string | null {
-    return this._description;
-  }
-
-  get assumptions(): Record<string, unknown> | null {
-    return this._assumptions;
-  }
-
-  get createdBy(): UserId {
-    return this._createdBy;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
+  get id(): ScenarioId { return this.props.id; }
+  get planId(): PlanId { return this.props.planId; }
+  get name(): string { return this.props.name; }
+  get description(): string | null { return this.props.description; }
+  get assumptions(): Record<string, unknown> | null { return this.props.assumptions; }
+  get createdBy(): UserId { return this.props.createdBy; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateDetails(params: {
     name?: string;
     description?: string | null;
     assumptions?: Record<string, unknown> | null;
   }): void {
-    const changes: Record<string, unknown> = {};
-    if (params.name) {
-      this._name = params.name;
-      changes.name = params.name;
-    }
-    if (params.description !== undefined) {
-      this._description = params.description;
-      changes.description = params.description;
-    }
-    if (params.assumptions !== undefined) {
-      this._assumptions = params.assumptions;
-      changes.assumptions = params.assumptions;
-    }
-    this._updatedAt = new Date();
+    if (params.name) this.props.name = params.name;
+    if (params.description !== undefined) this.props.description = params.description;
+    if (params.assumptions !== undefined) this.props.assumptions = params.assumptions;
+    this.props.updatedAt = new Date();
   }
 
   static toDTO(scenario: Scenario): ScenarioDTO {
     return {
-      id: scenario.id.getValue(),
-      planId: scenario.planId.getValue(),
-      name: scenario.name,
-      description: scenario.description,
-      assumptions: scenario.assumptions,
-      createdBy: scenario.createdBy.getValue(),
-      createdAt: scenario.createdAt.toISOString(),
-      updatedAt: scenario.updatedAt.toISOString(),
+      id: scenario.props.id.getValue(),
+      planId: scenario.props.planId.getValue(),
+      name: scenario.props.name,
+      description: scenario.props.description,
+      assumptions: scenario.props.assumptions,
+      createdBy: scenario.props.createdBy.getValue(),
+      createdAt: scenario.props.createdAt.toISOString(),
+      updatedAt: scenario.props.updatedAt.toISOString(),
     };
   }
 }

@@ -106,10 +106,10 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(false);
 
       // Act
-      await service.deleteRule(rule.getId(), workspaceIdStr, userIdStr);
+      await service.deleteRule(rule.id, workspaceIdStr, userIdStr);
 
       // Assert
-      expect(mockRepository.delete).toHaveBeenCalledWith(rule.getId());
+      expect(mockRepository.delete).toHaveBeenCalledWith(rule.id);
     });
 
     it("should allow admin/owner to delete rule created by others", async () => {
@@ -125,10 +125,10 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(true);
 
       // Act
-      await service.deleteRule(rule.getId(), workspaceIdStr, userIdStr);
+      await service.deleteRule(rule.id, workspaceIdStr, userIdStr);
 
       // Assert
-      expect(mockRepository.delete).toHaveBeenCalledWith(rule.getId());
+      expect(mockRepository.delete).toHaveBeenCalledWith(rule.id);
     });
 
     it("should throw Unauthorized if neither creator nor admin", async () => {
@@ -144,7 +144,7 @@ describe("CategoryRuleService Authorization", () => {
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(false);
 
       // Act & Assert
-      await expect(service.deleteRule(rule.getId(), workspaceIdStr, userIdStr)).rejects.toThrow(
+      await expect(service.deleteRule(rule.id, workspaceIdStr, userIdStr)).rejects.toThrow(
         UnauthorizedRuleAccessError,
       );
     });

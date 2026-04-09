@@ -5,7 +5,6 @@ import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetSuggestionsByWorkspaceQuery extends IQuery {
@@ -16,18 +15,14 @@ export interface GetSuggestionsByWorkspaceQuery extends IQuery {
 
 export class GetSuggestionsByWorkspaceHandler implements IQueryHandler<
   GetSuggestionsByWorkspaceQuery,
-  QueryResult<PaginatedResult<CategorySuggestionDTO>>
+  PaginatedResult<CategorySuggestionDTO>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async handle(
-    query: GetSuggestionsByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<CategorySuggestionDTO>>> {
-    const result = await this.suggestionService.getSuggestionsByWorkspaceId(
+  async handle(query: GetSuggestionsByWorkspaceQuery): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    return this.suggestionService.getSuggestionsByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       { limit: query.limit, offset: query.offset }
     );
-
-    return QueryResult.success(result);
   }
 }

@@ -27,18 +27,18 @@ export class PrismaCategoryRuleRepository
 
   async save(rule: CategoryRule): Promise<void> {
     const data = {
-      id: rule.getId().getValue(),
-      workspaceId: rule.getWorkspaceId().getValue(),
-      name: rule.getName(),
-      description: rule.getDescription(),
-      priority: rule.getPriority(),
-      isActive: rule.getIsActive(),
-      conditionType: rule.getCondition().getConditionType(),
-      conditionValue: rule.getCondition().getConditionValue(),
-      targetCategoryId: rule.getTargetCategoryId().getValue(),
-      createdBy: rule.getCreatedBy().getValue(),
-      createdAt: rule.getCreatedAt(),
-      updatedAt: rule.getUpdatedAt(),
+      id: rule.id.getValue(),
+      workspaceId: rule.workspaceId.getValue(),
+      name: rule.name,
+      description: rule.description,
+      priority: rule.priority,
+      isActive: rule.isActive,
+      conditionType: rule.condition.getConditionType(),
+      conditionValue: rule.condition.getConditionValue(),
+      targetCategoryId: rule.targetCategoryId.getValue(),
+      createdBy: rule.createdBy.getValue(),
+      createdAt: rule.createdAt,
+      updatedAt: rule.updatedAt,
     };
 
     await this.prisma.categoryRule.upsert({
@@ -123,7 +123,7 @@ export class PrismaCategoryRuleRepository
   }
 
   private toDomain(raw: PrismaCategoryRule): CategoryRule {
-    return CategoryRule.reconstitute({
+    return CategoryRule.fromPersistence({
       id: RuleId.fromString(raw.id),
       workspaceId: WorkspaceId.fromString(raw.workspaceId),
       name: raw.name,

@@ -6,33 +6,33 @@ import { ForecastType } from '../enums/forecast-type.enum';
 // Entity
 // ============================================================================
 
+interface ForecastProps {
+  id: ForecastId;
+  planId: PlanId;
+  name: string;
+  type: ForecastType;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class Forecast {
-  private constructor(
-    private readonly _id: ForecastId,
-    private readonly _planId: PlanId,
-    private _name: string,
-    private readonly _type: ForecastType,
-    private _isActive: boolean,
-    private readonly _createdAt: Date,
-    private _updatedAt: Date
-  ) {}
+  private constructor(private props: ForecastProps) {}
 
   static create(params: {
     planId: PlanId;
     name: string;
     type: ForecastType;
   }): Forecast {
-    const forecast = new Forecast(
-      ForecastId.create(),
-      params.planId,
-      params.name,
-      params.type,
-      true,
-      new Date(),
-      new Date()
-    );
-
-    return forecast;
+    return new Forecast({
+      id: ForecastId.create(),
+      planId: params.planId,
+      name: params.name,
+      type: params.type,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   static fromPersistence(params: {
@@ -44,71 +44,51 @@ export class Forecast {
     createdAt: Date;
     updatedAt: Date;
   }): Forecast {
-    return new Forecast(
-      ForecastId.fromString(params.id),
-      PlanId.fromString(params.planId),
-      params.name,
-      params.type,
-      params.isActive,
-      params.createdAt,
-      params.updatedAt
-    );
+    return new Forecast({
+      id: ForecastId.fromString(params.id),
+      planId: PlanId.fromString(params.planId),
+      name: params.name,
+      type: params.type,
+      isActive: params.isActive,
+      createdAt: params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
-  get id(): ForecastId {
-    return this._id;
-  }
-
-  get planId(): PlanId {
-    return this._planId;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-
-  get type(): ForecastType {
-    return this._type;
-  }
-
-  get active(): boolean {
-    return this._isActive;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
+  get id(): ForecastId { return this.props.id; }
+  get planId(): PlanId { return this.props.planId; }
+  get name(): string { return this.props.name; }
+  get type(): ForecastType { return this.props.type; }
+  get active(): boolean { return this.props.isActive; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateName(name: string): void {
-    this._name = name;
-    this._updatedAt = new Date();
+    this.props.name = name;
+    this.props.updatedAt = new Date();
   }
 
   activate(): void {
-    if (this._isActive) return;
-    this._isActive = true;
-    this._updatedAt = new Date();
+    if (this.props.isActive) return;
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
   }
 
   deactivate(): void {
-    if (!this._isActive) return;
-    this._isActive = false;
-    this._updatedAt = new Date();
+    if (!this.props.isActive) return;
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
   }
 
   static toDTO(forecast: Forecast): ForecastDTO {
     return {
-      id: forecast.id.getValue(),
-      planId: forecast.planId.getValue(),
-      name: forecast.name,
-      type: forecast.type,
-      isActive: forecast.active,
-      createdAt: forecast.createdAt.toISOString(),
-      updatedAt: forecast.updatedAt.toISOString(),
+      id: forecast.props.id.getValue(),
+      planId: forecast.props.planId.getValue(),
+      name: forecast.props.name,
+      type: forecast.props.type,
+      isActive: forecast.props.isActive,
+      createdAt: forecast.props.createdAt.toISOString(),
+      updatedAt: forecast.props.updatedAt.toISOString(),
     };
   }
 }

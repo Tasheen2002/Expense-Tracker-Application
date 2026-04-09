@@ -7,49 +7,35 @@ import { ExpenseId, CategoryId } from '../../../expense-ledger';
 // Entity
 // ============================================================================
 
+interface RuleExecutionProps {
+  id: RuleExecutionId;
+  ruleId: RuleId;
+  expenseId: ExpenseId;
+  workspaceId: WorkspaceId;
+  appliedCategoryId: CategoryId;
+  executedAt: Date;
+}
+
 export class RuleExecution {
-  private id: RuleExecutionId;
-  private ruleId: RuleId;
-  private expenseId: ExpenseId;
-  private workspaceId: WorkspaceId;
-  private appliedCategoryId: CategoryId;
-  private executedAt: Date;
+  private constructor(private props: RuleExecutionProps) {}
 
-  private constructor(props: {
-    id: RuleExecutionId;
-    ruleId: RuleId;
-    expenseId: ExpenseId;
-    workspaceId: WorkspaceId;
-    appliedCategoryId: CategoryId;
-    executedAt: Date;
-  }) {
-    this.id = props.id;
-    this.ruleId = props.ruleId;
-    this.expenseId = props.expenseId;
-    this.workspaceId = props.workspaceId;
-    this.appliedCategoryId = props.appliedCategoryId;
-    this.executedAt = props.executedAt;
-  }
-
-  static create(props: {
+  static create(params: {
     ruleId: RuleId;
     expenseId: ExpenseId;
     workspaceId: WorkspaceId;
     appliedCategoryId: CategoryId;
   }): RuleExecution {
-    const execution = new RuleExecution({
+    return new RuleExecution({
       id: RuleExecutionId.create(),
-      ruleId: props.ruleId,
-      expenseId: props.expenseId,
-      workspaceId: props.workspaceId,
-      appliedCategoryId: props.appliedCategoryId,
+      ruleId: params.ruleId,
+      expenseId: params.expenseId,
+      workspaceId: params.workspaceId,
+      appliedCategoryId: params.appliedCategoryId,
       executedAt: new Date(),
     });
-
-    return execution;
   }
 
-  static reconstitute(props: {
+  static fromPersistence(params: {
     id: RuleExecutionId;
     ruleId: RuleId;
     expenseId: ExpenseId;
@@ -57,46 +43,37 @@ export class RuleExecution {
     appliedCategoryId: CategoryId;
     executedAt: Date;
   }): RuleExecution {
-    return new RuleExecution(props);
+    return new RuleExecution(params);
   }
 
   // Getters
-  getId(): RuleExecutionId {
-    return this.id;
+  get id(): RuleExecutionId {
+    return this.props.id;
+  }
+  get ruleId(): RuleId {
+    return this.props.ruleId;
+  }
+  get expenseId(): ExpenseId {
+    return this.props.expenseId;
+  }
+  get workspaceId(): WorkspaceId {
+    return this.props.workspaceId;
+  }
+  get appliedCategoryId(): CategoryId {
+    return this.props.appliedCategoryId;
+  }
+  get executedAt(): Date {
+    return this.props.executedAt;
   }
 
-  getRuleId(): RuleId {
-    return this.ruleId;
-  }
-
-  getExpenseId(): ExpenseId {
-    return this.expenseId;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getAppliedCategoryId(): CategoryId {
-    return this.appliedCategoryId;
-  }
-
-  getExecutedAt(): Date {
-    return this.executedAt;
-  }
-
-  /**
-   * Serialize RuleExecution to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(execution: RuleExecution): RuleExecutionDTO {
     return {
-      id: execution.id.getValue(),
-      ruleId: execution.ruleId.getValue(),
-      expenseId: execution.expenseId.getValue(),
-      workspaceId: execution.workspaceId.getValue(),
-      appliedCategoryId: execution.appliedCategoryId.getValue(),
-      executedAt: execution.executedAt,
+      id: execution.props.id.getValue(),
+      ruleId: execution.props.ruleId.getValue(),
+      expenseId: execution.props.expenseId.getValue(),
+      workspaceId: execution.props.workspaceId.getValue(),
+      appliedCategoryId: execution.props.appliedCategoryId.getValue(),
+      executedAt: execution.props.executedAt,
     };
   }
 }

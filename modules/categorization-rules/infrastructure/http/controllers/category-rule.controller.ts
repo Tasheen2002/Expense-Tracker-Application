@@ -193,14 +193,9 @@ export class CategoryRuleController {
       const { workspaceId, ruleId } = request.params;
       const userId = request.user.userId;
 
-      const result = await this.getRuleByIdHandler.handle({ ruleId, workspaceId, userId });
+      const rule = await this.getRuleByIdHandler.handle({ ruleId, workspaceId, userId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Category rule retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Category rule retrieved successfully', rule);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -225,17 +220,16 @@ export class CategoryRuleController {
           limit: limit ? parseInt(limit) : undefined,
           offset: offset ? parseInt(offset) : undefined,
         });
-        return ResponseHelper.fromQuery(
+        return ResponseHelper.ok(
           reply,
-          result,
           'Active category rules retrieved successfully',
           {
-            items: result.data?.items || [],
+            items: result.items,
             pagination: {
-              total: result.data?.total || 0,
-              limit: result.data?.limit || 10,
-              offset: result.data?.offset || 0,
-              hasMore: result.data?.hasMore || false,
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
             },
           }
         );
@@ -246,17 +240,16 @@ export class CategoryRuleController {
           limit: limit ? parseInt(limit) : undefined,
           offset: offset ? parseInt(offset) : undefined,
         });
-        return ResponseHelper.fromQuery(
+        return ResponseHelper.ok(
           reply,
-          result,
           'Category rules retrieved successfully',
           {
-            items: result.data?.items || [],
+            items: result.items,
             pagination: {
-              total: result.data?.total || 0,
-              limit: result.data?.limit || 10,
-              offset: result.data?.offset || 0,
-              hasMore: result.data?.hasMore || false,
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
             },
           }
         );
@@ -285,17 +278,16 @@ export class CategoryRuleController {
           : undefined,
       });
 
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Rule executions retrieved successfully',
         {
-          items: result.data?.items || [],
+          items: result.items,
           pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 10,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
           },
         }
       );

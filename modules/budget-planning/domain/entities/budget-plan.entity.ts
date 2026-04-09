@@ -331,19 +331,21 @@ export class ScenarioDeletedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+interface BudgetPlanProps {
+  id: PlanId;
+  workspaceId: WorkspaceId;
+  name: string;
+  description: string | null;
+  periodType: PeriodType;
+  period: PlanPeriod;
+  status: PlanStatus;
+  createdBy: UserId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class BudgetPlan extends AggregateRoot {
-  private constructor(
-    private readonly _id: PlanId,
-    private readonly _workspaceId: WorkspaceId,
-    private _name: string,
-    private _description: string | null,
-    private readonly _periodType: PeriodType,
-    private readonly _period: PlanPeriod,
-    private _status: PlanStatus,
-    private readonly _createdBy: UserId,
-    private readonly _createdAt: Date,
-    private _updatedAt: Date
-  ) {
+  private constructor(private props: BudgetPlanProps) {
     super();
   }
 
@@ -357,18 +359,18 @@ export class BudgetPlan extends AggregateRoot {
   }): BudgetPlan {
     const planId = PlanId.create();
 
-    const plan = new BudgetPlan(
-      planId,
-      params.workspaceId,
-      params.name,
-      params.description || null,
-      params.periodType,
-      params.period,
-      PlanStatus.DRAFT,
-      params.createdBy,
-      new Date(),
-      new Date()
-    );
+    const plan = new BudgetPlan({
+      id: planId,
+      workspaceId: params.workspaceId,
+      name: params.name,
+      description: params.description || null,
+      periodType: params.periodType,
+      period: params.period,
+      status: PlanStatus.DRAFT,
+      createdBy: params.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     plan.addDomainEvent(
       new BudgetPlanCreatedEvent(
@@ -395,208 +397,132 @@ export class BudgetPlan extends AggregateRoot {
     createdAt: Date;
     updatedAt: Date;
   }): BudgetPlan {
-    return new BudgetPlan(
-      PlanId.fromString(params.id),
-      WorkspaceId.fromString(params.workspaceId),
-      params.name,
-      params.description,
-      params.periodType,
-      PlanPeriod.create(params.startDate, params.endDate),
-      params.status,
-      UserId.fromString(params.createdBy),
-      params.createdAt,
-      params.updatedAt
-    );
+    return new BudgetPlan({
+      id: PlanId.fromString(params.id),
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
+      name: params.name,
+      description: params.description,
+      periodType: params.periodType,
+      period: PlanPeriod.create(params.startDate, params.endDate),
+      status: params.status,
+      createdBy: UserId.fromString(params.createdBy),
+      createdAt: params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
-  get id(): PlanId {
-    return this._id;
-  }
-
-  get workspaceId(): WorkspaceId {
-    return this._workspaceId;
-  }
-
-  get name(): string {
-    return this._name;
-  }
-
-  get description(): string | null {
-    return this._description;
-  }
-
-  get periodType(): PeriodType {
-    return this._periodType;
-  }
-
-  get period(): PlanPeriod {
-    return this._period;
-  }
-
-  get status(): PlanStatus {
-    return this._status;
-  }
-
-  get createdBy(): UserId {
-    return this._createdBy;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
+  get id(): PlanId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get description(): string | null { return this.props.description; }
+  get periodType(): PeriodType { return this.props.periodType; }
+  get period(): PlanPeriod { return this.props.period; }
+  get status(): PlanStatus { return this.props.status; }
+  get createdBy(): UserId { return this.props.createdBy; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateDetails(name?: string, description?: string | null): void {
-    if (name) this._name = name;
-    if (description !== undefined) this._description = description;
-    this._updatedAt = new Date();
+    if (name) this.props.name = name;
+    if (description !== undefined) this.props.description = description;
+    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanUpdatedEvent(this._id.getValue(), this._name, this._description)
+      new BudgetPlanUpdatedEvent(this.props.id.getValue(), this.props.name, this.props.description)
     );
   }
 
   updateStatus(status: PlanStatus): void {
-    const oldStatus = this._status;
-    this._status = status;
-    this._updatedAt = new Date();
+    const oldStatus = this.props.status;
+    this.props.status = status;
+    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
-      new BudgetPlanStatusChangedEvent(this._id.getValue(), oldStatus, status)
+      new BudgetPlanStatusChangedEvent(this.props.id.getValue(), oldStatus, status)
     );
   }
 
   markAsDeleted(): void {
     this.addDomainEvent(
-      new BudgetPlanDeletedEvent(
-        this._id.getValue(),
-        this._workspaceId.getValue()
-      )
+      new BudgetPlanDeletedEvent(this.props.id.getValue(), this.props.workspaceId.getValue())
     );
   }
 
   recordForecastCreated(forecastId: string, name: string): void {
     this.addDomainEvent(
-      new ForecastCreatedEvent(
-        this._id.getValue(),
-        forecastId,
-        this._workspaceId.getValue(),
-        name
-      )
+      new ForecastCreatedEvent(this.props.id.getValue(), forecastId, this.props.workspaceId.getValue(), name)
     );
   }
 
   recordForecastUpdated(forecastId: string): void {
     this.addDomainEvent(
-      new ForecastUpdatedEvent(
-        this._id.getValue(),
-        forecastId,
-        this._workspaceId.getValue()
-      )
+      new ForecastUpdatedEvent(this.props.id.getValue(), forecastId, this.props.workspaceId.getValue())
     );
   }
 
   recordForecastActivated(forecastId: string): void {
     this.addDomainEvent(
-      new ForecastActivatedEvent(
-        this._id.getValue(),
-        forecastId,
-        this._workspaceId.getValue()
-      )
+      new ForecastActivatedEvent(this.props.id.getValue(), forecastId, this.props.workspaceId.getValue())
     );
   }
 
   recordForecastDeactivated(forecastId: string): void {
     this.addDomainEvent(
-      new ForecastDeactivatedEvent(
-        this._id.getValue(),
-        forecastId,
-        this._workspaceId.getValue()
-      )
+      new ForecastDeactivatedEvent(this.props.id.getValue(), forecastId, this.props.workspaceId.getValue())
     );
   }
 
   recordScenarioCreated(scenarioId: string, name: string): void {
     this.addDomainEvent(
-      new ScenarioCreatedEvent(
-        this._id.getValue(),
-        scenarioId,
-        this._workspaceId.getValue(),
-        name
-      )
+      new ScenarioCreatedEvent(this.props.id.getValue(), scenarioId, this.props.workspaceId.getValue(), name)
     );
   }
 
   recordScenarioUpdated(scenarioId: string): void {
     this.addDomainEvent(
-      new ScenarioUpdatedEvent(
-        this._id.getValue(),
-        scenarioId,
-        this._workspaceId.getValue()
-      )
+      new ScenarioUpdatedEvent(this.props.id.getValue(), scenarioId, this.props.workspaceId.getValue())
     );
   }
 
   recordForecastItemUpdated(forecastId: string, itemId: string): void {
     this.addDomainEvent(
-      new ForecastItemUpdatedEvent(
-        this._id.getValue(),
-        forecastId,
-        itemId,
-        this._workspaceId.getValue()
-      )
+      new ForecastItemUpdatedEvent(this.props.id.getValue(), forecastId, itemId, this.props.workspaceId.getValue())
     );
   }
 
   recordForecastItemDeleted(forecastId: string, itemId: string): void {
     this.addDomainEvent(
-      new ForecastItemDeletedEvent(
-        this._id.getValue(),
-        forecastId,
-        itemId,
-        this._workspaceId.getValue()
-      )
+      new ForecastItemDeletedEvent(this.props.id.getValue(), forecastId, itemId, this.props.workspaceId.getValue())
     );
   }
 
   recordForecastDeleted(forecastId: string): void {
     this.addDomainEvent(
-      new ForecastDeletedEvent(
-        this._id.getValue(),
-        forecastId,
-        this._workspaceId.getValue()
-      )
+      new ForecastDeletedEvent(this.props.id.getValue(), forecastId, this.props.workspaceId.getValue())
     );
   }
 
   recordScenarioDeleted(scenarioId: string): void {
     this.addDomainEvent(
-      new ScenarioDeletedEvent(
-        this._id.getValue(),
-        scenarioId,
-        this._workspaceId.getValue()
-      )
+      new ScenarioDeletedEvent(this.props.id.getValue(), scenarioId, this.props.workspaceId.getValue())
     );
   }
 
   static toDTO(plan: BudgetPlan): BudgetPlanDTO {
     return {
-      id: plan.id.getValue(),
-      workspaceId: plan.workspaceId.getValue(),
-      name: plan.name,
-      description: plan.description,
-      periodType: plan.periodType,
+      id: plan.props.id.getValue(),
+      workspaceId: plan.props.workspaceId.getValue(),
+      name: plan.props.name,
+      description: plan.props.description,
+      periodType: plan.props.periodType,
       period: {
-        startDate: plan.period.startDate.toISOString(),
-        endDate: plan.period.endDate.toISOString(),
+        startDate: plan.props.period.startDate.toISOString(),
+        endDate: plan.props.period.endDate.toISOString(),
       },
-      status: plan.status,
-      createdBy: plan.createdBy.getValue(),
-      createdAt: plan.createdAt.toISOString(),
-      updatedAt: plan.updatedAt.toISOString(),
+      status: plan.props.status,
+      createdBy: plan.props.createdBy.getValue(),
+      createdAt: plan.props.createdAt.toISOString(),
+      updatedAt: plan.props.updatedAt.toISOString(),
     };
   }
 }

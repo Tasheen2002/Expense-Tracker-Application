@@ -23,15 +23,15 @@ export class PrismaCategorySuggestionRepository
 
   async save(suggestion: CategorySuggestion): Promise<void> {
     const data = {
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
+      id: suggestion.id.getValue(),
+      workspaceId: suggestion.workspaceId.getValue(),
+      expenseId: suggestion.expenseId.getValue(),
+      suggestedCategoryId: suggestion.suggestedCategoryId.getValue(),
+      confidence: suggestion.confidence.getValue(),
+      reason: suggestion.reason,
+      isAccepted: suggestion.isAccepted,
+      createdAt: suggestion.createdAt,
+      respondedAt: suggestion.respondedAt,
     };
 
     await this.prisma.categorySuggestion.upsert({
@@ -119,7 +119,7 @@ export class PrismaCategorySuggestionRepository
   private toDomain(
     raw: Prisma.CategorySuggestionGetPayload<object>,
   ): CategorySuggestion {
-    return CategorySuggestion.reconstitute({
+    return CategorySuggestion.fromPersistence({
       id: SuggestionId.fromString(raw.id),
       workspaceId: WorkspaceId.fromString(raw.workspaceId),
       expenseId: ExpenseId.fromString(raw.expenseId),

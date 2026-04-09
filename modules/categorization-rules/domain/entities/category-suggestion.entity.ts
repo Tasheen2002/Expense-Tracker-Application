@@ -96,38 +96,21 @@ export class CategorySuggestionDeletedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
-export class CategorySuggestion extends AggregateRoot {
-  private id: SuggestionId;
-  private workspaceId: WorkspaceId;
-  private expenseId: ExpenseId;
-  private suggestedCategoryId: CategoryId;
-  private confidence: ConfidenceScore;
-  private reason: string | null;
-  private isAccepted: boolean | null;
-  private createdAt: Date;
-  private respondedAt: Date | null;
+interface CategorySuggestionProps {
+  id: SuggestionId;
+  workspaceId: WorkspaceId;
+  expenseId: ExpenseId;
+  suggestedCategoryId: CategoryId;
+  confidence: ConfidenceScore;
+  reason: string | null;
+  isAccepted: boolean | null;
+  createdAt: Date;
+  respondedAt: Date | null;
+}
 
-  private constructor(props: {
-    id: SuggestionId;
-    workspaceId: WorkspaceId;
-    expenseId: ExpenseId;
-    suggestedCategoryId: CategoryId;
-    confidence: ConfidenceScore;
-    reason: string | null;
-    isAccepted: boolean | null;
-    createdAt: Date;
-    respondedAt: Date | null;
-  }) {
+export class CategorySuggestion extends AggregateRoot {
+  private constructor(private props: CategorySuggestionProps) {
     super();
-    this.id = props.id;
-    this.workspaceId = props.workspaceId;
-    this.expenseId = props.expenseId;
-    this.suggestedCategoryId = props.suggestedCategoryId;
-    this.confidence = props.confidence;
-    this.reason = props.reason;
-    this.isAccepted = props.isAccepted;
-    this.createdAt = props.createdAt;
-    this.respondedAt = props.respondedAt;
   }
 
   static create(props: {
@@ -157,7 +140,7 @@ export class CategorySuggestion extends AggregateRoot {
 
     suggestion.addDomainEvent(
       new CategorySuggestionCreatedEvent(
-        suggestion.id.getValue(),
+        suggestion.props.id.getValue(),
         props.workspaceId.getValue(),
         props.expenseId.getValue(),
         props.suggestedCategoryId.getValue(),
@@ -168,7 +151,7 @@ export class CategorySuggestion extends AggregateRoot {
     return suggestion;
   }
 
-  static reconstitute(props: {
+  static fromPersistence(props: {
     id: SuggestionId;
     workspaceId: WorkspaceId;
     expenseId: ExpenseId;
@@ -184,107 +167,95 @@ export class CategorySuggestion extends AggregateRoot {
 
   // Actions
   accept(): void {
-    if (this.isAccepted !== null) {
+    if (this.props.isAccepted !== null) {
       throw new InvalidSuggestionError(
         'Suggestion has already been responded to'
       );
     }
-    this.isAccepted = true;
-    this.respondedAt = new Date();
+    this.props.isAccepted = true;
+    this.props.respondedAt = new Date();
     this.addDomainEvent(
       new CategorySuggestionAcceptedEvent(
-        this.id.getValue(),
-        this.expenseId.getValue(),
-        this.suggestedCategoryId.getValue()
+        this.props.id.getValue(),
+        this.props.expenseId.getValue(),
+        this.props.suggestedCategoryId.getValue()
       )
     );
   }
 
   reject(): void {
-    if (this.isAccepted !== null) {
+    if (this.props.isAccepted !== null) {
       throw new InvalidSuggestionError(
         'Suggestion has already been responded to'
       );
     }
-    this.isAccepted = false;
-    this.respondedAt = new Date();
+    this.props.isAccepted = false;
+    this.props.respondedAt = new Date();
     this.addDomainEvent(
       new CategorySuggestionRejectedEvent(
-        this.id.getValue(),
-        this.expenseId.getValue()
+        this.props.id.getValue(),
+        this.props.expenseId.getValue()
       )
     );
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new CategorySuggestionDeletedEvent(this.id.getValue()));
+    this.addDomainEvent(
+      new CategorySuggestionDeletedEvent(this.props.id.getValue())
+    );
   }
 
   // Query methods
   isPending(): boolean {
-    return this.isAccepted === null;
+    return this.props.isAccepted === null;
   }
-
   wasAccepted(): boolean {
-    return this.isAccepted === true;
+    return this.props.isAccepted === true;
   }
-
   wasRejected(): boolean {
-    return this.isAccepted === false;
+    return this.props.isAccepted === false;
   }
 
   // Getters
-  getId(): SuggestionId {
-    return this.id;
+  get id(): SuggestionId {
+    return this.props.id;
+  }
+  get workspaceId(): WorkspaceId {
+    return this.props.workspaceId;
+  }
+  get expenseId(): ExpenseId {
+    return this.props.expenseId;
+  }
+  get suggestedCategoryId(): CategoryId {
+    return this.props.suggestedCategoryId;
+  }
+  get confidence(): ConfidenceScore {
+    return this.props.confidence;
+  }
+  get reason(): string | null {
+    return this.props.reason;
+  }
+  get isAccepted(): boolean | null {
+    return this.props.isAccepted;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get respondedAt(): Date | null {
+    return this.props.respondedAt;
   }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getExpenseId(): ExpenseId {
-    return this.expenseId;
-  }
-
-  getSuggestedCategoryId(): CategoryId {
-    return this.suggestedCategoryId;
-  }
-
-  getConfidence(): ConfidenceScore {
-    return this.confidence;
-  }
-
-  getReason(): string | null {
-    return this.reason;
-  }
-
-  getIsAccepted(): boolean | null {
-    return this.isAccepted;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getRespondedAt(): Date | null {
-    return this.respondedAt;
-  }
-
-  /**
-   * Serialize CategorySuggestion to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(suggestion: CategorySuggestion): CategorySuggestionDTO {
     return {
-      id: suggestion.id.getValue(),
-      workspaceId: suggestion.workspaceId.getValue(),
-      expenseId: suggestion.expenseId.getValue(),
-      suggestedCategoryId: suggestion.suggestedCategoryId.getValue(),
-      confidence: suggestion.confidence.getValue(),
-      reason: suggestion.reason,
-      isAccepted: suggestion.isAccepted,
-      createdAt: suggestion.createdAt,
-      respondedAt: suggestion.respondedAt,
+      id: suggestion.props.id.getValue(),
+      workspaceId: suggestion.props.workspaceId.getValue(),
+      expenseId: suggestion.props.expenseId.getValue(),
+      suggestedCategoryId: suggestion.props.suggestedCategoryId.getValue(),
+      confidence: suggestion.props.confidence.getValue(),
+      reason: suggestion.props.reason,
+      isAccepted: suggestion.props.isAccepted,
+      createdAt: suggestion.props.createdAt,
+      respondedAt: suggestion.props.respondedAt,
     };
   }
 }
