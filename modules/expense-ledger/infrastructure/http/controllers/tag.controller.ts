@@ -118,12 +118,7 @@ export class TagController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Tag retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Tag retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -146,22 +141,15 @@ export class TagController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Tags retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Tags retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

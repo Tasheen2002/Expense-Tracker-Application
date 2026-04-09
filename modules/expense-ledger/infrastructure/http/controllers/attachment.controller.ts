@@ -98,12 +98,7 @@ export class AttachmentController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Attachment retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Attachment retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -123,14 +118,7 @@ export class AttachmentController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Attachments retrieved successfully',
-        result.data
-          ? { items: result.data }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Attachments retrieved successfully', { items: result });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

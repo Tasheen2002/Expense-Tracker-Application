@@ -180,12 +180,7 @@ export class ExpenseController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Expense retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Expense retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -213,22 +208,15 @@ export class ExpenseController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Expenses retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Expenses retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -276,22 +264,15 @@ export class ExpenseController {
         offset: query.offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Expenses filtered successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Expenses filtered successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -314,12 +295,7 @@ export class ExpenseController {
         currency,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Expense statistics retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Expense statistics retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

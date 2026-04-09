@@ -3,7 +3,6 @@ import {
   Prisma,
   SplitType as PrismaSplitType,
 } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
 import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
 import { SplitParticipant } from '../../domain/entities/split-participant.entity';
@@ -30,42 +29,42 @@ export class ExpenseSplitRepositoryImpl
   async save(split: ExpenseSplit): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await tx.expenseSplit.upsert({
-        where: { id: split.getId().getValue() },
+        where: { id: split.id.getValue() },
         create: {
-          id: split.getId().getValue(),
-          expenseId: split.getExpenseId().getValue(),
-          workspaceId: split.getWorkspaceId(),
-          paidBy: split.getPaidBy(),
-          totalAmount: split.getTotalAmount().getAmount(),
-          currency: split.getTotalAmount().getCurrency(),
-          splitType: split.getSplitType() as PrismaSplitType,
-          createdAt: split.getCreatedAt(),
-          updatedAt: split.getUpdatedAt(),
+          id: split.id.getValue(),
+          expenseId: split.expenseId.getValue(),
+          workspaceId: split.workspaceId,
+          paidBy: split.paidBy,
+          totalAmount: split.totalAmount.getAmount(),
+          currency: split.totalAmount.getCurrency(),
+          splitType: split.splitType as PrismaSplitType,
+          createdAt: split.createdAt,
+          updatedAt: split.updatedAt,
         },
         update: {
-          totalAmount: split.getTotalAmount().getAmount(),
-          currency: split.getTotalAmount().getCurrency(),
-          splitType: split.getSplitType() as PrismaSplitType,
-          updatedAt: split.getUpdatedAt(),
+          totalAmount: split.totalAmount.getAmount(),
+          currency: split.totalAmount.getCurrency(),
+          splitType: split.splitType as PrismaSplitType,
+          updatedAt: split.updatedAt,
         },
       });
 
       await tx.splitParticipant.deleteMany({
-        where: { splitId: split.getId().getValue() },
+        where: { splitId: split.id.getValue() },
       });
 
-      if (split.getParticipants().length > 0) {
+      if (split.participants.length > 0) {
         await tx.splitParticipant.createMany({
-          data: split.getParticipants().map((p) => ({
-            id: p.getId().getValue(),
-            splitId: p.getSplitId().getValue(),
-            userId: p.getUserId(),
-            shareAmount: p.getShareAmount().getAmount(),
-            sharePercentage: p.getSharePercentage(),
-            isPaid: p.isPaidStatus(),
-            paidAt: p.getPaidAt(),
-            createdAt: p.getCreatedAt(),
-            updatedAt: p.getUpdatedAt(),
+          data: split.participants.map((p) => ({
+            id: p.id.getValue(),
+            splitId: p.splitId.getValue(),
+            userId: p.userId,
+            shareAmount: p.shareAmount.getAmount(),
+            sharePercentage: p.sharePercentage,
+            isPaid: p.isPaid,
+            paidAt: p.paidAt,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
           })),
         });
       }
@@ -230,14 +229,12 @@ export class ExpenseSplitRepositoryImpl
     data: Prisma.ExpenseSplitGetPayload<{ include: { participants: true } }>
   ): ExpenseSplit {
     const participants = data.participants.map((p) =>
-      SplitParticipant.reconstitute({
+      SplitParticipant.fromPersistence({
         id: SplitParticipantId.fromString(p.id),
         splitId: SplitId.fromString(p.splitId),
         userId: p.userId,
         shareAmount: Money.create(Number(p.shareAmount), data.currency),
-        sharePercentage: p.sharePercentage
-          ? new Decimal(p.sharePercentage)
-          : undefined,
+        sharePercentage: p.sharePercentage !== null ? Number(p.sharePercentage) : undefined,
         isPaid: p.isPaid,
         paidAt: p.paidAt ?? undefined,
         createdAt: p.createdAt,
@@ -245,7 +242,7 @@ export class ExpenseSplitRepositoryImpl
       })
     );
 
-    return ExpenseSplit.reconstitute({
+    return ExpenseSplit.fromPersistence({
       id: SplitId.fromString(data.id),
       expenseId: ExpenseId.fromString(data.expenseId),
       workspaceId: data.workspaceId,

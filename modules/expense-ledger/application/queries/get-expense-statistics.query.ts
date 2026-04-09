@@ -1,8 +1,4 @@
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 
@@ -25,15 +21,10 @@ export interface ExpenseStatisticsResult {
   totalCount: number;
 }
 
-export class GetExpenseStatisticsHandler implements IQueryHandler<
-  GetExpenseStatisticsQuery,
-  QueryResult<ExpenseStatisticsResult>
-> {
+export class GetExpenseStatisticsHandler implements IQueryHandler<GetExpenseStatisticsQuery, ExpenseStatisticsResult> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(
-    query: GetExpenseStatisticsQuery
-  ): Promise<QueryResult<ExpenseStatisticsResult>> {
+  async handle(query: GetExpenseStatisticsQuery): Promise<ExpenseStatisticsResult> {
     const stats = await this.expenseService.getExpenseStatistics(
       query.workspaceId,
       query.userId,
@@ -45,7 +36,7 @@ export class GetExpenseStatisticsHandler implements IQueryHandler<
       0
     );
 
-    return QueryResult.success({
+    return {
       totalExpense: stats.totalAmount,
       currency: stats.currency,
       expenseCountByStatus: {
@@ -56,6 +47,6 @@ export class GetExpenseStatisticsHandler implements IQueryHandler<
         reimbursed: stats.countByStatus[ExpenseStatus.REIMBURSED],
       },
       totalCount,
-    });
+    };
   }
 }

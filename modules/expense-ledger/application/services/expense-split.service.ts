@@ -19,7 +19,6 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export class ExpenseSplitService {
   constructor(
@@ -56,9 +55,7 @@ export class ExpenseSplitService {
       shareAmount: p.shareAmount
         ? Money.create(p.shareAmount, params.totalAmount.getCurrency())
         : undefined,
-      sharePercentage: p.sharePercentage
-        ? new Decimal(p.sharePercentage)
-        : undefined,
+      sharePercentage: p.sharePercentage,
     }));
 
     const split = ExpenseSplit.create({
@@ -73,13 +70,13 @@ export class ExpenseSplitService {
     await this.splitRepository.save(split);
 
     const settlements: SplitSettlement[] = [];
-    for (const participant of split.getParticipants()) {
-      if (participant.getUserId() !== params.userId) {
+    for (const participant of split.participants) {
+      if (participant.userId !== params.userId) {
         const settlement = SplitSettlement.create({
-          splitId: split.getId(),
-          fromUserId: participant.getUserId(),
+          splitId: split.id,
+          fromUserId: participant.userId,
           toUserId: params.userId,
-          owedAmount: participant.getShareAmount(),
+          owedAmount: participant.shareAmount,
         });
         settlements.push(settlement);
         await this.settlementRepository.save(settlement);
@@ -103,7 +100,7 @@ export class ExpenseSplitService {
       throw new SplitNotFoundError(splitId);
     }
 
-    if (!split.isParticipant(userId) && split.getPaidBy() !== userId) {
+    if (!split.isParticipant(userId) && split.paidBy !== userId) {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
@@ -124,8 +121,8 @@ export class ExpenseSplitService {
       return null;
     }
 
-    if (!split.isParticipant(userId) && split.getPaidBy() !== userId) {
-      throw new UnauthorizedSplitAccessError(split.getId().getValue(), userId);
+    if (!split.isParticipant(userId) && split.paidBy !== userId) {
+      throw new UnauthorizedSplitAccessError(split.id.getValue(), userId);
     }
 
     return split.toJSON();
@@ -154,7 +151,7 @@ export class ExpenseSplitService {
       throw new SplitNotFoundError(splitId);
     }
 
-    if (split.getPaidBy() !== userId) {
+    if (split.paidBy !== userId) {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
@@ -177,7 +174,7 @@ export class ExpenseSplitService {
       throw new SettlementNotFoundError(params.settlementId);
     }
 
-    if (settlement.getFromUserId() !== params.userId) {
+    if (settlement.fromUserId !== params.userId) {
       throw new UnauthorizedSplitAccessError(
         params.settlementId,
         params.userId
@@ -186,7 +183,7 @@ export class ExpenseSplitService {
 
     const paymentAmount = Money.create(
       params.amount,
-      settlement.getTotalOwedAmount().getCurrency()
+      settlement.totalOwedAmount.getCurrency()
     );
 
     settlement.recordPayment(paymentAmount);
@@ -194,7 +191,7 @@ export class ExpenseSplitService {
     await this.settlementRepository.save(settlement);
 
     const split = await this.splitRepository.findById(
-      settlement.getSplitId(),
+      settlement.splitId,
       params.workspaceId
     );
 
@@ -207,11 +204,11 @@ export class ExpenseSplitService {
 
       if (this.expenseRepository) {
         const expense = await this.expenseRepository.findById(
-          split.getExpenseId(),
+          split.expenseId,
           params.workspaceId
         );
         if (expense) {
-          expense.recordSettlement(settlement.getId().getValue());
+          expense.recordSettlement(settlement.id.getValue());
           await this.expenseRepository.update(expense);
         }
       }
@@ -249,7 +246,7 @@ export class ExpenseSplitService {
       throw new SplitNotFoundError(splitId);
     }
 
-    if (!split.isParticipant(userId) && split.getPaidBy() !== userId) {
+    if (!split.isParticipant(userId) && split.paidBy !== userId) {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 

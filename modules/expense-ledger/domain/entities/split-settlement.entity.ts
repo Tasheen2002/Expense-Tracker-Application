@@ -3,7 +3,7 @@ import { SplitId } from '../value-objects/split-id';
 import { Money } from '../value-objects/money';
 import { SettlementStatus } from '../enums/settlement-status';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/library'; // Decimal used only for arithmetic
 
 export interface SplitSettlementProps {
   id: SettlementId;
@@ -19,8 +19,7 @@ export interface SplitSettlementProps {
 }
 
 export class SplitSettlement {
-  private constructor(private props: SplitSettlementProps) {
-  }
+  private constructor(private props: SplitSettlementProps) {}
 
   static create(params: {
     splitId: SplitId;
@@ -41,47 +40,38 @@ export class SplitSettlement {
     });
   }
 
-  static reconstitute(props: SplitSettlementProps): SplitSettlement {
+  static fromPersistence(props: SplitSettlementProps): SplitSettlement {
     return new SplitSettlement(props);
   }
 
-  getId(): SettlementId {
+  get id(): SettlementId {
     return this.props.id;
   }
-
-  getSplitId(): SplitId {
+  get splitId(): SplitId {
     return this.props.splitId;
   }
-
-  getFromUserId(): string {
+  get fromUserId(): string {
     return this.props.fromUserId;
   }
-
-  getToUserId(): string {
+  get toUserId(): string {
     return this.props.toUserId;
   }
-
-  getTotalOwedAmount(): Money {
+  get totalOwedAmount(): Money {
     return this.props.totalOwedAmount;
   }
-
-  getPaidAmount(): Money {
+  get paidAmount(): Money {
     return this.props.paidAmount;
   }
-
-  getStatus(): SettlementStatus {
+  get status(): SettlementStatus {
     return this.props.status;
   }
-
-  getSettledAt(): Date | undefined {
+  get settledAt(): Date | undefined {
     return this.props.settledAt;
   }
-
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
-
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -128,18 +118,18 @@ export class SplitSettlement {
 
   toJSON(): SplitSettlementDTO {
     return {
-      id: this.getId().getValue(),
-      splitId: this.getSplitId().getValue(),
-      fromUserId: this.getFromUserId(),
-      toUserId: this.getToUserId(),
-      totalOwedAmount: this.getTotalOwedAmount().getAmount().toString(),
-      paidAmount: this.getPaidAmount().getAmount().toString(),
+      id: this.props.id.getValue(),
+      splitId: this.props.splitId.getValue(),
+      fromUserId: this.props.fromUserId,
+      toUserId: this.props.toUserId,
+      totalOwedAmount: this.props.totalOwedAmount.getAmount().toString(),
+      paidAmount: this.props.paidAmount.getAmount().toString(),
       remainingAmount: this.getRemainingAmount().getAmount().toString(),
-      currency: this.getTotalOwedAmount().getCurrency(),
-      status: this.getStatus(),
-      settledAt: this.getSettledAt()?.toISOString(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      currency: this.props.totalOwedAmount.getCurrency(),
+      status: this.props.status,
+      settledAt: this.props.settledAt?.toISOString(),
+      createdAt: this.props.createdAt.toISOString(),
+      updatedAt: this.props.updatedAt.toISOString(),
     };
   }
 }

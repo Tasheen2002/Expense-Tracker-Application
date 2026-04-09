@@ -1,14 +1,13 @@
-import { SplitParticipantId } from "../value-objects/split-participant-id";
-import { SplitId } from "../value-objects/split-id";
-import { Money } from "../value-objects/money";
-import { Decimal } from "@prisma/client/runtime/library";
+import { SplitParticipantId } from '../value-objects/split-participant-id';
+import { SplitId } from '../value-objects/split-id';
+import { Money } from '../value-objects/money';
 
 export interface SplitParticipantProps {
   id: SplitParticipantId;
   splitId: SplitId;
   userId: string;
   shareAmount: Money;
-  sharePercentage?: Decimal;
+  sharePercentage?: number;
   isPaid: boolean;
   paidAt?: Date;
   createdAt: Date;
@@ -16,14 +15,13 @@ export interface SplitParticipantProps {
 }
 
 export class SplitParticipant {
-  private constructor(private props: SplitParticipantProps) {
-  }
+  private constructor(private props: SplitParticipantProps) {}
 
   static create(params: {
     splitId: SplitId;
     userId: string;
     shareAmount: Money;
-    sharePercentage?: Decimal;
+    sharePercentage?: number;
   }): SplitParticipant {
     return new SplitParticipant({
       id: SplitParticipantId.create(),
@@ -37,43 +35,35 @@ export class SplitParticipant {
     });
   }
 
-  static reconstitute(props: SplitParticipantProps): SplitParticipant {
+  static fromPersistence(props: SplitParticipantProps): SplitParticipant {
     return new SplitParticipant(props);
   }
 
-  getId(): SplitParticipantId {
+  get id(): SplitParticipantId {
     return this.props.id;
   }
-
-  getSplitId(): SplitId {
+  get splitId(): SplitId {
     return this.props.splitId;
   }
-
-  getUserId(): string {
+  get userId(): string {
     return this.props.userId;
   }
-
-  getShareAmount(): Money {
+  get shareAmount(): Money {
     return this.props.shareAmount;
   }
-
-  getSharePercentage(): Decimal | undefined {
+  get sharePercentage(): number | undefined {
     return this.props.sharePercentage;
   }
-
-  isPaidStatus(): boolean {
+  get isPaid(): boolean {
     return this.props.isPaid;
   }
-
-  getPaidAt(): Date | undefined {
+  get paidAt(): Date | undefined {
     return this.props.paidAt;
   }
-
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
-
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -94,7 +84,7 @@ export class SplitParticipant {
     this.props.updatedAt = new Date();
   }
 
-  updateSharePercentage(percentage: Decimal): void {
+  updateSharePercentage(percentage: number): void {
     this.props.sharePercentage = percentage;
     this.props.updatedAt = new Date();
   }
