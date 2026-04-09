@@ -5,22 +5,19 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetSpendingLimitQuery extends IQuery {
   limitId: string;
   workspaceId: string;
 }
 
-export class GetSpendingLimitHandler
-  implements
-    IQueryHandler<GetSpendingLimitQuery, QueryResult<SpendingLimitDTO>>
-{
+export class GetSpendingLimitHandler implements IQueryHandler<
+  GetSpendingLimitQuery,
+  SpendingLimitDTO
+> {
   constructor(private readonly spendingLimitService: SpendingLimitService) {}
 
-  async handle(
-    query: GetSpendingLimitQuery
-  ): Promise<QueryResult<SpendingLimitDTO>> {
+  async handle(query: GetSpendingLimitQuery): Promise<SpendingLimitDTO> {
     const dto = await this.spendingLimitService.getSpendingLimitById(
       query.limitId,
       query.workspaceId
@@ -30,6 +27,6 @@ export class GetSpendingLimitHandler
       throw new SpendingLimitNotFoundError(query.limitId);
     }
 
-    return QueryResult.success(dto);
+    return dto;
   }
 }

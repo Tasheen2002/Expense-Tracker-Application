@@ -9,7 +9,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListSpendingLimitsQuery extends IQuery {
   workspaceId: string;
@@ -21,24 +20,17 @@ export interface ListSpendingLimitsQuery extends IQuery {
   offset?: number;
 }
 
-export class ListSpendingLimitsHandler
-  implements
-    IQueryHandler<
-      ListSpendingLimitsQuery,
-      QueryResult<PaginatedResult<SpendingLimitDTO>>
-    >
-{
+export class ListSpendingLimitsHandler implements IQueryHandler<
+  ListSpendingLimitsQuery,
+  PaginatedResult<SpendingLimitDTO>
+> {
   constructor(private readonly spendingLimitService: SpendingLimitService) {}
 
-  async handle(
-    query: ListSpendingLimitsQuery
-  ): Promise<QueryResult<PaginatedResult<SpendingLimitDTO>>> {
+  async handle(query: ListSpendingLimitsQuery): Promise<PaginatedResult<SpendingLimitDTO>> {
     const options: PaginationOptions = {
       limit: query.limit,
       offset: query.offset,
     };
-
-    let result: PaginatedResult<SpendingLimitDTO>;
 
     if (
       query.userId !== undefined ||
@@ -46,7 +38,7 @@ export class ListSpendingLimitsHandler
       query.isActive !== undefined ||
       query.periodType
     ) {
-      result = await this.spendingLimitService.filterSpendingLimits(
+      return this.spendingLimitService.filterSpendingLimits(
         {
           workspaceId: query.workspaceId,
           userId: query.userId,
@@ -56,13 +48,11 @@ export class ListSpendingLimitsHandler
         },
         options
       );
-    } else {
-      result = await this.spendingLimitService.getSpendingLimitsByWorkspace(
-        query.workspaceId,
-        options
-      );
     }
 
-    return QueryResult.success(result);
+    return this.spendingLimitService.getSpendingLimitsByWorkspace(
+      query.workspaceId,
+      options
+    );
   }
 }

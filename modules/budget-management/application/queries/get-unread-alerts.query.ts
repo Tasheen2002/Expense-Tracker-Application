@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetUnreadAlertsQuery extends IQuery {
   workspaceId: string;
@@ -16,28 +15,18 @@ export interface GetUnreadAlertsQuery extends IQuery {
   offset?: number;
 }
 
-export class GetUnreadAlertsHandler
-  implements
-    IQueryHandler<
-      GetUnreadAlertsQuery,
-      QueryResult<PaginatedResult<BudgetAlertDTO>>
-    >
-{
+export class GetUnreadAlertsHandler implements IQueryHandler<
+  GetUnreadAlertsQuery,
+  PaginatedResult<BudgetAlertDTO>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(
-    query: GetUnreadAlertsQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetAlertDTO>>> {
+  async handle(query: GetUnreadAlertsQuery): Promise<PaginatedResult<BudgetAlertDTO>> {
     const options: PaginationOptions = {
       limit: query.limit,
       offset: query.offset,
     };
 
-    const result = await this.budgetService.getUnreadAlerts(
-      query.workspaceId,
-      options
-    );
-
-    return QueryResult.success(result);
+    return this.budgetService.getUnreadAlerts(query.workspaceId, options);
   }
 }
