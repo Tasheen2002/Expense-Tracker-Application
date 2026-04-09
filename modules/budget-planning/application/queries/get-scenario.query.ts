@@ -4,7 +4,6 @@ import { ScenarioNotFoundError } from '../../domain/errors/budget-planning.error
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetScenarioQuery extends IQuery {
@@ -15,15 +14,15 @@ export interface GetScenarioQuery extends IQuery {
 
 export class GetScenarioHandler implements IQueryHandler<
   GetScenarioQuery,
-  QueryResult<ScenarioDTO>
+  ScenarioDTO
 > {
   constructor(private readonly scenarioService: ScenarioService) {}
 
-  async handle(query: GetScenarioQuery): Promise<QueryResult<ScenarioDTO>> {
+  async handle(query: GetScenarioQuery): Promise<ScenarioDTO> {
     const dto = await this.scenarioService.getScenarioById(query.id, query.workspaceId);
     if (!dto) {
       throw new ScenarioNotFoundError(query.id);
     }
-    return QueryResult.success(dto);
+    return dto;
   }
 }

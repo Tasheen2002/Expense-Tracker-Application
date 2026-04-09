@@ -4,7 +4,6 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface ListScenariosQuery extends IQuery {
@@ -15,17 +14,14 @@ export interface ListScenariosQuery extends IQuery {
 
 export class ListScenariosHandler implements IQueryHandler<
   ListScenariosQuery,
-  QueryResult<PaginatedResult<ScenarioDTO>>
+  PaginatedResult<ScenarioDTO>
 > {
   constructor(private readonly scenarioService: ScenarioService) {}
 
-  async handle(
-    query: ListScenariosQuery
-  ): Promise<QueryResult<PaginatedResult<ScenarioDTO>>> {
-    const result = await this.scenarioService.getScenariosByPlan(
+  async handle(query: ListScenariosQuery): Promise<PaginatedResult<ScenarioDTO>> {
+    return this.scenarioService.getScenariosByPlan(
       query.planId,
       query.workspaceId,
     );
-    return QueryResult.success(result);
   }
 }

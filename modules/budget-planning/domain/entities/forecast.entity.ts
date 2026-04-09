@@ -35,7 +35,7 @@ export class Forecast {
     return forecast;
   }
 
-  static reconstitute(params: {
+  static fromPersistence(params: {
     id: string;
     planId: string;
     name: string;

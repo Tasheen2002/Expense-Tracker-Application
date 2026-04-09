@@ -57,13 +57,8 @@ export class ScenarioController {
     try {
       const userId = req.user.userId;
       const { workspaceId, id } = req.params;
-      const result = await this.getScenarioHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Scenario retrieved successfully',
-        result.data
-      );
+      const scenario = await this.getScenarioHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Scenario retrieved successfully', scenario);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -77,12 +72,7 @@ export class ScenarioController {
       const userId = req.user.userId;
       const { workspaceId, planId } = req.params;
       const result = await this.listScenariosHandler.handle({ planId, workspaceId, userId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Scenarios retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Scenarios retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

@@ -4,7 +4,6 @@ import { ForecastNotFoundError } from '../../domain/errors/budget-planning.error
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetForecastQuery extends IQuery {
@@ -15,15 +14,15 @@ export interface GetForecastQuery extends IQuery {
 
 export class GetForecastHandler implements IQueryHandler<
   GetForecastQuery,
-  QueryResult<ForecastDTO>
+  ForecastDTO
 > {
   constructor(private readonly forecastService: ForecastService) {}
 
-  async handle(query: GetForecastQuery): Promise<QueryResult<ForecastDTO>> {
+  async handle(query: GetForecastQuery): Promise<ForecastDTO> {
     const dto = await this.forecastService.getForecastById(query.id, query.workspaceId);
     if (!dto) {
       throw new ForecastNotFoundError(query.id);
     }
-    return QueryResult.success(dto);
+    return dto;
   }
 }

@@ -112,13 +112,8 @@ export class BudgetPlanController {
     try {
       const userId = req.user.userId;
       const { workspaceId, id } = req.params;
-      const result = await this.getHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Budget plan retrieved successfully',
-        result.data
-      );
+      const plan = await this.getHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Budget plan retrieved successfully', plan);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -146,12 +141,7 @@ export class BudgetPlanController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Budget plans retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Budget plans retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

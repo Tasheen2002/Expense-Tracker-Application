@@ -45,7 +45,7 @@ export class ForecastItemRepositoryImpl
 
     if (!raw) return null;
 
-    return ForecastItem.reconstitute({
+    return ForecastItem.fromPersistence({
       id: raw.id,
       forecastId: raw.forecastId,
       categoryId: raw.categoryId,
@@ -68,7 +68,7 @@ export class ForecastItemRepositoryImpl
       this.prisma.forecastItem,
       { where, orderBy: { createdAt: "desc" } },
       (raw) =>
-        ForecastItem.reconstitute({
+        ForecastItem.fromPersistence({
           id: raw.id,
           forecastId: raw.forecastId,
           categoryId: raw.categoryId,
@@ -100,7 +100,7 @@ export class ForecastItemRepositoryImpl
 
     if (!raw) return null;
 
-    return ForecastItem.reconstitute({
+    return ForecastItem.fromPersistence({
       id: raw.id,
       forecastId: raw.forecastId,
       categoryId: raw.categoryId,

@@ -4,7 +4,6 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetForecastItemsQuery extends IQuery {
@@ -15,17 +14,14 @@ export interface GetForecastItemsQuery extends IQuery {
 
 export class GetForecastItemsHandler implements IQueryHandler<
   GetForecastItemsQuery,
-  QueryResult<PaginatedResult<ForecastItemDTO>>
+  PaginatedResult<ForecastItemDTO>
 > {
   constructor(private readonly forecastService: ForecastService) {}
 
-  async handle(
-    query: GetForecastItemsQuery
-  ): Promise<QueryResult<PaginatedResult<ForecastItemDTO>>> {
-    const result = await this.forecastService.getForecastItemsByForecast(
+  async handle(query: GetForecastItemsQuery): Promise<PaginatedResult<ForecastItemDTO>> {
+    return this.forecastService.getForecastItemsByForecast(
       query.forecastId,
       query.workspaceId,
     );
-    return QueryResult.success(result);
   }
 }

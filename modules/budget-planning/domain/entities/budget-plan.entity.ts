@@ -382,7 +382,7 @@ export class BudgetPlan extends AggregateRoot {
     return plan;
   }
 
-  static reconstitute(params: {
+  static fromPersistence(params: {
     id: string;
     workspaceId: string;
     name: string;

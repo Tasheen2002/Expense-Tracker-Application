@@ -96,13 +96,8 @@ export class ForecastController {
     try {
       const userId = req.user.userId;
       const { workspaceId, id } = req.params;
-      const result = await this.getForecastHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Forecast retrieved successfully',
-        result.data
-      );
+      const forecast = await this.getForecastHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Forecast retrieved successfully', forecast);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -116,12 +111,7 @@ export class ForecastController {
       const userId = req.user.userId;
       const { workspaceId, planId } = req.params;
       const result = await this.listForecastsHandler.handle({ planId, workspaceId, userId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Forecasts retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Forecasts retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -139,12 +129,7 @@ export class ForecastController {
         workspaceId,
         userId,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Forecast items retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Forecast items retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
