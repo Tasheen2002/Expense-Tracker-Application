@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetLocationQuery extends IQuery {
   locationId: string;
@@ -13,11 +12,11 @@ export interface GetLocationQuery extends IQuery {
 }
 
 export class GetLocationHandler
-  implements IQueryHandler<GetLocationQuery, QueryResult<LocationDTO>>
+  implements IQueryHandler<GetLocationQuery, LocationDTO>
 {
   constructor(private readonly locationService: LocationService) {}
 
-  async handle(query: GetLocationQuery): Promise<QueryResult<LocationDTO>> {
+  async handle(query: GetLocationQuery): Promise<LocationDTO> {
     const dto = await this.locationService.getLocationById(
       query.locationId,
       query.workspaceId
@@ -25,6 +24,6 @@ export class GetLocationHandler
     if (!dto) {
       throw new LocationNotFoundError(query.locationId, query.workspaceId);
     }
-    return QueryResult.success(dto);
+    return dto;
   }
 }

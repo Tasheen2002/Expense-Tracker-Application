@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListPurchaseOrdersQuery extends IQuery {
@@ -17,18 +16,15 @@ export interface ListPurchaseOrdersQuery extends IQuery {
 }
 
 export class ListPurchaseOrdersHandler
-  implements IQueryHandler<ListPurchaseOrdersQuery, QueryResult<PaginatedResult<PurchaseOrderDTO>>>
+  implements IQueryHandler<ListPurchaseOrdersQuery, PaginatedResult<PurchaseOrderDTO>>
 {
   constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
 
-  async handle(
-    query: ListPurchaseOrdersQuery
-  ): Promise<QueryResult<PaginatedResult<PurchaseOrderDTO>>> {
-    const result = await this.purchaseOrderService.getPurchaseOrdersByWorkspace(
+  async handle(query: ListPurchaseOrdersQuery): Promise<PaginatedResult<PurchaseOrderDTO>> {
+    return this.purchaseOrderService.getPurchaseOrdersByWorkspace(
       query.workspaceId,
       { status: query.status, supplierId: query.supplierId },
       { limit: query.limit, offset: query.offset }
     );
-    return QueryResult.success(result);
   }
 }

@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListTransactionsQuery extends IQuery {
@@ -16,35 +15,30 @@ export interface ListTransactionsQuery extends IQuery {
 }
 
 export class ListTransactionsHandler
-  implements IQueryHandler<ListTransactionsQuery, QueryResult<PaginatedResult<InventoryTransactionDTO>>>
+  implements IQueryHandler<ListTransactionsQuery, PaginatedResult<InventoryTransactionDTO>>
 {
   constructor(private readonly stockService: StockService) {}
 
-  async handle(
-    query: ListTransactionsQuery
-  ): Promise<QueryResult<PaginatedResult<InventoryTransactionDTO>>> {
+  async handle(query: ListTransactionsQuery): Promise<PaginatedResult<InventoryTransactionDTO>> {
     const options = { limit: query.limit, offset: query.offset };
 
-    let result: PaginatedResult<InventoryTransactionDTO>;
     if (query.variantId) {
-      result = await this.stockService.getTransactionsByVariant(
+      return this.stockService.getTransactionsByVariant(
         query.variantId,
         query.workspaceId,
         options
       );
     } else if (query.locationId) {
-      result = await this.stockService.getTransactionsByLocation(
+      return this.stockService.getTransactionsByLocation(
         query.locationId,
         query.workspaceId,
         options
       );
     } else {
-      result = await this.stockService.getTransactionsByWorkspace(
+      return this.stockService.getTransactionsByWorkspace(
         query.workspaceId,
         options
       );
     }
-
-    return QueryResult.success(result);
   }
 }

@@ -6,7 +6,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetPurchaseOrderQuery extends IQuery {
   purchaseOrderId: string;
@@ -18,13 +17,11 @@ export interface PurchaseOrderWithItemsDTO extends PurchaseOrderDTO {
 }
 
 export class GetPurchaseOrderHandler
-  implements IQueryHandler<GetPurchaseOrderQuery, QueryResult<PurchaseOrderWithItemsDTO>>
+  implements IQueryHandler<GetPurchaseOrderQuery, PurchaseOrderWithItemsDTO>
 {
   constructor(private readonly purchaseOrderService: PurchaseOrderService) {}
 
-  async handle(
-    query: GetPurchaseOrderQuery
-  ): Promise<QueryResult<PurchaseOrderWithItemsDTO>> {
+  async handle(query: GetPurchaseOrderQuery): Promise<PurchaseOrderWithItemsDTO> {
     const poDTO = await this.purchaseOrderService.getPurchaseOrderById(
       query.purchaseOrderId,
       query.workspaceId
@@ -37,6 +34,6 @@ export class GetPurchaseOrderHandler
       query.purchaseOrderId
     );
 
-    return QueryResult.success({ ...poDTO, items });
+    return { ...poDTO, items };
   }
 }

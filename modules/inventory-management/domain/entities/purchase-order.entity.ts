@@ -8,8 +8,6 @@ import {
   InvalidInventoryDataError,
 } from '../errors/inventory.errors';
 import { PurchaseOrderItem, CreatePurchaseOrderItemData } from './purchase-order-item.entity';
-import { Decimal } from '@prisma/client/runtime/library';
-
 // Domain Events
 export class PurchaseOrderCreatedEvent extends DomainEvent {
   constructor(
@@ -132,7 +130,7 @@ export interface PurchaseOrderProps {
   expectedDate: Date | null;
   receivedDate: Date | null;
   notes: string | null;
-  totalAmount: Decimal;
+  totalAmount: number;
   currency: string;
   createdBy: string;
   createdAt: Date;
@@ -188,7 +186,7 @@ export class PurchaseOrder extends AggregateRoot {
       expectedDate: data.expectedDate || null,
       receivedDate: null,
       notes: data.notes || null,
-      totalAmount: new Decimal(0),
+      totalAmount: 0,
       currency: data.currency || 'USD',
       createdBy: data.createdBy,
       createdAt: now,
@@ -229,7 +227,7 @@ export class PurchaseOrder extends AggregateRoot {
     this.props.updatedAt = new Date();
   }
 
-  updateTotalAmount(amount: Decimal): void {
+  updateTotalAmount(amount: number): void {
     this.props.totalAmount = amount;
     this.props.updatedAt = new Date();
   }
@@ -277,7 +275,7 @@ export class PurchaseOrder extends AggregateRoot {
   get expectedDate(): Date | null { return this.props.expectedDate; }
   get receivedDate(): Date | null { return this.props.receivedDate; }
   get notes(): string | null { return this.props.notes; }
-  get totalAmount(): Decimal { return this.props.totalAmount; }
+  get totalAmount(): number { return this.props.totalAmount; }
   get currency(): string { return this.props.currency; }
   get createdBy(): string { return this.props.createdBy; }
   get createdAt(): Date { return this.props.createdAt; }

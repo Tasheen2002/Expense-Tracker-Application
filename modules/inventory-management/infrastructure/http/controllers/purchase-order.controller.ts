@@ -274,11 +274,7 @@ export class PurchaseOrderController {
         purchaseOrderId,
         workspaceId,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Purchase order retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Purchase order retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -306,11 +302,15 @@ export class PurchaseOrderController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Purchase orders retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Purchase orders retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

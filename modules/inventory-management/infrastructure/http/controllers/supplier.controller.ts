@@ -104,7 +104,7 @@ export class SupplierController {
         supplierId,
         workspaceId,
       });
-      return ResponseHelper.fromQuery(reply, result, 'Supplier retrieved successfully');
+      return ResponseHelper.ok(reply, 'Supplier retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -125,7 +125,15 @@ export class SupplierController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.fromQuery(reply, result, 'Suppliers retrieved successfully');
+      return ResponseHelper.ok(reply, 'Suppliers retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

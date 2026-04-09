@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListLocationsQuery extends IQuery {
@@ -14,17 +13,14 @@ export interface ListLocationsQuery extends IQuery {
 }
 
 export class ListLocationsHandler
-  implements IQueryHandler<ListLocationsQuery, QueryResult<PaginatedResult<LocationDTO>>>
+  implements IQueryHandler<ListLocationsQuery, PaginatedResult<LocationDTO>>
 {
   constructor(private readonly locationService: LocationService) {}
 
-  async handle(
-    query: ListLocationsQuery
-  ): Promise<QueryResult<PaginatedResult<LocationDTO>>> {
-    const result = await this.locationService.getLocationsByWorkspace(
+  async handle(query: ListLocationsQuery): Promise<PaginatedResult<LocationDTO>> {
+    return this.locationService.getLocationsByWorkspace(
       query.workspaceId,
       { limit: query.limit, offset: query.offset }
     );
-    return QueryResult.success(result);
   }
 }
