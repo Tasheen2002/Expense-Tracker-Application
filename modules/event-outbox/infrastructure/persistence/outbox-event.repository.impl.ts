@@ -69,7 +69,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
 
     if (!record) return null;
 
-    return OutboxEvent.reconstitute({
+    return OutboxEvent.fromPersistence({
       id: OutboxEventId.fromString(record.id),
       aggregateType: record.aggregateType,
       aggregateId: AggregateId.fromString(record.aggregateId),
@@ -94,7 +94,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       this.prisma.outboxEvent,
       { where, orderBy: { createdAt: "asc" } },
       (record) =>
-        OutboxEvent.reconstitute({
+        OutboxEvent.fromPersistence({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
           aggregateId: AggregateId.fromString(record.aggregateId),
@@ -123,7 +123,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       this.prisma.outboxEvent,
       { where, orderBy: { createdAt: "asc" } },
       (record) =>
-        OutboxEvent.reconstitute({
+        OutboxEvent.fromPersistence({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
           aggregateId: AggregateId.fromString(record.aggregateId),
@@ -151,7 +151,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       this.prisma.outboxEvent,
       { where, orderBy: { createdAt: "asc" } },
       (record) =>
-        OutboxEvent.reconstitute({
+        OutboxEvent.fromPersistence({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
           aggregateId: AggregateId.fromString(record.aggregateId),
@@ -177,7 +177,7 @@ export class OutboxEventRepositoryImpl implements IOutboxEventRepository {
       this.prisma.outboxEvent,
       { where, orderBy: { createdAt: "desc" } },
       (record) =>
-        OutboxEvent.reconstitute({
+        OutboxEvent.fromPersistence({
           id: OutboxEventId.fromString(record.id),
           aggregateType: record.aggregateType,
           aggregateId: AggregateId.fromString(record.aggregateId),

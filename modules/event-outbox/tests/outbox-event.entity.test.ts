@@ -218,12 +218,12 @@ describe("OutboxEvent Entity", () => {
     });
   });
 
-  describe("reconstitute", () => {
+  describe("fromPersistence", () => {
     it("should reconstitute event from persisted data", () => {
       const id = OutboxEventId.create();
       const createdAt = new Date();
 
-      const event = OutboxEvent.reconstitute({
+      const event = OutboxEvent.fromPersistence({
         id,
         aggregateType: "Expense",
         aggregateId: AggregateId.fromString("123e4567-e89b-12d3-a456-426614174000"),
