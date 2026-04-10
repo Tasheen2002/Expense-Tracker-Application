@@ -36,7 +36,7 @@ export class TagService {
 
     await this.tagRepository.save(tag);
 
-    return tag.toJSON();
+    return Tag.toDTO(tag);
   }
 
   async updateTag(
@@ -74,7 +74,7 @@ export class TagService {
 
     await this.tagRepository.update(tag);
 
-    return tag.toJSON();
+    return Tag.toDTO(tag);
   }
 
   async deleteTag(tagId: string, workspaceId: string): Promise<void> {
@@ -96,7 +96,7 @@ export class TagService {
       TagId.fromString(tagId),
       workspaceId
     );
-    return tag ? tag.toJSON() : null;
+    return tag ? Tag.toDTO(tag) : null;
   }
 
   async getTagsByWorkspace(
@@ -106,7 +106,7 @@ export class TagService {
     const result = await this.tagRepository.findByWorkspace(workspaceId, options);
     return {
       ...result,
-      items: result.items.map((tag) => tag.toJSON()),
+      items: result.items.map((tag) => Tag.toDTO(tag)),
     };
   }
 }

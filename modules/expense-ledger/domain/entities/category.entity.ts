@@ -206,17 +206,17 @@ export class Category extends AggregateRoot {
     this.addDomainEvent(new CategoryDeletedEvent(this.id.getValue()));
   }
 
-  toJSON(): CategoryDTO {
+  static toDTO(category: Category): CategoryDTO {
     return {
-      categoryId: this.id.getValue(),
-      workspaceId: this.workspaceId,
-      name: this.name,
-      description: this.description,
-      color: this.color,
-      icon: this.icon,
-      isActive: this.isActive,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      categoryId: category.id.getValue(),
+      workspaceId: category.workspaceId,
+      name: category.name,
+      description: category.description,
+      color: category.color,
+      icon: category.icon,
+      isActive: category.isActive,
+      createdAt: category.createdAt.toISOString(),
+      updatedAt: category.updatedAt.toISOString(),
     };
   }
 }

@@ -50,7 +50,7 @@ export class CategoryService {
       `workspace:${params.workspaceId}:categories*`
     );
 
-    return category.toJSON();
+    return Category.toDTO(category);
   }
 
   async updateCategory(
@@ -104,7 +104,7 @@ export class CategoryService {
       `workspace:${workspaceId}:categories*`
     );
 
-    return category.toJSON();
+    return Category.toDTO(category);
   }
 
   async deleteCategory(categoryId: string, workspaceId: string): Promise<void> {
@@ -147,7 +147,7 @@ export class CategoryService {
       300 // 5 minutes TTL
     );
 
-    return category ? category.toJSON() : null;
+    return category ? Category.toDTO(category) : null;
   }
 
   async getCategoriesByWorkspace(
@@ -157,7 +157,7 @@ export class CategoryService {
     const result = await this.categoryRepository.findByWorkspace(workspaceId, options);
     return {
       ...result,
-      items: result.items.map((category) => category.toJSON()),
+      items: result.items.map((category) => Category.toDTO(category)),
     };
   }
 
@@ -171,7 +171,7 @@ export class CategoryService {
     );
     return {
       ...result,
-      items: result.items.map((category) => category.toJSON()),
+      items: result.items.map((category) => Category.toDTO(category)),
     };
   }
 }

@@ -41,7 +41,7 @@ export class AttachmentService {
 
     await this.attachmentRepository.save(attachment);
 
-    return attachment.toJSON();
+    return Attachment.toDTO(attachment);
   }
 
   async deleteAttachment(
@@ -70,7 +70,7 @@ export class AttachmentService {
     const attachment = await this.attachmentRepository.findById(
       AttachmentId.fromString(attachmentId)
     );
-    return attachment ? attachment.toJSON() : null;
+    return attachment ? Attachment.toDTO(attachment) : null;
   }
 
   async getAttachmentDTOsByExpense(
@@ -79,7 +79,7 @@ export class AttachmentService {
     const result = await this.attachmentRepository.findByExpense(expenseId);
     return {
       ...result,
-      items: result.items.map((a) => a.toJSON()),
+      items: result.items.map((a) => Attachment.toDTO(a)),
     };
   }
 }

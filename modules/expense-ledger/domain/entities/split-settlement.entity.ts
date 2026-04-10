@@ -116,20 +116,20 @@ export class SplitSettlement {
     return this.props.status === SettlementStatus.SETTLED;
   }
 
-  toJSON(): SplitSettlementDTO {
+  static toDTO(settlement: SplitSettlement): SplitSettlementDTO {
     return {
-      id: this.props.id.getValue(),
-      splitId: this.props.splitId.getValue(),
-      fromUserId: this.props.fromUserId,
-      toUserId: this.props.toUserId,
-      totalOwedAmount: this.props.totalOwedAmount.getAmount().toString(),
-      paidAmount: this.props.paidAmount.getAmount().toString(),
-      remainingAmount: this.getRemainingAmount().getAmount().toString(),
-      currency: this.props.totalOwedAmount.getCurrency(),
-      status: this.props.status,
-      settledAt: this.props.settledAt?.toISOString(),
-      createdAt: this.props.createdAt.toISOString(),
-      updatedAt: this.props.updatedAt.toISOString(),
+      id: settlement.props.id.getValue(),
+      splitId: settlement.props.splitId.getValue(),
+      fromUserId: settlement.props.fromUserId,
+      toUserId: settlement.props.toUserId,
+      totalOwedAmount: settlement.props.totalOwedAmount.getAmount().toString(),
+      paidAmount: settlement.props.paidAmount.getAmount().toString(),
+      remainingAmount: settlement.getRemainingAmount().getAmount().toString(),
+      currency: settlement.props.totalOwedAmount.getCurrency(),
+      status: settlement.props.status,
+      settledAt: settlement.props.settledAt?.toISOString(),
+      createdAt: settlement.props.createdAt.toISOString(),
+      updatedAt: settlement.props.updatedAt.toISOString(),
     };
   }
 }

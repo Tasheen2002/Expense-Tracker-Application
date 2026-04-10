@@ -778,25 +778,25 @@ export class Expense extends AggregateRoot {
     this.addDomainEvent(new ExpenseDeletedEvent(this.id.getValue()));
   }
 
-  toJSON(): ExpenseDTO {
+  static toDTO(expense: Expense): ExpenseDTO {
     return {
-      expenseId: this.id.getValue(),
-      workspaceId: this.workspaceId,
-      userId: this.userId,
-      title: this.title,
-      description: this.description,
-      amount: this.amount.getAmount().toString(),
-      currency: this.amount.getCurrency(),
-      expenseDate: this.expenseDate.toDateString(),
-      categoryId: this.categoryId?.getValue(),
-      merchant: this.merchant,
-      paymentMethod: this.paymentMethod,
-      isReimbursable: this.isReimbursable,
-      status: this.status,
-      tagIds: this.tagIds.map((id) => id.getValue()),
-      attachmentIds: this.attachmentIds.map((id) => id.getValue()),
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      expenseId: expense.id.getValue(),
+      workspaceId: expense.workspaceId,
+      userId: expense.userId,
+      title: expense.title,
+      description: expense.description,
+      amount: expense.amount.getAmount().toString(),
+      currency: expense.amount.getCurrency(),
+      expenseDate: expense.expenseDate.toDateString(),
+      categoryId: expense.categoryId?.getValue(),
+      merchant: expense.merchant,
+      paymentMethod: expense.paymentMethod,
+      isReimbursable: expense.isReimbursable,
+      status: expense.status,
+      tagIds: expense.tagIds.map((id) => id.getValue()),
+      attachmentIds: expense.attachmentIds.map((id) => id.getValue()),
+      createdAt: expense.createdAt.toISOString(),
+      updatedAt: expense.updatedAt.toISOString(),
     };
   }
 }

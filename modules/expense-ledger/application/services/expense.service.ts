@@ -72,7 +72,7 @@ export class ExpenseService {
 
     await this.expenseRepository.save(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async updateExpense(
@@ -149,7 +149,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async deleteExpense(
@@ -191,7 +191,7 @@ export class ExpenseService {
       ExpenseId.fromString(expenseId),
       workspaceId
     );
-    return expense ? expense.toJSON() : null;
+    return expense ? Expense.toDTO(expense) : null;
   }
 
   async getExpensesWithFilters(
@@ -200,7 +200,7 @@ export class ExpenseService {
     const result = await this.expenseRepository.findWithFilters(filters);
     return {
       ...result,
-      items: result.items.map((expense) => expense.toJSON()),
+      items: result.items.map((expense) => Expense.toDTO(expense)),
     };
   }
 
@@ -226,7 +226,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async approveExpense(
@@ -256,7 +256,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async rejectExpense(
@@ -287,7 +287,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async markExpenseAsReimbursed(
@@ -317,7 +317,7 @@ export class ExpenseService {
 
     await this.expenseRepository.update(expense);
 
-    return expense.toJSON();
+    return Expense.toDTO(expense);
   }
 
   async getExpenseStatistics(

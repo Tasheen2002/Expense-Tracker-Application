@@ -204,20 +204,20 @@ export class RecurringExpense extends AggregateRoot {
     this.addDomainEvent(new RecurringExpenseStatusChangedEvent(this.id.getValue(), this.workspaceId, this.props.status));
   }
 
-  toJSON(): RecurringExpenseDTO {
+  static toDTO(expense: RecurringExpense): RecurringExpenseDTO {
     return {
-      id: this.id.getValue(),
-      workspaceId: this.workspaceId,
-      userId: this.userId,
-      frequency: this.frequency,
-      interval: this.interval,
-      startDate: this.startDate.toISOString(),
-      endDate: this.endDate?.toISOString(),
-      nextRunDate: this.nextRunDate.toISOString(),
-      status: this.status,
-      template: this.template,
-      createdAt: this.createdAt.toISOString(),
-      updatedAt: this.updatedAt.toISOString(),
+      id: expense.id.getValue(),
+      workspaceId: expense.workspaceId,
+      userId: expense.userId,
+      frequency: expense.frequency,
+      interval: expense.interval,
+      startDate: expense.startDate.toISOString(),
+      endDate: expense.endDate?.toISOString(),
+      nextRunDate: expense.nextRunDate.toISOString(),
+      status: expense.status,
+      template: expense.template,
+      createdAt: expense.createdAt.toISOString(),
+      updatedAt: expense.updatedAt.toISOString(),
     };
   }
 }

@@ -232,16 +232,16 @@ export class ExpenseSplit extends AggregateRoot {
     );
   }
 
-  toJSON(): ExpenseSplitDTO {
+  static toDTO(split: ExpenseSplit): ExpenseSplitDTO {
     return {
-      id: this.props.id.getValue(),
-      expenseId: this.props.expenseId.getValue(),
-      workspaceId: this.props.workspaceId,
-      paidBy: this.props.paidBy,
-      totalAmount: this.props.totalAmount.getAmount().toString(),
-      currency: this.props.totalAmount.getCurrency(),
-      splitType: this.props.splitType,
-      participants: this.props.participants.map((p) => ({
+      id: split.props.id.getValue(),
+      expenseId: split.props.expenseId.getValue(),
+      workspaceId: split.props.workspaceId,
+      paidBy: split.props.paidBy,
+      totalAmount: split.props.totalAmount.getAmount().toString(),
+      currency: split.props.totalAmount.getCurrency(),
+      splitType: split.props.splitType,
+      participants: split.props.participants.map((p) => ({
         id: p.id.getValue(),
         userId: p.userId,
         shareAmount: p.shareAmount.getAmount().toString(),
@@ -249,10 +249,10 @@ export class ExpenseSplit extends AggregateRoot {
         isPaid: p.isPaid,
         paidAt: p.paidAt?.toISOString(),
       })),
-      isFullySettled: this.isFullySettled(),
-      outstandingAmount: this.getOutstandingAmount().getAmount().toString(),
-      createdAt: this.props.createdAt.toISOString(),
-      updatedAt: this.props.updatedAt.toISOString(),
+      isFullySettled: split.isFullySettled(),
+      outstandingAmount: split.getOutstandingAmount().getAmount().toString(),
+      createdAt: split.props.createdAt.toISOString(),
+      updatedAt: split.props.updatedAt.toISOString(),
     };
   }
 }

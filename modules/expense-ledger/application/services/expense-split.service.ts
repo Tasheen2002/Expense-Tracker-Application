@@ -83,7 +83,7 @@ export class ExpenseSplitService {
       }
     }
 
-    return split.toJSON();
+    return ExpenseSplit.toDTO(split);
   }
 
   async getSplitById(
@@ -104,7 +104,7 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(splitId, userId);
     }
 
-    return split.toJSON();
+    return ExpenseSplit.toDTO(split);
   }
 
   async getSplitByExpenseId(
@@ -125,7 +125,7 @@ export class ExpenseSplitService {
       throw new UnauthorizedSplitAccessError(split.id.getValue(), userId);
     }
 
-    return split.toJSON();
+    return ExpenseSplit.toDTO(split);
   }
 
   async listUserSplits(
@@ -134,7 +134,7 @@ export class ExpenseSplitService {
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseSplitDTO>> {
     const result = await this.splitRepository.findByUser(userId, workspaceId, options);
-    return { ...result, items: result.items.map((s) => s.toJSON()) };
+    return { ...result, items: result.items.map((s) => ExpenseSplit.toDTO(s)) };
   }
 
   async deleteSplit(
@@ -214,7 +214,7 @@ export class ExpenseSplitService {
       }
     }
 
-    return settlement.toJSON();
+    return SplitSettlement.toDTO(settlement);
   }
 
   async getUserSettlements(
@@ -229,7 +229,7 @@ export class ExpenseSplitService {
       status,
       options
     );
-    return { ...result, items: result.items.map((s) => s.toJSON()) };
+    return { ...result, items: result.items.map((s) => SplitSettlement.toDTO(s)) };
   }
 
   async getSplitSettlements(
@@ -254,6 +254,6 @@ export class ExpenseSplitService {
       SplitId.fromString(splitId),
       workspaceId
     );
-    return { ...result, items: result.items.map((s) => s.toJSON()) };
+    return { ...result, items: result.items.map((s) => SplitSettlement.toDTO(s)) };
   }
 }
