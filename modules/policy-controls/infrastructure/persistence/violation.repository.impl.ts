@@ -27,51 +27,31 @@ export class PrismaViolationRepository
 
   async save(violation: PolicyViolation): Promise<void> {
     await this.prisma.policyViolation.upsert({
-      where: { id: violation.getId().getValue() },
+      where: { id: violation.id.getValue() },
       create: {
-        id: violation.getId().getValue(),
-        workspaceId: violation.getWorkspaceId().getValue(),
-        policyId: violation.getPolicyId().getValue(),
-        expenseId: violation.getExpenseId(),
-        userId: violation.getUserId(),
-        status: violation.getStatus(),
-        severity: violation.getSeverity(),
-        violationDetails: violation.getViolationDetails(),
-        expenseAmount: violation.getExpenseAmount() ?? 0,
-        ...(violation.getCurrency() && { currency: violation.getCurrency() }),
-        ...(violation.getAcknowledgedAt() && {
-          acknowledgedAt: violation.getAcknowledgedAt(),
-        }),
-        ...(violation.getAcknowledgedBy() && {
-          acknowledgedBy: violation.getAcknowledgedBy(),
-        }),
-        ...(violation.getResolvedAt() && {
-          resolvedAt: violation.getResolvedAt(),
-        }),
-        ...(violation.getResolvedBy() && {
-          resolvedBy: violation.getResolvedBy(),
-        }),
-        ...(violation.getResolutionNotes() && {
-          resolutionNote: violation.getResolutionNotes(),
-        }),
+        id: violation.id.getValue(),
+        workspaceId: violation.workspaceId.getValue(),
+        policyId: violation.policyId.getValue(),
+        expenseId: violation.expenseId,
+        userId: violation.userId,
+        status: violation.status,
+        severity: violation.severity,
+        violationDetails: violation.violationDetails,
+        expenseAmount: violation.expenseAmount ?? 0,
+        ...(violation.currency && { currency: violation.currency }),
+        ...(violation.acknowledgedAt && { acknowledgedAt: violation.acknowledgedAt }),
+        ...(violation.acknowledgedBy && { acknowledgedBy: violation.acknowledgedBy }),
+        ...(violation.resolvedAt && { resolvedAt: violation.resolvedAt }),
+        ...(violation.resolvedBy && { resolvedBy: violation.resolvedBy }),
+        ...(violation.resolutionNotes && { resolutionNote: violation.resolutionNotes }),
       },
       update: {
-        status: violation.getStatus(),
-        ...(violation.getAcknowledgedAt() && {
-          acknowledgedAt: violation.getAcknowledgedAt(),
-        }),
-        ...(violation.getAcknowledgedBy() && {
-          acknowledgedBy: violation.getAcknowledgedBy(),
-        }),
-        ...(violation.getResolvedAt() && {
-          resolvedAt: violation.getResolvedAt(),
-        }),
-        ...(violation.getResolvedBy() && {
-          resolvedBy: violation.getResolvedBy(),
-        }),
-        ...(violation.getResolutionNotes() && {
-          resolutionNote: violation.getResolutionNotes(),
-        }),
+        status: violation.status,
+        ...(violation.acknowledgedAt && { acknowledgedAt: violation.acknowledgedAt }),
+        ...(violation.acknowledgedBy && { acknowledgedBy: violation.acknowledgedBy }),
+        ...(violation.resolvedAt && { resolvedAt: violation.resolvedAt }),
+        ...(violation.resolvedBy && { resolvedBy: violation.resolvedBy }),
+        ...(violation.resolutionNotes && { resolutionNote: violation.resolutionNotes }),
       },
     });
     await this.dispatchEvents(violation);
@@ -193,7 +173,7 @@ export class PrismaViolationRepository
   private toDomain(
     row: Prisma.PolicyViolationGetPayload<object>
   ): PolicyViolation {
-    return PolicyViolation.reconstitute({
+    return PolicyViolation.fromPersistence({
       violationId: ViolationId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       policyId: PolicyId.fromString(row.policyId),

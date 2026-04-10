@@ -11,9 +11,6 @@ import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-
 // Domain Events
 // ============================================================================
 
-/**
- * Emitted when a policy violation is detected.
- */
 export class PolicyViolationDetectedEvent extends DomainEvent {
   constructor(
     public readonly violationId: string,
@@ -29,9 +26,7 @@ export class PolicyViolationDetectedEvent extends DomainEvent {
     super(violationId, 'PolicyViolation');
   }
 
-  get eventType(): string {
-    return 'violation.detected';
-  }
+  get eventType(): string { return 'violation.detected'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -48,9 +43,6 @@ export class PolicyViolationDetectedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when a violation is acknowledged by the user.
- */
 export class ViolationAcknowledgedEvent extends DomainEvent {
   constructor(
     public readonly violationId: string,
@@ -60,9 +52,7 @@ export class ViolationAcknowledgedEvent extends DomainEvent {
     super(violationId, 'PolicyViolation');
   }
 
-  get eventType(): string {
-    return 'violation.acknowledged';
-  }
+  get eventType(): string { return 'violation.acknowledged'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -73,9 +63,6 @@ export class ViolationAcknowledgedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when a violation is resolved.
- */
 export class ViolationResolvedEvent extends DomainEvent {
   constructor(
     public readonly violationId: string,
@@ -87,9 +74,7 @@ export class ViolationResolvedEvent extends DomainEvent {
     super(violationId, 'PolicyViolation');
   }
 
-  get eventType(): string {
-    return 'violation.resolved';
-  }
+  get eventType(): string { return 'violation.resolved'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -114,7 +99,7 @@ export interface PolicyViolationProps {
   userId: string;
   severity: ViolationSeverity;
   status: ViolationStatus;
-  violationDetails: string; // Description of what violated the policy
+  violationDetails: string;
   expenseAmount?: number;
   currency?: string;
   acknowledgedBy?: string;
@@ -126,15 +111,9 @@ export interface PolicyViolationProps {
   updatedAt: Date;
 }
 
-/**
- * Policy Violation entity - represents an expense that violated a policy
- */
 export class PolicyViolation extends AggregateRoot {
-  private props: PolicyViolationProps;
-
-  private constructor(props: PolicyViolationProps) {
+  private constructor(private props: PolicyViolationProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -162,7 +141,6 @@ export class PolicyViolation extends AggregateRoot {
       updatedAt: new Date(),
     });
 
-    // Add domain event
     violation.addDomainEvent(
       new PolicyViolationDetectedEvent(
         violation.props.violationId.getValue(),
@@ -180,105 +158,41 @@ export class PolicyViolation extends AggregateRoot {
     return violation;
   }
 
-  static reconstitute(props: PolicyViolationProps): PolicyViolation {
+  static fromPersistence(props: PolicyViolationProps): PolicyViolation {
     return new PolicyViolation(props);
   }
 
-  // Getters
-  getId(): ViolationId {
-    return this.props.violationId;
-  }
+  get id(): ViolationId { return this.props.violationId; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get policyId(): PolicyId { return this.props.policyId; }
+  get expenseId(): string { return this.props.expenseId; }
+  get userId(): string { return this.props.userId; }
+  get severity(): ViolationSeverity { return this.props.severity; }
+  get status(): ViolationStatus { return this.props.status; }
+  get violationDetails(): string { return this.props.violationDetails; }
+  get expenseAmount(): number | undefined { return this.props.expenseAmount; }
+  get currency(): string | undefined { return this.props.currency; }
+  get acknowledgedBy(): string | undefined { return this.props.acknowledgedBy; }
+  get acknowledgedAt(): Date | undefined { return this.props.acknowledgedAt; }
+  get resolvedBy(): string | undefined { return this.props.resolvedBy; }
+  get resolvedAt(): Date | undefined { return this.props.resolvedAt; }
+  get resolutionNotes(): string | undefined { return this.props.resolutionNotes; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getPolicyId(): PolicyId {
-    return this.props.policyId;
-  }
-
-  getExpenseId(): string {
-    return this.props.expenseId;
-  }
-
-  getUserId(): string {
-    return this.props.userId;
-  }
-
-  getSeverity(): ViolationSeverity {
-    return this.props.severity;
-  }
-
-  getStatus(): ViolationStatus {
-    return this.props.status;
-  }
-
-  getViolationDetails(): string {
-    return this.props.violationDetails;
-  }
-
-  getExpenseAmount(): number | undefined {
-    return this.props.expenseAmount;
-  }
-
-  getCurrency(): string | undefined {
-    return this.props.currency;
-  }
-
-  getAcknowledgedBy(): string | undefined {
-    return this.props.acknowledgedBy;
-  }
-
-  getAcknowledgedAt(): Date | undefined {
-    return this.props.acknowledgedAt;
-  }
-
-  getResolvedBy(): string | undefined {
-    return this.props.resolvedBy;
-  }
-
-  getResolvedAt(): Date | undefined {
-    return this.props.resolvedAt;
-  }
-
-  getResolutionNotes(): string | undefined {
-    return this.props.resolutionNotes;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  // Status checks
-  isPending(): boolean {
-    return this.props.status === ViolationStatus.PENDING;
-  }
+  isPending(): boolean { return this.props.status === ViolationStatus.PENDING; }
 
   isResolved(): boolean {
-    return [
-      ViolationStatus.RESOLVED,
-      ViolationStatus.EXEMPTED,
-      ViolationStatus.OVERRIDDEN,
-    ].includes(this.props.status);
+    return [ViolationStatus.RESOLVED, ViolationStatus.EXEMPTED, ViolationStatus.OVERRIDDEN]
+      .includes(this.props.status);
   }
 
-  // Status transitions
   acknowledge(userId: string): void {
-    if (this.isResolved()) {
-      throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue()
-      );
-    }
-
+    if (this.isResolved()) throw new ViolationAlreadyResolvedError(this.props.violationId.getValue());
     this.props.status = ViolationStatus.ACKNOWLEDGED;
     this.props.acknowledgedBy = userId;
     this.props.acknowledgedAt = new Date();
     this.props.updatedAt = new Date();
-
     this.addDomainEvent(
       new ViolationAcknowledgedEvent(
         this.props.violationId.getValue(),
@@ -289,96 +203,60 @@ export class PolicyViolation extends AggregateRoot {
   }
 
   resolve(userId: string, notes?: string): void {
-    if (this.isResolved()) {
-      throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue()
-      );
-    }
-
+    if (this.isResolved()) throw new ViolationAlreadyResolvedError(this.props.violationId.getValue());
     this.props.status = ViolationStatus.RESOLVED;
     this.props.resolvedBy = userId;
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
-
     this.addDomainEvent(
-      new ViolationResolvedEvent(
-        this.props.violationId.getValue(),
-        this.props.workspaceId.getValue(),
-        userId,
-        'resolved',
-        notes
-      )
+      new ViolationResolvedEvent(this.props.violationId.getValue(), this.props.workspaceId.getValue(), userId, 'resolved', notes)
     );
   }
 
   exempt(userId: string, notes?: string): void {
-    if (this.isResolved()) {
-      throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue()
-      );
-    }
-
+    if (this.isResolved()) throw new ViolationAlreadyResolvedError(this.props.violationId.getValue());
     this.props.status = ViolationStatus.EXEMPTED;
     this.props.resolvedBy = userId;
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
-
     this.addDomainEvent(
-      new ViolationResolvedEvent(
-        this.props.violationId.getValue(),
-        this.props.workspaceId.getValue(),
-        userId,
-        'exempted',
-        notes
-      )
+      new ViolationResolvedEvent(this.props.violationId.getValue(), this.props.workspaceId.getValue(), userId, 'exempted', notes)
     );
   }
 
   override(userId: string, notes?: string): void {
-    if (this.isResolved()) {
-      throw new ViolationAlreadyResolvedError(
-        this.props.violationId.getValue()
-      );
-    }
-
+    if (this.isResolved()) throw new ViolationAlreadyResolvedError(this.props.violationId.getValue());
     this.props.status = ViolationStatus.OVERRIDDEN;
     this.props.resolvedBy = userId;
     this.props.resolvedAt = new Date();
     this.props.resolutionNotes = notes;
     this.props.updatedAt = new Date();
-
     this.addDomainEvent(
-      new ViolationResolvedEvent(
-        this.props.violationId.getValue(),
-        this.props.workspaceId.getValue(),
-        userId,
-        'overridden',
-        notes
-      )
+      new ViolationResolvedEvent(this.props.violationId.getValue(), this.props.workspaceId.getValue(), userId, 'overridden', notes)
     );
   }
 
   static toDTO(violation: PolicyViolation): PolicyViolationDTO {
     return {
-      id: violation.getId().getValue(),
-      workspaceId: violation.getWorkspaceId().getValue(),
-      policyId: violation.getPolicyId().getValue(),
-      expenseId: violation.getExpenseId(),
-      userId: violation.getUserId(),
-      status: violation.getStatus(),
-      severity: violation.getSeverity(),
-      violationDetails: violation.getViolationDetails(),
-      expenseAmount: violation.getExpenseAmount(),
-      currency: violation.getCurrency(),
-      acknowledgedAt: violation.getAcknowledgedAt()?.toISOString(),
-      acknowledgedBy: violation.getAcknowledgedBy(),
-      resolvedAt: violation.getResolvedAt()?.toISOString(),
-      resolvedBy: violation.getResolvedBy(),
-      resolutionNotes: violation.getResolutionNotes(),
-      createdAt: violation.getCreatedAt().toISOString(),
-      updatedAt: violation.getUpdatedAt().toISOString(),
+      id: violation.id.getValue(),
+      workspaceId: violation.workspaceId.getValue(),
+      policyId: violation.policyId.getValue(),
+      expenseId: violation.expenseId,
+      userId: violation.userId,
+      status: violation.status,
+      severity: violation.severity,
+      violationDetails: violation.violationDetails,
+      expenseAmount: violation.expenseAmount,
+      currency: violation.currency,
+      acknowledgedAt: violation.acknowledgedAt?.toISOString(),
+      acknowledgedBy: violation.acknowledgedBy,
+      resolvedAt: violation.resolvedAt?.toISOString(),
+      resolvedBy: violation.resolvedBy,
+      resolutionNotes: violation.resolutionNotes,
+      createdAt: violation.createdAt.toISOString(),
+      updatedAt: violation.updatedAt.toISOString(),
     };
   }
 }

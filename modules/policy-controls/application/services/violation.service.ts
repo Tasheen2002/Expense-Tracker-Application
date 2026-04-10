@@ -55,7 +55,7 @@ export class ViolationService {
       ViolationId.fromString(violationId),
     );
 
-    if (!violation || violation.getWorkspaceId().getValue() !== workspaceId) {
+    if (!violation || violation.workspaceId.getValue() !== workspaceId) {
       throw new ViolationNotFoundError(violationId);
     }
 
@@ -168,7 +168,7 @@ export class ViolationService {
     workspaceId: string,
   ): Promise<void> {
     const violation = await this._getViolationEntity(violationId, workspaceId);
-    await this.violationRepository.delete(violation.getId());
+    await this.violationRepository.delete(violation.id);
   }
 
   async deleteViolationsByExpense(expenseId: string): Promise<void> {

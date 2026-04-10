@@ -26,34 +26,34 @@ export class PrismaExemptionRepository
 
   async save(exemption: PolicyExemption): Promise<void> {
     await this.prisma.policyExemption.upsert({
-      where: { id: exemption.getId().getValue() },
+      where: { id: exemption.id.getValue() },
       create: {
-        id: exemption.getId().getValue(),
-        workspaceId: exemption.getWorkspaceId().getValue(),
-        policyId: exemption.getPolicyId().getValue(),
-        userId: exemption.getUserId(),
-        status: exemption.getStatus(),
-        reason: exemption.getReason(),
-        requestedBy: exemption.getRequestedBy(),
-        requestedAt: exemption.getCreatedAt(),
-        validFrom: exemption.getStartDate(),
-        validUntil: exemption.getEndDate(),
-        approvedBy: exemption.getApprovedBy(),
-        approvedAt: exemption.getApprovedAt(),
-        rejectedBy: exemption.getRejectedBy(),
-        rejectedAt: exemption.getRejectedAt(),
-        rejectionReason: exemption.getRejectionReason(),
+        id: exemption.id.getValue(),
+        workspaceId: exemption.workspaceId.getValue(),
+        policyId: exemption.policyId.getValue(),
+        userId: exemption.userId,
+        status: exemption.status,
+        reason: exemption.reason,
+        requestedBy: exemption.requestedBy,
+        requestedAt: exemption.createdAt,
+        validFrom: exemption.startDate,
+        validUntil: exemption.endDate,
+        approvedBy: exemption.approvedBy,
+        approvedAt: exemption.approvedAt,
+        rejectedBy: exemption.rejectedBy,
+        rejectedAt: exemption.rejectedAt,
+        rejectionReason: exemption.rejectionReason,
       },
       update: {
-        status: exemption.getStatus(),
-        approvedBy: exemption.getApprovedBy(),
-        approvedAt: exemption.getApprovedAt(),
-        rejectedBy: exemption.getRejectedBy(),
-        rejectedAt: exemption.getRejectedAt(),
-        rejectionReason: exemption.getRejectionReason(),
-        validFrom: exemption.getStartDate(),
-        validUntil: exemption.getEndDate(),
-        reason: exemption.getReason(),
+        status: exemption.status,
+        approvedBy: exemption.approvedBy,
+        approvedAt: exemption.approvedAt,
+        rejectedBy: exemption.rejectedBy,
+        rejectedAt: exemption.rejectedAt,
+        rejectionReason: exemption.rejectionReason,
+        validFrom: exemption.startDate,
+        validUntil: exemption.endDate,
+        reason: exemption.reason,
       },
     });
     await this.dispatchEvents(exemption);
@@ -201,7 +201,7 @@ export class PrismaExemptionRepository
   private toDomain(
     row: Prisma.PolicyExemptionGetPayload<object>
   ): PolicyExemption {
-    return PolicyExemption.reconstitute({
+    return PolicyExemption.fromPersistence({
       exemptionId: ExemptionId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       policyId: PolicyId.fromString(row.policyId),

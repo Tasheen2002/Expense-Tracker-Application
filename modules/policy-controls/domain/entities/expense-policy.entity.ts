@@ -16,9 +16,6 @@ import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-
 // Domain Events
 // ============================================================================
 
-/**
- * Emitted when a new expense policy is created.
- */
 export class PolicyCreatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
@@ -31,9 +28,7 @@ export class PolicyCreatedEvent extends DomainEvent {
     super(policyId, 'ExpensePolicy');
   }
 
-  get eventType(): string {
-    return 'policy.created';
-  }
+  get eventType(): string { return 'policy.created'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -47,9 +42,6 @@ export class PolicyCreatedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when a policy is activated.
- */
 export class PolicyActivatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
@@ -59,22 +51,13 @@ export class PolicyActivatedEvent extends DomainEvent {
     super(policyId, 'ExpensePolicy');
   }
 
-  get eventType(): string {
-    return 'policy.activated';
-  }
+  get eventType(): string { return 'policy.activated'; }
 
   getPayload(): Record<string, unknown> {
-    return {
-      policyId: this.policyId,
-      workspaceId: this.workspaceId,
-      name: this.name,
-    };
+    return { policyId: this.policyId, workspaceId: this.workspaceId, name: this.name };
   }
 }
 
-/**
- * Emitted when a policy is deactivated.
- */
 export class PolicyDeactivatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
@@ -84,22 +67,13 @@ export class PolicyDeactivatedEvent extends DomainEvent {
     super(policyId, 'ExpensePolicy');
   }
 
-  get eventType(): string {
-    return 'policy.deactivated';
-  }
+  get eventType(): string { return 'policy.deactivated'; }
 
   getPayload(): Record<string, unknown> {
-    return {
-      policyId: this.policyId,
-      workspaceId: this.workspaceId,
-      name: this.name,
-    };
+    return { policyId: this.policyId, workspaceId: this.workspaceId, name: this.name };
   }
 }
 
-/**
- * Emitted when a policy is updated.
- */
 export class PolicyUpdatedEvent extends DomainEvent {
   constructor(
     public readonly policyId: string,
@@ -110,9 +84,7 @@ export class PolicyUpdatedEvent extends DomainEvent {
     super(policyId, 'ExpensePolicy');
   }
 
-  get eventType(): string {
-    return 'policy.updated';
-  }
+  get eventType(): string { return 'policy.updated'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -131,33 +103,17 @@ export class PolicyUpdatedEvent extends DomainEvent {
 const MAX_NAME_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 500;
 
-/**
- * Configuration for different policy types
- */
 export interface PolicyConfiguration {
-  // For spending/amount limits
   threshold?: number;
   currency?: string;
-
-  // For category restrictions
   restrictedCategoryIds?: string[];
   allowedCategoryIds?: string[];
-
-  // For merchant blacklist
   blacklistedMerchants?: string[];
-
-  // For time restrictions
-  blockedDays?: number[]; // 0=Sunday, 6=Saturday
+  blockedDays?: number[];
   blockedHoursStart?: number;
   blockedHoursEnd?: number;
-
-  // For receipt/description requirements
-  requirementThreshold?: number; // Amount above which requirement applies
-
-  // Apply to specific categories only
+  requirementThreshold?: number;
   applyCategoryIds?: string[];
-
-  // Apply to specific user roles only
   applyToRoles?: string[];
 }
 
@@ -170,21 +126,15 @@ export interface ExpensePolicyProps {
   severity: ViolationSeverity;
   configuration: PolicyConfiguration;
   isActive: boolean;
-  priority: number; // Higher priority = evaluated first
+  priority: number;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-/**
- * Expense Policy entity - defines rules that expenses must comply with
- */
 export class ExpensePolicy extends AggregateRoot {
-  private props: ExpensePolicyProps;
-
-  private constructor(props: ExpensePolicyProps) {
+  private constructor(private props: ExpensePolicyProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -197,27 +147,16 @@ export class ExpensePolicy extends AggregateRoot {
     priority?: number;
     createdBy: string;
   }): ExpensePolicy {
-    // Validate name
     if (!params.name || params.name.trim().length === 0) {
       throw new PolicyNameRequiredError();
     }
     if (params.name.length > MAX_NAME_LENGTH) {
       throw new PolicyNameTooLongError(MAX_NAME_LENGTH);
     }
-
-    // Validate description
-    if (
-      params.description &&
-      params.description.length > MAX_DESCRIPTION_LENGTH
-    ) {
+    if (params.description && params.description.length > MAX_DESCRIPTION_LENGTH) {
       throw new PolicyDescriptionTooLongError(MAX_DESCRIPTION_LENGTH);
     }
-
-    // Validate configuration based on policy type
-    ExpensePolicy.validateConfiguration(
-      params.policyType,
-      params.configuration
-    );
+    ExpensePolicy.validateConfiguration(params.policyType, params.configuration);
 
     const policy = new ExpensePolicy({
       policyId: PolicyId.create(),
@@ -234,7 +173,6 @@ export class ExpensePolicy extends AggregateRoot {
       updatedAt: new Date(),
     });
 
-    // Add domain event
     policy.addDomainEvent(
       new PolicyCreatedEvent(
         policy.props.policyId.getValue(),
@@ -249,7 +187,7 @@ export class ExpensePolicy extends AggregateRoot {
     return policy;
   }
 
-  static reconstitute(props: ExpensePolicyProps): ExpensePolicy {
+  static fromPersistence(props: ExpensePolicyProps): ExpensePolicy {
     return new ExpensePolicy(props);
   }
 
@@ -263,23 +201,16 @@ export class ExpensePolicy extends AggregateRoot {
       case PolicyType.WEEKLY_LIMIT:
       case PolicyType.MONTHLY_LIMIT:
         if (!config.threshold || config.threshold <= 0) {
-          throw new InvalidThresholdError(
-            'Threshold must be a positive number'
-          );
+          throw new InvalidThresholdError('Threshold must be a positive number');
         }
         break;
-
       case PolicyType.CATEGORY_RESTRICTION:
-        if (
-          !config.restrictedCategoryIds?.length &&
-          !config.allowedCategoryIds?.length
-        ) {
+        if (!config.restrictedCategoryIds?.length && !config.allowedCategoryIds?.length) {
           throw new InvalidPolicyConfigurationError(
             'Category restriction requires either restricted or allowed categories'
           );
         }
         break;
-
       case PolicyType.MERCHANT_BLACKLIST:
         if (!config.blacklistedMerchants?.length) {
           throw new InvalidPolicyConfigurationError(
@@ -287,91 +218,42 @@ export class ExpensePolicy extends AggregateRoot {
           );
         }
         break;
-
       case PolicyType.TIME_RESTRICTION:
         if (
           !config.blockedDays?.length &&
-          (config.blockedHoursStart === undefined ||
-            config.blockedHoursEnd === undefined)
+          (config.blockedHoursStart === undefined || config.blockedHoursEnd === undefined)
         ) {
           throw new InvalidPolicyConfigurationError(
             'Time restriction requires blocked days or blocked hours'
           );
         }
         break;
-
       case PolicyType.RECEIPT_REQUIRED:
       case PolicyType.DESCRIPTION_REQUIRED:
       case PolicyType.APPROVAL_REQUIRED:
-        if (
-          config.requirementThreshold !== undefined &&
-          config.requirementThreshold < 0
-        ) {
-          throw new InvalidThresholdError(
-            'Requirement threshold cannot be negative'
-          );
+        if (config.requirementThreshold !== undefined && config.requirementThreshold < 0) {
+          throw new InvalidThresholdError('Requirement threshold cannot be negative');
         }
         break;
     }
   }
 
-  // Getters
-  getId(): PolicyId {
-    return this.props.policyId;
-  }
+  get id(): PolicyId { return this.props.policyId; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get description(): string | undefined { return this.props.description; }
+  get policyType(): PolicyType { return this.props.policyType; }
+  get severity(): ViolationSeverity { return this.props.severity; }
+  get configuration(): PolicyConfiguration { return this.props.configuration; }
+  get isActive(): boolean { return this.props.isActive; }
+  get priority(): number { return this.props.priority; }
+  get createdBy(): string { return this.props.createdBy; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getName(): string {
-    return this.props.name;
-  }
-
-  getDescription(): string | undefined {
-    return this.props.description;
-  }
-
-  getPolicyType(): PolicyType {
-    return this.props.policyType;
-  }
-
-  getSeverity(): ViolationSeverity {
-    return this.props.severity;
-  }
-
-  getConfiguration(): PolicyConfiguration {
-    return this.props.configuration;
-  }
-
-  isActive(): boolean {
-    return this.props.isActive;
-  }
-
-  getPriority(): number {
-    return this.props.priority;
-  }
-
-  getCreatedBy(): string {
-    return this.props.createdBy;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  // Mutators
   updateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new PolicyNameRequiredError();
-    }
-    if (name.length > MAX_NAME_LENGTH) {
-      throw new PolicyNameTooLongError(MAX_NAME_LENGTH);
-    }
+    if (!name || name.trim().length === 0) throw new PolicyNameRequiredError();
+    if (name.length > MAX_NAME_LENGTH) throw new PolicyNameTooLongError(MAX_NAME_LENGTH);
     this.props.name = name.trim();
     this.props.updatedAt = new Date();
   }
@@ -403,8 +285,6 @@ export class ExpensePolicy extends AggregateRoot {
   activate(): void {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
-
-    // Add domain event
     this.addDomainEvent(
       new PolicyActivatedEvent(
         this.props.policyId.getValue(),
@@ -417,8 +297,6 @@ export class ExpensePolicy extends AggregateRoot {
   deactivate(): void {
     this.props.isActive = false;
     this.props.updatedAt = new Date();
-
-    // Add domain event
     this.addDomainEvent(
       new PolicyDeactivatedEvent(
         this.props.policyId.getValue(),
@@ -428,53 +306,35 @@ export class ExpensePolicy extends AggregateRoot {
     );
   }
 
-  /**
-   * Check if this policy applies to a given expense context
-   */
-  appliesTo(context: {
-    categoryId?: string;
-    userRole?: string;
-    amount?: number;
-  }): boolean {
+  appliesTo(context: { categoryId?: string; userRole?: string; amount?: number }): boolean {
     const config = this.props.configuration;
-
-    // Check category filter
     if (config.applyCategoryIds?.length) {
-      if (
-        !context.categoryId ||
-        !config.applyCategoryIds.includes(context.categoryId)
-      ) {
+      if (!context.categoryId || !config.applyCategoryIds.includes(context.categoryId)) {
         return false;
       }
     }
-
-    // Check role filter
     if (config.applyToRoles?.length) {
-      if (
-        !context.userRole ||
-        !config.applyToRoles.includes(context.userRole)
-      ) {
+      if (!context.userRole || !config.applyToRoles.includes(context.userRole)) {
         return false;
       }
     }
-
     return true;
   }
 
   static toDTO(policy: ExpensePolicy): ExpensePolicyDTO {
     return {
-      id: policy.getId().getValue(),
-      workspaceId: policy.getWorkspaceId().getValue(),
-      name: policy.getName(),
-      description: policy.getDescription(),
-      policyType: policy.getPolicyType(),
-      severity: policy.getSeverity(),
-      configuration: policy.getConfiguration(),
-      priority: policy.getPriority(),
-      isActive: policy.isActive(),
-      createdBy: policy.getCreatedBy(),
-      createdAt: policy.getCreatedAt().toISOString(),
-      updatedAt: policy.getUpdatedAt().toISOString(),
+      id: policy.id.getValue(),
+      workspaceId: policy.workspaceId.getValue(),
+      name: policy.name,
+      description: policy.description,
+      policyType: policy.policyType,
+      severity: policy.severity,
+      configuration: policy.configuration,
+      priority: policy.priority,
+      isActive: policy.isActive,
+      createdBy: policy.createdBy,
+      createdAt: policy.createdAt.toISOString(),
+      updatedAt: policy.updatedAt.toISOString(),
     };
   }
 }

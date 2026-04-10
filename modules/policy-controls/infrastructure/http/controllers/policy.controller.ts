@@ -80,11 +80,7 @@ export class PolicyController {
         ...request.body,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Policy updated successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Policy updated successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -99,17 +95,9 @@ export class PolicyController {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const result = await this.getPolicyHandler.handle({
-        policyId,
-        workspaceId,
-      });
+      const policy = await this.getPolicyHandler.handle({ policyId, workspaceId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Policy retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Policy retrieved successfully', policy);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -140,24 +128,15 @@ export class PolicyController {
         },
       });
 
-      const data = result.data
-        ? {
-            items: result.data.items,
-            pagination: {
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            },
-          }
-        : undefined;
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Policies retrieved successfully',
-        data
-      );
+      return ResponseHelper.ok(reply, 'Policies retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -172,16 +151,9 @@ export class PolicyController {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const result = await this.deletePolicyHandler.handle({
-        policyId,
-        workspaceId,
-      });
+      const result = await this.deletePolicyHandler.handle({ policyId, workspaceId });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Policy deleted successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Policy deleted successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -196,16 +168,9 @@ export class PolicyController {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const result = await this.activatePolicyHandler.handle({
-        policyId,
-        workspaceId,
-      });
+      const result = await this.activatePolicyHandler.handle({ policyId, workspaceId });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Policy activated successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Policy activated successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -220,16 +185,9 @@ export class PolicyController {
     try {
       const { workspaceId, policyId } = request.params;
 
-      const result = await this.deactivatePolicyHandler.handle({
-        policyId,
-        workspaceId,
-      });
+      const result = await this.deactivatePolicyHandler.handle({ policyId, workspaceId });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Policy deactivated successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Policy deactivated successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

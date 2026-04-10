@@ -5,7 +5,6 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListPoliciesInput {
   workspaceId: string;
@@ -17,14 +16,11 @@ export interface ListPoliciesInput {
 export class ListPoliciesHandler {
   constructor(private readonly policyService: PolicyService) {}
 
-  async handle(
-    input: ListPoliciesInput
-  ): Promise<QueryResult<PaginatedResult<ExpensePolicyDTO>>> {
-    const result = await this.policyService.listPolicies(
+  async handle(input: ListPoliciesInput): Promise<PaginatedResult<ExpensePolicyDTO>> {
+    return this.policyService.listPolicies(
       input.workspaceId,
       input.activeOnly,
       input.pagination
     );
-    return QueryResult.success(result);
   }
 }

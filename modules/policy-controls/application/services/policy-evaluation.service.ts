@@ -68,7 +68,7 @@ export class PolicyEvaluationService {
       const exemption = await this.exemptionRepository.findActiveForUser(
         context.workspaceId,
         context.userId,
-        policy.getId().getValue(),
+        policy.id.getValue(),
       );
       if (exemption && exemption.isActive()) {
         continue;
@@ -80,10 +80,10 @@ export class PolicyEvaluationService {
       if (violationResult) {
         const violation = PolicyViolation.create({
           workspaceId: context.workspaceId,
-          policyId: policy.getId().getValue(),
+          policyId: policy.id.getValue(),
           expenseId: context.expenseId,
           userId: context.userId,
-          severity: policy.getSeverity(),
+          severity: policy.severity,
           violationDetails: violationResult.details,
           expenseAmount: context.amount,
           currency: context.currency,
@@ -92,7 +92,7 @@ export class PolicyEvaluationService {
         violations.push(violation);
 
         // Critical severity blocks the expense
-        if (policy.getSeverity() === ViolationSeverity.CRITICAL) {
+        if (policy.severity === ViolationSeverity.CRITICAL) {
           blockedByPolicy = policy;
         }
       }
@@ -117,8 +117,8 @@ export class PolicyEvaluationService {
     policy: ExpensePolicy,
     context: ExpenseContext,
   ): Promise<{ details: string } | null> {
-    const config = policy.getConfiguration();
-    const policyType = policy.getPolicyType();
+    const config = policy.configuration;
+    const policyType = policy.policyType;
 
     switch (policyType) {
       case PolicyType.SPENDING_LIMIT:
@@ -151,7 +151,7 @@ export class PolicyEvaluationService {
         if (config.restrictedCategoryIds?.length && context.categoryId) {
           if (config.restrictedCategoryIds.includes(context.categoryId)) {
             return {
-              details: `Category is restricted by policy "${policy.getName()}"`,
+              details: `Category is restricted by policy "${policy.name}"`,
             };
           }
         }
@@ -247,7 +247,7 @@ export class PolicyEvaluationService {
       const exemption = await this.exemptionRepository.findActiveForUser(
         context.workspaceId,
         context.userId,
-        policy.getId().getValue(),
+        policy.id.getValue(),
       );
       if (exemption && exemption.isActive()) {
         continue;
@@ -256,9 +256,9 @@ export class PolicyEvaluationService {
       const violationResult = await this.evaluatePolicy(policy, context);
       if (violationResult) {
         potentialViolations.push({
-          policyName: policy.getName(),
-          policyType: policy.getPolicyType(),
-          severity: policy.getSeverity(),
+          policyName: policy.name,
+          policyType: policy.policyType,
+          severity: policy.severity,
           details: violationResult.details,
         });
       }

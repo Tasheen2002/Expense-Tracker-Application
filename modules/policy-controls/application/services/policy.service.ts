@@ -64,7 +64,7 @@ export class PolicyService {
   }): Promise<ExpensePolicyDTO> {
     const policy = await this._getPolicyEntity(params.policyId, params.workspaceId);
 
-    if (params.name && params.name !== policy.getName()) {
+    if (params.name && params.name !== policy.name) {
       // Check if new name already exists
       const existingPolicy = await this.policyRepository.findByNameInWorkspace(
         params.workspaceId,
@@ -115,7 +115,7 @@ export class PolicyService {
       PolicyId.fromString(policyId),
     );
 
-    if (!policy || policy.getWorkspaceId().getValue() !== workspaceId) {
+    if (!policy || policy.workspaceId.getValue() !== workspaceId) {
       throw new PolicyNotFoundError(policyId);
     }
 
@@ -173,6 +173,6 @@ export class PolicyService {
 
   async deletePolicy(policyId: string, workspaceId: string): Promise<void> {
     const policy = await this._getPolicyEntity(policyId, workspaceId);
-    await this.policyRepository.delete(policy.getId());
+    await this.policyRepository.delete(policy.id);
   }
 }
