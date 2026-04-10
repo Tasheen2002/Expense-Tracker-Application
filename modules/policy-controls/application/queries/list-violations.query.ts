@@ -5,8 +5,9 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListViolationsInput {
+export interface ListViolationsInput extends IQuery {
   workspaceId: string;
   status?: ViolationStatus;
   userId?: string;
@@ -15,7 +16,7 @@ export interface ListViolationsInput {
   pagination?: PaginationOptions;
 }
 
-export class ListViolationsHandler {
+export class ListViolationsHandler implements IQueryHandler<ListViolationsInput, PaginatedResult<PolicyViolationDTO>> {
   constructor(private readonly violationService: ViolationService) {}
 
   async handle(input: ListViolationsInput): Promise<PaginatedResult<PolicyViolationDTO>> {

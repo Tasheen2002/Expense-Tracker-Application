@@ -33,7 +33,7 @@ export async function workflowRoutes(
   controller: WorkflowController
 ) {
   // Apply write rate limiting to all mutation routes
-  fastify.addHook('preHandler', async (request, reply) => {
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }

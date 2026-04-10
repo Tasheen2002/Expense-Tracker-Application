@@ -1,13 +1,14 @@
 import { ExemptionService } from '../services/exemption.service';
 import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
-export interface CheckActiveExemptionInput {
+export interface CheckActiveExemptionInput extends IQuery {
   workspaceId: string;
   userId: string;
   policyId: string;
 }
 
-export class CheckActiveExemptionHandler {
+export class CheckActiveExemptionHandler implements IQueryHandler<CheckActiveExemptionInput, PolicyExemptionDTO | null> {
   constructor(private readonly exemptionService: ExemptionService) {}
 
   async handle(input: CheckActiveExemptionInput): Promise<PolicyExemptionDTO | null> {

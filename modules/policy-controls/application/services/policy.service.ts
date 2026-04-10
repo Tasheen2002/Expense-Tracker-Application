@@ -72,7 +72,7 @@ export class PolicyService {
       );
       if (
         existingPolicy &&
-        existingPolicy.getId().getValue() !== params.policyId
+        existingPolicy.id.getValue() !== params.policyId
       ) {
         throw new PolicyNameAlreadyExistsError(params.name, params.workspaceId);
       }

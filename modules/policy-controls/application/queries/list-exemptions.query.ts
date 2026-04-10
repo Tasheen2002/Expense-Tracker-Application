@@ -5,8 +5,9 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListExemptionsInput {
+export interface ListExemptionsInput extends IQuery {
   workspaceId: string;
   status?: ExemptionStatus;
   userId?: string;
@@ -14,7 +15,7 @@ export interface ListExemptionsInput {
   pagination?: PaginationOptions;
 }
 
-export class ListExemptionsHandler {
+export class ListExemptionsHandler implements IQueryHandler<ListExemptionsInput, PaginatedResult<PolicyExemptionDTO>> {
   constructor(private readonly exemptionService: ExemptionService) {}
 
   async handle(input: ListExemptionsInput): Promise<PaginatedResult<PolicyExemptionDTO>> {

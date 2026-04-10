@@ -30,8 +30,8 @@ export class EvaluateExpenseHandler implements ICommandHandler<
 
     return CommandResult.success({
       passed: result.passed,
-      violationIds: result.violations.map((v) => v.getId().getValue()),
-      blockedByPolicyId: result.blockedByPolicy?.getId().getValue(),
+      violationIds: result.violations.map((v) => v.id.getValue()),
+      blockedByPolicyId: result.blockedByPolicy?.id.getValue(),
     });
   }
 }

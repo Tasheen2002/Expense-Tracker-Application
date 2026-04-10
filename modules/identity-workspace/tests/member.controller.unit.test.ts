@@ -4,7 +4,6 @@ import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
 import { CommandResult } from '../../../packages/core/src/application/command-result';
-import { QueryResult } from '../../../packages/core/src/application/query-result';
 
 // Mock handlers
 const mockListMembersHandler = {

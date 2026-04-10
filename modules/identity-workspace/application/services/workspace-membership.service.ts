@@ -15,7 +15,7 @@ import {
 } from '../../domain/errors/identity.errors';
 
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
+import { ICacheService } from '../../../../packages/core/src/domain/interfaces/cache.interface';
 
 export class WorkspaceMembershipService {
   constructor(

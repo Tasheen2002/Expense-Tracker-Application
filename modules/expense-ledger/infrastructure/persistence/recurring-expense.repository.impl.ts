@@ -12,14 +12,15 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
 
 export class PrismaRecurringExpenseRepository
+  extends PrismaRepository<RecurringExpense>
   implements RecurringExpenseRepository
 {
-  protected readonly prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
   }
 
   async save(expense: RecurringExpense): Promise<void> {
@@ -50,7 +51,7 @@ export class PrismaRecurringExpenseRepository
         updatedAt: expense.updatedAt,
       },
     });
-
+    await this.dispatchEvents(expense);
   }
 
   async findById(id: string): Promise<RecurringExpense | null> {
