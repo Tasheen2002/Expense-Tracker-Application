@@ -3,7 +3,6 @@ import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-defin
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import {
   PaginatedResult,
@@ -15,19 +14,10 @@ export interface ListTagsQuery extends IQuery {
   options?: PaginationOptions;
 }
 
-export class ListTagsHandler implements IQueryHandler<
-  ListTagsQuery,
-  QueryResult<PaginatedResult<ReceiptTagDefinitionDTO>>
-> {
+export class ListTagsHandler implements IQueryHandler<ListTagsQuery, PaginatedResult<ReceiptTagDefinitionDTO>> {
   constructor(private readonly tagService: TagService) {}
 
-  async handle(
-    query: ListTagsQuery,
-  ): Promise<QueryResult<PaginatedResult<ReceiptTagDefinitionDTO>>> {
-    const result = await this.tagService.getTagsByWorkspace(
-      query.workspaceId,
-      query.options,
-    );
-    return QueryResult.success(result);
+  async handle(query: ListTagsQuery): Promise<PaginatedResult<ReceiptTagDefinitionDTO>> {
+    return this.tagService.getTagsByWorkspace(query.workspaceId, query.options);
   }
 }

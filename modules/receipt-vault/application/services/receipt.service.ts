@@ -49,7 +49,7 @@ export class ReceiptService {
       throw new ReceiptNotFoundError(receiptId, workspaceId);
     }
 
-    if (userId && receipt.getUserId() !== userId) {
+    if (userId && receipt.userId !== userId) {
       throw new UnauthorizedAccessError(userId, receiptId);
     }
 
@@ -292,12 +292,12 @@ export class ReceiptService {
     if (permanent) {
       // Transactional delete of receipt and dependencies
       await this.receiptRepository.deleteWithDependencies(
-        receipt.getId(),
+        receipt.id,
         workspaceId
       );
 
       // Clean up file storage
-      const storageLocation = receipt.getStorageLocation();
+      const storageLocation = receipt.storageLocation;
       const bucket = storageLocation.getBucket() || 'local';
       const key = storageLocation.getKey();
 
@@ -349,7 +349,7 @@ export class ReceiptService {
 
     // Check if metadata already exists
     const existing = await this.metadataRepository.findByReceiptId(
-      receipt.getId()
+      receipt.id
     );
     if (existing) {
       throw new ReceiptMetadataAlreadyExistsError(params.receiptId);
@@ -371,7 +371,7 @@ export class ReceiptService {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const metadata = await this.metadataRepository.findByReceiptId(
-      receipt.getId()
+      receipt.id
     );
 
     if (!metadata) {
@@ -441,7 +441,7 @@ export class ReceiptService {
       return null;
     }
 
-    const metadata = await this.metadataRepository.findByReceiptId(receipt.getId());
+    const metadata = await this.metadataRepository.findByReceiptId(receipt.id);
     if (!metadata) {
       return null;
     }
@@ -459,7 +459,7 @@ export class ReceiptService {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const hasTag = await this.tagRepository.hasTag(
-      receipt.getId(),
+      receipt.id,
       TagId.fromString(tagId)
     );
 
@@ -467,7 +467,7 @@ export class ReceiptService {
       return; // Already has this tag
     }
 
-    await this.tagRepository.addTag(receipt.getId(), TagId.fromString(tagId));
+    await this.tagRepository.addTag(receipt.id, TagId.fromString(tagId));
   }
 
   async removeTag(
@@ -479,7 +479,7 @@ export class ReceiptService {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     await this.tagRepository.removeTag(
-      receipt.getId(),
+      receipt.id,
       TagId.fromString(tagId)
     );
   }
@@ -490,7 +490,7 @@ export class ReceiptService {
   ): Promise<TagId[]> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId);
 
-    return await this.tagRepository.findTagsByReceipt(receipt.getId());
+    return await this.tagRepository.findTagsByReceipt(receipt.id);
   }
 
   // Statistics
@@ -521,7 +521,7 @@ export class ReceiptService {
   ): Promise<string> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
-    const storageLocation = receipt.getStorageLocation();
+    const storageLocation = receipt.storageLocation;
     const bucket = storageLocation.getBucket() || 'local';
     const key = storageLocation.getKey();
 

@@ -95,27 +95,27 @@ export class ReceiptTagDefinition extends AggregateRoot {
   }
 
   // Getters
-  getId(): TagId {
+  get id(): TagId {
     return this.props.id;
   }
 
-  getWorkspaceId(): string {
+  get workspaceId(): string {
     return this.props.workspaceId;
   }
 
-  getName(): string {
+  get name(): string {
     return this.props.name;
   }
 
-  getColor(): string | undefined {
+  get color(): string | undefined {
     return this.props.color;
   }
 
-  getDescription(): string | undefined {
+  get description(): string | undefined {
     return this.props.description;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
@@ -159,12 +159,12 @@ export class ReceiptTagDefinition extends AggregateRoot {
 
   static toDTO(tag: ReceiptTagDefinition): ReceiptTagDefinitionDTO {
     return {
-      tagId: tag.getId().getValue(),
-      workspaceId: tag.getWorkspaceId(),
-      name: tag.getName(),
-      color: tag.getColor(),
-      description: tag.getDescription(),
-      createdAt: tag.getCreatedAt().toISOString(),
+      tagId: tag.id.getValue(),
+      workspaceId: tag.workspaceId,
+      name: tag.name,
+      color: tag.color,
+      description: tag.description,
+      createdAt: tag.createdAt.toISOString(),
     };
   }
 }

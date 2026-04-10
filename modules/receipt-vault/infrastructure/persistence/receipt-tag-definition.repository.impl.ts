@@ -20,19 +20,19 @@ export class ReceiptTagDefinitionRepositoryImpl
 
   async save(tag: ReceiptTagDefinition): Promise<void> {
     await this.prisma.receiptTagDefinition.upsert({
-      where: { id: tag.getId().getValue() },
+      where: { id: tag.id.getValue() },
       create: {
-        id: tag.getId().getValue(),
-        workspaceId: tag.getWorkspaceId(),
-        name: tag.getName(),
-        color: tag.getColor(),
-        description: tag.getDescription(),
-        createdAt: tag.getCreatedAt(),
+        id: tag.id.getValue(),
+        workspaceId: tag.workspaceId,
+        name: tag.name,
+        color: tag.color,
+        description: tag.description,
+        createdAt: tag.createdAt,
       },
       update: {
-        name: tag.getName(),
-        color: tag.getColor(),
-        description: tag.getDescription(),
+        name: tag.name,
+        color: tag.color,
+        description: tag.description,
       },
     });
     await this.dispatchEvents(tag);

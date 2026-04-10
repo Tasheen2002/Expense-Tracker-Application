@@ -84,12 +84,7 @@ export class ReceiptController {
         receiptId,
         workspaceId,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Receipt retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Receipt retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -113,21 +108,15 @@ export class ReceiptController {
         limit: query.limit,
         offset: query.offset,
       });
-      const paginatedData = result.data;
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Receipts retrieved successfully',
-        {
-          items: paginatedData?.items ?? [],
-          pagination: {
-            total: paginatedData?.total ?? 0,
-            limit: paginatedData?.limit ?? 0,
-            offset: paginatedData?.offset ?? 0,
-            hasMore: paginatedData?.hasMore ?? false,
-          },
-        }
-      );
+      return ResponseHelper.ok(reply, 'Receipts retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -147,21 +136,15 @@ export class ReceiptController {
         expenseId,
         workspaceId,
       });
-      const paginatedData = result.data;
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Receipts retrieved successfully',
-        {
-          receipts: paginatedData?.items ?? [],
-          pagination: {
-            total: paginatedData?.total ?? 0,
-            limit: paginatedData?.limit ?? 0,
-            offset: paginatedData?.offset ?? 0,
-            hasMore: paginatedData?.hasMore ?? false,
-          },
-        }
-      );
+      return ResponseHelper.ok(reply, 'Receipts retrieved successfully', {
+        receipts: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -404,12 +387,7 @@ export class ReceiptController {
         receiptId,
         workspaceId,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Metadata retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Metadata retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -479,11 +457,7 @@ export class ReceiptController {
 
     try {
       const result = await this.getStatsHandler.handle({ workspaceId });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Receipt statistics retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Receipt statistics retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

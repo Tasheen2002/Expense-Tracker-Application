@@ -125,91 +125,91 @@ export class ReceiptMetadata extends AggregateRoot {
   }
 
   // Getters
-  getId(): MetadataId {
+  get id(): MetadataId {
     return this.props.id;
   }
 
-  getReceiptId(): ReceiptId {
+  get receiptId(): ReceiptId {
     return this.props.receiptId;
   }
 
-  getMerchantName(): string | undefined {
+  get merchantName(): string | undefined {
     return this.props.merchantName;
   }
 
-  getMerchantAddress(): string | undefined {
+  get merchantAddress(): string | undefined {
     return this.props.merchantAddress;
   }
 
-  getMerchantPhone(): string | undefined {
+  get merchantPhone(): string | undefined {
     return this.props.merchantPhone;
   }
 
-  getMerchantTaxId(): string | undefined {
+  get merchantTaxId(): string | undefined {
     return this.props.merchantTaxId;
   }
 
-  getTransactionDate(): Date | undefined {
+  get transactionDate(): Date | undefined {
     return this.props.transactionDate;
   }
 
-  getTransactionTime(): string | undefined {
+  get transactionTime(): string | undefined {
     return this.props.transactionTime;
   }
 
-  getSubtotal(): Decimal | undefined {
+  get subtotal(): Decimal | undefined {
     return this.props.subtotal;
   }
 
-  getTaxAmount(): Decimal | undefined {
+  get taxAmount(): Decimal | undefined {
     return this.props.taxAmount;
   }
 
-  getTipAmount(): Decimal | undefined {
+  get tipAmount(): Decimal | undefined {
     return this.props.tipAmount;
   }
 
-  getTotalAmount(): Decimal | undefined {
+  get totalAmount(): Decimal | undefined {
     return this.props.totalAmount;
   }
 
-  getCurrency(): string | undefined {
+  get currency(): string | undefined {
     return this.props.currency;
   }
 
-  getPaymentMethod(): string | undefined {
+  get paymentMethod(): string | undefined {
     return this.props.paymentMethod;
   }
 
-  getLastFourDigits(): string | undefined {
+  get lastFourDigits(): string | undefined {
     return this.props.lastFourDigits;
   }
 
-  getInvoiceNumber(): string | undefined {
+  get invoiceNumber(): string | undefined {
     return this.props.invoiceNumber;
   }
 
-  getPoNumber(): string | undefined {
+  get poNumber(): string | undefined {
     return this.props.poNumber;
   }
 
-  getLineItems(): LineItem[] | undefined {
+  get lineItems(): LineItem[] | undefined {
     return this.props.lineItems;
   }
 
-  getNotes(): string | undefined {
+  get notes(): string | undefined {
     return this.props.notes;
   }
 
-  getCustomFields(): Record<string, any> | undefined {
+  get customFields(): Record<string, any> | undefined {
     return this.props.customFields;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -377,28 +377,28 @@ export class ReceiptMetadata extends AggregateRoot {
 
   static toDTO(metadata: ReceiptMetadata): ReceiptMetadataDTO {
     return {
-      metadataId: metadata.getId().getValue(),
-      receiptId: metadata.getReceiptId().getValue(),
-      merchantName: metadata.getMerchantName(),
-      merchantAddress: metadata.getMerchantAddress(),
-      merchantPhone: metadata.getMerchantPhone(),
-      merchantTaxId: metadata.getMerchantTaxId(),
-      transactionDate: metadata.getTransactionDate()?.toISOString(),
-      transactionTime: metadata.getTransactionTime(),
-      subtotal: metadata.getSubtotal()?.toString(),
-      taxAmount: metadata.getTaxAmount()?.toString(),
-      tipAmount: metadata.getTipAmount()?.toString(),
-      totalAmount: metadata.getTotalAmount()?.toString(),
-      currency: metadata.getCurrency(),
-      paymentMethod: metadata.getPaymentMethod(),
-      lastFourDigits: metadata.getLastFourDigits(),
-      invoiceNumber: metadata.getInvoiceNumber(),
-      poNumber: metadata.getPoNumber(),
-      lineItems: metadata.getLineItems(),
-      notes: metadata.getNotes(),
-      customFields: metadata.getCustomFields(),
-      createdAt: metadata.getCreatedAt().toISOString(),
-      updatedAt: metadata.getUpdatedAt().toISOString(),
+      metadataId: metadata.id.getValue(),
+      receiptId: metadata.receiptId.getValue(),
+      merchantName: metadata.merchantName,
+      merchantAddress: metadata.merchantAddress,
+      merchantPhone: metadata.merchantPhone,
+      merchantTaxId: metadata.merchantTaxId,
+      transactionDate: metadata.transactionDate?.toISOString(),
+      transactionTime: metadata.transactionTime,
+      subtotal: metadata.subtotal?.toString(),
+      taxAmount: metadata.taxAmount?.toString(),
+      tipAmount: metadata.tipAmount?.toString(),
+      totalAmount: metadata.totalAmount?.toString(),
+      currency: metadata.currency,
+      paymentMethod: metadata.paymentMethod,
+      lastFourDigits: metadata.lastFourDigits,
+      invoiceNumber: metadata.invoiceNumber,
+      poNumber: metadata.poNumber,
+      lineItems: metadata.lineItems,
+      notes: metadata.notes,
+      customFields: metadata.customFields,
+      createdAt: metadata.createdAt.toISOString(),
+      updatedAt: metadata.updatedAt.toISOString(),
     };
   }
 }

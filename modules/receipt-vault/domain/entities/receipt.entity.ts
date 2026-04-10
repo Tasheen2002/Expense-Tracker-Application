@@ -206,67 +206,67 @@ export class Receipt extends AggregateRoot {
   }
 
   // Getters
-  getId(): ReceiptId {
+  get id(): ReceiptId {
     return this.props.id;
   }
 
-  getWorkspaceId(): string {
+  get workspaceId(): string {
     return this.props.workspaceId;
   }
 
-  getExpenseId(): string | undefined {
+  get expenseId(): string | undefined {
     return this.props.expenseId;
   }
 
-  getUserId(): string {
+  get userId(): string {
     return this.props.userId;
   }
 
-  getFileInfo(): FileInfo {
+  get fileInfo(): FileInfo {
     return this.props.fileInfo;
   }
 
-  getReceiptType(): ReceiptType {
+  get receiptType(): ReceiptType {
     return this.props.receiptType;
   }
 
-  getStatus(): ReceiptStatus {
+  get status(): ReceiptStatus {
     return this.props.status;
   }
 
-  getStorageLocation(): StorageLocation {
+  get storageLocation(): StorageLocation {
     return this.props.storageLocation;
   }
 
-  getThumbnailPath(): string | undefined {
+  get thumbnailPath(): string | undefined {
     return this.props.thumbnailPath;
   }
 
-  getOcrText(): string | undefined {
+  get ocrText(): string | undefined {
     return this.props.ocrText;
   }
 
-  getOcrConfidence(): Decimal | undefined {
+  get ocrConfidence(): Decimal | undefined {
     return this.props.ocrConfidence;
   }
 
-  getProcessedAt(): Date | undefined {
+  get processedAt(): Date | undefined {
     return this.props.processedAt;
   }
 
-  getFailureReason(): string | undefined {
+  get failureReason(): string | undefined {
     return this.props.failureReason;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
-  getDeletedAt(): Date | undefined {
+  get deletedAt(): Date | undefined {
     return this.props.deletedAt;
   }
 
@@ -450,34 +450,34 @@ export class Receipt extends AggregateRoot {
   }
 
   static toDTO(receipt: Receipt): ReceiptDTO {
-    const fileInfo = receipt.getFileInfo();
-    const storageLocation = receipt.getStorageLocation();
+    const fileInfo = receipt.fileInfo;
+    const storageLocation = receipt.storageLocation;
     return {
-      receiptId: receipt.getId().getValue(),
-      workspaceId: receipt.getWorkspaceId(),
-      expenseId: receipt.getExpenseId(),
-      userId: receipt.getUserId(),
+      receiptId: receipt.id.getValue(),
+      workspaceId: receipt.workspaceId,
+      expenseId: receipt.expenseId,
+      userId: receipt.userId,
       fileName: fileInfo.getFileName(),
       originalName: fileInfo.getOriginalName(),
       filePath: fileInfo.getFilePath(),
       fileSize: fileInfo.getFileSize(),
       mimeType: fileInfo.getMimeType(),
       fileHash: fileInfo.getFileHash(),
-      receiptType: receipt.getReceiptType(),
-      status: receipt.getStatus(),
+      receiptType: receipt.receiptType,
+      status: receipt.status,
       storageProvider: storageLocation.getProvider(),
       storageBucket: storageLocation.getBucket(),
       storageKey: storageLocation.getKey(),
-      thumbnailPath: receipt.getThumbnailPath(),
-      ocrText: receipt.getOcrText(),
-      ocrConfidence: receipt.getOcrConfidence()?.toString(),
-      processedAt: receipt.getProcessedAt()?.toISOString(),
-      failureReason: receipt.getFailureReason(),
+      thumbnailPath: receipt.thumbnailPath,
+      ocrText: receipt.ocrText,
+      ocrConfidence: receipt.ocrConfidence?.toString(),
+      processedAt: receipt.processedAt?.toISOString(),
+      failureReason: receipt.failureReason,
       isLinked: receipt.isLinkedToExpense(),
       isDeleted: receipt.isDeleted(),
-      createdAt: receipt.getCreatedAt().toISOString(),
-      updatedAt: receipt.getUpdatedAt().toISOString(),
-      deletedAt: receipt.getDeletedAt()?.toISOString(),
+      createdAt: receipt.createdAt.toISOString(),
+      updatedAt: receipt.updatedAt.toISOString(),
+      deletedAt: receipt.deletedAt?.toISOString(),
     };
   }
 
