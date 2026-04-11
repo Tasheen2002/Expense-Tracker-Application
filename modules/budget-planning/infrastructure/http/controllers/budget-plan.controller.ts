@@ -94,7 +94,11 @@ export class BudgetPlanController {
     try {
       const { workspaceId, id } = req.params;
       const userId = req.user.userId;
-      const result = await this.activateHandler.handle({ id, workspaceId, userId });
+      const result = await this.activateHandler.handle({
+        id,
+        workspaceId,
+        userId,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -113,7 +117,11 @@ export class BudgetPlanController {
       const userId = req.user.userId;
       const { workspaceId, id } = req.params;
       const plan = await this.getHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.ok(reply, 'Budget plan retrieved successfully', plan);
+      return ResponseHelper.ok(
+        reply,
+        'Budget plan retrieved successfully',
+        plan
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -141,7 +149,11 @@ export class BudgetPlanController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.ok(reply, 'Budget plans retrieved successfully', result);
+      return ResponseHelper.ok(
+        reply,
+        'Budget plans retrieved successfully',
+        result
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -154,7 +166,11 @@ export class BudgetPlanController {
     try {
       const { workspaceId, id } = req.params;
       const userId = req.user.userId;
-      const result = await this.deleteHandler.handle({ id, workspaceId, userId });
+      const result = await this.deleteHandler.handle({
+        id,
+        workspaceId,
+        userId,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
