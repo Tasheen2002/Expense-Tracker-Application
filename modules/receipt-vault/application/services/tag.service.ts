@@ -73,7 +73,7 @@ export class TagService {
     const tag = await this._getTagEntity(tagId, workspaceId);
 
     // Check name uniqueness if name is being updated
-    if (updates.name && updates.name !== tag.getName()) {
+    if (updates.name && updates.name !== tag.name) {
       const existing = await this.tagDefinitionRepository.findByName(
         updates.name,
         workspaceId,

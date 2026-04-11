@@ -10,7 +10,7 @@ import {
   InvalidSplitPercentageError,
   InsufficientParticipantsError,
 } from '../errors/split-expense.errors';
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from '@prisma/client/runtime/library'; // Decimal used only for arithmetic
 
 export class ExpenseSplitCreatedEvent extends DomainEvent {
   constructor(
@@ -68,7 +68,7 @@ export class ExpenseSplit extends AggregateRoot {
     participants: Array<{
       userId: string;
       shareAmount?: Money;
-      sharePercentage?: Decimal;
+      sharePercentage?: number;
     }>;
   }): ExpenseSplit {
     if (params.participants.length < 2) {
@@ -95,7 +95,7 @@ export class ExpenseSplit extends AggregateRoot {
           ),
           sharePercentage: new Decimal(100).dividedBy(
             params.participants.length
-          ),
+          ).toNumber(),
         })
       );
     } else if (params.splitType === SplitType.EXACT) {
@@ -123,7 +123,7 @@ export class ExpenseSplit extends AggregateRoot {
           splitId,
           userId: p.userId,
           shareAmount: p.shareAmount!,
-          sharePercentage: percentage,
+          sharePercentage: percentage.toNumber(),
         });
       });
     } else if (params.splitType === SplitType.PERCENTAGE) {
@@ -169,86 +169,60 @@ export class ExpenseSplit extends AggregateRoot {
 
     split.addDomainEvent(
       new ExpenseSplitCreatedEvent(
-        split.getId().getValue(),
-        split.getExpenseId().getValue(),
-        split.getWorkspaceId(),
-        split.getSplitType(),
-        split.getParticipants().length
+        split.props.id.getValue(),
+        split.props.expenseId.getValue(),
+        split.props.workspaceId,
+        split.props.splitType,
+        split.props.participants.length
       )
     );
 
     return split;
   }
 
-  static reconstitute(props: ExpenseSplitProps): ExpenseSplit {
+  static fromPersistence(props: ExpenseSplitProps): ExpenseSplit {
     return new ExpenseSplit(props);
   }
 
-  getId(): SplitId {
-    return this.props.id;
-  }
-
-  getExpenseId(): ExpenseId {
-    return this.props.expenseId;
-  }
-
-  getWorkspaceId(): string {
-    return this.props.workspaceId;
-  }
-
-  getPaidBy(): string {
-    return this.props.paidBy;
-  }
-
-  getTotalAmount(): Money {
-    return this.props.totalAmount;
-  }
-
-  getSplitType(): SplitType {
-    return this.props.splitType;
-  }
-
-  getParticipants(): SplitParticipant[] {
-    return this.props.participants;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
+  get id(): SplitId { return this.props.id; }
+  get expenseId(): ExpenseId { return this.props.expenseId; }
+  get workspaceId(): string { return this.props.workspaceId; }
+  get paidBy(): string { return this.props.paidBy; }
+  get totalAmount(): Money { return this.props.totalAmount; }
+  get splitType(): SplitType { return this.props.splitType; }
+  get participants(): SplitParticipant[] { return this.props.participants; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   getParticipantByUserId(userId: string): SplitParticipant | undefined {
-    return this.props.participants.find((p) => p.getUserId() === userId);
+    return this.props.participants.find((p) => p.userId === userId);
   }
 
   isParticipant(userId: string): boolean {
-    return this.props.participants.some((p) => p.getUserId() === userId);
+    return this.props.participants.some((p) => p.userId === userId);
   }
 
   markAsDeleted(): void {
     this.addDomainEvent(
       new ExpenseSplitDeletedEvent(
-        this.getId().getValue(),
-        this.getExpenseId().getValue(),
-        this.getWorkspaceId()
+        this.props.id.getValue(),
+        this.props.expenseId.getValue(),
+        this.props.workspaceId
       )
     );
   }
 
   isFullySettled(): boolean {
     return this.props.participants
-      .filter((p) => p.getUserId() !== this.props.paidBy)
-      .every((p) => p.isPaidStatus());
+      .filter((p) => p.userId !== this.props.paidBy)
+      .every((p) => p.isPaid);
   }
 
   getOutstandingAmount(): Money {
     const outstanding = this.props.participants
-      .filter((p) => p.getUserId() !== this.props.paidBy && !p.isPaidStatus())
+      .filter((p) => p.userId !== this.props.paidBy && !p.isPaid)
       .reduce(
-        (sum, p) => sum.plus(p.getShareAmount().getAmount()),
+        (sum, p) => sum.plus(p.shareAmount.getAmount()),
         new Decimal(0)
       );
 
@@ -258,27 +232,27 @@ export class ExpenseSplit extends AggregateRoot {
     );
   }
 
-  toJSON(): ExpenseSplitDTO {
+  static toDTO(split: ExpenseSplit): ExpenseSplitDTO {
     return {
-      id: this.getId().getValue(),
-      expenseId: this.getExpenseId().getValue(),
-      workspaceId: this.getWorkspaceId(),
-      paidBy: this.getPaidBy(),
-      totalAmount: this.getTotalAmount().getAmount().toString(),
-      currency: this.getTotalAmount().getCurrency(),
-      splitType: this.getSplitType(),
-      participants: this.getParticipants().map((p) => ({
-        id: p.getId().getValue(),
-        userId: p.getUserId(),
-        shareAmount: p.getShareAmount().getAmount().toString(),
-        sharePercentage: p.getSharePercentage()?.toNumber(),
-        isPaid: p.isPaidStatus(),
-        paidAt: p.getPaidAt()?.toISOString(),
+      id: split.props.id.getValue(),
+      expenseId: split.props.expenseId.getValue(),
+      workspaceId: split.props.workspaceId,
+      paidBy: split.props.paidBy,
+      totalAmount: split.props.totalAmount.getAmount().toString(),
+      currency: split.props.totalAmount.getCurrency(),
+      splitType: split.props.splitType,
+      participants: split.props.participants.map((p) => ({
+        id: p.id.getValue(),
+        userId: p.userId,
+        shareAmount: p.shareAmount.getAmount().toString(),
+        sharePercentage: p.sharePercentage,
+        isPaid: p.isPaid,
+        paidAt: p.paidAt?.toISOString(),
       })),
-      isFullySettled: this.isFullySettled(),
-      outstandingAmount: this.getOutstandingAmount().getAmount().toString(),
-      createdAt: this.getCreatedAt().toISOString(),
-      updatedAt: this.getUpdatedAt().toISOString(),
+      isFullySettled: split.isFullySettled(),
+      outstandingAmount: split.getOutstandingAmount().getAmount().toString(),
+      createdAt: split.props.createdAt.toISOString(),
+      updatedAt: split.props.updatedAt.toISOString(),
     };
   }
 }

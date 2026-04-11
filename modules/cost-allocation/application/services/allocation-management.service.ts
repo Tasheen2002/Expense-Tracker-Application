@@ -17,7 +17,6 @@ import {
   DuplicateProjectCodeError,
   UnauthorizedAllocationAccessError,
 } from "../../domain/errors/cost-allocation.errors";
-import { Decimal } from "@prisma/client/runtime/library";
 import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
 import {
   PaginatedResult,
@@ -56,7 +55,6 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("create department");
     }
 
-    // Check for duplicate code
     const existing = await this.departmentRepository.findByCode(
       params.code,
       workspaceId,
@@ -64,8 +62,6 @@ export class AllocationManagementService {
     if (existing) {
       throw new DuplicateDepartmentCodeError(params.code);
     }
-
-    // specific validation for parent dept existence could be added here
 
     const department = Department.create({
       workspaceId,
@@ -133,24 +129,21 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("update department");
     }
 
-    // Get existing department
     const department = await this.departmentRepository.findById(departmentId);
     if (!department) {
       throw new DepartmentNotFoundError(params.id);
     }
 
-    // Check if code is being changed and if new code already exists
-    if (params.code && params.code !== department.getCode()) {
+    if (params.code && params.code !== department.code) {
       const existing = await this.departmentRepository.findByCode(
         params.code,
         workspaceId,
       );
-      if (existing && existing.getId().getValue() !== params.id) {
+      if (existing && existing.id.getValue() !== params.id) {
         throw new DuplicateDepartmentCodeError(params.code);
       }
     }
 
-    // Update department details
     department.updateDetails({
       name: params.name,
       code: params.code,
@@ -186,7 +179,6 @@ export class AllocationManagementService {
       throw new DepartmentNotFoundError(id);
     }
 
-    // Soft delete by deactivating and staging the deleted event
     department.deactivate();
     department.markAsDeleted();
     await this.departmentRepository.save(department);
@@ -300,24 +292,21 @@ export class AllocationManagementService {
     }
     const costCenterId = CostCenterId.fromString(params.id);
 
-    // Get existing cost center
     const costCenter = await this.costCenterRepository.findById(costCenterId);
     if (!costCenter) {
       throw new CostCenterNotFoundError(params.id);
     }
 
-    // Check if code is being changed and if new code already exists
-    if (params.code && params.code !== costCenter.getCode()) {
+    if (params.code && params.code !== costCenter.code) {
       const existing = await this.costCenterRepository.findByCode(
         params.code,
         workspaceId,
       );
-      if (existing && existing.getId().getValue() !== params.id) {
+      if (existing && existing.id.getValue() !== params.id) {
         throw new DuplicateCostCenterCodeError(params.code);
       }
     }
 
-    // Update cost center details
     costCenter.updateDetails({
       name: params.name,
       code: params.code,
@@ -343,7 +332,6 @@ export class AllocationManagementService {
       throw new CostCenterNotFoundError(id);
     }
 
-    // Soft delete by deactivating and staging the deleted event
     costCenter.deactivate();
     costCenter.markAsDeleted();
     await this.costCenterRepository.save(costCenter);
@@ -395,7 +383,6 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("create project");
     }
 
-    // Check code uniqueness
     const existing = await this.projectRepository.findByCode(
       params.code,
       workspaceId,
@@ -414,7 +401,7 @@ export class AllocationManagementService {
       managerId: params.managerId
         ? UserId.fromString(params.managerId)
         : undefined,
-      budget: params.budget ? new Decimal(params.budget) : undefined,
+      budget: params.budget ?? null,
     });
 
     await this.projectRepository.save(project);
@@ -472,24 +459,21 @@ export class AllocationManagementService {
     }
     const projectId = ProjectId.fromString(params.id);
 
-    // Get existing project
     const project = await this.projectRepository.findById(projectId);
     if (!project) {
       throw new ProjectNotFoundError(params.id);
     }
 
-    // Check if code is being changed and if new code already exists
-    if (params.code && params.code !== project.getCode()) {
+    if (params.code && params.code !== project.code) {
       const existing = await this.projectRepository.findByCode(
         params.code,
         workspaceId,
       );
-      if (existing && existing.getId().getValue() !== params.id) {
+      if (existing && existing.id.getValue() !== params.id) {
         throw new DuplicateProjectCodeError(params.code);
       }
     }
 
-    // Update project details
     project.updateDetails({
       name: params.name,
       code: params.code,
@@ -508,11 +492,7 @@ export class AllocationManagementService {
             : UserId.fromString(params.managerId)
           : undefined,
       budget:
-        params.budget !== undefined
-          ? params.budget === null
-            ? null
-            : new Decimal(params.budget)
-          : undefined,
+        params.budget !== undefined ? params.budget : undefined,
     });
 
     await this.projectRepository.save(project);
@@ -534,7 +514,6 @@ export class AllocationManagementService {
       throw new ProjectNotFoundError(id);
     }
 
-    // Soft delete by deactivating and staging the deleted event
     project.deactivate();
     project.markAsDeleted();
     await this.projectRepository.save(project);

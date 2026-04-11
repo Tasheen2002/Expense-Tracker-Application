@@ -9,7 +9,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface ListBudgetsQuery extends IQuery {
   workspaceId: string;
@@ -23,19 +22,15 @@ export interface ListBudgetsQuery extends IQuery {
 
 export class ListBudgetsHandler implements IQueryHandler<
   ListBudgetsQuery,
-  QueryResult<PaginatedResult<BudgetDTO>>
+  PaginatedResult<BudgetDTO>
 > {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(
-    query: ListBudgetsQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetDTO>>> {
+  async handle(query: ListBudgetsQuery): Promise<PaginatedResult<BudgetDTO>> {
     const options: PaginationOptions = {
       limit: query.limit || 50,
       offset: query.offset || 0,
     };
-
-    let result: PaginatedResult<BudgetDTO>;
 
     if (
       query.status ||
@@ -43,7 +38,7 @@ export class ListBudgetsHandler implements IQueryHandler<
       query.createdBy ||
       query.currency
     ) {
-      result = await this.budgetService.filterBudgets(
+      return this.budgetService.filterBudgets(
         {
           workspaceId: query.workspaceId,
           status: query.status,
@@ -53,13 +48,8 @@ export class ListBudgetsHandler implements IQueryHandler<
         },
         options
       );
-    } else {
-      result = await this.budgetService.getBudgetsByWorkspace(
-        query.workspaceId,
-        options
-      );
     }
 
-    return QueryResult.success(result);
+    return this.budgetService.getBudgetsByWorkspace(query.workspaceId, options);
   }
 }

@@ -4,7 +4,6 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetUnreadNotificationsQuery extends IQuery {
@@ -14,17 +13,16 @@ export interface GetUnreadNotificationsQuery extends IQuery {
 
 export class GetUnreadNotificationsHandler implements IQueryHandler<
   GetUnreadNotificationsQuery,
-  QueryResult<PaginatedResult<NotificationDTO>>
+  PaginatedResult<NotificationDTO>
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(
     input: GetUnreadNotificationsQuery
-  ): Promise<QueryResult<PaginatedResult<NotificationDTO>>> {
-    const result = await this.notificationService.getUnreadNotifications(
+  ): Promise<PaginatedResult<NotificationDTO>> {
+    return this.notificationService.getUnreadNotifications(
       input.recipientId,
       input.workspaceId
     );
-    return QueryResult.success(result);
   }
 }

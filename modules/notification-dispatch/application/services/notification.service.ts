@@ -118,11 +118,11 @@ export class NotificationService {
 
       // Render template
       const title = this.renderTemplate(
-        template.getSubjectTemplate(),
+        template.subjectTemplate,
         params.data
       );
       const content = this.renderTemplate(
-        template.getBodyTemplate(),
+        template.bodyTemplate,
         params.data
       );
 
@@ -169,7 +169,7 @@ export class NotificationService {
     }
 
     // Verify the user owns this notification
-    if (!notification.getRecipientId().equals(recipientId)) {
+    if (!notification.recipientId.equals(recipientId)) {
       throw new UnauthorizedNotificationAccessError(notificationId, userId);
     }
 

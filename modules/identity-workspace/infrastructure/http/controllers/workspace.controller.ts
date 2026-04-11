@@ -65,12 +65,7 @@ export class WorkspaceController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Workspace retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Workspace retrieved successfully', result);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -97,22 +92,15 @@ export class WorkspaceController {
         },
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Workspaces retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Workspaces retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

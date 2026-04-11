@@ -11,7 +11,6 @@ import {
   PurchaseOrderItemNotFoundError,
   SupplierNotFoundError,
 } from '../../domain/errors/inventory.errors';
-import { Decimal } from '@prisma/client/runtime/library';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -162,9 +161,9 @@ export class PurchaseOrderService {
     if (!po) return;
 
     const items = await this.poRepository.findItemsByPurchaseOrder(poId);
-    let total = new Decimal(0);
+    let total = 0;
     for (const item of items) {
-      total = total.plus(item.getLineTotal());
+      total += item.getLineTotal();
     }
     po.updateTotalAmount(total);
     await this.poRepository.save(po);

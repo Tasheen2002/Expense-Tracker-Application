@@ -98,7 +98,7 @@ describe("ReceiptService", () => {
     );
 
     const url = await service.getDownloadUrl(
-      mockReceipt.getId().getValue(),
+      mockReceipt.id.getValue(),
       "workspace-1",
       "user-1",
     );

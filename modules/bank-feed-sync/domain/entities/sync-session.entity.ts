@@ -186,7 +186,7 @@ export class SyncSession extends AggregateRoot {
     return session;
   }
 
-  static reconstitute(props: SyncSessionProps): SyncSession {
+  static fromPersistence(props: SyncSessionProps): SyncSession {
     return new SyncSession(props);
   }
 

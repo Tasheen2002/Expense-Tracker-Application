@@ -5,7 +5,6 @@ import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetExecutionsByWorkspaceQuery extends IQuery {
@@ -16,18 +15,14 @@ export interface GetExecutionsByWorkspaceQuery extends IQuery {
 
 export class GetExecutionsByWorkspaceHandler implements IQueryHandler<
   GetExecutionsByWorkspaceQuery,
-  QueryResult<PaginatedResult<RuleExecutionDTO>>
+  PaginatedResult<RuleExecutionDTO>
 > {
   constructor(private readonly executionService: RuleExecutionService) {}
 
-  async handle(
-    query: GetExecutionsByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<RuleExecutionDTO>>> {
-    const result = await this.executionService.getExecutionsByWorkspaceId(
+  async handle(query: GetExecutionsByWorkspaceQuery): Promise<PaginatedResult<RuleExecutionDTO>> {
+    return this.executionService.getExecutionsByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       { limit: query.limit, offset: query.offset }
     );
-
-    return QueryResult.success(result);
   }
 }

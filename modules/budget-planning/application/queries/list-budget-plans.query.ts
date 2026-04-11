@@ -5,7 +5,6 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface ListBudgetPlansQuery extends IQuery {
@@ -18,18 +17,15 @@ export interface ListBudgetPlansQuery extends IQuery {
 
 export class ListBudgetPlansHandler implements IQueryHandler<
   ListBudgetPlansQuery,
-  QueryResult<PaginatedResult<BudgetPlanDTO>>
+  PaginatedResult<BudgetPlanDTO>
 > {
   constructor(private readonly budgetPlanService: BudgetPlanService) {}
 
-  async handle(
-    query: ListBudgetPlansQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetPlanDTO>>> {
-    const result = await this.budgetPlanService.getPlans(
+  async handle(query: ListBudgetPlansQuery): Promise<PaginatedResult<BudgetPlanDTO>> {
+    return this.budgetPlanService.getPlans(
       query.workspaceId,
       query.status,
       { limit: query.limit, offset: query.offset },
     );
-    return QueryResult.success(result);
   }
 }

@@ -144,17 +144,12 @@ export class CategorySuggestionController {
     try {
       const { workspaceId, suggestionId } = request.params;
 
-      const result = await this.getSuggestionByIdHandler.handle({
+      const suggestion = await this.getSuggestionByIdHandler.handle({
         suggestionId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Category suggestion retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Category suggestion retrieved successfully', suggestion);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -169,17 +164,12 @@ export class CategorySuggestionController {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const result = await this.getSuggestionsByExpenseHandler.handle({
+      const suggestions = await this.getSuggestionsByExpenseHandler.handle({
         workspaceId,
         expenseId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Category suggestions retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Category suggestions retrieved successfully', suggestions);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -198,22 +188,20 @@ export class CategorySuggestionController {
       const limit = limitStr ? parseInt(limitStr) : undefined;
 
       if (pendingOnly === true || pendingOnly === 'true') {
-        const result =
-          await this.getPendingSuggestionsByWorkspaceHandler.handle({
-            workspaceId,
-            limit,
-          });
-        return ResponseHelper.fromQuery(
+        const result = await this.getPendingSuggestionsByWorkspaceHandler.handle({
+          workspaceId,
+          limit,
+        });
+        return ResponseHelper.ok(
           reply,
-          result,
           'Pending category suggestions retrieved successfully',
           {
-            items: result.data?.items || [],
+            items: result.items,
             pagination: {
-              total: result.data?.total || 0,
-              limit: result.data?.limit || 10,
-              offset: result.data?.offset || 0,
-              hasMore: result.data?.hasMore || false,
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
             },
           }
         );
@@ -222,17 +210,16 @@ export class CategorySuggestionController {
           workspaceId,
           limit,
         });
-        return ResponseHelper.fromQuery(
+        return ResponseHelper.ok(
           reply,
-          result,
           'Category suggestions retrieved successfully',
           {
-            items: result.data?.items || [],
+            items: result.items,
             pagination: {
-              total: result.data?.total || 0,
-              limit: result.data?.limit || 10,
-              offset: result.data?.offset || 0,
-              hasMore: result.data?.hasMore || false,
+              total: result.total,
+              limit: result.limit,
+              offset: result.offset,
+              hasMore: result.hasMore,
             },
           }
         );

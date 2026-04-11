@@ -171,16 +171,16 @@ export class Attachment {
     return Math.round((this.props.fileSize / (1024 * 1024)) * 100) / 100;
   }
 
-  toJSON(): AttachmentDTO {
+  static toDTO(attachment: Attachment): AttachmentDTO {
     return {
-      attachmentId: this.id.getValue(),
-      expenseId: this.expenseId,
-      fileName: this.fileName,
-      filePath: this.filePath,
-      fileSize: this.fileSize,
-      mimeType: this.mimeType,
-      uploadedBy: this.uploadedBy,
-      createdAt: this.createdAt.toISOString(),
+      attachmentId: attachment.id.getValue(),
+      expenseId: attachment.expenseId,
+      fileName: attachment.fileName,
+      filePath: attachment.filePath,
+      fileSize: attachment.fileSize,
+      mimeType: attachment.mimeType,
+      uploadedBy: attachment.uploadedBy,
+      createdAt: attachment.createdAt.toISOString(),
     };
   }
 }

@@ -25,14 +25,14 @@ export class UserRepositoryImpl
   async save(user: User): Promise<void> {
     await this.prisma.userAccount.create({
       data: {
-        id: user.getId().getValue(),
-        email: user.getEmail().getValue(),
-        passwordHash: user.getPasswordHash(),
-        fullName: user.getFullName(),
-        isActive: user.getIsActive(),
-        emailVerified: user.getEmailVerified(),
-        createdAt: user.getCreatedAt(),
-        updatedAt: user.getUpdatedAt(),
+        id: user.id.getValue(),
+        email: user.email.getValue(),
+        passwordHash: user.passwordHash,
+        fullName: user.fullName,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
     await this.dispatchEvents(user);
@@ -47,7 +47,7 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.reconstitute({
+    return User.fromPersistence({
       id: UserId.fromString(row.id),
       email: Email.create(row.email),
       passwordHash: row.passwordHash,
@@ -68,7 +68,7 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.reconstitute({
+    return User.fromPersistence({
       id: UserId.fromString(row.id),
       email: Email.create(row.email),
       passwordHash: row.passwordHash,
@@ -109,7 +109,7 @@ export class UserRepositoryImpl
       this.prisma.userAccount,
       { where, orderBy },
       (row) =>
-        User.reconstitute({
+        User.fromPersistence({
           id: UserId.fromString(row.id),
           email: Email.create(row.email),
           passwordHash: row.passwordHash,
@@ -125,14 +125,14 @@ export class UserRepositoryImpl
 
   async update(user: User): Promise<void> {
     await this.prisma.userAccount.update({
-      where: { id: user.getId().getValue() },
+      where: { id: user.id.getValue() },
       data: {
-        email: user.getEmail().getValue(),
-        passwordHash: user.getPasswordHash(),
-        fullName: user.getFullName(),
-        isActive: user.getIsActive(),
-        emailVerified: user.getEmailVerified(),
-        updatedAt: user.getUpdatedAt(),
+        email: user.email.getValue(),
+        passwordHash: user.passwordHash,
+        fullName: user.fullName,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+        updatedAt: user.updatedAt,
       },
     });
     await this.dispatchEvents(user);

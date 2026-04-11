@@ -15,8 +15,6 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { Decimal } from '@prisma/client/runtime/library';
-
 export class PurchaseOrderRepositoryImpl
   extends PrismaRepository<PurchaseOrder>
   implements IPurchaseOrderRepository
@@ -171,7 +169,7 @@ export class PurchaseOrderRepositoryImpl
       expectedDate: row.expectedDate,
       receivedDate: row.receivedDate,
       notes: row.notes,
-      totalAmount: row.totalAmount,
+      totalAmount: Number(row.totalAmount),
       currency: row.currency,
       createdBy: row.createdBy,
       createdAt: row.createdAt,
@@ -188,7 +186,7 @@ export class PurchaseOrderRepositoryImpl
       variantId: row.variantId,
       variantName: row.variantName,
       quantity: row.quantity,
-      unitPrice: row.unitPrice,
+      unitPrice: Number(row.unitPrice),
       receivedQuantity: row.receivedQuantity,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

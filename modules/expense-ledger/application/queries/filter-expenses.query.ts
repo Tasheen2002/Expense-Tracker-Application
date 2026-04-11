@@ -1,8 +1,4 @@
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
@@ -33,16 +29,11 @@ export interface FilterExpensesQuery extends IQuery {
   readonly offset?: number;
 }
 
-export class FilterExpensesHandler implements IQueryHandler<
-  FilterExpensesQuery,
-  QueryResult<FilterExpensesResult>
-> {
+export class FilterExpensesHandler implements IQueryHandler<FilterExpensesQuery, FilterExpensesResult> {
   constructor(private readonly expenseService: ExpenseService) {}
 
-  async handle(
-    query: FilterExpensesQuery
-  ): Promise<QueryResult<FilterExpensesResult>> {
-    const result = await this.expenseService.getExpensesWithFilters({
+  async handle(query: FilterExpensesQuery): Promise<FilterExpensesResult> {
+    return this.expenseService.getExpensesWithFilters({
       workspaceId: query.workspaceId,
       userId: query.userId,
       categoryId: query.categoryId,
@@ -57,6 +48,5 @@ export class FilterExpensesHandler implements IQueryHandler<
       searchText: query.searchText,
       pagination: { limit: query.limit, offset: query.offset },
     });
-    return QueryResult.success(result);
   }
 }

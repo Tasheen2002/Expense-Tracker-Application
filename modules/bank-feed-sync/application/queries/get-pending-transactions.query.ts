@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetPendingTransactionsQuery extends IQuery {
   workspaceId: string;
@@ -18,20 +17,17 @@ export interface GetPendingTransactionsQuery extends IQuery {
 
 export class GetPendingTransactionsHandler implements IQueryHandler<
   GetPendingTransactionsQuery,
-  QueryResult<PaginatedResult<BankTransactionDTO>>
+  PaginatedResult<BankTransactionDTO>
 > {
   constructor(
     private readonly transactionSyncService: TransactionSyncService
   ) {}
 
-  async handle(
-    query: GetPendingTransactionsQuery
-  ): Promise<QueryResult<PaginatedResult<BankTransactionDTO>>> {
-    const result = await this.transactionSyncService.getPendingTransactions(
+  async handle(query: GetPendingTransactionsQuery): Promise<PaginatedResult<BankTransactionDTO>> {
+    return this.transactionSyncService.getPendingTransactions(
       query.workspaceId,
       query.connectionId,
       query.options
     );
-    return QueryResult.success(result);
   }
 }

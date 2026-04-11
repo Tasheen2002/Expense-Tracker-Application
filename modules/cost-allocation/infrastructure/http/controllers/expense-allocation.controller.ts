@@ -40,7 +40,6 @@ export class ExpenseAllocationController {
       const { workspaceId, expenseId } = request.params;
       const { allocations } = request.body;
 
-      // Extract userId from authenticated user context
       const userId = request.user.userId;
 
       const result = await this.allocateExpenseHandler.handle({
@@ -69,20 +68,13 @@ export class ExpenseAllocationController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { workspaceId, expenseId } = request.params;
-      const result = await this.getExpenseAllocationsHandler.handle({
+      const allocations = await this.getExpenseAllocationsHandler.handle({
         expenseId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Allocations retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Allocations retrieved successfully', allocations);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -121,19 +113,12 @@ export class ExpenseAllocationController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { workspaceId } = request.params;
-      const result = await this.getAllocationSummaryHandler.handle({
+      const summary = await this.getAllocationSummaryHandler.handle({
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Allocation summary retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Allocation summary retrieved successfully', summary);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

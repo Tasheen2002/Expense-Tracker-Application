@@ -74,17 +74,11 @@ export class InvitationController {
     const { token } = request.params as { token: string };
 
     try {
-      const result = await this.getInvitationByTokenHandler.handle({ token });
+      const invitation = await this.getInvitationByTokenHandler.handle({ token });
 
-      if (!result.success) {
-        return ResponseHelper.fromQuery(reply, result, 'Invitation retrieved');
-      }
-
-      if (!result.data) {
+      if (!invitation) {
         return ResponseHelper.notFound(reply, 'Invitation not found');
       }
-
-      const invitation = result.data;
 
       if (invitation.isExpired) {
         return ResponseHelper.gone(reply, 'Invitation has expired');
@@ -97,12 +91,7 @@ export class InvitationController {
         );
       }
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Invitation retrieved successfully',
-        invitation
-      );
+      return ResponseHelper.ok(reply, 'Invitation retrieved successfully', invitation);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -165,24 +154,15 @@ export class InvitationController {
         },
       });
 
-      const paginatedResult = result.data;
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Invitations retrieved successfully',
-        paginatedResult
-          ? {
-              items: paginatedResult.items,
-              pagination: {
-                total: paginatedResult.total,
-                limit: paginatedResult.limit,
-                offset: paginatedResult.offset,
-                hasMore: paginatedResult.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Invitations retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

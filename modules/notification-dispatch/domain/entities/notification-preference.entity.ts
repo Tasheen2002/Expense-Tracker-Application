@@ -1,6 +1,7 @@
 import { NotificationType } from '../enums/notification-type.enum';
 import { PreferenceId } from '../value-objects/preference-id';
 import { UserId, WorkspaceId } from '../value-objects';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface TypeSettingValue {
   email?: boolean;
@@ -20,11 +21,9 @@ export interface NotificationPreferenceProps {
   updatedAt: Date;
 }
 
-export class NotificationPreference {
-  private props: NotificationPreferenceProps;
-
-  private constructor(props: NotificationPreferenceProps) {
-    this.props = props;
+export class NotificationPreference extends AggregateRoot {
+  private constructor(private props: NotificationPreferenceProps) {
+    super();
   }
 
   static create(params: {
@@ -44,39 +43,19 @@ export class NotificationPreference {
     });
   }
 
-  static reconstitute(
+  static fromPersistence(
     props: NotificationPreferenceProps
   ): NotificationPreference {
     return new NotificationPreference(props);
   }
 
-  getId(): PreferenceId {
-    return this.props.id;
-  }
-
-  getUserId(): UserId {
-    return this.props.userId;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  isEmailEnabled(): boolean {
-    return this.props.emailEnabled;
-  }
-
-  isInAppEnabled(): boolean {
-    return this.props.inAppEnabled;
-  }
-
-  isPushEnabled(): boolean {
-    return this.props.pushEnabled;
-  }
-
-  getTypeSettings(): Record<string, TypeSettingValue> {
-    return this.props.typeSettings;
-  }
+  get id(): PreferenceId { return this.props.id; }
+  get userId(): UserId { return this.props.userId; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get emailEnabled(): boolean { return this.props.emailEnabled; }
+  get inAppEnabled(): boolean { return this.props.inAppEnabled; }
+  get pushEnabled(): boolean { return this.props.pushEnabled; }
+  get typeSettings(): Record<string, TypeSettingValue> { return this.props.typeSettings; }
 
   isChannelEnabledForType(
     type: NotificationType,
@@ -120,12 +99,12 @@ export class NotificationPreference {
 
   static toDTO(pref: NotificationPreference): NotificationPreferenceDTO {
     return {
-      id: pref.getId().getValue(),
-      userId: pref.getUserId().getValue(),
-      workspaceId: pref.getWorkspaceId().getValue(),
-      emailEnabled: pref.isEmailEnabled(),
-      inAppEnabled: pref.isInAppEnabled(),
-      pushEnabled: pref.isPushEnabled(),
+      id: pref.id.getValue(),
+      userId: pref.userId.getValue(),
+      workspaceId: pref.workspaceId.getValue(),
+      emailEnabled: pref.emailEnabled,
+      inAppEnabled: pref.inAppEnabled,
+      pushEnabled: pref.pushEnabled,
     };
   }
 }

@@ -25,9 +25,9 @@ describe("ExpenseAllocation Entity", () => {
     });
 
     expect(allocation).toBeDefined();
-    expect(allocation.getDepartmentId()?.equals(departmentId)).toBe(true);
-    expect(allocation.getCostCenterId()).toBeNull();
-    expect(allocation.getProjectId()).toBeNull();
+    expect(allocation.departmentId?.equals(departmentId)).toBe(true);
+    expect(allocation.costCenterId).toBeNull();
+    expect(allocation.projectId).toBeNull();
   });
 
   it("should create a valid cost center allocation", () => {
@@ -41,8 +41,8 @@ describe("ExpenseAllocation Entity", () => {
     });
 
     expect(allocation).toBeDefined();
-    expect(allocation.getCostCenterId()?.equals(costCenterId)).toBe(true);
-    expect(allocation.getDepartmentId()).toBeNull();
+    expect(allocation.costCenterId?.equals(costCenterId)).toBe(true);
+    expect(allocation.departmentId).toBeNull();
   });
 
   it("should create a valid project allocation", () => {
@@ -56,7 +56,7 @@ describe("ExpenseAllocation Entity", () => {
     });
 
     expect(allocation).toBeDefined();
-    expect(allocation.getProjectId()?.equals(projectId)).toBe(true);
+    expect(allocation.projectId?.equals(projectId)).toBe(true);
   });
 
   it("should throw error if multiple targets provided", () => {

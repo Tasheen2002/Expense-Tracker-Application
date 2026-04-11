@@ -5,7 +5,6 @@ import { NotificationTemplateDTO } from '../../domain/entities/notification-temp
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetActiveTemplateQuery extends IQuery {
@@ -16,18 +15,17 @@ export interface GetActiveTemplateQuery extends IQuery {
 
 export class GetActiveTemplateHandler implements IQueryHandler<
   GetActiveTemplateQuery,
-  QueryResult<NotificationTemplateDTO | null>
+  NotificationTemplateDTO | null
 > {
   constructor(private readonly templateService: TemplateService) {}
 
   async handle(
     input: GetActiveTemplateQuery
-  ): Promise<QueryResult<NotificationTemplateDTO | null>> {
-    const template = await this.templateService.getActiveTemplate(
+  ): Promise<NotificationTemplateDTO | null> {
+    return this.templateService.getActiveTemplate(
       input.workspaceId,
       input.type,
       input.channel
     );
-    return QueryResult.success(template);
   }
 }

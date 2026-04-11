@@ -2,7 +2,6 @@ import { NotificationService } from '../services/notification.service';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetUnreadCountQuery extends IQuery {
@@ -12,15 +11,14 @@ export interface GetUnreadCountQuery extends IQuery {
 
 export class GetUnreadCountHandler implements IQueryHandler<
   GetUnreadCountQuery,
-  QueryResult<number>
+  number
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(input: GetUnreadCountQuery): Promise<QueryResult<number>> {
-    const count = await this.notificationService.getUnreadCount(
+  async handle(input: GetUnreadCountQuery): Promise<number> {
+    return this.notificationService.getUnreadCount(
       input.recipientId,
       input.workspaceId
     );
-    return QueryResult.success(count);
   }
 }

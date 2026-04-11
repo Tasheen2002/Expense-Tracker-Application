@@ -45,7 +45,7 @@ export class ForecastRepositoryImpl
 
     if (!raw) return null;
 
-    return Forecast.reconstitute({
+    return Forecast.fromPersistence({
       id: raw.id,
       planId: raw.planId,
       name: raw.name,
@@ -70,7 +70,7 @@ export class ForecastRepositoryImpl
       this.prisma.forecast,
       { where, orderBy: { createdAt: "desc" } },
       (raw) =>
-        Forecast.reconstitute({
+        Forecast.fromPersistence({
           id: raw.id,
           planId: raw.planId,
           name: raw.name,
@@ -112,7 +112,7 @@ export class ForecastRepositoryImpl
 
     if (!raw) return null;
 
-    return Forecast.reconstitute({
+    return Forecast.fromPersistence({
       id: raw.id,
       planId: raw.planId,
       name: raw.name,

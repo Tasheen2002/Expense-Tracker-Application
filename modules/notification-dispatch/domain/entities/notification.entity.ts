@@ -145,11 +145,8 @@ export interface NotificationProps {
 }
 
 export class Notification extends AggregateRoot {
-  private props: NotificationProps;
-
-  private constructor(props: NotificationProps) {
+  private constructor(private props: NotificationProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -179,77 +176,36 @@ export class Notification extends AggregateRoot {
 
     notification.addDomainEvent(
       new NotificationCreatedEvent(
-        notification.getId().getValue(),
-        notification.getWorkspaceId().getValue(),
-        notification.getRecipientId().getValue(),
-        notification.getType(),
-        notification.getChannel(),
-        notification.getPriority()
+        notification.id.getValue(),
+        notification.workspaceId.getValue(),
+        notification.recipientId.getValue(),
+        notification.type,
+        notification.channel,
+        notification.priority
       )
     );
 
     return notification;
   }
 
-  static reconstitute(props: NotificationProps): Notification {
+  static fromPersistence(props: NotificationProps): Notification {
     return new Notification(props);
   }
 
-  getId(): NotificationId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getRecipientId(): UserId {
-    return this.props.recipientId;
-  }
-
-  getType(): NotificationType {
-    return this.props.type;
-  }
-
-  getChannel(): NotificationChannel {
-    return this.props.channel;
-  }
-
-  getPriority(): NotificationPriority {
-    return this.props.priority;
-  }
-
-  getTitle(): string {
-    return this.props.title;
-  }
-
-  getContent(): string {
-    return this.props.content;
-  }
-
-  getData(): Record<string, unknown> | undefined {
-    return this.props.data;
-  }
-
-  getStatus(): NotificationStatus {
-    return this.props.status;
-  }
-
-  getError(): string | undefined {
-    return this.props.error;
-  }
-
-  getReadAt(): Date | undefined {
-    return this.props.readAt;
-  }
-
-  getSentAt(): Date | undefined {
-    return this.props.sentAt;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
+  get id(): NotificationId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get recipientId(): UserId { return this.props.recipientId; }
+  get type(): NotificationType { return this.props.type; }
+  get channel(): NotificationChannel { return this.props.channel; }
+  get priority(): NotificationPriority { return this.props.priority; }
+  get title(): string { return this.props.title; }
+  get content(): string { return this.props.content; }
+  get data(): Record<string, unknown> | undefined { return this.props.data; }
+  get status(): NotificationStatus { return this.props.status; }
+  get error(): string | undefined { return this.props.error; }
+  get readAt(): Date | undefined { return this.props.readAt; }
+  get sentAt(): Date | undefined { return this.props.sentAt; }
+  get createdAt(): Date { return this.props.createdAt; }
 
   isRead(): boolean {
     return !!this.props.readAt;
@@ -262,10 +218,10 @@ export class Notification extends AggregateRoot {
 
     this.addDomainEvent(
       new NotificationSentEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getRecipientId().getValue(),
-        this.getChannel(),
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.recipientId.getValue(),
+        this.props.channel,
         this.props.sentAt
       )
     );
@@ -278,10 +234,10 @@ export class Notification extends AggregateRoot {
 
     this.addDomainEvent(
       new NotificationFailedEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getRecipientId().getValue(),
-        this.getChannel(),
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.recipientId.getValue(),
+        this.props.channel,
         error,
         this.props.updatedAt
       )
@@ -296,9 +252,9 @@ export class Notification extends AggregateRoot {
 
     this.addDomainEvent(
       new NotificationReadEvent(
-        this.getId().getValue(),
-        this.getWorkspaceId().getValue(),
-        this.getRecipientId().getValue(),
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.recipientId.getValue(),
         this.props.readAt
       )
     );
@@ -306,18 +262,18 @@ export class Notification extends AggregateRoot {
 
   static toDTO(notification: Notification): NotificationDTO {
     return {
-      id: notification.getId().getValue(),
-      type: notification.getType(),
-      channel: notification.getChannel(),
-      priority: notification.getPriority(),
-      title: notification.getTitle(),
-      content: notification.getContent(),
-      data: notification.getData(),
-      status: notification.getStatus(),
+      id: notification.id.getValue(),
+      type: notification.type,
+      channel: notification.channel,
+      priority: notification.priority,
+      title: notification.title,
+      content: notification.content,
+      data: notification.data,
+      status: notification.status,
       isRead: notification.isRead(),
-      readAt: notification.getReadAt()?.toISOString() || null,
-      sentAt: notification.getSentAt()?.toISOString() || null,
-      createdAt: notification.getCreatedAt().toISOString(),
+      readAt: notification.readAt?.toISOString() || null,
+      sentAt: notification.sentAt?.toISOString() || null,
+      createdAt: notification.createdAt.toISOString(),
     };
   }
 }

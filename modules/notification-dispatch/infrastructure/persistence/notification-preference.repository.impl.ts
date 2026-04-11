@@ -16,15 +16,15 @@ export class NotificationPreferenceRepositoryImpl implements INotificationPrefer
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(preference: NotificationPreference): Promise<void> {
-    const id = preference.getId().getValue();
-    const typeSettings = preference.getTypeSettings();
+    const id = preference.id.getValue();
+    const typeSettings = preference.typeSettings;
 
     const data = {
-      userId: preference.getUserId().getValue(),
-      workspaceId: preference.getWorkspaceId().getValue(),
-      emailEnabled: preference.isEmailEnabled(),
-      inAppEnabled: preference.isInAppEnabled(),
-      pushEnabled: preference.isPushEnabled(),
+      userId: preference.userId.getValue(),
+      workspaceId: preference.workspaceId.getValue(),
+      emailEnabled: preference.emailEnabled,
+      inAppEnabled: preference.inAppEnabled,
+      pushEnabled: preference.pushEnabled,
       typeSettings: typeSettings
         ? (typeSettings as Prisma.InputJsonValue)
         : Prisma.JsonNull,
@@ -79,6 +79,6 @@ export class NotificationPreferenceRepositoryImpl implements INotificationPrefer
       updatedAt: record.updatedAt,
     };
 
-    return NotificationPreference.reconstitute(props);
+    return NotificationPreference.fromPersistence(props);
   }
 }

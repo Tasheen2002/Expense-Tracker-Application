@@ -93,7 +93,7 @@ export class TemplateService {
         allowedTags: [], // Subject should not have HTML tags
         allowedAttributes: {},
       });
-      template.updateTemplates(sanitizedSubject, template.getBodyTemplate());
+      template.updateTemplates(sanitizedSubject, template.bodyTemplate);
     }
 
     if (params.bodyTemplate !== undefined) {
@@ -104,7 +104,7 @@ export class TemplateService {
           img: ["src", "alt", "width", "height"],
         },
       });
-      template.updateTemplates(template.getSubjectTemplate(), sanitizedBody);
+      template.updateTemplates(template.subjectTemplate, sanitizedBody);
     }
 
     await this.templateRepository.save(template);

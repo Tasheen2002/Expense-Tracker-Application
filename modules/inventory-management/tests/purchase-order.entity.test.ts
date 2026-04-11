@@ -25,7 +25,7 @@ describe('PurchaseOrder Entity', () => {
       expect(po.status).toBe(PurchaseOrderStatus.DRAFT);
       expect(po.supplierId).toBe('supplier-123');
       expect(po.currency).toBe('USD');
-      expect(po.totalAmount.toNumber()).toBe(0);
+      expect(po.totalAmount).toBe(0);
     });
 
     it('should add PurchaseOrderCreatedEvent on create', () => {

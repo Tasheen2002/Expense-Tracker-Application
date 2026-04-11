@@ -147,22 +147,15 @@ export class OutboxEventController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Pending events retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Pending events retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -182,22 +175,15 @@ export class OutboxEventController {
         limit: limit ? parseInt(limit, 10) : undefined,
         offset: offset ? parseInt(offset, 10) : undefined,
       });
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Failed events retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Failed events retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -211,12 +197,7 @@ export class OutboxEventController {
   ) {
     try {
       const result = await this.getDeadLetterCountHandler.handle({});
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Dead letter count retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Dead letter count retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

@@ -18,10 +18,6 @@ export class AuditLogController {
     private readonly getAuditSummaryHandler: GetAuditSummaryHandler
   ) {}
 
-  /**
-   * GET /api/workspaces/:workspaceId/audit-logs
-   * List audit logs with optional filters
-   */
   async listAuditLogs(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
@@ -56,31 +52,20 @@ export class AuditLogController {
         offset: query.offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Audit logs retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Audit logs retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  /**
-   * GET /api/workspaces/:workspaceId/audit-logs/:auditLogId
-   * Get a specific audit log by ID
-   */
   async getAuditLog(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; auditLogId: string };
@@ -90,26 +75,17 @@ export class AuditLogController {
     try {
       const { workspaceId, auditLogId } = request.params;
 
-      const result = await this.getAuditLogHandler.handle({
+      const auditLog = await this.getAuditLogHandler.handle({
         workspaceId,
         auditLogId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Audit log retrieved successfully',
-        result.data ?? undefined
-      );
+      return ResponseHelper.ok(reply, 'Audit log retrieved successfully', auditLog);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  /**
-   * GET /api/workspaces/:workspaceId/audit-logs/entity-history
-   * Get audit history for a specific entity
-   */
   async getEntityAuditHistory(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
@@ -134,31 +110,20 @@ export class AuditLogController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Entity audit history retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Entity audit history retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  /**
-   * GET /api/workspaces/:workspaceId/audit-logs/summary
-   * Get audit summary statistics
-   */
   async getAuditSummary(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
@@ -170,27 +135,18 @@ export class AuditLogController {
       const { workspaceId } = request.params;
       const { startDate, endDate } = request.query;
 
-      const result = await this.getAuditSummaryHandler.handle({
+      const summary = await this.getAuditSummaryHandler.handle({
         workspaceId,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Audit summary retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Audit summary retrieved successfully', summary);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  /**
-   * POST /api/workspaces/:workspaceId/audit-logs
-   * Create an audit log entry (for system/internal use)
-   */
   async createAuditLog(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
@@ -210,20 +166,18 @@ export class AuditLogController {
       const body = request.body;
 
       const result = await this.createAuditLogHandler.handle({
-        data: {
-          workspaceId,
-          userId,
-          action: body.action,
-          entityType: body.entityType,
-          entityId: body.entityId,
-          details: body.details,
-          metadata: body.metadata,
-          ipAddress:
-            (request.headers['x-forwarded-for'] as string) ||
-            request.ip ||
-            undefined,
-          userAgent: request.headers['user-agent'] || undefined,
-        },
+        workspaceId,
+        userId,
+        action: body.action,
+        entityType: body.entityType,
+        entityId: body.entityId,
+        details: body.details,
+        metadata: body.metadata,
+        ipAddress:
+          (request.headers['x-forwarded-for'] as string) ||
+          request.ip ||
+          undefined,
+        userAgent: request.headers['user-agent'] || undefined,
       });
 
       return ResponseHelper.fromCommand(
@@ -238,10 +192,6 @@ export class AuditLogController {
     }
   }
 
-  /**
-   * DELETE /api/workspaces/:workspaceId/audit-logs
-   * Purge audit logs older than N days (admin only, minimum 30 days)
-   */
   async purgeAuditLogs(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };

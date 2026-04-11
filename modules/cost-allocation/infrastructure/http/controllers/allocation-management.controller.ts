@@ -134,8 +134,6 @@ export class AllocationManagementController {
 
   async listDepartments(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const userId = request.user.userId;
-
       const { workspaceId } = request.params as { workspaceId: string };
       const { limit, offset } = request.query as {
         limit?: string;
@@ -147,22 +145,15 @@ export class AllocationManagementController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Departments retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Departments retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -175,19 +166,12 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { departmentId } = request.params;
-      const result = await this.getDepartmentHandler.handle({
+      const department = await this.getDepartmentHandler.handle({
         id: departmentId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Department retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Department retrieved successfully', department);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -320,8 +304,6 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
       const result = await this.listCostCentersHandler.handle({
@@ -330,22 +312,15 @@ export class AllocationManagementController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Cost Centers retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Cost Centers retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -358,19 +333,12 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { costCenterId } = request.params;
-      const result = await this.getCostCenterHandler.handle({
+      const costCenter = await this.getCostCenterHandler.handle({
         id: costCenterId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Cost Center retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Cost Center retrieved successfully', costCenter);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -474,7 +442,6 @@ export class AllocationManagementController {
 
       const { workspaceId } = request.params;
 
-      // Handle potential date parsing if raw JSON comes as strings
       const startDate = new Date(request.body.startDate);
       const endDate = request.body.endDate
         ? new Date(request.body.endDate)
@@ -512,8 +479,6 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { workspaceId } = request.params;
       const { limit, offset } = request.query;
       const result = await this.listProjectsHandler.handle({
@@ -522,22 +487,15 @@ export class AllocationManagementController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Projects retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Projects retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -550,17 +508,10 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const userId = request.user.userId;
-
       const { projectId } = request.params;
-      const result = await this.getProjectHandler.handle({ id: projectId });
+      const project = await this.getProjectHandler.handle({ id: projectId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Project retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Project retrieved successfully', project);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

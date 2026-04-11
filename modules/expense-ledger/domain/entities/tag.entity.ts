@@ -139,13 +139,13 @@ export class Tag extends AggregateRoot {
     this.addDomainEvent(new TagDeletedEvent(this.id.getValue()));
   }
 
-  toJSON(): TagDTO {
+  static toDTO(tag: Tag): TagDTO {
     return {
-      tagId: this.id.getValue(),
-      workspaceId: this.workspaceId,
-      name: this.name,
-      color: this.color,
-      createdAt: this.createdAt.toISOString(),
+      tagId: tag.id.getValue(),
+      workspaceId: tag.workspaceId,
+      name: tag.name,
+      color: tag.color,
+      createdAt: tag.createdAt.toISOString(),
     };
   }
 }

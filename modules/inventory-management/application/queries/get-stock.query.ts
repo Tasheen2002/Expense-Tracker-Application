@@ -4,7 +4,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetStockQuery extends IQuery {
@@ -15,24 +14,20 @@ export interface GetStockQuery extends IQuery {
 }
 
 export class GetStockHandler
-  implements IQueryHandler<GetStockQuery, QueryResult<PaginatedResult<StockDTO>>>
+  implements IQueryHandler<GetStockQuery, PaginatedResult<StockDTO>>
 {
   constructor(private readonly stockService: StockService) {}
 
-  async handle(
-    query: GetStockQuery
-  ): Promise<QueryResult<PaginatedResult<StockDTO>>> {
-    const result = query.locationId
-      ? await this.stockService.getStockByLocation(
+  async handle(query: GetStockQuery): Promise<PaginatedResult<StockDTO>> {
+    return query.locationId
+      ? this.stockService.getStockByLocation(
           query.locationId,
           query.workspaceId,
           { limit: query.limit, offset: query.offset }
         )
-      : await this.stockService.getStockByWorkspace(query.workspaceId, {
+      : this.stockService.getStockByWorkspace(query.workspaceId, {
           limit: query.limit,
           offset: query.offset,
         });
-
-    return QueryResult.success(result);
   }
 }

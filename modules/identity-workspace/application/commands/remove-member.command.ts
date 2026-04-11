@@ -25,7 +25,7 @@ export class RemoveMemberHandler implements ICommandHandler<
         throw new MembershipNotFoundError(command.userId);
       }
 
-      await this.membershipService.removeMember(membership.getId().getValue());
+      await this.membershipService.removeMember(membership.id.getValue());
       return CommandResult.success(undefined);
     } catch (error) {
       return CommandResult.fromError(error);

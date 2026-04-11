@@ -91,15 +91,17 @@ export enum WorkspaceRole {
 // Entity
 // ============================================================================
 
+export interface WorkspaceMembershipProps {
+  id: MembershipId;
+  userId: UserId;
+  workspaceId: WorkspaceId;
+  role: WorkspaceRole;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class WorkspaceMembership extends AggregateRoot {
-  private constructor(
-    private readonly id: MembershipId,
-    private readonly userId: UserId,
-    private readonly workspaceId: WorkspaceId,
-    private role: WorkspaceRole,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
-  ) {
+  private constructor(private props: WorkspaceMembershipProps) {
     super();
   }
 
@@ -109,14 +111,14 @@ export class WorkspaceMembership extends AggregateRoot {
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
     const now = new Date();
 
-    const membership = new WorkspaceMembership(
-      membershipId,
+    const membership = new WorkspaceMembership({
+      id: membershipId,
       userId,
       workspaceId,
-      data.role,
-      now,
-      now,
-    );
+      role: data.role,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     membership.addDomainEvent(
       new MemberJoinedWorkspaceEvent(
@@ -130,56 +132,39 @@ export class WorkspaceMembership extends AggregateRoot {
     return membership;
   }
 
-  static reconstitute(data: WorkspaceMembershipData): WorkspaceMembership {
-    return new WorkspaceMembership(
-      MembershipId.fromString(data.id),
-      UserId.fromString(data.userId),
-      WorkspaceId.fromString(data.workspaceId),
-      data.role,
-      data.createdAt,
-      data.updatedAt,
-    );
+  static fromPersistence(data: WorkspaceMembershipData): WorkspaceMembership {
+    return new WorkspaceMembership({
+      id: MembershipId.fromString(data.id),
+      userId: UserId.fromString(data.userId),
+      workspaceId: WorkspaceId.fromString(data.workspaceId),
+      role: data.role,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    });
   }
 
   // Getters
-  getId(): MembershipId {
-    return this.id;
-  }
-
-  getUserId(): UserId {
-    return this.userId;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getRole(): WorkspaceRole {
-    return this.role;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
+  get id(): MembershipId { return this.props.id; }
+  get userId(): UserId { return this.props.userId; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get role(): WorkspaceRole { return this.props.role; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // Business logic methods
   changeRole(newRole: WorkspaceRole): void {
-    if (this.role === WorkspaceRole.OWNER && newRole !== WorkspaceRole.OWNER) {
+    if (this.props.role === WorkspaceRole.OWNER && newRole !== WorkspaceRole.OWNER) {
       throw new CannotChangeOwnerRoleError();
     }
-    const oldRole = this.role;
-    this.role = newRole;
-    this.updatedAt = new Date();
+    const oldRole = this.props.role;
+    this.props.role = newRole;
+    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new MemberRoleChangedEvent(
-        this.id.getValue(),
-        this.userId.getValue(),
-        this.workspaceId.getValue(),
+        this.props.id.getValue(),
+        this.props.userId.getValue(),
+        this.props.workspaceId.getValue(),
         oldRole,
         newRole,
       ),
@@ -189,59 +174,59 @@ export class WorkspaceMembership extends AggregateRoot {
   markAsRemoved(): void {
     this.addDomainEvent(
       new MemberRemovedEvent(
-        this.id.getValue(),
-        this.userId.getValue(),
-        this.workspaceId.getValue(),
+        this.props.id.getValue(),
+        this.props.userId.getValue(),
+        this.props.workspaceId.getValue(),
       ),
     );
   }
 
   isOwner(): boolean {
-    return this.role === WorkspaceRole.OWNER;
+    return this.props.role === WorkspaceRole.OWNER;
   }
 
   isAdmin(): boolean {
-    return this.role === WorkspaceRole.ADMIN;
+    return this.props.role === WorkspaceRole.ADMIN;
   }
 
   isMember(): boolean {
-    return this.role === WorkspaceRole.MEMBER;
+    return this.props.role === WorkspaceRole.MEMBER;
   }
 
   hasAdminPrivileges(): boolean {
     return (
-      this.role === WorkspaceRole.OWNER || this.role === WorkspaceRole.ADMIN
+      this.props.role === WorkspaceRole.OWNER || this.props.role === WorkspaceRole.ADMIN
     );
   }
 
   canManageMembers(): boolean {
     return (
-      this.role === WorkspaceRole.OWNER || this.role === WorkspaceRole.ADMIN
+      this.props.role === WorkspaceRole.OWNER || this.props.role === WorkspaceRole.ADMIN
     );
   }
 
   canEditWorkspace(): boolean {
     return (
-      this.role === WorkspaceRole.OWNER || this.role === WorkspaceRole.ADMIN
+      this.props.role === WorkspaceRole.OWNER || this.props.role === WorkspaceRole.ADMIN
     );
   }
 
   canDeleteWorkspace(): boolean {
-    return this.role === WorkspaceRole.OWNER;
+    return this.props.role === WorkspaceRole.OWNER;
   }
 
   equals(other: WorkspaceMembership): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
   }
 
   static toDTO(membership: WorkspaceMembership): WorkspaceMembershipDTO {
     return {
-      membershipId: membership.id.getValue(),
-      userId: membership.userId.getValue(),
-      workspaceId: membership.workspaceId.getValue(),
-      role: membership.role,
-      createdAt: membership.createdAt.toISOString(),
-      updatedAt: membership.updatedAt.toISOString(),
+      membershipId: membership.props.id.getValue(),
+      userId: membership.props.userId.getValue(),
+      workspaceId: membership.props.workspaceId.getValue(),
+      role: membership.props.role,
+      createdAt: membership.props.createdAt.toISOString(),
+      updatedAt: membership.props.updatedAt.toISOString(),
     };
   }
 }
@@ -274,5 +259,3 @@ export interface WorkspaceMembershipData {
   createdAt: Date;
   updatedAt: Date;
 }
-
-

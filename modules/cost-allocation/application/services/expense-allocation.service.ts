@@ -39,7 +39,6 @@ export class ExpenseAllocationService {
   }): Promise<ExpenseAllocationDTO[]> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    // 1. Fetch Expense Validation Data via port (no direct Prisma dependency)
     const expense = await this.expenseLookup.findExpenseForAllocation(
       params.expenseId,
     );
@@ -62,18 +61,15 @@ export class ExpenseAllocationService {
     const expenseTotal = expense.amount;
     let newAllocationTotal = new Decimal(0);
 
-    // 2. Prepare Allocation Entities & Validate Items
     const allocationEntities: ExpenseAllocation[] = [];
 
     for (const alloc of params.allocations) {
       const amount = new Decimal(alloc.amount);
 
-      // Validation: Positive Amount
       if (amount.lessThanOrEqualTo(0)) {
         throw new InvalidAllocationAmountError(amount.toNumber());
       }
 
-      // Validation: Exactly One Target
       this.validateAllocationTarget(
         alloc.departmentId,
         alloc.costCenterId,
@@ -86,7 +82,7 @@ export class ExpenseAllocationService {
         workspaceId,
         expenseId: params.expenseId,
         amount: AllocationAmount.create(amount),
-        percentage: alloc.percentage ? new Decimal(alloc.percentage) : null,
+        percentage: alloc.percentage ?? null,
         departmentId: alloc.departmentId
           ? DepartmentId.fromString(alloc.departmentId)
           : undefined,
@@ -103,7 +99,6 @@ export class ExpenseAllocationService {
       allocationEntities.push(entity);
     }
 
-    // 3. Validation: Total Sum <= Expense Total
     if (newAllocationTotal.greaterThan(expenseTotal)) {
       throw new InvalidTotalAllocationError(
         newAllocationTotal.toNumber(),
@@ -111,7 +106,6 @@ export class ExpenseAllocationService {
       );
     }
 
-    // 4. Persistence
     await this.allocationRepository.replaceAllocs(
       params.expenseId,
       workspaceId,
@@ -157,7 +151,6 @@ export class ExpenseAllocationService {
     workspaceId: string,
     userId: string,
   ): Promise<void> {
-    // Verify expense exists and belongs to workspace via port
     const expense =
       await this.expenseLookup.findExpenseForAllocation(expenseId);
 
@@ -200,7 +193,6 @@ export class ExpenseAllocationService {
       count: number;
     }>;
   }> {
-    // Query allocation statistics via port (no direct Prisma dependency)
     const [
       departmentAllocations,
       costCenterAllocations,
@@ -213,7 +205,6 @@ export class ExpenseAllocationService {
       this.allocationSummary.getTotalCount(workspaceId),
     ]);
 
-    // Fetch entity names via port
     const departmentIds = departmentAllocations.map((a) => a.targetId);
     const costCenterIds = costCenterAllocations.map((a) => a.targetId);
     const projectIds = projectAllocations.map((a) => a.targetId);

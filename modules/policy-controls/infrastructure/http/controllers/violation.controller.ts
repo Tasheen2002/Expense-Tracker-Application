@@ -30,17 +30,9 @@ export class ViolationController {
     try {
       const { workspaceId, violationId } = request.params;
 
-      const result = await this.getViolationHandler.handle({
-        violationId,
-        workspaceId,
-      });
+      const violation = await this.getViolationHandler.handle({ violationId, workspaceId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Violation retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Violation retrieved successfully', violation);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -62,8 +54,7 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const { status, userId, expenseId, policyId, limit, offset } =
-        request.query;
+      const { status, userId, expenseId, policyId, limit, offset } = request.query;
 
       const result = await this.listViolationsHandler.handle({
         workspaceId,
@@ -77,24 +68,15 @@ export class ViolationController {
         },
       });
 
-      const data = result.data
-        ? {
-            items: result.data.items,
-            pagination: {
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            },
-          }
-        : undefined;
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Violations retrieved successfully',
-        data
-      );
+      return ResponseHelper.ok(reply, 'Violations retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -111,27 +93,18 @@ export class ViolationController {
       const { workspaceId } = request.params;
       const { startDate, endDate } = request.query;
 
-      const result = await this.getViolationStatsHandler.handle({
+      const stats = await this.getViolationStatsHandler.handle({
         workspaceId,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
       });
 
-      const data = result.data
-        ? {
-            total: result.data.total,
-            pending: result.data.pendingCount,
-            byStatus: result.data.byStatus,
-            bySeverity: result.data.bySeverity,
-          }
-        : undefined;
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Violation stats retrieved successfully',
-        data
-      );
+      return ResponseHelper.ok(reply, 'Violation stats retrieved successfully', {
+        total: stats.total,
+        pending: stats.pendingCount,
+        byStatus: stats.byStatus,
+        bySeverity: stats.bySeverity,
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -153,11 +126,7 @@ export class ViolationController {
         acknowledgedBy: userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Violation acknowledged successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Violation acknowledged successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -181,11 +150,7 @@ export class ViolationController {
         resolutionNote: request.body.resolutionNote,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Violation resolved successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Violation resolved successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -208,11 +173,7 @@ export class ViolationController {
         exemptedBy: userId,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Violation exempted successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Violation exempted successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -236,11 +197,7 @@ export class ViolationController {
         overrideReason: request.body.overrideReason,
       });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Violation overridden successfully'
-      );
+      return ResponseHelper.fromCommand(reply, result, 'Violation overridden successfully');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

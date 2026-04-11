@@ -28,17 +28,9 @@ export class ExemptionController {
     try {
       const { workspaceId, exemptionId } = request.params;
 
-      const result = await this.getExemptionHandler.handle({
-        exemptionId,
-        workspaceId,
-      });
+      const exemption = await this.getExemptionHandler.handle({ exemptionId, workspaceId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Exemption retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Exemption retrieved successfully', exemption);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -72,24 +64,15 @@ export class ExemptionController {
         },
       });
 
-      const data = result.data
-        ? {
-            items: result.data.items,
-            pagination: {
-              total: result.data.total,
-              limit: result.data.limit,
-              offset: result.data.offset,
-              hasMore: result.data.hasMore,
-            },
-          }
-        : undefined;
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Exemptions retrieved successfully',
-        data
-      );
+      return ResponseHelper.ok(reply, 'Exemptions retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -106,17 +89,16 @@ export class ExemptionController {
       const { workspaceId } = request.params;
       const { userId, policyId } = request.query;
 
-      const result = await this.checkActiveExemptionHandler.handle({
+      const exemption = await this.checkActiveExemptionHandler.handle({
         workspaceId,
         userId,
         policyId,
       });
 
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Exemption status checked successfully',
-        result.data ?? null
+        exemption ?? null
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

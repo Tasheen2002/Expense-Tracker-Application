@@ -5,9 +5,9 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListViolationsInput {
+export interface ListViolationsInput extends IQuery {
   workspaceId: string;
   status?: ViolationStatus;
   userId?: string;
@@ -16,42 +16,25 @@ export interface ListViolationsInput {
   pagination?: PaginationOptions;
 }
 
-export class ListViolationsHandler {
+export class ListViolationsHandler implements IQueryHandler<ListViolationsInput, PaginatedResult<PolicyViolationDTO>> {
   constructor(private readonly violationService: ViolationService) {}
 
-  async handle(
-    input: ListViolationsInput
-  ): Promise<QueryResult<PaginatedResult<PolicyViolationDTO>>> {
-    let result: PaginatedResult<PolicyViolationDTO>;
-
+  async handle(input: ListViolationsInput): Promise<PaginatedResult<PolicyViolationDTO>> {
     if (input.expenseId) {
-      const items = await this.violationService.listViolationsByExpense(
-        input.expenseId
-      );
-      result = {
-        items,
-        total: items.length,
-        limit: items.length,
-        offset: 0,
-        hasMore: false,
-      };
-    } else if (input.userId) {
-      result = await this.violationService.listViolationsByUser(
+      const items = await this.violationService.listViolationsByExpense(input.expenseId);
+      return { items, total: items.length, limit: items.length, offset: 0, hasMore: false };
+    }
+    if (input.userId) {
+      return this.violationService.listViolationsByUser(
         input.workspaceId,
         input.userId,
         input.pagination
       );
-    } else {
-      result = await this.violationService.listViolations(
-        input.workspaceId,
-        {
-          status: input.status,
-          policyId: input.policyId,
-        },
-        input.pagination
-      );
     }
-
-    return QueryResult.success(result);
+    return this.violationService.listViolations(
+      input.workspaceId,
+      { status: input.status, policyId: input.policyId },
+      input.pagination
+    );
   }
 }

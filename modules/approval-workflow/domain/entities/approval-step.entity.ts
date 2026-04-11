@@ -21,6 +21,12 @@ export interface ApprovalStepProps {
   updatedAt: Date;
 }
 
+export interface CreateApprovalStepData {
+  workflowId: string;
+  stepNumber: number;
+  approverId: string;
+}
+
 export class ApprovalStep {
   private props: ApprovalStepProps;
 
@@ -28,63 +34,59 @@ export class ApprovalStep {
     this.props = props;
   }
 
-  static create(params: {
-    workflowId: string;
-    stepNumber: number;
-    approverId: string;
-  }): ApprovalStep {
+  static create(data: CreateApprovalStepData): ApprovalStep {
     return new ApprovalStep({
       stepId: ApprovalStepId.create(),
-      workflowId: WorkflowId.fromString(params.workflowId),
-      stepNumber: params.stepNumber,
-      approverId: UserId.fromString(params.approverId),
+      workflowId: WorkflowId.fromString(data.workflowId),
+      stepNumber: data.stepNumber,
+      approverId: UserId.fromString(data.approverId),
       status: ApprovalStatus.PENDING,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
   }
 
-  static reconstitute(props: ApprovalStepProps): ApprovalStep {
+  static fromPersistence(props: ApprovalStepProps): ApprovalStep {
     return new ApprovalStep(props);
   }
 
-  getId(): ApprovalStepId {
+  get id(): ApprovalStepId {
     return this.props.stepId;
   }
 
-  getWorkflowId(): WorkflowId {
+  get workflowId(): WorkflowId {
     return this.props.workflowId;
   }
 
-  getStepNumber(): number {
+  get stepNumber(): number {
     return this.props.stepNumber;
   }
 
-  getApproverId(): UserId {
+  get approverId(): UserId {
     return this.props.approverId;
   }
 
-  getDelegatedTo(): UserId | undefined {
+  get delegatedTo(): UserId | undefined {
     return this.props.delegatedTo;
   }
 
-  getStatus(): ApprovalStatus {
+  get status(): ApprovalStatus {
     return this.props.status;
   }
 
-  getComments(): string | undefined {
+  get comments(): string | undefined {
     return this.props.comments;
   }
 
-  getProcessedAt(): Date | undefined {
+  get processedAt(): Date | undefined {
     return this.props.processedAt;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
@@ -156,22 +158,18 @@ export class ApprovalStep {
     this.props.updatedAt = new Date();
   }
 
-  /**
-   * Serialize ApprovalStep to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(step: ApprovalStep): ApprovalStepDTO {
     return {
-      stepId: step.getId().getValue(),
-      workflowId: step.getWorkflowId().getValue(),
-      stepNumber: step.getStepNumber(),
-      approverId: step.getApproverId().getValue(),
-      delegatedTo: step.getDelegatedTo()?.getValue(),
-      status: step.getStatus(),
-      comments: step.getComments(),
-      processedAt: step.getProcessedAt()?.toISOString(),
-      createdAt: step.getCreatedAt().toISOString(),
-      updatedAt: step.getUpdatedAt().toISOString(),
+      stepId: step.id.getValue(),
+      workflowId: step.workflowId.getValue(),
+      stepNumber: step.stepNumber,
+      approverId: step.approverId.getValue(),
+      delegatedTo: step.delegatedTo?.getValue(),
+      status: step.status,
+      comments: step.comments,
+      processedAt: step.processedAt?.toISOString(),
+      createdAt: step.createdAt.toISOString(),
+      updatedAt: step.updatedAt.toISOString(),
     };
   }
 }

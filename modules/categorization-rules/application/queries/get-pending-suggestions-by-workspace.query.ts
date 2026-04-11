@@ -5,7 +5,6 @@ import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetPendingSuggestionsByWorkspaceQuery extends IQuery {
@@ -16,19 +15,14 @@ export interface GetPendingSuggestionsByWorkspaceQuery extends IQuery {
 
 export class GetPendingSuggestionsByWorkspaceHandler implements IQueryHandler<
   GetPendingSuggestionsByWorkspaceQuery,
-  QueryResult<PaginatedResult<CategorySuggestionDTO>>
+  PaginatedResult<CategorySuggestionDTO>
 > {
   constructor(private readonly suggestionService: CategorySuggestionService) {}
 
-  async handle(
-    query: GetPendingSuggestionsByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<CategorySuggestionDTO>>> {
-    const result =
-      await this.suggestionService.getPendingSuggestionsByWorkspaceId(
-        WorkspaceId.fromString(query.workspaceId),
-        { limit: query.limit, offset: query.offset }
-      );
-
-    return QueryResult.success(result);
+  async handle(query: GetPendingSuggestionsByWorkspaceQuery): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    return this.suggestionService.getPendingSuggestionsByWorkspaceId(
+      WorkspaceId.fromString(query.workspaceId),
+      { limit: query.limit, offset: query.offset }
+    );
   }
 }

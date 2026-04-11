@@ -1,11 +1,7 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { CostCenterDTO } from '../../domain/entities/cost-center.entity';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
 export interface ListCostCentersQuery extends IQuery {
   workspaceId: string;
@@ -13,24 +9,18 @@ export interface ListCostCentersQuery extends IQuery {
   offset?: number;
 }
 
-export class ListCostCentersHandler implements IQueryHandler<
-  ListCostCentersQuery,
-  QueryResult<PaginatedResult<CostCenterDTO>>
-> {
+export class ListCostCentersHandler implements IQueryHandler<ListCostCentersQuery, PaginatedResult<CostCenterDTO>> {
   constructor(
     private readonly allocationManagementService: AllocationManagementService
   ) {}
 
-  async handle(
-    query: ListCostCentersQuery
-  ): Promise<QueryResult<PaginatedResult<CostCenterDTO>>> {
-    const result = await this.allocationManagementService.listCostCenters(
+  async handle(query: ListCostCentersQuery): Promise<PaginatedResult<CostCenterDTO>> {
+    return this.allocationManagementService.listCostCenters(
       query.workspaceId,
       {
         limit: query.limit || 50,
         offset: query.offset || 0,
       }
     );
-    return QueryResult.success(result);
   }
 }

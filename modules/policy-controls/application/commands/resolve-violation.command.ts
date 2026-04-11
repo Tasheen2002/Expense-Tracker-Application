@@ -1,15 +1,16 @@
 import { ViolationService } from '../services/violation.service';
 import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface ResolveViolationInput {
+export interface ResolveViolationInput extends ICommand {
   violationId: string;
   workspaceId: string;
   resolvedBy: string;
   resolutionNote?: string;
 }
 
-export class ResolveViolationHandler {
+export class ResolveViolationHandler implements ICommandHandler<ResolveViolationInput, CommandResult<PolicyViolationDTO>> {
   constructor(private readonly violationService: ViolationService) {}
 
   async handle(input: ResolveViolationInput): Promise<CommandResult<PolicyViolationDTO>> {

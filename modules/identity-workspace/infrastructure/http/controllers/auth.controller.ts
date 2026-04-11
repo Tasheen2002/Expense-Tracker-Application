@@ -55,17 +55,7 @@ export class AuthController {
     try {
       const { email, password } = request.body;
 
-      // Execute query
-      const result = await this.loginUserHandler.handle({ email, password });
-
-      if (!result.success) {
-        return ResponseHelper.unauthorized(
-          reply,
-          result.error ?? 'Invalid credentials'
-        );
-      }
-
-      const userData = result.data!;
+      const userData = await this.loginUserHandler.handle({ email, password });
 
       // Generate JWT token
       const token = request.server.signToken({
@@ -84,17 +74,11 @@ export class AuthController {
 
   async me(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      // User is attached by authenticate middleware
       const user = request.user;
 
       const result = await this.getUserHandler.handle({ userId: user.userId });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'User profile retrieved',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'User profile retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

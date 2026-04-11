@@ -37,22 +37,15 @@ export class MemberController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Members retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Members retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

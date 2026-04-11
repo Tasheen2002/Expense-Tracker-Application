@@ -3,7 +3,6 @@ import { NotificationType } from '../../domain/enums/notification-type.enum';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface CheckChannelEnabledQuery extends IQuery {
@@ -15,17 +14,16 @@ export interface CheckChannelEnabledQuery extends IQuery {
 
 export class CheckChannelEnabledHandler implements IQueryHandler<
   CheckChannelEnabledQuery,
-  QueryResult<boolean>
+  boolean
 > {
   constructor(private readonly preferenceService: PreferenceService) {}
 
-  async handle(input: CheckChannelEnabledQuery): Promise<QueryResult<boolean>> {
-    const isEnabled = await this.preferenceService.isChannelEnabled(
+  async handle(input: CheckChannelEnabledQuery): Promise<boolean> {
+    return this.preferenceService.isChannelEnabled(
       input.userId,
       input.workspaceId,
       input.type,
       input.channel
     );
-    return QueryResult.success(isEnabled);
   }
 }

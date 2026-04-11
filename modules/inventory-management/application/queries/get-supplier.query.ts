@@ -5,7 +5,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetSupplierQuery extends IQuery {
   supplierId: string;
@@ -13,11 +12,11 @@ export interface GetSupplierQuery extends IQuery {
 }
 
 export class GetSupplierHandler
-  implements IQueryHandler<GetSupplierQuery, QueryResult<SupplierDTO>>
+  implements IQueryHandler<GetSupplierQuery, SupplierDTO>
 {
   constructor(private readonly supplierService: SupplierService) {}
 
-  async handle(query: GetSupplierQuery): Promise<QueryResult<SupplierDTO>> {
+  async handle(query: GetSupplierQuery): Promise<SupplierDTO> {
     const dto = await this.supplierService.getSupplierById(
       query.supplierId,
       query.workspaceId
@@ -25,6 +24,6 @@ export class GetSupplierHandler
     if (!dto) {
       throw new SupplierNotFoundError(query.supplierId, query.workspaceId);
     }
-    return QueryResult.success(dto);
+    return dto;
   }
 }

@@ -22,30 +22,28 @@ export class DepartmentRepositoryImpl
   async save(department: Department): Promise<void> {
     await this.prisma.department.upsert({
       where: {
-        id: department.getId().getValue(),
+        id: department.id.getValue(),
       },
       create: {
-        id: department.getId().getValue(),
-        workspaceId: department.getWorkspaceId().getValue(),
-        name: department.getName(),
-        code: department.getCode(),
-        description: department.getDescription(),
-        managerId: department.getManagerId()?.getValue() || null,
-        parentDepartmentId:
-          department.getParentDepartmentId()?.getValue() || null,
-        isActive: department.getIsActive(),
-        createdAt: department.getCreatedAt(),
-        updatedAt: department.getUpdatedAt(),
+        id: department.id.getValue(),
+        workspaceId: department.workspaceId.getValue(),
+        name: department.name,
+        code: department.code,
+        description: department.description,
+        managerId: department.managerId?.getValue() || null,
+        parentDepartmentId: department.parentDepartmentId?.getValue() || null,
+        isActive: department.isActive,
+        createdAt: department.createdAt,
+        updatedAt: department.updatedAt,
       },
       update: {
-        name: department.getName(),
-        code: department.getCode(),
-        description: department.getDescription(),
-        managerId: department.getManagerId()?.getValue() || null,
-        parentDepartmentId:
-          department.getParentDepartmentId()?.getValue() || null,
-        isActive: department.getIsActive(),
-        updatedAt: department.getUpdatedAt(),
+        name: department.name,
+        code: department.code,
+        description: department.description,
+        managerId: department.managerId?.getValue() || null,
+        parentDepartmentId: department.parentDepartmentId?.getValue() || null,
+        isActive: department.isActive,
+        updatedAt: department.updatedAt,
       },
     });
 
@@ -59,7 +57,7 @@ export class DepartmentRepositoryImpl
 
     if (!data) return null;
 
-    return Department.reconstitute({
+    return Department.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -86,7 +84,7 @@ export class DepartmentRepositoryImpl
 
     if (!data) return null;
 
-    return Department.reconstitute({
+    return Department.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -112,7 +110,7 @@ export class DepartmentRepositoryImpl
       this.prisma.department,
       { where },
       (d) =>
-        Department.reconstitute({
+        Department.fromPersistence({
           id: d.id,
           workspaceId: d.workspaceId,
           name: d.name,

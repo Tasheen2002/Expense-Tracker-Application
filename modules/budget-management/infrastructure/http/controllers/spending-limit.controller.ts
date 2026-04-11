@@ -26,16 +26,12 @@ export class SpendingLimitController {
     try {
       const { workspaceId, limitId } = request.params;
 
-      const result = await this.getLimitHandler.handle({
+      const limit = await this.getLimitHandler.handle({
         limitId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Spending limit retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Spending limit retrieved successfully', limit);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -164,11 +160,7 @@ export class SpendingLimitController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Spending limits retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Spending limits retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

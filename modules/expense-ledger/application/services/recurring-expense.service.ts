@@ -36,7 +36,7 @@ export class RecurringExpenseService {
     });
 
     await this.recurringExpenseRepository.save(expense);
-    return expense.toJSON();
+    return RecurringExpense.toDTO(expense);
   }
 
   async processDueExpenses(limit = 100): Promise<number> {

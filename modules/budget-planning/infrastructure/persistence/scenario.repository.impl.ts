@@ -45,7 +45,7 @@ export class ScenarioRepositoryImpl
 
     if (!raw) return null;
 
-    return Scenario.reconstitute({
+    return Scenario.fromPersistence({
       id: raw.id,
       planId: raw.planId,
       name: raw.name,
@@ -71,7 +71,7 @@ export class ScenarioRepositoryImpl
       this.prisma.scenario,
       { where, orderBy: { createdAt: "desc" } },
       (raw) =>
-        Scenario.reconstitute({
+        Scenario.fromPersistence({
           id: raw.id,
           planId: raw.planId,
           name: raw.name,
@@ -101,7 +101,7 @@ export class ScenarioRepositoryImpl
 
     if (!raw) return null;
 
-    return Scenario.reconstitute({
+    return Scenario.fromPersistence({
       id: raw.id,
       planId: raw.planId,
       name: raw.name,

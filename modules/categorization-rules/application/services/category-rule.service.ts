@@ -87,10 +87,10 @@ export class CategoryRuleService {
     }
 
     const userIdVO = UserId.fromString(params.userId);
-    const isCreator = rule.getCreatedBy().equals(userIdVO);
+    const isCreator = rule.createdBy.equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
       userIdVO,
-      rule.getWorkspaceId(),
+      rule.workspaceId,
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -98,13 +98,13 @@ export class CategoryRuleService {
     }
 
     // Check for duplicate name if name is being changed
-    if (params.name && params.name !== rule.getName()) {
+    if (params.name && params.name !== rule.name) {
       const existingRule = await this.ruleRepository.findByName(
         params.name,
-        rule.getWorkspaceId(),
+        rule.workspaceId,
       );
 
-      if (existingRule && !existingRule.getId().equals(params.ruleId)) {
+      if (existingRule && !existingRule.id.equals(params.ruleId)) {
         throw new DuplicateRuleNameError(params.name);
       }
     }
@@ -144,10 +144,10 @@ export class CategoryRuleService {
     }
 
     const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.getCreatedBy().equals(userIdVO);
+    const isCreator = rule.createdBy.equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
       userIdVO,
-      rule.getWorkspaceId(),
+      rule.workspaceId,
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -169,10 +169,10 @@ export class CategoryRuleService {
     }
 
     const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.getCreatedBy().equals(userIdVO);
+    const isCreator = rule.createdBy.equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
       userIdVO,
-      rule.getWorkspaceId(),
+      rule.workspaceId,
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -195,10 +195,10 @@ export class CategoryRuleService {
     }
 
     const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.getCreatedBy().equals(userIdVO);
+    const isCreator = rule.createdBy.equals(userIdVO);
     const isAdminOrOwner = await this.checkAccess(
       userIdVO,
-      rule.getWorkspaceId(),
+      rule.workspaceId,
     );
 
     if (!isCreator && !isAdminOrOwner) {
@@ -222,7 +222,7 @@ export class CategoryRuleService {
     const userIdVO = UserId.fromString(userId);
     const hasAccess = await this.checkAccess(
       userIdVO,
-      rule.getWorkspaceId(),
+      rule.workspaceId,
     );
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("view");

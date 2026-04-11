@@ -1,8 +1,4 @@
-import {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { CategoryDTO } from '../../domain/entities/category.entity';
 import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
@@ -12,13 +8,10 @@ export interface GetCategoryQuery extends IQuery {
   readonly workspaceId: string;
 }
 
-export class GetCategoryHandler implements IQueryHandler<
-  GetCategoryQuery,
-  QueryResult<CategoryDTO>
-> {
+export class GetCategoryHandler implements IQueryHandler<GetCategoryQuery, CategoryDTO> {
   constructor(private readonly categoryService: CategoryService) {}
 
-  async handle(query: GetCategoryQuery): Promise<QueryResult<CategoryDTO>> {
+  async handle(query: GetCategoryQuery): Promise<CategoryDTO> {
     const category = await this.categoryService.getCategoryById(
       query.categoryId,
       query.workspaceId
@@ -28,6 +21,6 @@ export class GetCategoryHandler implements IQueryHandler<
       throw new CategoryNotFoundError(query.categoryId, query.workspaceId);
     }
 
-    return QueryResult.success(category);
+    return category;
   }
 }

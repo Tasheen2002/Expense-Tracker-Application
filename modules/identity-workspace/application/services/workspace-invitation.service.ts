@@ -46,12 +46,12 @@ export class WorkspaceInvitationService {
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
       const membership = await this.membershipRepository.findByUserAndWorkspace(
-        existingUser.getId(),
+        existingUser.id,
         workspaceId
       );
       if (membership) {
         throw new MembershipAlreadyExistsError(
-          existingUser.getId().getValue(),
+          existingUser.id.getValue(),
           data.workspaceId
         );
       }
@@ -138,8 +138,8 @@ export class WorkspaceInvitationService {
     }
 
     if (
-      user.getEmail().getValue().toLowerCase() !==
-      invitation.getEmail().toLowerCase()
+      user.email.getValue().toLowerCase() !==
+      invitation.email.toLowerCase()
     ) {
       throw new InvitationEmailMismatchError();
     }
@@ -147,21 +147,21 @@ export class WorkspaceInvitationService {
     // Check if already a member
     const existingMembership =
       await this.membershipRepository.findByUserAndWorkspace(
-        user.getId(),
-        invitation.getWorkspaceId()
+        user.id,
+        invitation.workspaceId
       );
     if (existingMembership) {
       throw new MembershipAlreadyExistsError(
         userId,
-        invitation.getWorkspaceId().getValue()
+        invitation.workspaceId.getValue()
       );
     }
 
     // Create membership
     const membership = WorkspaceMembership.create({
       userId: userId,
-      workspaceId: invitation.getWorkspaceId().getValue(),
-      role: invitation.getRole(),
+      workspaceId: invitation.workspaceId.getValue(),
+      role: invitation.role,
     });
 
     // Mark invitation as accepted

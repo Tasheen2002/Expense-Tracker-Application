@@ -13,9 +13,6 @@ import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-
 // Domain Events
 // ============================================================================
 
-/**
- * Emitted when an exemption request is created.
- */
 export class ExemptionRequestedEvent extends DomainEvent {
   constructor(
     public readonly exemptionId: string,
@@ -30,9 +27,7 @@ export class ExemptionRequestedEvent extends DomainEvent {
     super(exemptionId, 'PolicyExemption');
   }
 
-  get eventType(): string {
-    return 'exemption.requested';
-  }
+  get eventType(): string { return 'exemption.requested'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -48,9 +43,6 @@ export class ExemptionRequestedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when an exemption is approved.
- */
 export class ExemptionApprovedEvent extends DomainEvent {
   constructor(
     public readonly exemptionId: string,
@@ -62,9 +54,7 @@ export class ExemptionApprovedEvent extends DomainEvent {
     super(exemptionId, 'PolicyExemption');
   }
 
-  get eventType(): string {
-    return 'exemption.approved';
-  }
+  get eventType(): string { return 'exemption.approved'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -77,9 +67,6 @@ export class ExemptionApprovedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when an exemption is rejected.
- */
 export class ExemptionRejectedEvent extends DomainEvent {
   constructor(
     public readonly exemptionId: string,
@@ -92,9 +79,7 @@ export class ExemptionRejectedEvent extends DomainEvent {
     super(exemptionId, 'PolicyExemption');
   }
 
-  get eventType(): string {
-    return 'exemption.rejected';
-  }
+  get eventType(): string { return 'exemption.rejected'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -108,9 +93,6 @@ export class ExemptionRejectedEvent extends DomainEvent {
   }
 }
 
-/**
- * Emitted when an exemption expires.
- */
 export class ExemptionExpiredEvent extends DomainEvent {
   constructor(
     public readonly exemptionId: string,
@@ -121,9 +103,7 @@ export class ExemptionExpiredEvent extends DomainEvent {
     super(exemptionId, 'PolicyExemption');
   }
 
-  get eventType(): string {
-    return 'exemption.expired';
-  }
+  get eventType(): string { return 'exemption.expired'; }
 
   getPayload(): Record<string, unknown> {
     return {
@@ -143,8 +123,8 @@ export interface PolicyExemptionProps {
   exemptionId: ExemptionId;
   workspaceId: WorkspaceId;
   policyId: PolicyId;
-  userId: string; // User who receives the exemption
-  requestedBy: string; // User who requested the exemption
+  userId: string;
+  requestedBy: string;
   reason: string;
   status: ExemptionStatus;
   startDate: Date;
@@ -158,15 +138,9 @@ export interface PolicyExemptionProps {
   updatedAt: Date;
 }
 
-/**
- * Policy Exemption entity - temporary exemption from a policy for a user
- */
 export class PolicyExemption extends AggregateRoot {
-  private props: PolicyExemptionProps;
-
-  private constructor(props: PolicyExemptionProps) {
+  private constructor(private props: PolicyExemptionProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -196,7 +170,6 @@ export class PolicyExemption extends AggregateRoot {
       updatedAt: new Date(),
     });
 
-    // Add domain event
     exemption.addDomainEvent(
       new ExemptionRequestedEvent(
         exemption.props.exemptionId.getValue(),
@@ -213,117 +186,49 @@ export class PolicyExemption extends AggregateRoot {
     return exemption;
   }
 
-  static reconstitute(props: PolicyExemptionProps): PolicyExemption {
+  static fromPersistence(props: PolicyExemptionProps): PolicyExemption {
     return new PolicyExemption(props);
   }
 
-  // Getters
-  getId(): ExemptionId {
-    return this.props.exemptionId;
-  }
+  get id(): ExemptionId { return this.props.exemptionId; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get policyId(): PolicyId { return this.props.policyId; }
+  get userId(): string { return this.props.userId; }
+  get requestedBy(): string { return this.props.requestedBy; }
+  get reason(): string { return this.props.reason; }
+  get status(): ExemptionStatus { return this.props.status; }
+  get startDate(): Date { return this.props.startDate; }
+  get endDate(): Date { return this.props.endDate; }
+  get approvedBy(): string | undefined { return this.props.approvedBy; }
+  get approvedAt(): Date | undefined { return this.props.approvedAt; }
+  get rejectedBy(): string | undefined { return this.props.rejectedBy; }
+  get rejectedAt(): Date | undefined { return this.props.rejectedAt; }
+  get rejectionReason(): string | undefined { return this.props.rejectionReason; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.props.workspaceId;
-  }
-
-  getPolicyId(): PolicyId {
-    return this.props.policyId;
-  }
-
-  getUserId(): string {
-    return this.props.userId;
-  }
-
-  getRequestedBy(): string {
-    return this.props.requestedBy;
-  }
-
-  getReason(): string {
-    return this.props.reason;
-  }
-
-  getStatus(): ExemptionStatus {
-    return this.props.status;
-  }
-
-  getStartDate(): Date {
-    return this.props.startDate;
-  }
-
-  getEndDate(): Date {
-    return this.props.endDate;
-  }
-
-  getApprovedBy(): string | undefined {
-    return this.props.approvedBy;
-  }
-
-  getApprovedAt(): Date | undefined {
-    return this.props.approvedAt;
-  }
-
-  getRejectedBy(): string | undefined {
-    return this.props.rejectedBy;
-  }
-
-  getRejectedAt(): Date | undefined {
-    return this.props.rejectedAt;
-  }
-
-  getRejectionReason(): string | undefined {
-    return this.props.rejectionReason;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  // Status checks
-  isPending(): boolean {
-    return this.props.status === ExemptionStatus.PENDING;
-  }
-
-  isApproved(): boolean {
-    return this.props.status === ExemptionStatus.APPROVED;
-  }
-
-  isRejected(): boolean {
-    return this.props.status === ExemptionStatus.REJECTED;
-  }
+  isPending(): boolean { return this.props.status === ExemptionStatus.PENDING; }
+  isApproved(): boolean { return this.props.status === ExemptionStatus.APPROVED; }
+  isRejected(): boolean { return this.props.status === ExemptionStatus.REJECTED; }
 
   isExpired(): boolean {
-    return (
-      this.props.status === ExemptionStatus.EXPIRED ||
-      new Date() > this.props.endDate
-    );
+    return this.props.status === ExemptionStatus.EXPIRED || new Date() > this.props.endDate;
   }
 
   isActive(): boolean {
-    if (this.props.status !== ExemptionStatus.APPROVED) {
-      return false;
-    }
+    if (this.props.status !== ExemptionStatus.APPROVED) return false;
     const now = new Date();
     return now >= this.props.startDate && now <= this.props.endDate;
   }
 
-  // Status transitions
   approve(approvedBy: string): void {
     if (!this.isPending()) {
-      throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue()
-      );
+      throw new ExemptionAlreadyProcessedError(this.props.exemptionId.getValue());
     }
-
     this.props.status = ExemptionStatus.APPROVED;
     this.props.approvedBy = approvedBy;
     this.props.approvedAt = new Date();
     this.props.updatedAt = new Date();
-
-    // Add domain event
     this.addDomainEvent(
       new ExemptionApprovedEvent(
         this.props.exemptionId.getValue(),
@@ -337,18 +242,13 @@ export class PolicyExemption extends AggregateRoot {
 
   reject(rejectedBy: string, reason?: string): void {
     if (!this.isPending()) {
-      throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue()
-      );
+      throw new ExemptionAlreadyProcessedError(this.props.exemptionId.getValue());
     }
-
     this.props.status = ExemptionStatus.REJECTED;
     this.props.rejectedBy = rejectedBy;
     this.props.rejectedAt = new Date();
     this.props.rejectionReason = reason;
     this.props.updatedAt = new Date();
-
-    // Add domain event
     this.addDomainEvent(
       new ExemptionRejectedEvent(
         this.props.exemptionId.getValue(),
@@ -365,8 +265,6 @@ export class PolicyExemption extends AggregateRoot {
     if (this.isApproved() && new Date() > this.props.endDate) {
       this.props.status = ExemptionStatus.EXPIRED;
       this.props.updatedAt = new Date();
-
-      // Add domain event
       this.addDomainEvent(
         new ExemptionExpiredEvent(
           this.props.exemptionId.getValue(),
@@ -380,15 +278,9 @@ export class PolicyExemption extends AggregateRoot {
 
   updateDates(startDate: Date, endDate: Date): void {
     if (!this.isPending()) {
-      throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue()
-      );
+      throw new ExemptionAlreadyProcessedError(this.props.exemptionId.getValue());
     }
-
-    if (endDate <= startDate) {
-      throw new InvalidExemptionDateRangeError();
-    }
-
+    if (endDate <= startDate) throw new InvalidExemptionDateRangeError();
     this.props.startDate = startDate;
     this.props.endDate = endDate;
     this.props.updatedAt = new Date();
@@ -396,34 +288,31 @@ export class PolicyExemption extends AggregateRoot {
 
   updateReason(reason: string): void {
     if (!this.isPending()) {
-      throw new ExemptionAlreadyProcessedError(
-        this.props.exemptionId.getValue()
-      );
+      throw new ExemptionAlreadyProcessedError(this.props.exemptionId.getValue());
     }
-
     this.props.reason = reason;
     this.props.updatedAt = new Date();
   }
 
   static toDTO(exemption: PolicyExemption): PolicyExemptionDTO {
     return {
-      id: exemption.getId().getValue(),
-      workspaceId: exemption.getWorkspaceId().getValue(),
-      policyId: exemption.getPolicyId().getValue(),
-      userId: exemption.getUserId(),
-      status: exemption.getStatus(),
-      reason: exemption.getReason(),
-      requestedBy: exemption.getRequestedBy(),
-      approvedBy: exemption.getApprovedBy(),
-      approvedAt: exemption.getApprovedAt()?.toISOString(),
-      rejectedBy: exemption.getRejectedBy(),
-      rejectedAt: exemption.getRejectedAt()?.toISOString(),
-      rejectionReason: exemption.getRejectionReason(),
-      startDate: exemption.getStartDate().toISOString(),
-      endDate: exemption.getEndDate().toISOString(),
+      id: exemption.id.getValue(),
+      workspaceId: exemption.workspaceId.getValue(),
+      policyId: exemption.policyId.getValue(),
+      userId: exemption.userId,
+      status: exemption.status,
+      reason: exemption.reason,
+      requestedBy: exemption.requestedBy,
+      approvedBy: exemption.approvedBy,
+      approvedAt: exemption.approvedAt?.toISOString(),
+      rejectedBy: exemption.rejectedBy,
+      rejectedAt: exemption.rejectedAt?.toISOString(),
+      rejectionReason: exemption.rejectionReason,
+      startDate: exemption.startDate.toISOString(),
+      endDate: exemption.endDate.toISOString(),
       isActive: exemption.isActive(),
-      createdAt: exemption.getCreatedAt().toISOString(),
-      updatedAt: exemption.getUpdatedAt().toISOString(),
+      createdAt: exemption.createdAt.toISOString(),
+      updatedAt: exemption.updatedAt.toISOString(),
     };
   }
 }

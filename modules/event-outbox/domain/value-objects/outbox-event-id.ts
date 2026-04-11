@@ -1,29 +1,16 @@
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from 'crypto';
+import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
 
-export class OutboxEventId {
-  private constructor(private readonly value: string) {
-    if (!value || value.trim() === "") {
-      throw new Error("OutboxEventId cannot be empty");
-    }
+export class OutboxEventId extends UuidId {
+  private constructor(value: string) {
+    super(value, 'OutboxEventId');
   }
 
   static create(): OutboxEventId {
-    return new OutboxEventId(uuidv4());
+    return new OutboxEventId(randomUUID());
   }
 
   static fromString(id: string): OutboxEventId {
     return new OutboxEventId(id);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: OutboxEventId): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }

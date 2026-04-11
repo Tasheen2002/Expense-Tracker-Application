@@ -4,7 +4,6 @@ import { ReceiptNotFoundError } from '../../domain/errors/receipt.errors';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetReceiptQuery extends IQuery {
@@ -12,13 +11,10 @@ export interface GetReceiptQuery extends IQuery {
   workspaceId: string;
 }
 
-export class GetReceiptHandler implements IQueryHandler<
-  GetReceiptQuery,
-  QueryResult<ReceiptDTO>
-> {
+export class GetReceiptHandler implements IQueryHandler<GetReceiptQuery, ReceiptDTO> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(query: GetReceiptQuery): Promise<QueryResult<ReceiptDTO>> {
+  async handle(query: GetReceiptQuery): Promise<ReceiptDTO> {
     const receiptDTO = await this.receiptService.getReceipt(
       query.receiptId,
       query.workspaceId
@@ -26,6 +22,6 @@ export class GetReceiptHandler implements IQueryHandler<
     if (!receiptDTO) {
       throw new ReceiptNotFoundError(query.receiptId, query.workspaceId);
     }
-    return QueryResult.success(receiptDTO);
+    return receiptDTO;
   }
 }

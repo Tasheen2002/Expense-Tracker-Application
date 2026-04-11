@@ -647,7 +647,7 @@ export class Container {
     const categoryRepository = new CategoryRepositoryImpl(prisma, eventBus);
     const tagRepository = new TagRepositoryImpl(prisma, eventBus);
     const attachmentRepository = new AttachmentRepositoryImpl(prisma);
-    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(prisma);
+    const recurringExpenseRepository = new PrismaRecurringExpenseRepository(prisma, eventBus);
     const expenseSplitRepository = new ExpenseSplitRepositoryImpl(
       prisma,
       eventBus
@@ -1177,7 +1177,7 @@ export class Container {
     );
 
     // Services - Notification
-    const recipientLookup = new PrismaRecipientLookupAdapter(userRepository);
+    const recipientLookup = new PrismaRecipientLookupAdapter(prisma);
     const notificationService = new NotificationService(
       notificationRepository,
       notificationTemplateRepository,

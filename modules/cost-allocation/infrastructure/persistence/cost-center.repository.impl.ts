@@ -22,24 +22,24 @@ export class CostCenterRepositoryImpl
   async save(costCenter: CostCenter): Promise<void> {
     await this.prisma.costCenter.upsert({
       where: {
-        id: costCenter.getId().getValue(),
+        id: costCenter.id.getValue(),
       },
       create: {
-        id: costCenter.getId().getValue(),
-        workspaceId: costCenter.getWorkspaceId().getValue(),
-        name: costCenter.getName(),
-        code: costCenter.getCode(),
-        description: costCenter.getDescription(),
-        isActive: costCenter.getIsActive(),
-        createdAt: costCenter.getCreatedAt(),
-        updatedAt: costCenter.getUpdatedAt(),
+        id: costCenter.id.getValue(),
+        workspaceId: costCenter.workspaceId.getValue(),
+        name: costCenter.name,
+        code: costCenter.code,
+        description: costCenter.description,
+        isActive: costCenter.isActive,
+        createdAt: costCenter.createdAt,
+        updatedAt: costCenter.updatedAt,
       },
       update: {
-        name: costCenter.getName(),
-        code: costCenter.getCode(),
-        description: costCenter.getDescription(),
-        isActive: costCenter.getIsActive(),
-        updatedAt: costCenter.getUpdatedAt(),
+        name: costCenter.name,
+        code: costCenter.code,
+        description: costCenter.description,
+        isActive: costCenter.isActive,
+        updatedAt: costCenter.updatedAt,
       },
     });
 
@@ -53,7 +53,7 @@ export class CostCenterRepositoryImpl
 
     if (!data) return null;
 
-    return CostCenter.reconstitute({
+    return CostCenter.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -78,7 +78,7 @@ export class CostCenterRepositoryImpl
 
     if (!data) return null;
 
-    return CostCenter.reconstitute({
+    return CostCenter.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -102,7 +102,7 @@ export class CostCenterRepositoryImpl
       this.prisma.costCenter,
       { where },
       (c) =>
-        CostCenter.reconstitute({
+        CostCenter.fromPersistence({
           id: c.id,
           workspaceId: c.workspaceId,
           name: c.name,

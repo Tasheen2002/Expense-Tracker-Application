@@ -1,7 +1,6 @@
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
@@ -25,19 +24,16 @@ export interface ListAuditLogsQuery extends IQuery {
 
 export class ListAuditLogsHandler implements IQueryHandler<
   ListAuditLogsQuery,
-  QueryResult<PaginatedResult<AuditLogDTO>>
+  PaginatedResult<AuditLogDTO>
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(
-    input: ListAuditLogsQuery
-  ): Promise<QueryResult<PaginatedResult<AuditLogDTO>>> {
-    const result = await this.auditService.listAuditLogs(
+  async handle(input: ListAuditLogsQuery): Promise<PaginatedResult<AuditLogDTO>> {
+    return this.auditService.listAuditLogs(
       input.workspaceId,
       input.filters,
       input.limit,
       input.offset
     );
-    return QueryResult.success(result);
   }
 }

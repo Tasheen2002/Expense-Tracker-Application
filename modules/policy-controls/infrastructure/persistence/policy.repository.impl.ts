@@ -26,29 +26,29 @@ export class PrismaPolicyRepository
 
   async save(policy: ExpensePolicy): Promise<void> {
     await this.prisma.expensePolicy.upsert({
-      where: { id: policy.getId().getValue() },
+      where: { id: policy.id.getValue() },
       create: {
-        id: policy.getId().getValue(),
-        workspaceId: policy.getWorkspaceId().getValue(),
-        name: policy.getName(),
-        description: policy.getDescription(),
-        policyType: policy.getPolicyType(),
-        severity: policy.getSeverity(),
-        configuration: policy.getConfiguration() as Prisma.InputJsonValue,
-        priority: policy.getPriority(),
-        isActive: policy.isActive(),
-        createdBy: policy.getCreatedBy(),
-        createdAt: policy.getCreatedAt(),
-        updatedAt: policy.getUpdatedAt(),
+        id: policy.id.getValue(),
+        workspaceId: policy.workspaceId.getValue(),
+        name: policy.name,
+        description: policy.description,
+        policyType: policy.policyType,
+        severity: policy.severity,
+        configuration: policy.configuration as Prisma.InputJsonValue,
+        priority: policy.priority,
+        isActive: policy.isActive,
+        createdBy: policy.createdBy,
+        createdAt: policy.createdAt,
+        updatedAt: policy.updatedAt,
       },
       update: {
-        name: policy.getName(),
-        description: policy.getDescription(),
-        severity: policy.getSeverity(),
-        configuration: policy.getConfiguration() as Prisma.InputJsonValue,
-        priority: policy.getPriority(),
-        isActive: policy.isActive(),
-        updatedAt: policy.getUpdatedAt(),
+        name: policy.name,
+        description: policy.description,
+        severity: policy.severity,
+        configuration: policy.configuration as Prisma.InputJsonValue,
+        priority: policy.priority,
+        isActive: policy.isActive,
+        updatedAt: policy.updatedAt,
       },
     });
     await this.dispatchEvents(policy);
@@ -135,7 +135,7 @@ export class PrismaPolicyRepository
   }
 
   private toDomain(row: Prisma.ExpensePolicyGetPayload<object>): ExpensePolicy {
-    return ExpensePolicy.reconstitute({
+    return ExpensePolicy.fromPersistence({
       policyId: PolicyId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       name: row.name,

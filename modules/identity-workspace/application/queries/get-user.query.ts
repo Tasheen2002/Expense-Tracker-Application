@@ -5,7 +5,6 @@ import {
   UserNotFoundError,
 } from '../../domain/errors/identity.errors';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetUserQuery extends IQuery {
   userId?: string;
@@ -14,30 +13,26 @@ export interface GetUserQuery extends IQuery {
 
 export class GetUserHandler implements IQueryHandler<
   GetUserQuery,
-  QueryResult<UserDTO>
+  UserDTO
 > {
   constructor(private readonly userManagementService: UserManagementService) {}
 
-  async handle(query: GetUserQuery): Promise<QueryResult<UserDTO>> {
-    try {
-      if (!query.userId && !query.email) {
-        throw new UserLookupCriteriaRequiredError();
-      }
-
-      let userDTO: UserDTO | null = null;
-      if (query.userId) {
-        userDTO = await this.userManagementService.getUserDTOById(query.userId);
-      } else if (query.email) {
-        userDTO = await this.userManagementService.getUserDTOByEmail(query.email);
-      }
-
-      if (!userDTO) {
-        throw new UserNotFoundError(query.userId ?? query.email!);
-      }
-
-      return QueryResult.success(userDTO);
-    } catch (error) {
-      return QueryResult.fromError(error);
+  async handle(query: GetUserQuery): Promise<UserDTO> {
+    if (!query.userId && !query.email) {
+      throw new UserLookupCriteriaRequiredError();
     }
+
+    let userDTO: UserDTO | null = null;
+    if (query.userId) {
+      userDTO = await this.userManagementService.getUserDTOById(query.userId);
+    } else if (query.email) {
+      userDTO = await this.userManagementService.getUserDTOByEmail(query.email);
+    }
+
+    if (!userDTO) {
+      throw new UserNotFoundError(query.userId ?? query.email!);
+    }
+
+    return userDTO;
   }
 }

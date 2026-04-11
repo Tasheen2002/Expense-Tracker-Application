@@ -55,7 +55,7 @@ export class ExemptionService {
       ExemptionId.fromString(exemptionId),
     );
 
-    if (!exemption || exemption.getWorkspaceId().getValue() !== workspaceId) {
+    if (!exemption || exemption.workspaceId.getValue() !== workspaceId) {
       throw new ExemptionNotFoundError(exemptionId);
     }
 
@@ -132,7 +132,7 @@ export class ExemptionService {
     const exemption = await this._getExemptionEntity(exemptionId, workspaceId);
 
     // Cannot approve your own exemption request
-    if (exemption.getRequestedBy() === approvedBy) {
+    if (exemption.requestedBy === approvedBy) {
       throw new UnauthorizedExemptionApprovalError(approvedBy);
     }
 
@@ -181,6 +181,6 @@ export class ExemptionService {
     workspaceId: string,
   ): Promise<void> {
     const exemption = await this._getExemptionEntity(exemptionId, workspaceId);
-    await this.exemptionRepository.delete(exemption.getId());
+    await this.exemptionRepository.delete(exemption.id);
   }
 }

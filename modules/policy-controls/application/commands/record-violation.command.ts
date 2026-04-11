@@ -1,9 +1,10 @@
 import { ViolationService } from '../services/violation.service';
 import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface RecordViolationInput {
+export interface RecordViolationInput extends ICommand {
   workspaceId: string;
   policyId: string;
   expenseId: string;
@@ -14,7 +15,7 @@ export interface RecordViolationInput {
   currency: string;
 }
 
-export class RecordViolationHandler {
+export class RecordViolationHandler implements ICommandHandler<RecordViolationInput, CommandResult<PolicyViolationDTO>> {
   constructor(private readonly violationService: ViolationService) {}
 
   async handle(

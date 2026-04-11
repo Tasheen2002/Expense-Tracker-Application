@@ -74,7 +74,7 @@ export class OutboxEvent {
     });
   }
 
-  static reconstitute(props: OutboxEventProps): OutboxEvent {
+  static fromPersistence(props: OutboxEventProps): OutboxEvent {
     return new OutboxEvent(props);
   }
 

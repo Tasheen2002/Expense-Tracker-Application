@@ -4,7 +4,6 @@ import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface ListNotificationsQuery extends IQuery {
@@ -16,18 +15,17 @@ export interface ListNotificationsQuery extends IQuery {
 
 export class ListNotificationsHandler implements IQueryHandler<
   ListNotificationsQuery,
-  QueryResult<PaginatedResult<NotificationDTO>>
+  PaginatedResult<NotificationDTO>
 > {
   constructor(private readonly notificationService: NotificationService) {}
 
   async handle(
     input: ListNotificationsQuery
-  ): Promise<QueryResult<PaginatedResult<NotificationDTO>>> {
-    const result = await this.notificationService.getNotifications(
+  ): Promise<PaginatedResult<NotificationDTO>> {
+    return this.notificationService.getNotifications(
       input.recipientId,
       input.workspaceId,
       { limit: input.limit, offset: input.offset }
     );
-    return QueryResult.success(result);
   }
 }

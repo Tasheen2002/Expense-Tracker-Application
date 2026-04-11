@@ -1,7 +1,6 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
-  NotificationPreference,
   TypeSettingValue,
 } from '../../../domain/entities/notification-preference.entity';
 import { NotificationType } from '../../../domain/enums/notification-type.enum';
@@ -30,17 +29,16 @@ export class PreferenceController {
       const { workspaceId } = request.params;
       const userId = request.user.userId;
 
-      const result = await this.getPreferencesHandler.handle({
+      const preferences = await this.getPreferencesHandler.handle({
         userId,
         workspaceId,
       });
       // When no preferences exist yet, return safe defaults without persisting.
       // Preferences are created lazily on the first PATCH.
-      const data = result.data
+      const data = preferences
         ?? { emailEnabled: true, inAppEnabled: true, pushEnabled: false };
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Preferences retrieved successfully',
         data
       );
@@ -116,17 +114,16 @@ export class PreferenceController {
       const { type, channel } = request.query;
       const userId = request.user.userId;
 
-      const result = await this.checkChannelEnabledHandler.handle({
+      const isEnabled = await this.checkChannelEnabledHandler.handle({
         userId,
         workspaceId,
         type: type as NotificationType,
         channel,
       });
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Channel status retrieved successfully',
-        { type, channel, isEnabled: result.data ?? false }
+        { type, channel, isEnabled }
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

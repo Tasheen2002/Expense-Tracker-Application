@@ -3,7 +3,6 @@ import {
   InvalidInventoryDataError,
   InvalidQuantityError,
 } from '../errors/inventory.errors';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export interface PurchaseOrderItemProps {
   id: PurchaseOrderItemId;
@@ -11,7 +10,7 @@ export interface PurchaseOrderItemProps {
   variantId: string;
   variantName: string;
   quantity: number;
-  unitPrice: Decimal;
+  unitPrice: number;
   receivedQuantity: number;
   createdAt: Date;
   updatedAt: Date;
@@ -22,7 +21,7 @@ export interface CreatePurchaseOrderItemData {
   variantId: string;
   variantName: string;
   quantity: number;
-  unitPrice: number | string | Decimal;
+  unitPrice: number;
 }
 
 export interface PurchaseOrderItemDTO {
@@ -51,30 +50,22 @@ export class PurchaseOrderItem {
     if (data.quantity <= 0) {
       throw new InvalidQuantityError('Quantity must be greater than zero');
     }
-
-    const unitPrice =
-      typeof data.unitPrice === 'number' || typeof data.unitPrice === 'string'
-        ? new Decimal(data.unitPrice)
-        : data.unitPrice;
-
-    if (unitPrice.isNegative()) {
+    if (data.unitPrice < 0) {
       throw new InvalidInventoryDataError('Unit price cannot be negative');
     }
 
     const now = new Date();
-    const item = new PurchaseOrderItem({
+    return new PurchaseOrderItem({
       id: PurchaseOrderItemId.create(),
       purchaseOrderId: data.purchaseOrderId,
       variantId: data.variantId.trim(),
       variantName: data.variantName.trim(),
       quantity: data.quantity,
-      unitPrice,
+      unitPrice: data.unitPrice,
       receivedQuantity: 0,
       createdAt: now,
       updatedAt: now,
     });
-
-    return item;
   }
 
   static fromPersistence(props: PurchaseOrderItemProps): PurchaseOrderItem {
@@ -89,15 +80,11 @@ export class PurchaseOrderItem {
     this.props.updatedAt = new Date();
   }
 
-  updateUnitPrice(unitPrice: number | string | Decimal): void {
-    const price =
-      typeof unitPrice === 'number' || typeof unitPrice === 'string'
-        ? new Decimal(unitPrice)
-        : unitPrice;
-    if (price.isNegative()) {
+  updateUnitPrice(unitPrice: number): void {
+    if (unitPrice < 0) {
       throw new InvalidInventoryDataError('Unit price cannot be negative');
     }
-    this.props.unitPrice = price;
+    this.props.unitPrice = unitPrice;
     this.props.updatedAt = new Date();
   }
 
@@ -109,37 +96,19 @@ export class PurchaseOrderItem {
     this.props.updatedAt = new Date();
   }
 
-  getLineTotal(): Decimal {
-    return this.props.unitPrice.mul(this.props.quantity);
+  getLineTotal(): number {
+    return this.props.unitPrice * this.props.quantity;
   }
 
-  get id(): PurchaseOrderItemId {
-    return this.props.id;
-  }
-  get purchaseOrderId(): string {
-    return this.props.purchaseOrderId;
-  }
-  get variantId(): string {
-    return this.props.variantId;
-  }
-  get variantName(): string {
-    return this.props.variantName;
-  }
-  get quantity(): number {
-    return this.props.quantity;
-  }
-  get unitPrice(): Decimal {
-    return this.props.unitPrice;
-  }
-  get receivedQuantity(): number {
-    return this.props.receivedQuantity;
-  }
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
+  get id(): PurchaseOrderItemId { return this.props.id; }
+  get purchaseOrderId(): string { return this.props.purchaseOrderId; }
+  get variantId(): string { return this.props.variantId; }
+  get variantName(): string { return this.props.variantName; }
+  get quantity(): number { return this.props.quantity; }
+  get unitPrice(): number { return this.props.unitPrice; }
+  get receivedQuantity(): number { return this.props.receivedQuantity; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   static toDTO(item: PurchaseOrderItem): PurchaseOrderItemDTO {
     return {

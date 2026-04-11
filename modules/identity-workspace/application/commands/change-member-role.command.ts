@@ -33,7 +33,7 @@ export class ChangeMemberRoleHandler implements ICommandHandler<
       }
 
       const updatedDTO = await this.membershipService.changeMemberRole(
-        membership.getId().getValue(),
+        membership.id.getValue(),
         command.role
       );
       return CommandResult.success(updatedDTO);

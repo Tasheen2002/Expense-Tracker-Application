@@ -2,6 +2,7 @@ import { NotificationType } from '../enums/notification-type.enum';
 import { NotificationChannel } from '../enums/notification-channel.enum';
 import { TemplateId } from '../value-objects/template-id';
 import { WorkspaceId } from '../value-objects';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 
 export interface NotificationTemplateProps {
   id: TemplateId;
@@ -16,11 +17,9 @@ export interface NotificationTemplateProps {
   updatedAt: Date;
 }
 
-export class NotificationTemplate {
-  private props: NotificationTemplateProps;
-
-  private constructor(props: NotificationTemplateProps) {
-    this.props = props;
+export class NotificationTemplate extends AggregateRoot {
+  private constructor(private props: NotificationTemplateProps) {
+    super();
   }
 
   static create(params: {
@@ -45,41 +44,20 @@ export class NotificationTemplate {
     });
   }
 
-  static reconstitute(props: NotificationTemplateProps): NotificationTemplate {
+  static fromPersistence(props: NotificationTemplateProps): NotificationTemplate {
     return new NotificationTemplate(props);
   }
 
-  getId(): TemplateId {
-    return this.props.id;
-  }
-
-  getWorkspaceId(): WorkspaceId | undefined {
-    return this.props.workspaceId;
-  }
-
-  getName(): string {
-    return this.props.name;
-  }
-
-  getType(): NotificationType {
-    return this.props.type;
-  }
-
-  getChannel(): NotificationChannel {
-    return this.props.channel;
-  }
-
-  getSubjectTemplate(): string {
-    return this.props.subjectTemplate;
-  }
-
-  getBodyTemplate(): string {
-    return this.props.bodyTemplate;
-  }
-
-  isActiveTemplate(): boolean {
-    return this.props.isActive;
-  }
+  get id(): TemplateId { return this.props.id; }
+  get workspaceId(): WorkspaceId | undefined { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get type(): NotificationType { return this.props.type; }
+  get channel(): NotificationChannel { return this.props.channel; }
+  get subjectTemplate(): string { return this.props.subjectTemplate; }
+  get bodyTemplate(): string { return this.props.bodyTemplate; }
+  get isActive(): boolean { return this.props.isActive; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateTemplates(subject: string, body: string): void {
     this.props.subjectTemplate = subject;
@@ -97,26 +75,18 @@ export class NotificationTemplate {
     this.props.updatedAt = new Date();
   }
 
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
   static toDTO(template: NotificationTemplate): NotificationTemplateDTO {
     return {
-      id: template.getId().getValue(),
-      workspaceId: template.getWorkspaceId()?.getValue() || null,
-      name: template.getName(),
-      type: template.getType(),
-      channel: template.getChannel(),
-      subjectTemplate: template.getSubjectTemplate(),
-      bodyTemplate: template.getBodyTemplate(),
-      isActive: template.isActiveTemplate(),
-      createdAt: template.getCreatedAt().toISOString(),
-      updatedAt: template.getUpdatedAt().toISOString(),
+      id: template.id.getValue(),
+      workspaceId: template.workspaceId?.getValue() || null,
+      name: template.name,
+      type: template.type,
+      channel: template.channel,
+      subjectTemplate: template.subjectTemplate,
+      bodyTemplate: template.bodyTemplate,
+      isActive: template.isActive,
+      createdAt: template.createdAt.toISOString(),
+      updatedAt: template.updatedAt.toISOString(),
     };
   }
 }

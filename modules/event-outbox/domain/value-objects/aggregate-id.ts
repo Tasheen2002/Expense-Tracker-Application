@@ -1,13 +1,13 @@
+import { randomUUID } from 'crypto';
 import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
-import { v4 as uuidv4 } from "uuid";
 
 export class AggregateId extends UuidId {
-  constructor(value: string) {
-    super(value, "AggregateId");
+  private constructor(value: string) {
+    super(value, 'AggregateId');
   }
 
   static create(): AggregateId {
-    return new AggregateId(uuidv4());
+    return new AggregateId(randomUUID());
   }
 
   static fromString(value: string): AggregateId {

@@ -22,32 +22,32 @@ export class ProjectRepositoryImpl
   async save(project: Project): Promise<void> {
     await this.prisma.project.upsert({
       where: {
-        id: project.getId().getValue(),
+        id: project.id.getValue(),
       },
       create: {
-        id: project.getId().getValue(),
-        workspaceId: project.getWorkspaceId().getValue(),
-        name: project.getName(),
-        code: project.getCode(),
-        description: project.getDescription(),
-        startDate: project.getStartDate(),
-        endDate: project.getEndDate(),
-        managerId: project.getManagerId()?.getValue() || null,
-        budget: project.getBudget(),
-        isActive: project.getIsActive(),
-        createdAt: project.getCreatedAt(),
-        updatedAt: project.getUpdatedAt(),
+        id: project.id.getValue(),
+        workspaceId: project.workspaceId.getValue(),
+        name: project.name,
+        code: project.code,
+        description: project.description,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        managerId: project.managerId?.getValue() || null,
+        budget: project.budget,
+        isActive: project.isActive,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
       },
       update: {
-        name: project.getName(),
-        code: project.getCode(),
-        description: project.getDescription(),
-        startDate: project.getStartDate(),
-        endDate: project.getEndDate(),
-        managerId: project.getManagerId()?.getValue() || null,
-        budget: project.getBudget(),
-        isActive: project.getIsActive(),
-        updatedAt: project.getUpdatedAt(),
+        name: project.name,
+        code: project.code,
+        description: project.description,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        managerId: project.managerId?.getValue() || null,
+        budget: project.budget,
+        isActive: project.isActive,
+        updatedAt: project.updatedAt,
       },
     });
 
@@ -61,7 +61,7 @@ export class ProjectRepositoryImpl
 
     if (!data) return null;
 
-    return Project.reconstitute({
+    return Project.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -70,7 +70,7 @@ export class ProjectRepositoryImpl
       startDate: data.startDate,
       endDate: data.endDate,
       managerId: data.managerId,
-      budget: data.budget,
+      budget: data.budget !== null ? data.budget.toNumber() : null,
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -90,7 +90,7 @@ export class ProjectRepositoryImpl
 
     if (!data) return null;
 
-    return Project.reconstitute({
+    return Project.fromPersistence({
       id: data.id,
       workspaceId: data.workspaceId,
       name: data.name,
@@ -99,7 +99,7 @@ export class ProjectRepositoryImpl
       startDate: data.startDate,
       endDate: data.endDate,
       managerId: data.managerId,
-      budget: data.budget,
+      budget: data.budget !== null ? data.budget.toNumber() : null,
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -118,7 +118,7 @@ export class ProjectRepositoryImpl
       this.prisma.project,
       { where },
       (p) =>
-        Project.reconstitute({
+        Project.fromPersistence({
           id: p.id,
           workspaceId: p.workspaceId,
           name: p.name,
@@ -127,7 +127,7 @@ export class ProjectRepositoryImpl
           startDate: p.startDate,
           endDate: p.endDate,
           managerId: p.managerId,
-          budget: p.budget,
+          budget: p.budget !== null ? p.budget.toNumber() : null,
           isActive: p.isActive,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,

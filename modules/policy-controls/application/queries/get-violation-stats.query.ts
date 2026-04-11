@@ -4,8 +4,8 @@ import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
+
 export interface GetViolationStatsInput extends IQuery {
   workspaceId: string;
   startDate?: Date;
@@ -20,15 +20,10 @@ export interface ViolationStatsResult {
   resolvedCount: number;
 }
 
-export class GetViolationStatsHandler implements IQueryHandler<
-  GetViolationStatsInput,
-  QueryResult<ViolationStatsResult>
-> {
+export class GetViolationStatsHandler implements IQueryHandler<GetViolationStatsInput, ViolationStatsResult> {
   constructor(private readonly violationService: ViolationService) {}
 
-  async handle(
-    input: GetViolationStatsInput
-  ): Promise<QueryResult<ViolationStatsResult>> {
+  async handle(input: GetViolationStatsInput): Promise<ViolationStatsResult> {
     const result = await this.violationService.listViolations(
       input.workspaceId,
       { startDate: input.startDate, endDate: input.endDate }
@@ -56,12 +51,12 @@ export class GetViolationStatsHandler implements IQueryHandler<
       bySeverity[violation.severity]++;
     }
 
-    return QueryResult.success({
+    return {
       total: result.total,
       byStatus,
       bySeverity,
       pendingCount: byStatus[ViolationStatus.PENDING],
       resolvedCount: byStatus[ViolationStatus.RESOLVED],
-    });
+    };
   }
 }

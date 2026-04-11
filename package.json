@@ -2,7 +2,6 @@
   "name": "expense-tracker",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "tsx watch apps/api/src/index.ts",
     "dev:web": "pnpm --filter @expense-tracker/web dev",

@@ -25,13 +25,13 @@ export class WorkspaceRepositoryImpl
   async save(workspace: Workspace): Promise<void> {
     await this.prisma.workspace.create({
       data: {
-        id: workspace.getId().getValue(),
-        name: workspace.getName(),
-        slug: workspace.getSlug(),
-        ownerId: workspace.getOwnerId().getValue(),
-        isActive: workspace.getIsActive(),
-        createdAt: workspace.getCreatedAt(),
-        updatedAt: workspace.getUpdatedAt(),
+        id: workspace.id.getValue(),
+        name: workspace.name,
+        slug: workspace.slug,
+        ownerId: workspace.ownerId.getValue(),
+        isActive: workspace.isActive,
+        createdAt: workspace.createdAt,
+        updatedAt: workspace.updatedAt,
       },
     });
     await this.dispatchEvents(workspace);
@@ -46,7 +46,7 @@ export class WorkspaceRepositoryImpl
       return null;
     }
 
-    return Workspace.reconstitute({
+    return Workspace.fromPersistence({
       id: row.id,
       name: row.name,
       slug: row.slug,
@@ -66,7 +66,7 @@ export class WorkspaceRepositoryImpl
       return null;
     }
 
-    return Workspace.reconstitute({
+    return Workspace.fromPersistence({
       id: row.id,
       name: row.name,
       slug: row.slug,
@@ -88,7 +88,7 @@ export class WorkspaceRepositoryImpl
         orderBy: { createdAt: "desc" },
       },
       (row) =>
-        Workspace.reconstitute({
+        Workspace.fromPersistence({
           id: row.id,
           name: row.name,
           slug: row.slug,
@@ -126,7 +126,7 @@ export class WorkspaceRepositoryImpl
       this.prisma.workspace,
       { where, orderBy },
       (row) =>
-        Workspace.reconstitute({
+        Workspace.fromPersistence({
           id: row.id,
           name: row.name,
           slug: row.slug,
@@ -141,12 +141,12 @@ export class WorkspaceRepositoryImpl
 
   async update(workspace: Workspace): Promise<void> {
     await this.prisma.workspace.update({
-      where: { id: workspace.getId().getValue() },
+      where: { id: workspace.id.getValue() },
       data: {
-        name: workspace.getName(),
-        slug: workspace.getSlug(),
-        isActive: workspace.getIsActive(),
-        updatedAt: workspace.getUpdatedAt(),
+        name: workspace.name,
+        slug: workspace.slug,
+        isActive: workspace.isActive,
+        updatedAt: workspace.updatedAt,
       },
     });
     await this.dispatchEvents(workspace);

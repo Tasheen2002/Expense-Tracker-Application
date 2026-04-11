@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetAllocationsQuery extends IQuery {
   budgetId: string;
@@ -17,29 +16,22 @@ export interface GetAllocationsQuery extends IQuery {
   offset?: number;
 }
 
-export class GetAllocationsHandler
-  implements
-    IQueryHandler<
-      GetAllocationsQuery,
-      QueryResult<PaginatedResult<BudgetAllocationDTO>>
-    >
-{
+export class GetAllocationsHandler implements IQueryHandler<
+  GetAllocationsQuery,
+  PaginatedResult<BudgetAllocationDTO>
+> {
   constructor(private readonly budgetService: BudgetService) {}
 
-  async handle(
-    query: GetAllocationsQuery
-  ): Promise<QueryResult<PaginatedResult<BudgetAllocationDTO>>> {
+  async handle(query: GetAllocationsQuery): Promise<PaginatedResult<BudgetAllocationDTO>> {
     const options: PaginationOptions = {
       limit: query.limit,
       offset: query.offset,
     };
 
-    const result = await this.budgetService.getAllocationsByBudget(
+    return this.budgetService.getAllocationsByBudget(
       query.budgetId,
       query.workspaceId,
       options
     );
-
-    return QueryResult.success(result);
   }
 }

@@ -4,7 +4,6 @@ import { ReceiptMetadataNotFoundError } from '../../domain/errors/receipt.errors
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetReceiptMetadataQuery extends IQuery {
@@ -12,15 +11,10 @@ export interface GetReceiptMetadataQuery extends IQuery {
   workspaceId: string;
 }
 
-export class GetReceiptMetadataHandler implements IQueryHandler<
-  GetReceiptMetadataQuery,
-  QueryResult<ReceiptMetadataDTO>
-> {
+export class GetReceiptMetadataHandler implements IQueryHandler<GetReceiptMetadataQuery, ReceiptMetadataDTO> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(
-    query: GetReceiptMetadataQuery
-  ): Promise<QueryResult<ReceiptMetadataDTO>> {
+  async handle(query: GetReceiptMetadataQuery): Promise<ReceiptMetadataDTO> {
     const metadataDTO = await this.receiptService.getMetadata(
       query.receiptId,
       query.workspaceId
@@ -28,6 +22,6 @@ export class GetReceiptMetadataHandler implements IQueryHandler<
     if (!metadataDTO) {
       throw new ReceiptMetadataNotFoundError(query.receiptId);
     }
-    return QueryResult.success(metadataDTO);
+    return metadataDTO;
   }
 }

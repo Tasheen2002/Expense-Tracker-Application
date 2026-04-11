@@ -60,17 +60,12 @@ export class RuleExecutionController {
     try {
       const { workspaceId, expenseId } = request.params;
 
-      const result = await this.getExecutionsByExpenseHandler.handle({
+      const executions = await this.getExecutionsByExpenseHandler.handle({
         workspaceId,
         expenseId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Executions retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Executions retrieved successfully', executions);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -98,17 +93,16 @@ export class RuleExecutionController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
+      return ResponseHelper.ok(
         reply,
-        result,
         'Executions retrieved successfully',
         {
-          items: result.data?.items || [],
+          items: result.items,
           pagination: {
-            total: result.data?.total || 0,
-            limit: result.data?.limit || 10,
-            offset: result.data?.offset || 0,
-            hasMore: result.data?.hasMore || false,
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
           },
         }
       );

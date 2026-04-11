@@ -105,21 +105,15 @@ export class TagController {
           offset: offset ? Number(offset) : undefined,
         },
       });
-      const paginatedData = result.data;
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Tags retrieved successfully',
-        {
-          items: paginatedData?.items ?? [],
-          pagination: {
-            total: paginatedData?.total ?? 0,
-            limit: paginatedData?.limit ?? 0,
-            offset: paginatedData?.offset ?? 0,
-            hasMore: paginatedData?.hasMore ?? false,
-          },
-        }
-      );
+      return ResponseHelper.ok(reply, 'Tags retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

@@ -79,12 +79,7 @@ export class ExpenseSplitController {
         userId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Split retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Split retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -106,12 +101,7 @@ export class ExpenseSplitController {
         userId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Split retrieved successfully',
-        result.data
-      );
+      return ResponseHelper.ok(reply, 'Split retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -136,22 +126,15 @@ export class ExpenseSplitController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Splits retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Splits retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -239,22 +222,15 @@ export class ExpenseSplitController {
         offset,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Settlements retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-              pagination: {
-                total: result.data.total,
-                limit: result.data.limit,
-                offset: result.data.offset,
-                hasMore: result.data.hasMore,
-              },
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Settlements retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -276,16 +252,15 @@ export class ExpenseSplitController {
         userId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Split settlements retrieved successfully',
-        result.data
-          ? {
-              items: result.data.items,
-            }
-          : undefined
-      );
+      return ResponseHelper.ok(reply, 'Split settlements retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

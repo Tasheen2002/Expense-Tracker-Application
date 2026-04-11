@@ -52,7 +52,7 @@ export class BudgetPlanRepositoryImpl
 
     if (!raw) return null;
 
-    return BudgetPlan.reconstitute({
+    return BudgetPlan.fromPersistence({
       id: raw.id,
       workspaceId: raw.workspaceId,
       name: raw.name,
@@ -83,7 +83,7 @@ export class BudgetPlanRepositoryImpl
       this.prisma.budgetPlan,
       { where, orderBy: { createdAt: "desc" } },
       (raw) =>
-        BudgetPlan.reconstitute({
+        BudgetPlan.fromPersistence({
           id: raw.id,
           workspaceId: raw.workspaceId,
           name: raw.name,

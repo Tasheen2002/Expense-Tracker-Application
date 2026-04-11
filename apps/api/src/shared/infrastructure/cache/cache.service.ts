@@ -1,53 +1,5 @@
-/**
- * Interface for cache service.
- * Abstracts caching implementation (in-memory, Redis, etc.)
- */
-export interface ICacheService {
-  /**
-   * Gets a value from cache.
-   * @returns The cached value or null if not found/expired.
-   */
-  get<T>(key: string): Promise<T | null>;
-
-  /**
-   * Sets a value in cache with optional TTL.
-   * @param key - Cache key
-   * @param value - Value to cache
-   * @param ttlSeconds - Time to live in seconds (optional)
-   */
-  set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
-
-  /**
-   * Deletes a value from cache.
-   */
-  delete(key: string): Promise<void>;
-
-  /**
-   * Deletes all keys matching a pattern.
-   */
-  deletePattern(pattern: string): Promise<void>;
-
-  /**
-   * Checks if a key exists in cache.
-   */
-  exists(key: string): Promise<boolean>;
-
-  /**
-   * Clears all cached values.
-   */
-  clear(): Promise<void>;
-
-  /**
-   * Gets or sets a value using a factory function.
-   * If key exists, returns cached value.
-   * If not, calls factory, caches result, and returns it.
-   */
-  getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    ttlSeconds?: number,
-  ): Promise<T>;
-}
+import { ICacheService } from '../../../../../../packages/core/src/domain/interfaces/cache.interface';
+export type { ICacheService };
 
 interface CacheEntry<T> {
   value: T;

@@ -75,7 +75,7 @@ export class WorkspaceManagementService {
     // Create membership for the owner (as OWNER role)
     const membership = WorkspaceMembership.create({
       userId: data.ownerId,
-      workspaceId: workspace.getId().getValue(),
+      workspaceId: workspace.id.getValue(),
       role: WorkspaceRole.OWNER,
     });
 
@@ -114,7 +114,7 @@ export class WorkspaceManagementService {
 
     // Get workspaces for each membership
     const workspacePromises = memberships.map((membership) =>
-      this.workspaceRepository.findById(membership.getWorkspaceId())
+      this.workspaceRepository.findById(membership.workspaceId)
     );
 
     const workspacesRaw = await Promise.all(workspacePromises);
@@ -172,7 +172,7 @@ export class WorkspaceManagementService {
       const newSlug = Workspace.generateSlug(updateData.name);
       const existingWorkspace =
         await this.workspaceRepository.findBySlug(newSlug);
-      if (existingWorkspace && !existingWorkspace.getId().equals(workspaceId)) {
+      if (existingWorkspace && !existingWorkspace.id.equals(workspaceId)) {
         throw new WorkspaceAlreadyExistsError(newSlug);
       }
       workspace.updateName(updateData.name);

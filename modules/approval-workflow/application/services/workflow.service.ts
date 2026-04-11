@@ -49,8 +49,7 @@ export class WorkflowService {
     }
 
     // CRITICAL: Prevent self-approval (fraud prevention)
-    const approverSequence = chain.getApproverSequence();
-    const approverIds = approverSequence.map((id) => id.getValue());
+    const approverIds = chain.approverSequence.map((id) => id.getValue());
     if (approverIds.includes(params.userId)) {
       throw new SelfApprovalNotAllowedError(params.userId);
     }
@@ -59,7 +58,7 @@ export class WorkflowService {
       expenseId: params.expenseId,
       workspaceId: params.workspaceId,
       userId: params.userId,
-      chainId: chain.getId().getValue(),
+      chainId: chain.id.getValue(),
       approverSequence: approverIds,
     });
 
@@ -92,7 +91,7 @@ export class WorkflowService {
   ): Promise<ExpenseWorkflowDTO> {
     const workflow = await this.workflowRepository.findByExpenseId(expenseId);
 
-    if (!workflow || workflow.getWorkspaceId().getValue() !== workspaceId) {
+    if (!workflow || workflow.workspaceId.getValue() !== workspaceId) {
       throw new WorkflowNotFoundError(expenseId);
     }
 
@@ -109,7 +108,7 @@ export class WorkflowService {
       params.expenseId
     );
 
-    if (!workflow || workflow.getWorkspaceId().getValue() !== params.workspaceId) {
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
       throw new WorkflowNotFoundError(params.expenseId);
     }
 
@@ -117,7 +116,7 @@ export class WorkflowService {
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus()
+        workflow.status
       );
     }
 
@@ -129,12 +128,12 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
       throw new UnauthorizedApproverError(
         params.approverId,
-        currentStep.getId().getValue()
+        currentStep.id.getValue()
       );
     }
 
     currentStep.approve(params.comments);
-    workflow.processStepApproval(currentStep.getStepNumber());
+    workflow.processStepApproval(currentStep.stepNumber);
 
     await this.workflowRepository.save(workflow);
 
@@ -156,7 +155,7 @@ export class WorkflowService {
       params.expenseId
     );
 
-    if (!workflow || workflow.getWorkspaceId().getValue() !== params.workspaceId) {
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
       throw new WorkflowNotFoundError(params.expenseId);
     }
 
@@ -164,7 +163,7 @@ export class WorkflowService {
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus()
+        workflow.status
       );
     }
 
@@ -176,7 +175,7 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
       throw new UnauthorizedApproverError(
         params.approverId,
-        currentStep.getId().getValue()
+        currentStep.id.getValue()
       );
     }
 
@@ -203,7 +202,7 @@ export class WorkflowService {
       params.expenseId
     );
 
-    if (!workflow || workflow.getWorkspaceId().getValue() !== params.workspaceId) {
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
       throw new WorkflowNotFoundError(params.expenseId);
     }
 
@@ -211,7 +210,7 @@ export class WorkflowService {
     if (workflow.isCompleted()) {
       throw new WorkflowAlreadyCompletedError(
         params.expenseId,
-        workflow.getStatus()
+        workflow.status
       );
     }
 
@@ -223,11 +222,11 @@ export class WorkflowService {
     if (currentStep.getCurrentApproverId().getValue() !== params.fromUserId) {
       throw new UnauthorizedApproverError(
         params.fromUserId,
-        currentStep.getId().getValue()
+        currentStep.id.getValue()
       );
     }
 
-    workflow.delegateStep(currentStep.getStepNumber(), params.toUserId);
+    workflow.delegateStep(currentStep.stepNumber, params.toUserId);
 
     await this.workflowRepository.save(workflow);
 
@@ -245,7 +244,7 @@ export class WorkflowService {
   ): Promise<ExpenseWorkflowDTO> {
     const workflow = await this.workflowRepository.findByExpenseId(expenseId);
 
-    if (!workflow || workflow.getWorkspaceId().getValue() !== workspaceId) {
+    if (!workflow || workflow.workspaceId.getValue() !== workspaceId) {
       throw new WorkflowNotFoundError(expenseId);
     }
 

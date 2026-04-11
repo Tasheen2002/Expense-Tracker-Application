@@ -26,30 +26,30 @@ describe("Receipt Entity", () => {
   it("should create a receipt with valid data", () => {
     const receipt = Receipt.create(validData);
 
-    expect(receipt.getId()).toBeDefined();
-    expect(receipt.getStatus()).toBe(ReceiptStatus.PENDING);
-    expect(receipt.getWorkspaceId()).toBe(validData.workspaceId);
-    expect(receipt.getFileInfo().getFileName()).toBe(validData.fileName);
+    expect(receipt.id).toBeDefined();
+    expect(receipt.status).toBe(ReceiptStatus.PENDING);
+    expect(receipt.workspaceId).toBe(validData.workspaceId);
+    expect(receipt.fileInfo.getFileName()).toBe(validData.fileName);
   });
 
   it("should validate receipt type", () => {
     const receipt = Receipt.create(validData);
-    expect(receipt.getReceiptType()).toBe(ReceiptType.EXPENSE);
+    expect(receipt.receiptType).toBe(ReceiptType.EXPENSE);
   });
 
   it("should transition status correctly", () => {
     const receipt = Receipt.create(validData);
 
     receipt.startProcessing();
-    expect(receipt.getStatus()).toBe(ReceiptStatus.PROCESSING);
+    expect(receipt.status).toBe(ReceiptStatus.PROCESSING);
 
     receipt.markAsProcessed("OCR Text", 0.95);
-    expect(receipt.getStatus()).toBe(ReceiptStatus.PROCESSED);
-    expect(receipt.getOcrText()).toBe("OCR Text");
-    expect(receipt.getOcrConfidence()?.toNumber()).toBe(0.95);
+    expect(receipt.status).toBe(ReceiptStatus.PROCESSED);
+    expect(receipt.ocrText).toBe("OCR Text");
+    expect(receipt.ocrConfidence?.toNumber()).toBe(0.95);
 
     receipt.verify();
-    expect(receipt.getStatus()).toBe(ReceiptStatus.VERIFIED);
+    expect(receipt.status).toBe(ReceiptStatus.VERIFIED);
   });
 
   it("should throw error on invalid status transition", () => {
@@ -63,7 +63,7 @@ describe("Receipt Entity", () => {
     const receipt = Receipt.create(validData);
     receipt.linkToExpense("expense-123");
 
-    expect(receipt.getExpenseId()).toBe("expense-123");
+    expect(receipt.expenseId).toBe("expense-123");
     expect(receipt.isLinkedToExpense()).toBe(true);
   });
 
@@ -72,7 +72,7 @@ describe("Receipt Entity", () => {
     receipt.linkToExpense("expense-123");
     receipt.unlinkFromExpense();
 
-    expect(receipt.getExpenseId()).toBeUndefined();
+    expect(receipt.expenseId).toBeUndefined();
     expect(receipt.isLinkedToExpense()).toBe(false);
   });
 

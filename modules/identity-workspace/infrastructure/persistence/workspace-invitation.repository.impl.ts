@@ -20,8 +20,8 @@ export class WorkspaceInvitationRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private reconstitute(row: Prisma.WorkspaceInvitationGetPayload<{}>): WorkspaceInvitation {
-    return WorkspaceInvitation.reconstitute({
+  private toDomain(row: Prisma.WorkspaceInvitationGetPayload<{}>): WorkspaceInvitation {
+    return WorkspaceInvitation.fromPersistence({
       id: row.id,
       workspaceId: row.workspaceId,
       email: row.email,
@@ -35,19 +35,19 @@ export class WorkspaceInvitationRepositoryImpl
 
   async save(invitation: WorkspaceInvitation): Promise<void> {
     await this.prisma.workspaceInvitation.upsert({
-      where: { id: invitation.getId().getValue() },
+      where: { id: invitation.id.getValue() },
       create: {
-        id: invitation.getId().getValue(),
-        workspaceId: invitation.getWorkspaceId().getValue(),
-        email: invitation.getEmail(),
-        role: invitation.getRole(),
-        token: invitation.getToken(),
-        expiresAt: invitation.getExpiresAt(),
-        acceptedAt: invitation.getAcceptedAt(),
-        createdAt: invitation.getCreatedAt(),
+        id: invitation.id.getValue(),
+        workspaceId: invitation.workspaceId.getValue(),
+        email: invitation.email,
+        role: invitation.role,
+        token: invitation.token,
+        expiresAt: invitation.expiresAt,
+        acceptedAt: invitation.acceptedAt,
+        createdAt: invitation.createdAt,
       },
       update: {
-        acceptedAt: invitation.getAcceptedAt(),
+        acceptedAt: invitation.acceptedAt,
       },
     });
     await this.dispatchEvents(invitation);
@@ -58,7 +58,7 @@ export class WorkspaceInvitationRepositoryImpl
       where: { id: id.getValue() },
     });
 
-    return row ? this.reconstitute(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findByToken(token: string): Promise<WorkspaceInvitation | null> {
@@ -66,7 +66,7 @@ export class WorkspaceInvitationRepositoryImpl
       where: { token },
     });
 
-    return row ? this.reconstitute(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findByWorkspaceId(
@@ -79,7 +79,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { workspaceId: workspaceId.getValue() },
         orderBy: { createdAt: "desc" },
       },
-      (row) => this.reconstitute(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -94,7 +94,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { email: email.toLowerCase() },
         orderBy: { createdAt: "desc" },
       },
-      (row) => this.reconstitute(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -113,7 +113,7 @@ export class WorkspaceInvitationRepositoryImpl
         },
         orderBy: { createdAt: "desc" },
       },
-      (row) => this.reconstitute(row),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -134,7 +134,7 @@ export class WorkspaceInvitationRepositoryImpl
       orderBy: { createdAt: "desc" },
     });
 
-    return row ? this.reconstitute(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async delete(id: InvitationId): Promise<void> {
@@ -162,19 +162,19 @@ export class WorkspaceInvitationRepositoryImpl
   ): Promise<void> {
     await this.prisma.$transaction([
       this.prisma.workspaceInvitation.update({
-        where: { id: invitation.getId().getValue() },
+        where: { id: invitation.id.getValue() },
         data: {
-          acceptedAt: invitation.getAcceptedAt(),
+          acceptedAt: invitation.acceptedAt,
         },
       }),
       this.prisma.workspaceMembership.create({
         data: {
-          id: membership.getId().getValue(),
-          userId: membership.getUserId().getValue(),
-          workspaceId: membership.getWorkspaceId().getValue(),
-          role: membership.getRole(),
-          createdAt: membership.getCreatedAt(),
-          updatedAt: membership.getUpdatedAt(),
+          id: membership.id.getValue(),
+          userId: membership.userId.getValue(),
+          workspaceId: membership.workspaceId.getValue(),
+          role: membership.role,
+          createdAt: membership.createdAt,
+          updatedAt: membership.updatedAt,
         },
       }),
     ]);

@@ -15,7 +15,7 @@ import {
 } from '../../domain/errors/identity.errors';
 
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { ICacheService } from '../../../../apps/api/src/shared/infrastructure/cache/cache.service';
+import { ICacheService } from '../../../../packages/core/src/domain/interfaces/cache.interface';
 
 export class WorkspaceMembershipService {
   constructor(
@@ -95,7 +95,7 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
+      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
     );
 
     membership.changeRole(newRole);
@@ -117,7 +117,7 @@ export class WorkspaceMembershipService {
 
     // Invalidate cache
     await this.cacheService.delete(
-      `membership:${membership.getUserId().getValue()}:${membership.getWorkspaceId().getValue()}`
+      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
     );
 
     membership.markAsRemoved();
@@ -149,7 +149,7 @@ export class WorkspaceMembershipService {
       return false;
     }
 
-    const role = membership.getRole();
+    const role = membership.role;
 
     // Owner has all privileges
     if (role === WorkspaceRole.OWNER) {

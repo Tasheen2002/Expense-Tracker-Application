@@ -22,12 +22,12 @@ export class PrismaRuleExecutionRepository
 
   async save(execution: RuleExecution): Promise<void> {
     const data = {
-      id: execution.getId().getValue(),
-      ruleId: execution.getRuleId().getValue(),
-      expenseId: execution.getExpenseId().getValue(),
-      workspaceId: execution.getWorkspaceId().getValue(),
-      appliedCategoryId: execution.getAppliedCategoryId().getValue(),
-      executedAt: execution.getExecutedAt(),
+      id: execution.id.getValue(),
+      ruleId: execution.ruleId.getValue(),
+      expenseId: execution.expenseId.getValue(),
+      workspaceId: execution.workspaceId.getValue(),
+      appliedCategoryId: execution.appliedCategoryId.getValue(),
+      executedAt: execution.executedAt,
     };
 
     await this.prisma.ruleExecution.upsert({
@@ -42,24 +42,24 @@ export class PrismaRuleExecutionRepository
     suggestion: CategorySuggestion
   ): Promise<void> {
     const executionData = {
-      id: execution.getId().getValue(),
-      ruleId: execution.getRuleId().getValue(),
-      expenseId: execution.getExpenseId().getValue(),
-      workspaceId: execution.getWorkspaceId().getValue(),
-      appliedCategoryId: execution.getAppliedCategoryId().getValue(),
-      executedAt: execution.getExecutedAt(),
+      id: execution.id.getValue(),
+      ruleId: execution.ruleId.getValue(),
+      expenseId: execution.expenseId.getValue(),
+      workspaceId: execution.workspaceId.getValue(),
+      appliedCategoryId: execution.appliedCategoryId.getValue(),
+      executedAt: execution.executedAt,
     };
 
     const suggestionData = {
-      id: suggestion.getId().getValue(),
-      workspaceId: suggestion.getWorkspaceId().getValue(),
-      expenseId: suggestion.getExpenseId().getValue(),
-      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
-      confidence: suggestion.getConfidence().getValue(),
-      reason: suggestion.getReason(),
-      isAccepted: suggestion.getIsAccepted(),
-      createdAt: suggestion.getCreatedAt(),
-      respondedAt: suggestion.getRespondedAt(),
+      id: suggestion.id.getValue(),
+      workspaceId: suggestion.workspaceId.getValue(),
+      expenseId: suggestion.expenseId.getValue(),
+      suggestedCategoryId: suggestion.suggestedCategoryId.getValue(),
+      confidence: suggestion.confidence.getValue(),
+      reason: suggestion.reason,
+      isAccepted: suggestion.isAccepted,
+      createdAt: suggestion.createdAt,
+      respondedAt: suggestion.respondedAt,
     };
 
     await this.prisma.$transaction([
@@ -147,7 +147,7 @@ export class PrismaRuleExecutionRepository
   }
 
   private toDomain(raw: PrismaRuleExecution): RuleExecution {
-    return RuleExecution.reconstitute({
+    return RuleExecution.fromPersistence({
       id: RuleExecutionId.fromString(raw.id),
       ruleId: RuleId.fromString(raw.ruleId),
       expenseId: ExpenseId.fromString(raw.expenseId),

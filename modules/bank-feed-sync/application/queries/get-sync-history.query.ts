@@ -8,7 +8,6 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { QueryResult } from '../../../../packages/core/src/application/query-result';
 
 export interface GetSyncHistoryQuery extends IQuery {
   workspaceId: string;
@@ -18,18 +17,15 @@ export interface GetSyncHistoryQuery extends IQuery {
 
 export class GetSyncHistoryHandler implements IQueryHandler<
   GetSyncHistoryQuery,
-  QueryResult<PaginatedResult<SyncSessionDTO>>
+  PaginatedResult<SyncSessionDTO>
 > {
   constructor(private readonly transactionSyncService: TransactionSyncService) {}
 
-  async handle(
-    query: GetSyncHistoryQuery
-  ): Promise<QueryResult<PaginatedResult<SyncSessionDTO>>> {
-    const result = await this.transactionSyncService.getSyncHistory(
+  async handle(query: GetSyncHistoryQuery): Promise<PaginatedResult<SyncSessionDTO>> {
+    return this.transactionSyncService.getSyncHistory(
       query.workspaceId,
       query.connectionId,
       query.options
     );
-    return QueryResult.success(result);
   }
 }

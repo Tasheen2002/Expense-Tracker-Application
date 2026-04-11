@@ -206,6 +206,14 @@ export interface ExpenseWorkflowProps {
   completedAt?: Date;
 }
 
+export interface CreateExpenseWorkflowData {
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
+  chainId: string;
+  approverSequence: string[];
+}
+
 export class ExpenseWorkflow extends AggregateRoot {
   private props: ExpenseWorkflowProps;
 
@@ -214,22 +222,16 @@ export class ExpenseWorkflow extends AggregateRoot {
     this.props = props;
   }
 
-  static create(params: {
-    expenseId: string;
-    workspaceId: string;
-    userId: string;
-    chainId: string;
-    approverSequence: string[];
-  }): ExpenseWorkflow {
-    const expenseId = ExpenseId.fromString(params.expenseId);
-    const workspaceId = WorkspaceId.fromString(params.workspaceId);
-    const userId = UserId.fromString(params.userId);
-    const chainId = ApprovalChainId.fromString(params.chainId);
+  static create(data: CreateExpenseWorkflowData): ExpenseWorkflow {
+    const expenseId = ExpenseId.fromString(data.expenseId);
+    const workspaceId = WorkspaceId.fromString(data.workspaceId);
+    const userId = UserId.fromString(data.userId);
+    const chainId = ApprovalChainId.fromString(data.chainId);
 
     // Create workflowId FIRST so it can be passed to steps
     const workflowId = WorkflowId.create();
 
-    const steps = params.approverSequence.map((approverId, index) =>
+    const steps = data.approverSequence.map((approverId, index) =>
       ApprovalStep.create({
         workflowId: workflowId.getValue(),
         stepNumber: index + 1,
@@ -263,57 +265,57 @@ export class ExpenseWorkflow extends AggregateRoot {
     return workflow;
   }
 
-  static reconstitute(props: ExpenseWorkflowProps): ExpenseWorkflow {
+  static fromPersistence(props: ExpenseWorkflowProps): ExpenseWorkflow {
     return new ExpenseWorkflow(props);
   }
 
-  getId(): WorkflowId {
+  get id(): WorkflowId {
     return this.props.workflowId;
   }
 
-  getExpenseId(): ExpenseId {
+  get expenseId(): ExpenseId {
     return this.props.expenseId;
   }
 
-  getWorkspaceId(): WorkspaceId {
+  get workspaceId(): WorkspaceId {
     return this.props.workspaceId;
   }
 
-  getUserId(): UserId {
+  get userId(): UserId {
     return this.props.userId;
   }
 
-  getChainId(): ApprovalChainId {
+  get chainId(): ApprovalChainId {
     return this.props.chainId;
   }
 
-  getStatus(): WorkflowStatus {
+  get status(): WorkflowStatus {
     return this.props.status;
   }
 
-  getCurrentStepNumber(): number {
+  get currentStepNumber(): number {
     return this.props.currentStepNumber;
   }
 
-  getSteps(): ApprovalStep[] {
+  get steps(): ApprovalStep[] {
     return this.props.steps;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
-  getCompletedAt(): Date | undefined {
+  get completedAt(): Date | undefined {
     return this.props.completedAt;
   }
 
   getCurrentStep(): ApprovalStep | undefined {
     return this.props.steps.find(
-      (step) => step.getStepNumber() === this.props.currentStepNumber
+      (step) => step.stepNumber === this.props.currentStepNumber
     );
   }
 
@@ -345,23 +347,23 @@ export class ExpenseWorkflow extends AggregateRoot {
   }
 
   processStepApproval(stepNumber: number): void {
-    const step = this.props.steps.find((s) => s.getStepNumber() === stepNumber);
+    const step = this.props.steps.find((s) => s.stepNumber === stepNumber);
     if (!step) {
       throw new WorkflowStepNotFoundError(stepNumber);
     }
 
-    if (!step.isProcessed() || step.getStatus() !== ApprovalStatus.APPROVED) {
+    if (!step.isProcessed() || step.status !== ApprovalStatus.APPROVED) {
       throw new InvalidApprovalTransitionError('pending', 'approved');
     }
 
     this.addDomainEvent(
       new ApprovalStepCompletedEvent(
         this.props.workflowId.getValue(),
-        step.getId().getValue(),
-        step.getApproverId().getValue(),
+        step.id.getValue(),
+        step.approverId.getValue(),
         stepNumber,
         'approved',
-        step.getComments()
+        step.comments
       )
     );
 
@@ -374,7 +376,7 @@ export class ExpenseWorkflow extends AggregateRoot {
           this.props.workflowId.getValue(),
           this.props.expenseId.getValue(),
           this.props.workspaceId.getValue(),
-          step.getApproverId().getValue()
+          step.approverId.getValue()
         )
       );
     } else {
@@ -388,19 +390,19 @@ export class ExpenseWorkflow extends AggregateRoot {
   processStepRejection(): void {
     const currentStep = this.getCurrentStep();
     const rejectedBy = currentStep
-      ? currentStep.getApproverId().getValue()
+      ? currentStep.approverId.getValue()
       : 'System';
-    const reason = currentStep ? currentStep.getComments() : 'Unknown';
+    const reason = currentStep ? currentStep.comments : 'Unknown';
 
     if (currentStep) {
       this.addDomainEvent(
         new ApprovalStepCompletedEvent(
           this.props.workflowId.getValue(),
-          currentStep.getId().getValue(),
-          currentStep.getApproverId().getValue(),
-          currentStep.getStepNumber(),
+          currentStep.id.getValue(),
+          currentStep.approverId.getValue(),
+          currentStep.stepNumber,
           'rejected',
-          currentStep.getComments()
+          currentStep.comments
         )
       );
     }
@@ -421,7 +423,7 @@ export class ExpenseWorkflow extends AggregateRoot {
   }
 
   delegateStep(stepNumber: number, toUserId: string): void {
-    const step = this.props.steps.find((s) => s.getStepNumber() === stepNumber);
+    const step = this.props.steps.find((s) => s.stepNumber === stepNumber);
     if (!step) {
       throw new WorkflowStepNotFoundError(stepNumber);
     }
@@ -434,7 +436,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     this.addDomainEvent(
       new ApprovalStepDelegatedEvent(
         this.props.workflowId.getValue(),
-        step.getId().getValue(),
+        step.id.getValue(),
         fromApproverId,
         toUserId
       )
@@ -472,9 +474,9 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.addDomainEvent(
           new ApprovalStepCompletedEvent(
             this.props.workflowId.getValue(),
-            step.getId().getValue(),
+            step.id.getValue(),
             'System',
-            step.getStepNumber(),
+            step.stepNumber,
             'approved',
             'Auto-approved'
           )
@@ -497,23 +499,19 @@ export class ExpenseWorkflow extends AggregateRoot {
     );
   }
 
-  /**
-   * Serialize ExpenseWorkflow to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(workflow: ExpenseWorkflow): ExpenseWorkflowDTO {
     return {
-      workflowId: workflow.getId().getValue(),
-      expenseId: workflow.getExpenseId().getValue(),
-      workspaceId: workflow.getWorkspaceId().getValue(),
-      userId: workflow.getUserId().getValue(),
-      chainId: workflow.getChainId()?.getValue(),
-      status: workflow.getStatus(),
-      currentStepNumber: workflow.getCurrentStepNumber(),
-      steps: workflow.getSteps().map((s) => ApprovalStep.toDTO(s)),
-      createdAt: workflow.getCreatedAt().toISOString(),
-      updatedAt: workflow.getUpdatedAt().toISOString(),
-      completedAt: workflow.getCompletedAt()?.toISOString(),
+      workflowId: workflow.id.getValue(),
+      expenseId: workflow.expenseId.getValue(),
+      workspaceId: workflow.workspaceId.getValue(),
+      userId: workflow.userId.getValue(),
+      chainId: workflow.chainId?.getValue(),
+      status: workflow.status,
+      currentStepNumber: workflow.currentStepNumber,
+      steps: workflow.steps.map((s) => ApprovalStep.toDTO(s)),
+      createdAt: workflow.createdAt.toISOString(),
+      updatedAt: workflow.updatedAt.toISOString(),
+      completedAt: workflow.completedAt?.toISOString(),
     };
   }
 }

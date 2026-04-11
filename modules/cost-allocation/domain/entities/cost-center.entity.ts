@@ -103,17 +103,19 @@ export class CostCenterDeletedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+interface CostCenterProps {
+  id: CostCenterId;
+  workspaceId: WorkspaceId;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class CostCenter extends AggregateRoot {
-  private constructor(
-    private readonly id: CostCenterId,
-    private readonly workspaceId: WorkspaceId,
-    private name: string,
-    private code: string,
-    private description: string | null,
-    private isActive: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date
-  ) {
+  private constructor(private props: CostCenterProps) {
     super();
   }
 
@@ -123,20 +125,20 @@ export class CostCenter extends AggregateRoot {
     code: string;
     description?: string | null;
   }): CostCenter {
-    const costCenter = new CostCenter(
-      CostCenterId.create(),
-      params.workspaceId,
-      params.name,
-      params.code,
-      params.description || null,
-      true,
-      new Date(),
-      new Date()
-    );
+    const costCenter = new CostCenter({
+      id: CostCenterId.create(),
+      workspaceId: params.workspaceId,
+      name: params.name,
+      code: params.code,
+      description: params.description || null,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     costCenter.addDomainEvent(
       new CostCenterCreatedEvent(
-        costCenter.id.getValue(),
+        costCenter.props.id.getValue(),
         params.workspaceId.getValue(),
         params.name,
         params.code
@@ -146,7 +148,7 @@ export class CostCenter extends AggregateRoot {
     return costCenter;
   }
 
-  static reconstitute(params: {
+  static fromPersistence(params: {
     id: string;
     workspaceId: string;
     name: string;
@@ -156,49 +158,26 @@ export class CostCenter extends AggregateRoot {
     createdAt: Date;
     updatedAt: Date;
   }): CostCenter {
-    return new CostCenter(
-      CostCenterId.fromString(params.id),
-      WorkspaceId.fromString(params.workspaceId),
-      params.name,
-      params.code,
-      params.description,
-      params.isActive,
-      params.createdAt,
-      params.updatedAt
-    );
+    return new CostCenter({
+      id: CostCenterId.fromString(params.id),
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
+      name: params.name,
+      code: params.code,
+      description: params.description,
+      isActive: params.isActive,
+      createdAt: params.createdAt,
+      updatedAt: params.updatedAt,
+    });
   }
 
-  getId(): CostCenterId {
-    return this.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getName(): string {
-    return this.name;
-  }
-
-  getCode(): string {
-    return this.code;
-  }
-
-  getDescription(): string | null {
-    return this.description;
-  }
-
-  getIsActive(): boolean {
-    return this.isActive;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
+  get id(): CostCenterId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get code(): string { return this.props.code; }
+  get description(): string | null { return this.props.description; }
+  get isActive(): boolean { return this.props.isActive; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   updateDetails(params: {
     name?: string;
@@ -207,59 +186,59 @@ export class CostCenter extends AggregateRoot {
   }): void {
     const changes: Record<string, unknown> = {};
     if (params.name !== undefined) {
-      this.name = params.name;
+      this.props.name = params.name;
       changes.name = params.name;
     }
     if (params.code !== undefined) {
-      this.code = params.code;
+      this.props.code = params.code;
       changes.code = params.code;
     }
     if (params.description !== undefined) {
-      this.description = params.description;
+      this.props.description = params.description;
       changes.description = params.description;
     }
-    this.updatedAt = new Date();
+    this.props.updatedAt = new Date();
 
     if (Object.keys(changes).length > 0) {
       this.addDomainEvent(
-        new CostCenterUpdatedEvent(this.id.getValue(), changes)
+        new CostCenterUpdatedEvent(this.props.id.getValue(), changes)
       );
     }
   }
 
   deactivate(): void {
-    if (!this.isActive) return;
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new CostCenterDeactivatedEvent(this.id.getValue()));
+    if (!this.props.isActive) return;
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CostCenterDeactivatedEvent(this.props.id.getValue()));
   }
 
   activate(): void {
-    if (this.isActive) return;
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new CostCenterActivatedEvent(this.id.getValue()));
+    if (this.props.isActive) return;
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CostCenterActivatedEvent(this.props.id.getValue()));
   }
 
   markAsDeleted(): void {
     this.addDomainEvent(
       new CostCenterDeletedEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue()
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue()
       )
     );
   }
 
   static toDTO(costCenter: CostCenter): CostCenterDTO {
     return {
-      id: costCenter.getId().getValue(),
-      workspaceId: costCenter.getWorkspaceId().getValue(),
-      name: costCenter.getName(),
-      code: costCenter.getCode(),
-      description: costCenter.getDescription(),
-      isActive: costCenter.getIsActive(),
-      createdAt: costCenter.getCreatedAt().toISOString(),
-      updatedAt: costCenter.getUpdatedAt().toISOString(),
+      id: costCenter.props.id.getValue(),
+      workspaceId: costCenter.props.workspaceId.getValue(),
+      name: costCenter.props.name,
+      code: costCenter.props.code,
+      description: costCenter.props.description,
+      isActive: costCenter.props.isActive,
+      createdAt: costCenter.props.createdAt.toISOString(),
+      updatedAt: costCenter.props.updatedAt.toISOString(),
     };
   }
 }

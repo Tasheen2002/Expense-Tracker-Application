@@ -18,7 +18,7 @@ export class AttachmentService {
     fileSize: number;
     mimeType: string;
     uploadedBy: string;
-  }): Promise<Attachment> {
+  }): Promise<AttachmentDTO> {
     // Check total attachment size limit (50MB per expense)
     const currentTotalSize =
       await this.attachmentRepository.getTotalSizeByExpense(params.expenseId);
@@ -41,7 +41,7 @@ export class AttachmentService {
 
     await this.attachmentRepository.save(attachment);
 
-    return attachment;
+    return Attachment.toDTO(attachment);
   }
 
   async deleteAttachment(
@@ -66,23 +66,11 @@ export class AttachmentService {
     );
   }
 
-  async getAttachmentById(attachmentId: string): Promise<Attachment | null> {
-    return await this.attachmentRepository.findById(
-      AttachmentId.fromString(attachmentId)
-    );
-  }
-
   async getAttachmentDTOById(attachmentId: string): Promise<AttachmentDTO | null> {
     const attachment = await this.attachmentRepository.findById(
       AttachmentId.fromString(attachmentId)
     );
-    return attachment ? attachment.toJSON() : null;
-  }
-
-  async getAttachmentsByExpense(
-    expenseId: string
-  ): Promise<PaginatedResult<Attachment>> {
-    return await this.attachmentRepository.findByExpense(expenseId);
+    return attachment ? Attachment.toDTO(attachment) : null;
   }
 
   async getAttachmentDTOsByExpense(
@@ -91,7 +79,7 @@ export class AttachmentService {
     const result = await this.attachmentRepository.findByExpense(expenseId);
     return {
       ...result,
-      items: result.items.map((a) => a.toJSON()),
+      items: result.items.map((a) => Attachment.toDTO(a)),
     };
   }
 }

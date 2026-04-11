@@ -24,7 +24,7 @@ export class PrismaApprovalChainRepository
     const data = this.toPersistence(chain);
 
     await this.prisma.approvalChain.upsert({
-      where: { id: chain.getId().getValue() },
+      where: { id: chain.id.getValue() },
       create: data.create,
       update: data.update,
     });
@@ -120,42 +120,40 @@ export class PrismaApprovalChainRepository
     update: Prisma.ApprovalChainUncheckedUpdateInput;
   } {
     const categoryIds =
-      chain.getCategoryIds()?.map((id) => id.getValue()) || [];
-    const approverSequence = chain
-      .getApproverSequence()
-      .map((id) => id.getValue());
+      chain.categoryIds?.map((id) => id.getValue()) || [];
+    const approverSequence = chain.approverSequence.map((id) => id.getValue());
 
     return {
       create: {
-        id: chain.getId().getValue(),
-        workspaceId: chain.getWorkspaceId().getValue(),
-        name: chain.getName(),
-        description: chain.getDescription(),
-        minAmount: chain.getMinAmount(),
-        maxAmount: chain.getMaxAmount(),
+        id: chain.id.getValue(),
+        workspaceId: chain.workspaceId.getValue(),
+        name: chain.name,
+        description: chain.description,
+        minAmount: chain.minAmount,
+        maxAmount: chain.maxAmount,
         categoryIds,
-        requiresReceipt: chain.requiresReceipt(),
+        requiresReceipt: chain.requiresReceipt,
         approverSequence,
-        isActive: chain.isActive(),
-        createdAt: chain.getCreatedAt(),
-        updatedAt: chain.getUpdatedAt(),
+        isActive: chain.isActive,
+        createdAt: chain.createdAt,
+        updatedAt: chain.updatedAt,
       },
       update: {
-        name: chain.getName(),
-        description: chain.getDescription(),
-        minAmount: chain.getMinAmount(),
-        maxAmount: chain.getMaxAmount(),
+        name: chain.name,
+        description: chain.description,
+        minAmount: chain.minAmount,
+        maxAmount: chain.maxAmount,
         categoryIds,
-        requiresReceipt: chain.requiresReceipt(),
+        requiresReceipt: chain.requiresReceipt,
         approverSequence,
-        isActive: chain.isActive(),
-        updatedAt: chain.getUpdatedAt(),
+        isActive: chain.isActive,
+        updatedAt: chain.updatedAt,
       },
     };
   }
 
   private toDomain(row: Prisma.ApprovalChainGetPayload<object>): ApprovalChain {
-    return ApprovalChain.reconstitute({
+    return ApprovalChain.fromPersistence({
       chainId: ApprovalChainId.fromString(row.id),
       workspaceId: WorkspaceId.fromString(row.workspaceId),
       name: row.name,

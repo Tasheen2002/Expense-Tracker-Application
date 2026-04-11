@@ -5,9 +5,10 @@ import {
 } from '../../domain/entities/expense-policy.entity';
 import { PolicyType } from '../../domain/enums/policy-type.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface CreatePolicyInput {
+export interface CreatePolicyInput extends ICommand {
   workspaceId: string;
   name: string;
   description?: string;
@@ -18,7 +19,7 @@ export interface CreatePolicyInput {
   createdBy: string;
 }
 
-export class CreatePolicyHandler {
+export class CreatePolicyHandler implements ICommandHandler<CreatePolicyInput, CommandResult<ExpensePolicyDTO>> {
   constructor(private readonly policyService: PolicyService) {}
 
   async handle(

@@ -22,25 +22,25 @@ export class SplitSettlementRepositoryImpl
 
   async save(settlement: SplitSettlement): Promise<void> {
     await this.prisma.splitSettlement.upsert({
-      where: { id: settlement.getId().getValue() },
+      where: { id: settlement.id.getValue() },
       create: {
-        id: settlement.getId().getValue(),
-        splitId: settlement.getSplitId().getValue(),
-        fromUserId: settlement.getFromUserId(),
-        toUserId: settlement.getToUserId(),
-        totalOwedAmount: settlement.getTotalOwedAmount().getAmount(),
-        paidAmount: settlement.getPaidAmount().getAmount(),
-        currency: settlement.getTotalOwedAmount().getCurrency(),
-        status: settlement.getStatus() as PrismaSettlementStatus,
-        settledAt: settlement.getSettledAt(),
-        createdAt: settlement.getCreatedAt(),
-        updatedAt: settlement.getUpdatedAt(),
+        id: settlement.id.getValue(),
+        splitId: settlement.splitId.getValue(),
+        fromUserId: settlement.fromUserId,
+        toUserId: settlement.toUserId,
+        totalOwedAmount: settlement.totalOwedAmount.getAmount(),
+        paidAmount: settlement.paidAmount.getAmount(),
+        currency: settlement.totalOwedAmount.getCurrency(),
+        status: settlement.status as PrismaSettlementStatus,
+        settledAt: settlement.settledAt,
+        createdAt: settlement.createdAt,
+        updatedAt: settlement.updatedAt,
       },
       update: {
-        paidAmount: settlement.getPaidAmount().getAmount(),
-        status: settlement.getStatus() as PrismaSettlementStatus,
-        settledAt: settlement.getSettledAt(),
-        updatedAt: settlement.getUpdatedAt(),
+        paidAmount: settlement.paidAmount.getAmount(),
+        status: settlement.status as PrismaSettlementStatus,
+        settledAt: settlement.settledAt,
+        updatedAt: settlement.updatedAt,
       },
     });
   }
@@ -149,7 +149,7 @@ export class SplitSettlementRepositoryImpl
   private toDomain(
     data: Prisma.SplitSettlementGetPayload<{}>,
   ): SplitSettlement {
-    return SplitSettlement.reconstitute({
+    return SplitSettlement.fromPersistence({
       id: SettlementId.fromString(data.id),
       splitId: SplitId.fromString(data.splitId),
       fromUserId: data.fromUserId,

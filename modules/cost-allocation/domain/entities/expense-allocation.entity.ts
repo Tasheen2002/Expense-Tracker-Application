@@ -4,7 +4,6 @@ import { DepartmentId } from '../value-objects/department-id';
 import { CostCenterId } from '../value-objects/cost-center-id';
 import { ProjectId } from '../value-objects/project-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { Decimal } from '@prisma/client/runtime/library';
 import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
@@ -93,20 +92,22 @@ export class ExpenseAllocationsReplacedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+interface ExpenseAllocationProps {
+  id: AllocationId;
+  workspaceId: WorkspaceId;
+  expenseId: string;
+  amount: AllocationAmount;
+  percentage: number | null;
+  departmentId: DepartmentId | null;
+  costCenterId: CostCenterId | null;
+  projectId: ProjectId | null;
+  notes: string | null;
+  createdBy: UserId;
+  createdAt: Date;
+}
+
 export class ExpenseAllocation extends AggregateRoot {
-  private constructor(
-    private readonly id: AllocationId,
-    private readonly workspaceId: WorkspaceId,
-    private readonly expenseId: string,
-    private readonly amount: AllocationAmount,
-    private readonly percentage: Decimal | null,
-    private readonly departmentId: DepartmentId | null,
-    private readonly costCenterId: CostCenterId | null,
-    private readonly projectId: ProjectId | null,
-    private readonly notes: string | null,
-    private readonly createdBy: UserId,
-    private readonly createdAt: Date
-  ) {
+  private constructor(private props: ExpenseAllocationProps) {
     super();
   }
 
@@ -114,7 +115,7 @@ export class ExpenseAllocation extends AggregateRoot {
     workspaceId: WorkspaceId;
     expenseId: string;
     amount: AllocationAmount;
-    percentage?: Decimal | null;
+    percentage?: number | null;
     departmentId?: DepartmentId | null;
     costCenterId?: CostCenterId | null;
     projectId?: ProjectId | null;
@@ -147,23 +148,23 @@ export class ExpenseAllocation extends AggregateRoot {
       targetId = params.projectId!.getValue();
     }
 
-    const allocation = new ExpenseAllocation(
-      AllocationId.create(),
-      params.workspaceId,
-      params.expenseId,
-      params.amount,
-      params.percentage || null,
-      params.departmentId || null,
-      params.costCenterId || null,
-      params.projectId || null,
-      params.notes || null,
-      params.createdBy,
-      new Date()
-    );
+    const allocation = new ExpenseAllocation({
+      id: AllocationId.create(),
+      workspaceId: params.workspaceId,
+      expenseId: params.expenseId,
+      amount: params.amount,
+      percentage: params.percentage ?? null,
+      departmentId: params.departmentId || null,
+      costCenterId: params.costCenterId || null,
+      projectId: params.projectId || null,
+      notes: params.notes || null,
+      createdBy: params.createdBy,
+      createdAt: new Date(),
+    });
 
     allocation.addDomainEvent(
       new ExpenseAllocationCreatedEvent(
-        allocation.id.getValue(),
+        allocation.props.id.getValue(),
         params.workspaceId.getValue(),
         params.expenseId,
         params.amount.getValue().toString(),
@@ -176,12 +177,12 @@ export class ExpenseAllocation extends AggregateRoot {
     return allocation;
   }
 
-  static reconstitute(params: {
+  static fromPersistence(params: {
     id: string;
     workspaceId: string;
     expenseId: string;
-    amount: Decimal;
-    percentage: Decimal | null;
+    amount: AllocationAmount;
+    percentage: number | null;
     departmentId: string | null;
     costCenterId: string | null;
     projectId: string | null;
@@ -189,64 +190,32 @@ export class ExpenseAllocation extends AggregateRoot {
     createdBy: string;
     createdAt: Date;
   }): ExpenseAllocation {
-    return new ExpenseAllocation(
-      AllocationId.fromString(params.id),
-      WorkspaceId.fromString(params.workspaceId),
-      params.expenseId,
-      AllocationAmount.create(params.amount),
-      params.percentage,
-      params.departmentId ? DepartmentId.fromString(params.departmentId) : null,
-      params.costCenterId ? CostCenterId.fromString(params.costCenterId) : null,
-      params.projectId ? ProjectId.fromString(params.projectId) : null,
-      params.notes,
-      UserId.fromString(params.createdBy),
-      params.createdAt
-    );
+    return new ExpenseAllocation({
+      id: AllocationId.fromString(params.id),
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
+      expenseId: params.expenseId,
+      amount: params.amount,
+      percentage: params.percentage,
+      departmentId: params.departmentId ? DepartmentId.fromString(params.departmentId) : null,
+      costCenterId: params.costCenterId ? CostCenterId.fromString(params.costCenterId) : null,
+      projectId: params.projectId ? ProjectId.fromString(params.projectId) : null,
+      notes: params.notes,
+      createdBy: UserId.fromString(params.createdBy),
+      createdAt: params.createdAt,
+    });
   }
 
-  getId(): AllocationId {
-    return this.id;
-  }
-
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getExpenseId(): string {
-    return this.expenseId;
-  }
-
-  getAmount(): AllocationAmount {
-    return this.amount;
-  }
-
-  getPercentage(): Decimal | null {
-    return this.percentage;
-  }
-
-  getDepartmentId(): DepartmentId | null {
-    return this.departmentId;
-  }
-
-  getCostCenterId(): CostCenterId | null {
-    return this.costCenterId;
-  }
-
-  getProjectId(): ProjectId | null {
-    return this.projectId;
-  }
-
-  getNotes(): string | null {
-    return this.notes;
-  }
-
-  getCreatedBy(): UserId {
-    return this.createdBy;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
+  get id(): AllocationId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get expenseId(): string { return this.props.expenseId; }
+  get amount(): AllocationAmount { return this.props.amount; }
+  get percentage(): number | null { return this.props.percentage; }
+  get departmentId(): DepartmentId | null { return this.props.departmentId; }
+  get costCenterId(): CostCenterId | null { return this.props.costCenterId; }
+  get projectId(): ProjectId | null { return this.props.projectId; }
+  get notes(): string | null { return this.props.notes; }
+  get createdBy(): UserId { return this.props.createdBy; }
+  get createdAt(): Date { return this.props.createdAt; }
 
   /**
    * Marks this allocation as deleted and emits a domain event.
@@ -255,18 +224,15 @@ export class ExpenseAllocation extends AggregateRoot {
   markAsDeleted(): void {
     this.addDomainEvent(
       new ExpenseAllocationDeletedEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue(),
-        this.expenseId
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
+        this.props.expenseId
       )
     );
   }
 
   /**
    * Records that all allocations for the given expense have been replaced.
-   * This is used as a single aggregate-level event when a bulk replace is
-   * performed and loading each old allocation entity individually is not
-   * practical.
    */
   recordReplacement(expenseId: string, workspaceId: string, newAllocationCount: number): void {
     this.addDomainEvent(
@@ -276,17 +242,17 @@ export class ExpenseAllocation extends AggregateRoot {
 
   static toDTO(allocation: ExpenseAllocation): ExpenseAllocationDTO {
     return {
-      id: allocation.getId().getValue(),
-      workspaceId: allocation.getWorkspaceId().getValue(),
-      expenseId: allocation.getExpenseId(),
-      amount: allocation.getAmount().getValue().toString(),
-      percentage: allocation.getPercentage()?.toString() ?? null,
-      departmentId: allocation.getDepartmentId()?.getValue() ?? null,
-      costCenterId: allocation.getCostCenterId()?.getValue() ?? null,
-      projectId: allocation.getProjectId()?.getValue() ?? null,
-      notes: allocation.getNotes(),
-      createdBy: allocation.getCreatedBy().getValue(),
-      createdAt: allocation.getCreatedAt().toISOString(),
+      id: allocation.props.id.getValue(),
+      workspaceId: allocation.props.workspaceId.getValue(),
+      expenseId: allocation.props.expenseId,
+      amount: allocation.props.amount.getValue().toString(),
+      percentage: allocation.props.percentage !== null ? String(allocation.props.percentage) : null,
+      departmentId: allocation.props.departmentId?.getValue() ?? null,
+      costCenterId: allocation.props.costCenterId?.getValue() ?? null,
+      projectId: allocation.props.projectId?.getValue() ?? null,
+      notes: allocation.props.notes,
+      createdBy: allocation.props.createdBy.getValue(),
+      createdAt: allocation.props.createdAt.toISOString(),
     };
   }
 }

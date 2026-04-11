@@ -128,44 +128,23 @@ export class RuleExecutedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
-export class CategoryRule extends AggregateRoot {
-  private id: RuleId;
-  private workspaceId: WorkspaceId;
-  private name: string;
-  private description: string | null;
-  private priority: number;
-  private isActive: boolean;
-  private condition: RuleCondition;
-  private targetCategoryId: CategoryId;
-  private createdBy: UserId;
-  private createdAt: Date;
-  private updatedAt: Date;
+interface CategoryRuleProps {
+  id: RuleId;
+  workspaceId: WorkspaceId;
+  name: string;
+  description: string | null;
+  priority: number;
+  isActive: boolean;
+  condition: RuleCondition;
+  targetCategoryId: CategoryId;
+  createdBy: UserId;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  private constructor(props: {
-    id: RuleId;
-    workspaceId: WorkspaceId;
-    name: string;
-    description: string | null;
-    priority: number;
-    isActive: boolean;
-    condition: RuleCondition;
-    targetCategoryId: CategoryId;
-    createdBy: UserId;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
+export class CategoryRule extends AggregateRoot {
+  private constructor(private props: CategoryRuleProps) {
     super();
-    this.id = props.id;
-    this.workspaceId = props.workspaceId;
-    this.name = props.name;
-    this.description = props.description;
-    this.priority = props.priority;
-    this.isActive = props.isActive;
-    this.condition = props.condition;
-    this.targetCategoryId = props.targetCategoryId;
-    this.createdBy = props.createdBy;
-    this.createdAt = props.createdAt;
-    this.updatedAt = props.updatedAt;
   }
 
   static create(props: {
@@ -223,10 +202,11 @@ export class CategoryRule extends AggregateRoot {
       )
     );
 
+
     return rule;
   }
 
-  static reconstitute(props: {
+  static fromPersistence(props: {
     id: RuleId;
     workspaceId: WorkspaceId;
     name: string;
@@ -243,47 +223,43 @@ export class CategoryRule extends AggregateRoot {
   }
 
   // Update methods
-  updateDetails(props: {
+  updateDetails(params: {
     name?: string;
     description?: string | null;
     priority?: number;
   }): void {
     const changedFields: string[] = [];
 
-    if (props.name !== undefined) {
-      if (!props.name || props.name.trim().length === 0) {
+    if (params.name !== undefined) {
+      if (!params.name || params.name.trim().length === 0) {
         throw new InvalidRuleError('Rule name cannot be empty');
       }
-      if (props.name.length > 100) {
+      if (params.name.length > 100) {
         throw new InvalidRuleError('Rule name cannot exceed 100 characters');
       }
-      this.name = props.name.trim();
+      this.props.name = params.name.trim();
       changedFields.push('name');
     }
 
-    if (props.description !== undefined) {
-      if (props.description && props.description.length > 500) {
-        throw new InvalidRuleError(
-          'Rule description cannot exceed 500 characters'
-        );
+    if (params.description !== undefined) {
+      if (params.description && params.description.length > 500) {
+        throw new InvalidRuleError('Rule description cannot exceed 500 characters');
       }
-      this.description = props.description?.trim() || null;
+      this.props.description = params.description?.trim() || null;
       changedFields.push('description');
     }
 
-    if (props.priority !== undefined) {
-      if (props.priority < 0) {
+    if (params.priority !== undefined) {
+      if (params.priority < 0) {
         throw new InvalidRuleError('Priority cannot be negative');
       }
-      this.priority = props.priority;
+      this.props.priority = params.priority;
       changedFields.push('priority');
     }
 
-    this.updatedAt = new Date();
+    this.props.updatedAt = new Date();
     if (changedFields.length > 0) {
-      this.addDomainEvent(
-        new CategoryRuleUpdatedEvent(this.id.getValue(), changedFields)
-      );
+      this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), changedFields));
     }
   }
 
@@ -294,87 +270,72 @@ export class CategoryRule extends AggregateRoot {
     if (name.length > 100) {
       throw new InvalidRuleError('Rule name cannot exceed 100 characters');
     }
-    this.name = name.trim();
-    this.updatedAt = new Date();
-    this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), ['name'])
-    );
+    this.props.name = name.trim();
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['name']));
   }
 
   updateDescription(description: string | null): void {
     if (description && description.length > 500) {
-      throw new InvalidRuleError(
-        'Rule description cannot exceed 500 characters'
-      );
+      throw new InvalidRuleError('Rule description cannot exceed 500 characters');
     }
-    this.description = description?.trim() || null;
-    this.updatedAt = new Date();
-    this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), ['description'])
-    );
+    this.props.description = description?.trim() || null;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['description']));
   }
 
   updatePriority(priority: number): void {
     if (priority < 0) {
       throw new InvalidRuleError('Priority cannot be negative');
     }
-    this.priority = priority;
-    this.updatedAt = new Date();
-    this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), ['priority'])
-    );
+    this.props.priority = priority;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['priority']));
   }
 
   updateCondition(condition: RuleCondition): void {
-    this.condition = condition;
-    this.updatedAt = new Date();
-    this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), ['condition'])
-    );
+    this.props.condition = condition;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['condition']));
   }
 
   updateTargetCategory(categoryId: CategoryId): void {
-    this.targetCategoryId = categoryId;
-    this.updatedAt = new Date();
-    this.addDomainEvent(
-      new CategoryRuleUpdatedEvent(this.id.getValue(), ['targetCategoryId'])
-    );
+    this.props.targetCategoryId = categoryId;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['targetCategoryId']));
   }
 
   activate(): void {
-    this.isActive = true;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleActivatedEvent(this.id.getValue()));
+    this.props.isActive = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleActivatedEvent(this.props.id.getValue()));
   }
 
   deactivate(): void {
-    this.isActive = false;
-    this.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.id.getValue()));
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.props.id.getValue()));
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new CategoryRuleDeletedEvent(this.id.getValue()));
+    this.addDomainEvent(new CategoryRuleDeletedEvent(this.props.id.getValue()));
   }
 
-  // Check if rule matches expense data
   matches(expenseData: {
     merchant?: string;
     description?: string;
     amount: number;
     paymentMethod?: string;
   }): boolean {
-    if (!this.isActive) {
-      return false;
-    }
-    return this.condition.matches(expenseData);
+    if (!this.props.isActive) return false;
+    return this.props.condition.matches(expenseData);
   }
 
   recordExecution(executionId: string, expenseId: string, matched: boolean): void {
     this.addDomainEvent(
       new RuleExecutedEvent(
-        this.id.getValue(),
-        this.workspaceId.getValue(),
+        this.props.id.getValue(),
+        this.props.workspaceId.getValue(),
         expenseId,
         executionId,
         matched,
@@ -383,70 +344,34 @@ export class CategoryRule extends AggregateRoot {
   }
 
   // Getters
-  getId(): RuleId {
-    return this.id;
-  }
+  get id(): RuleId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
+  get name(): string { return this.props.name; }
+  get description(): string | null { return this.props.description; }
+  get priority(): number { return this.props.priority; }
+  get isActive(): boolean { return this.props.isActive; }
+  get condition(): RuleCondition { return this.props.condition; }
+  get targetCategoryId(): CategoryId { return this.props.targetCategoryId; }
+  get createdBy(): UserId { return this.props.createdBy; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
-  getWorkspaceId(): WorkspaceId {
-    return this.workspaceId;
-  }
-
-  getName(): string {
-    return this.name;
-  }
-
-  getDescription(): string | null {
-    return this.description;
-  }
-
-  getPriority(): number {
-    return this.priority;
-  }
-
-  getIsActive(): boolean {
-    return this.isActive;
-  }
-
-  getCondition(): RuleCondition {
-    return this.condition;
-  }
-
-  getTargetCategoryId(): CategoryId {
-    return this.targetCategoryId;
-  }
-
-  getCreatedBy(): UserId {
-    return this.createdBy;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
-
-  /**
-   * Serialize CategoryRule to DTO for API responses.
-   * Static method ensures serialization is separate from domain logic.
-   */
   static toDTO(rule: CategoryRule): CategoryRuleDTO {
     return {
-      id: rule.id.getValue(),
-      workspaceId: rule.workspaceId.getValue(),
-      name: rule.name,
-      description: rule.description,
-      priority: rule.priority,
-      isActive: rule.isActive,
+      id: rule.props.id.getValue(),
+      workspaceId: rule.props.workspaceId.getValue(),
+      name: rule.props.name,
+      description: rule.props.description,
+      priority: rule.props.priority,
+      isActive: rule.props.isActive,
       condition: {
-        type: rule.condition.getConditionType(),
-        value: rule.condition.getConditionValue(),
+        type: rule.props.condition.getConditionType(),
+        value: rule.props.condition.getConditionValue(),
       },
-      targetCategoryId: rule.targetCategoryId.getValue(),
-      createdBy: rule.createdBy.getValue(),
-      createdAt: rule.createdAt.toISOString(),
-      updatedAt: rule.updatedAt.toISOString(),
+      targetCategoryId: rule.props.targetCategoryId.getValue(),
+      createdBy: rule.props.createdBy.getValue(),
+      createdAt: rule.props.createdAt.toISOString(),
+      updatedAt: rule.props.updatedAt.toISOString(),
     };
   }
 }

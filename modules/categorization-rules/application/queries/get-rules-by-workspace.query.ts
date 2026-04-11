@@ -5,7 +5,6 @@ import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetRulesByWorkspaceQuery extends IQuery {
@@ -17,19 +16,15 @@ export interface GetRulesByWorkspaceQuery extends IQuery {
 
 export class GetRulesByWorkspaceHandler implements IQueryHandler<
   GetRulesByWorkspaceQuery,
-  QueryResult<PaginatedResult<CategoryRuleDTO>>
+  PaginatedResult<CategoryRuleDTO>
 > {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
-  async handle(
-    query: GetRulesByWorkspaceQuery
-  ): Promise<QueryResult<PaginatedResult<CategoryRuleDTO>>> {
-    const result = await this.ruleService.getRulesByWorkspaceId(
+  async handle(query: GetRulesByWorkspaceQuery): Promise<PaginatedResult<CategoryRuleDTO>> {
+    return this.ruleService.getRulesByWorkspaceId(
       WorkspaceId.fromString(query.workspaceId),
       query.userId,
       { limit: query.limit, offset: query.offset }
     );
-
-    return QueryResult.success(result);
   }
 }

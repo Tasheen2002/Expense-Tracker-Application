@@ -5,7 +5,6 @@ import { ReceiptType } from '../../domain/enums/receipt-type';
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
@@ -23,14 +22,11 @@ export interface ListReceiptsQuery extends IQuery {
   offset?: number;
 }
 
-export class ListReceiptsHandler implements IQueryHandler<
-  ListReceiptsQuery,
-  QueryResult<PaginatedResult<ReceiptDTO>>
-> {
+export class ListReceiptsHandler implements IQueryHandler<ListReceiptsQuery, PaginatedResult<ReceiptDTO>> {
   constructor(private readonly receiptService: ReceiptService) {}
 
-  async handle(query: ListReceiptsQuery): Promise<QueryResult<PaginatedResult<ReceiptDTO>>> {
-    const result = await this.receiptService.filterReceipts(
+  async handle(query: ListReceiptsQuery): Promise<PaginatedResult<ReceiptDTO>> {
+    return this.receiptService.filterReceipts(
       {
         workspaceId: query.workspaceId,
         userId: query.userId,
@@ -47,6 +43,5 @@ export class ListReceiptsHandler implements IQueryHandler<
         offset: query.offset,
       },
     );
-    return QueryResult.success(result);
   }
 }

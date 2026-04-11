@@ -209,16 +209,12 @@ export class BudgetController {
     try {
       const { workspaceId, budgetId } = request.params;
 
-      const result = await this.getBudgetHandler.handle({
+      const budget = await this.getBudgetHandler.handle({
         budgetId,
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Budget retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Budget retrieved successfully', budget);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -254,11 +250,7 @@ export class BudgetController {
         offset: offset ? parseInt(offset, 10) : undefined,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Budgets retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Budgets retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -377,11 +369,7 @@ export class BudgetController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Allocations retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Allocations retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -400,11 +388,7 @@ export class BudgetController {
         workspaceId,
       });
 
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        'Alerts retrieved successfully'
-      );
+      return ResponseHelper.ok(reply, 'Alerts retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

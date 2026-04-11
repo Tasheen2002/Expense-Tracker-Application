@@ -37,7 +37,6 @@ import { categorySuggestionRoutes } from '../infrastructure/http/routes/category
 import { ruleExecutionRoutes } from '../infrastructure/http/routes/rule-execution.routes';
 import {
   CommandResult,
-  QueryResult,
 } from '../../../packages/core/src/application/cqrs';
 
 // Create domain errors with statusCode for testing
@@ -408,15 +407,13 @@ describe('Category Rule Routes', () => {
         createMockRule(mockRuleId, 'Rule 1'),
         createMockRule('123e4567-e89b-12d3-a456-426614174011', 'Rule 2'),
       ];
-      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockRules,
-          total: 2,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockRules,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -432,15 +429,13 @@ describe('Category Rule Routes', () => {
 
     it('should filter by active rules only', async () => {
       const mockRules = [createMockRule(mockRuleId, 'Active Rule', true)];
-      ruleHandlers.getActiveRulesByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockRules,
-          total: 1,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      ruleHandlers.getActiveRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockRules,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -454,15 +449,13 @@ describe('Category Rule Routes', () => {
     });
 
     it('should return empty array when no rules exist', async () => {
-      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: [],
-          total: 0,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -491,9 +484,7 @@ describe('Category Rule Routes', () => {
   describe('GET /:workspaceId/rules/:ruleId', () => {
     it('should get category rule by ID', async () => {
       const mockRule = createMockRule();
-      ruleHandlers.getRuleByIdHandler.handle.mockResolvedValue(
-        QueryResult.success(mockRule)
-      );
+      ruleHandlers.getRuleByIdHandler.handle.mockResolvedValue(mockRule);
 
       const response = await app.inject({
         method: 'GET',
@@ -745,15 +736,13 @@ describe('Category Rule Routes', () => {
   describe('GET /:workspaceId/rules/:ruleId/executions', () => {
     it('should get rule executions', async () => {
       const mockExecutions = [createMockExecution()];
-      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockExecutions,
-          total: 1,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -767,15 +756,13 @@ describe('Category Rule Routes', () => {
     });
 
     it('should return empty array when no executions', async () => {
-      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: [],
-          total: 0,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -890,15 +877,13 @@ describe('Category Suggestion Routes', () => {
   describe('GET /:workspaceId/suggestions', () => {
     it('should list all suggestions', async () => {
       const mockSuggestions = [createMockSuggestion(), createMockSuggestion()];
-      suggestionHandlers.getSuggestionsByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockSuggestions,
-          total: 2,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      suggestionHandlers.getSuggestionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockSuggestions,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -913,15 +898,13 @@ describe('Category Suggestion Routes', () => {
 
     it('should filter pending suggestions only', async () => {
       const mockSuggestions = [createMockSuggestion(mockSuggestionId, null)];
-      suggestionHandlers.getPendingSuggestionsByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockSuggestions,
-          total: 1,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      suggestionHandlers.getPendingSuggestionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockSuggestions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -947,9 +930,7 @@ describe('Category Suggestion Routes', () => {
   describe('GET /:workspaceId/suggestions/:suggestionId', () => {
     it('should get suggestion by ID', async () => {
       const mockSuggestion = createMockSuggestion();
-      suggestionHandlers.getSuggestionByIdHandler.handle.mockResolvedValue(
-        QueryResult.success(mockSuggestion)
-      );
+      suggestionHandlers.getSuggestionByIdHandler.handle.mockResolvedValue(mockSuggestion);
 
       const response = await app.inject({
         method: 'GET',
@@ -981,9 +962,7 @@ describe('Category Suggestion Routes', () => {
   describe('GET /:workspaceId/suggestions/expense/:expenseId', () => {
     it('should get suggestions for expense', async () => {
       const mockSuggestions = [createMockSuggestion()];
-      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue(
-        QueryResult.success(mockSuggestions)
-      );
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue(mockSuggestions);
 
       const response = await app.inject({
         method: 'GET',
@@ -996,9 +975,7 @@ describe('Category Suggestion Routes', () => {
     });
 
     it('should return empty array when no suggestions for expense', async () => {
-      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue(
-        QueryResult.success([])
-      );
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue([]);
 
       const response = await app.inject({
         method: 'GET',
@@ -1294,9 +1271,7 @@ describe('Rule Execution Routes', () => {
   describe('GET /:workspaceId/executions/expense/:expenseId', () => {
     it('should get executions for expense', async () => {
       const mockExecutions = [createMockExecution()];
-      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue(
-        QueryResult.success(mockExecutions)
-      );
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue(mockExecutions);
 
       const response = await app.inject({
         method: 'GET',
@@ -1310,9 +1285,7 @@ describe('Rule Execution Routes', () => {
     });
 
     it('should return empty array when no executions for expense', async () => {
-      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue(
-        QueryResult.success([])
-      );
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue([]);
 
       const response = await app.inject({
         method: 'GET',
@@ -1340,15 +1313,13 @@ describe('Rule Execution Routes', () => {
   describe('GET /:workspaceId/executions', () => {
     it('should get executions for workspace', async () => {
       const mockExecutions = [createMockExecution(), createMockExecution()];
-      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockExecutions,
-          total: 2,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -1362,15 +1333,13 @@ describe('Rule Execution Routes', () => {
 
     it('should support limit query parameter', async () => {
       const mockExecutions = [createMockExecution()];
-      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue(
-        QueryResult.success({
-          items: mockExecutions,
-          total: 1,
-          limit: 10,
-          offset: 0,
-          hasMore: false,
-        })
-      );
+      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
 
       const response = await app.inject({
         method: 'GET',
@@ -1600,15 +1569,13 @@ describe('Categorization Rules Edge Cases', () => {
 
   it('should handle concurrent requests gracefully', async () => {
     const mockRules = [createMockRule()];
-    ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue(
-      QueryResult.success({
-        items: mockRules,
-        total: 1,
-        limit: 10,
-        offset: 0,
-        hasMore: false,
-      })
-    );
+    ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+      items: mockRules,
+      total: 1,
+      limit: 10,
+      offset: 0,
+      hasMore: false,
+    });
 
     const requests = Array(5)
       .fill(null)

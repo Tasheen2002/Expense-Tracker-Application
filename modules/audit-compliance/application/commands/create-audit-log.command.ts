@@ -3,10 +3,18 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { AuditService, CreateAuditLogDTO, AuditLogDTO } from '../services/audit.service';
+import { AuditService, AuditLogDTO } from '../services/audit.service';
 
 export interface CreateAuditLogCommand extends ICommand {
-  data: CreateAuditLogDTO;
+  workspaceId: string;
+  userId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  details?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export class CreateAuditLogHandler implements ICommandHandler<
@@ -16,7 +24,17 @@ export class CreateAuditLogHandler implements ICommandHandler<
   constructor(private readonly auditService: AuditService) {}
 
   async handle(input: CreateAuditLogCommand): Promise<CommandResult<AuditLogDTO>> {
-    const auditLog = await this.auditService.createAuditLog(input.data);
+    const auditLog = await this.auditService.createAuditLog({
+      workspaceId: input.workspaceId,
+      userId: input.userId,
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      details: input.details,
+      metadata: input.metadata,
+      ipAddress: input.ipAddress,
+      userAgent: input.userAgent,
+    });
     return CommandResult.success(auditLog);
   }
 }
