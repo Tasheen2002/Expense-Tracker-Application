@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { ExpenseAllocation } from "../../domain/entities/expense-allocation.entity";
-import { ExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
+import { IExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
 import { WorkspaceId } from "../../../identity-workspace";
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
@@ -8,7 +8,7 @@ import { AllocationAmount } from "../../domain/value-objects/allocation-amount";
 
 export class ExpenseAllocationRepositoryImpl
   extends PrismaRepository<ExpenseAllocation>
-  implements ExpenseAllocationRepository
+  implements IExpenseAllocationRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

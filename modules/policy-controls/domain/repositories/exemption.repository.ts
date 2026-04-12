@@ -14,7 +14,7 @@ export interface ExemptionFilters {
   endDate?: Date;
 }
 
-export interface ExemptionRepository {
+export interface IExemptionRepository {
   save(exemption: PolicyExemption): Promise<void>;
   findById(id: ExemptionId): Promise<PolicyExemption | null>;
   findByWorkspace(

@@ -4,7 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { CategoryService } from '../services/category.service';
-import { ExpenseRepository } from '../../domain/repositories/expense.repository';
+import { IExpenseRepository } from '../../domain/repositories/expense.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
 
 export interface DeleteCategoryCommand extends ICommand {
@@ -18,7 +18,7 @@ export class DeleteCategoryHandler implements ICommandHandler<
 > {
   constructor(
     private readonly categoryService: CategoryService,
-    private readonly expenseRepository: ExpenseRepository
+    private readonly expenseRepository: IExpenseRepository
   ) {}
 
   async handle(command: DeleteCategoryCommand): Promise<CommandResult<void>> {

@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { AttachmentRepository } from "../../domain/repositories/attachment.repository";
+import { IAttachmentRepository } from "../../domain/repositories/attachment.repository";
 import { Attachment } from "../../domain/entities/attachment.entity";
 import { AttachmentId } from "../../domain/value-objects/attachment-id";
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
@@ -9,7 +9,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class AttachmentRepositoryImpl
-  implements AttachmentRepository
+  implements IAttachmentRepository
 {
   constructor(protected readonly prisma: PrismaClient) {}
 

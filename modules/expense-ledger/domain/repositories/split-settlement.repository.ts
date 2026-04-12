@@ -7,7 +7,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface SplitSettlementRepository {
+export interface ISplitSettlementRepository {
   save(settlement: SplitSettlement): Promise<void>;
   findById(
     id: SettlementId,

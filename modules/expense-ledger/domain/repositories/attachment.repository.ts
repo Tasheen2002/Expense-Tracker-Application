@@ -5,7 +5,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface AttachmentRepository {
+export interface IAttachmentRepository {
   save(attachment: Attachment): Promise<void>;
 
   findById(id: AttachmentId): Promise<Attachment | null>;

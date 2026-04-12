@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CategoryRepository } from "../../domain/repositories/category.repository";
+import { ICategoryRepository } from "../../domain/repositories/category.repository";
 import { Category } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
@@ -12,7 +12,7 @@ import {
 
 export class CategoryRepositoryImpl
   extends PrismaRepository<Category>
-  implements CategoryRepository
+  implements ICategoryRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

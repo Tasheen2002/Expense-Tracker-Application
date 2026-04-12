@@ -1,9 +1,9 @@
 import {
-  ExpenseRepository,
+  IExpenseRepository,
   ExpenseFilters,
-  PaginatedResult,
 } from '../../domain/repositories/expense.repository';
-import { TagRepository } from '../../domain/repositories/tag.repository';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { Expense, ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { CategoryId } from '../../domain/value-objects/category-id';
@@ -21,8 +21,8 @@ import {
 
 export class ExpenseService {
   constructor(
-    private readonly expenseRepository: ExpenseRepository,
-    private readonly tagRepository?: TagRepository
+    private readonly expenseRepository: IExpenseRepository,
+    private readonly tagRepository?: ITagRepository
   ) {}
 
   async createExpense(params: {

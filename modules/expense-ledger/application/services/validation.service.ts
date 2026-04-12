@@ -1,5 +1,5 @@
-import { CategoryRepository } from "../../domain/repositories/category.repository";
-import { TagRepository } from "../../domain/repositories/tag.repository";
+import { ICategoryRepository } from "../../domain/repositories/category.repository";
+import { ITagRepository } from "../../domain/repositories/tag.repository";
 import { CategoryId } from "../../domain/value-objects/category-id";
 import { TagId } from "../../domain/value-objects/tag-id";
 import {
@@ -13,8 +13,8 @@ import {
  */
 export class ValidationService {
   constructor(
-    private readonly categoryRepository: CategoryRepository,
-    private readonly tagRepository: TagRepository,
+    private readonly categoryRepository: ICategoryRepository,
+    private readonly tagRepository: ITagRepository,
   ) {}
 
   /**

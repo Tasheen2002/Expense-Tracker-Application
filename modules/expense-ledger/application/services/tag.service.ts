@@ -1,4 +1,4 @@
-import { TagRepository } from '../../domain/repositories/tag.repository';
+import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { Tag, TagDTO } from '../../domain/entities/tag.entity';
 import { TagId } from '../../domain/value-objects/tag-id';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class TagService {
-  constructor(private readonly tagRepository: TagRepository) {}
+  constructor(private readonly tagRepository: ITagRepository) {}
 
   async createTag(params: {
     workspaceId: string;

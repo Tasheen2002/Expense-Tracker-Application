@@ -13,8 +13,11 @@ export interface AuditLogFilter {
   entityId?: string;
   startDate?: Date;
   endDate?: Date;
-  limit?: number;
-  offset?: number;
+}
+
+export interface AuditActionSummary {
+  action: string;
+  count: number;
 }
 
 export interface IAuditLogRepository {
@@ -39,6 +42,6 @@ export interface IAuditLogRepository {
     workspaceId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<{ action: string; count: number }[]>;
+  ): Promise<AuditActionSummary[]>;
   deleteOlderThan(workspaceId: string, olderThan: Date): Promise<number>;
 }

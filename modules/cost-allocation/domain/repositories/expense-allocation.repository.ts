@@ -1,7 +1,7 @@
 import { ExpenseAllocation } from "../entities/expense-allocation.entity";
 import { WorkspaceId } from "../../../identity-workspace";
 
-export interface ExpenseAllocationRepository {
+export interface IExpenseAllocationRepository {
   save(allocation: ExpenseAllocation): Promise<void>;
   saveBatch(allocations: ExpenseAllocation[]): Promise<void>;
   findByExpenseId(

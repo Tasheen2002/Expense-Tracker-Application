@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { TagRepository } from "../../domain/repositories/tag.repository";
+import { ITagRepository } from "../../domain/repositories/tag.repository";
 import { Tag } from "../../domain/entities/tag.entity";
 import { TagId } from "../../domain/value-objects/tag-id";
 import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
@@ -12,7 +12,7 @@ import {
 
 export class TagRepositoryImpl
   extends PrismaRepository<Tag>
-  implements TagRepository
+  implements ITagRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

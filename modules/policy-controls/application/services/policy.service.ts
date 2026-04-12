@@ -1,4 +1,4 @@
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
+import { IPolicyRepository } from "../../domain/repositories/policy.repository";
 import {
   ExpensePolicy,
   ExpensePolicyDTO,
@@ -17,7 +17,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class PolicyService {
-  constructor(private readonly policyRepository: PolicyRepository) {}
+  constructor(private readonly policyRepository: IPolicyRepository) {}
 
   async createPolicy(params: {
     workspaceId: string;

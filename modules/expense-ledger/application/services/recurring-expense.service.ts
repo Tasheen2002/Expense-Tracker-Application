@@ -1,4 +1,4 @@
-import { RecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
+import { IRecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
 import {
   RecurringExpense,
   RecurringExpenseDTO,
@@ -12,7 +12,7 @@ import { RecurringExpenseNotFoundError } from "../../domain/errors/expense.error
 
 export class RecurringExpenseService {
   constructor(
-    private readonly recurringExpenseRepository: RecurringExpenseRepository,
+    private readonly recurringExpenseRepository: IRecurringExpenseRepository,
     private readonly expenseService: ExpenseService,
   ) {}
 

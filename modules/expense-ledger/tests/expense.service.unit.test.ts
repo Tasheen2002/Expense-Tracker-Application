@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ExpenseService } from '../application/services/expense.service';
-import { ExpenseRepository } from '../domain/repositories/expense.repository';
-import { CategoryRepository } from '../domain/repositories/category.repository';
-import { TagRepository } from '../domain/repositories/tag.repository';
+import { IExpenseRepository } from '../domain/repositories/expense.repository';
+import { ICategoryRepository } from '../domain/repositories/category.repository';
+import { ITagRepository } from '../domain/repositories/tag.repository';
 import { TagId } from '../domain/value-objects/tag-id';
 import { Expense } from '../domain/entities/expense.entity';
 
@@ -13,15 +13,15 @@ const mockExpenseRepo = {
   save: vi.fn(),
   update: vi.fn(),
   findById: vi.fn(),
-} as unknown as ExpenseRepository;
+} as unknown as IExpenseRepository;
 
 const mockCategoryRepo = {
   exists: vi.fn(),
-} as unknown as CategoryRepository;
+} as unknown as ICategoryRepository;
 
 const mockTagRepo = {
   findByIds: vi.fn(),
-} as unknown as TagRepository;
+} as unknown as ITagRepository;
 
 describe('ExpenseService (Unit)', () => {
   let service: ExpenseService;

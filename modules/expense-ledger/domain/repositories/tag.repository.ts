@@ -5,7 +5,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface TagRepository {
+export interface ITagRepository {
   save(tag: Tag): Promise<void>;
 
   update(tag: Tag): Promise<void>;

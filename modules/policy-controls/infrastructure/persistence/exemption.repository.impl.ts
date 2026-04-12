@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
-  ExemptionRepository,
+  IExemptionRepository,
   ExemptionFilters,
 } from '../../domain/repositories/exemption.repository';
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
@@ -18,7 +18,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaExemptionRepository
   extends PrismaRepository<PolicyExemption>
-  implements ExemptionRepository
+  implements IExemptionRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

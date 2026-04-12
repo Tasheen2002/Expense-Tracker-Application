@@ -1,6 +1,6 @@
-import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
-import { SplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
-import { ExpenseRepository } from '../../domain/repositories/expense.repository';
+import { IExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
+import { ISplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
+import { IExpenseRepository } from '../../domain/repositories/expense.repository';
 import { ExpenseSplit, ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 import { SplitSettlement, SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
@@ -22,9 +22,9 @@ import {
 
 export class ExpenseSplitService {
   constructor(
-    private readonly splitRepository: ExpenseSplitRepository,
-    private readonly settlementRepository: SplitSettlementRepository,
-    private readonly expenseRepository?: ExpenseRepository
+    private readonly splitRepository: IExpenseSplitRepository,
+    private readonly settlementRepository: ISplitSettlementRepository,
+    private readonly expenseRepository?: IExpenseRepository
   ) {}
 
   async createSplit(params: {

@@ -1,9 +1,9 @@
 import { Department, DepartmentDTO } from "../../domain/entities/department.entity";
 import { CostCenter, CostCenterDTO } from "../../domain/entities/cost-center.entity";
 import { Project, ProjectDTO } from "../../domain/entities/project.entity";
-import { DepartmentRepository } from "../../domain/repositories/department.repository";
-import { CostCenterRepository } from "../../domain/repositories/cost-center.repository";
-import { ProjectRepository } from "../../domain/repositories/project.repository";
+import { IDepartmentRepository } from "../../domain/repositories/department.repository";
+import { ICostCenterRepository } from "../../domain/repositories/cost-center.repository";
+import { IProjectRepository } from "../../domain/repositories/project.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
 import { ProjectId } from "../../domain/value-objects/project-id";
@@ -25,9 +25,9 @@ import {
 
 export class AllocationManagementService {
   constructor(
-    private readonly departmentRepository: DepartmentRepository,
-    private readonly costCenterRepository: CostCenterRepository,
-    private readonly projectRepository: ProjectRepository,
+    private readonly departmentRepository: IDepartmentRepository,
+    private readonly costCenterRepository: ICostCenterRepository,
+    private readonly projectRepository: IProjectRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 

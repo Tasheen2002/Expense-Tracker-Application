@@ -1,3 +1,3 @@
-export { PolicyRepository } from "./policy.repository";
-export { ViolationRepository, ViolationFilters } from "./violation.repository";
-export { ExemptionRepository, ExemptionFilters } from "./exemption.repository";
+export { IPolicyRepository } from "./policy.repository";
+export { IViolationRepository, ViolationFilters } from "./violation.repository";
+export { IExemptionRepository, ExemptionFilters } from "./exemption.repository";

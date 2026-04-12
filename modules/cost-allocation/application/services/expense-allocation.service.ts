@@ -1,5 +1,5 @@
 import { ExpenseAllocation, ExpenseAllocationDTO } from "../../domain/entities/expense-allocation.entity";
-import { ExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
+import { IExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
 import { AllocationAmount } from "../../domain/value-objects/allocation-amount";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
@@ -19,7 +19,7 @@ import { IAllocationSummaryPort } from "../ports/allocation-summary.port";
 
 export class ExpenseAllocationService {
   constructor(
-    private readonly allocationRepository: ExpenseAllocationRepository,
+    private readonly allocationRepository: IExpenseAllocationRepository,
     private readonly expenseLookup: IExpenseLookupPort,
     private readonly allocationSummary: IAllocationSummaryPort,
   ) {}

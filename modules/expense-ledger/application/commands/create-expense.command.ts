@@ -6,8 +6,8 @@ import {
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseDTO } from '../../domain/entities/expense.entity';
-import { CategoryRepository } from '../../domain/repositories/category.repository';
-import { TagRepository } from '../../domain/repositories/tag.repository';
+import { ICategoryRepository } from '../../domain/repositories/category.repository';
+import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import { TagId } from '../../domain/value-objects/tag-id';
 import {
@@ -36,8 +36,8 @@ export class CreateExpenseHandler implements ICommandHandler<
 > {
   constructor(
     private readonly expenseService: ExpenseService,
-    private readonly categoryRepository: CategoryRepository,
-    private readonly tagRepository: TagRepository
+    private readonly categoryRepository: ICategoryRepository,
+    private readonly tagRepository: ITagRepository
   ) {}
 
   async handle(

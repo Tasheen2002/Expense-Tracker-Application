@@ -6,7 +6,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ProjectRepository {
+export interface IProjectRepository {
   save(project: Project): Promise<void>;
   findById(id: ProjectId): Promise<Project | null>;
   findByCode(code: string, workspaceId: WorkspaceId): Promise<Project | null>;

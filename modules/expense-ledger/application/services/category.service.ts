@@ -1,4 +1,4 @@
-import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { ICategoryRepository } from '../../domain/repositories/category.repository';
 import { Category, CategoryDTO } from '../../domain/entities/category.entity';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import {
@@ -13,7 +13,7 @@ import { ICacheService } from '../../../../packages/core/src/domain/interfaces/c
 
 export class CategoryService {
   constructor(
-    private readonly categoryRepository: CategoryRepository,
+    private readonly categoryRepository: ICategoryRepository,
     private readonly cacheService: ICacheService
   ) {}
 

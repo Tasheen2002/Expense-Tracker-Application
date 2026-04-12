@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
-  ViolationRepository,
+  IViolationRepository,
   ViolationFilters,
 } from '../../domain/repositories/violation.repository';
 import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
@@ -19,7 +19,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaViolationRepository
   extends PrismaRepository<PolicyViolation>
-  implements ViolationRepository
+  implements IViolationRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
