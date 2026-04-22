@@ -3,7 +3,7 @@ import {
   Prisma,
   SettlementStatus as PrismaSettlementStatus,
 } from "@prisma/client";
-import { SplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
+import { ISplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
 import { SplitSettlement } from "../../domain/entities/split-settlement.entity";
 import { SettlementId } from "../../domain/value-objects/settlement-id";
 import { SplitId } from "../../domain/value-objects/split-id";
@@ -16,7 +16,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class SplitSettlementRepositoryImpl
-  implements SplitSettlementRepository
+  implements ISplitSettlementRepository
 {
   constructor(protected readonly prisma: PrismaClient) {}
 

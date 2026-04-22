@@ -1,6 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Department } from "../../domain/entities/department.entity";
-import { DepartmentRepository } from "../../domain/repositories/department.repository";
+import { IDepartmentRepository } from "../../domain/repositories/department.repository";
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { WorkspaceId } from "../../../identity-workspace";
 import {
@@ -13,7 +13,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class DepartmentRepositoryImpl
   extends PrismaRepository<Department>
-  implements DepartmentRepository
+  implements IDepartmentRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

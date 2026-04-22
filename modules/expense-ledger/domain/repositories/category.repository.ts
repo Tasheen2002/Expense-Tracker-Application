@@ -5,7 +5,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface CategoryRepository {
+export interface ICategoryRepository {
   save(category: Category): Promise<void>;
 
   update(category: Category): Promise<void>;

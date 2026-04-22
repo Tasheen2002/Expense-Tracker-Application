@@ -3,12 +3,10 @@ import { ExpenseId } from '../value-objects/expense-id';
 import { CategoryId } from '../value-objects/category-id';
 import { ExpenseStatus } from '../enums/expense-status';
 import { PaymentMethod } from '../enums/payment-method';
-
 import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-export { PaginatedResult, PaginationOptions };
 
 export interface ExpenseFilters {
   workspaceId: string;
@@ -23,11 +21,15 @@ export interface ExpenseFilters {
   maxAmount?: number;
   currency?: string;
   searchText?: string;
-  // Pagination options
-  pagination?: PaginationOptions;
 }
 
-export interface ExpenseRepository {
+export interface ExpenseStatistics {
+  totalAmount: number;
+  currency: string;
+  countByStatus: Record<ExpenseStatus, number>;
+}
+
+export interface IExpenseRepository {
   /**
    * Save a new expense
    */
@@ -136,9 +138,5 @@ export interface ExpenseRepository {
     workspaceId: string,
     userId?: string,
     currency?: string
-  ): Promise<{
-    totalAmount: number;
-    currency: string;
-    countByStatus: Record<ExpenseStatus, number>;
-  }>;
+  ): Promise<ExpenseStatistics>;
 }

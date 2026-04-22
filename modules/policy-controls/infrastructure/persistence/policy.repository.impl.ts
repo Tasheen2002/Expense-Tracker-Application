@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { PolicyRepository } from '../../domain/repositories/policy.repository';
+import { IPolicyRepository } from '../../domain/repositories/policy.repository';
 import {
   ExpensePolicy,
   PolicyConfiguration,
@@ -18,7 +18,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaPolicyRepository
   extends PrismaRepository<ExpensePolicy>
-  implements PolicyRepository
+  implements IPolicyRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

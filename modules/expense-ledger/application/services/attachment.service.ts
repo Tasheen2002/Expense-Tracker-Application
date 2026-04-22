@@ -1,4 +1,4 @@
-import { AttachmentRepository } from '../../domain/repositories/attachment.repository';
+import { IAttachmentRepository } from '../../domain/repositories/attachment.repository';
 import { Attachment, AttachmentDTO } from '../../domain/entities/attachment.entity';
 import { AttachmentId } from '../../domain/value-objects/attachment-id';
 import {
@@ -8,7 +8,7 @@ import {
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class AttachmentService {
-  constructor(private readonly attachmentRepository: AttachmentRepository) {}
+  constructor(private readonly attachmentRepository: IAttachmentRepository) {}
 
   async createAttachment(params: {
     expenseId: string;

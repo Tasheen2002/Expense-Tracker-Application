@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AllocationManagementService } from "../application/services/allocation-management.service";
-import { DepartmentRepository } from "../domain/repositories/department.repository";
-import { CostCenterRepository } from "../domain/repositories/cost-center.repository";
-import { ProjectRepository } from "../domain/repositories/project.repository";
+import { IDepartmentRepository } from "../domain/repositories/department.repository";
+import { ICostCenterRepository } from "../domain/repositories/cost-center.repository";
+import { IProjectRepository } from "../domain/repositories/project.repository";
 import { IWorkspaceAccessPort } from "../application/ports/workspace-access.port";
 import { WorkspaceId, UserId } from "../../identity-workspace";
 import {
@@ -12,9 +12,9 @@ import {
 
 describe("AllocationManagementService", () => {
   let service: AllocationManagementService;
-  let departmentRepo: DepartmentRepository;
-  let costCenterRepo: CostCenterRepository;
-  let projectRepo: ProjectRepository;
+  let departmentRepo: IDepartmentRepository;
+  let costCenterRepo: ICostCenterRepository;
+  let projectRepo: IProjectRepository;
   let workspaceAccess: IWorkspaceAccessPort;
 
   beforeEach(() => {

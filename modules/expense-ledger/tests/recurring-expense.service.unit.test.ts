@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { RecurringExpenseService } from "../application/services/recurring-expense.service";
-import { RecurringExpenseRepository } from "../domain/repositories/recurring-expense.repository";
+import { IRecurringExpenseRepository } from "../domain/repositories/recurring-expense.repository";
 import { ExpenseService } from "../application/services/expense.service";
 import { RecurringExpense } from "../domain/entities/recurring-expense.entity";
 import { RecurrenceFrequency } from "../domain/enums/recurrence-frequency";
@@ -9,7 +9,7 @@ import { PaymentMethod } from "../domain/enums/payment-method";
 
 describe("RecurringExpenseService", () => {
   let service: RecurringExpenseService;
-  let mockRecurringRepo: Partial<RecurringExpenseRepository>;
+  let mockRecurringRepo: Partial<IRecurringExpenseRepository>;
   let mockExpenseService: Partial<ExpenseService>;
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe("RecurringExpenseService", () => {
       createExpense: vi.fn(),
     };
     service = new RecurringExpenseService(
-      mockRecurringRepo as RecurringExpenseRepository,
+      mockRecurringRepo as IRecurringExpenseRepository,
       mockExpenseService as ExpenseService,
     );
   });

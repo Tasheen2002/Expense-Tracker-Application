@@ -1,10 +1,13 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
-  ExpenseRepository,
+  IExpenseRepository,
   ExpenseFilters,
+  ExpenseStatistics,
+} from '../../domain/repositories/expense.repository';
+import {
   PaginatedResult,
   PaginationOptions,
-} from '../../domain/repositories/expense.repository';
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { Expense } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { CategoryId } from '../../domain/value-objects/category-id';
@@ -27,7 +30,7 @@ type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
 
 export class ExpenseRepositoryImpl
   extends PrismaRepository<Expense>
-  implements ExpenseRepository
+  implements IExpenseRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

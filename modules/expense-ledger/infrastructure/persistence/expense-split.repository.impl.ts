@@ -3,7 +3,7 @@ import {
   Prisma,
   SplitType as PrismaSplitType,
 } from '@prisma/client';
-import { ExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
+import { IExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
 import { ExpenseSplit } from '../../domain/entities/expense-split.entity';
 import { SplitParticipant } from '../../domain/entities/split-participant.entity';
 import { SplitId } from '../../domain/value-objects/split-id';
@@ -20,7 +20,7 @@ import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repo
 
 export class ExpenseSplitRepositoryImpl
   extends PrismaRepository<ExpenseSplit>
-  implements ExpenseSplitRepository
+  implements IExpenseSplitRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

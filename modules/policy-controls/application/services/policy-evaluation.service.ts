@@ -1,6 +1,6 @@
-import { PolicyRepository } from "../../domain/repositories/policy.repository";
-import { ViolationRepository } from "../../domain/repositories/violation.repository";
-import { ExemptionRepository } from "../../domain/repositories/exemption.repository";
+import { IPolicyRepository } from "../../domain/repositories/policy.repository";
+import { IViolationRepository } from "../../domain/repositories/violation.repository";
+import { IExemptionRepository } from "../../domain/repositories/exemption.repository";
 import { ExpensePolicy } from "../../domain/entities/expense-policy.entity";
 import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
 import { PolicyType } from "../../domain/enums/policy-type.enum";
@@ -31,9 +31,9 @@ export interface PolicyEvaluationResult {
  */
 export class PolicyEvaluationService {
   constructor(
-    private readonly policyRepository: PolicyRepository,
-    private readonly violationRepository: ViolationRepository,
-    private readonly exemptionRepository: ExemptionRepository,
+    private readonly policyRepository: IPolicyRepository,
+    private readonly violationRepository: IViolationRepository,
+    private readonly exemptionRepository: IExemptionRepository,
   ) {}
 
   /**

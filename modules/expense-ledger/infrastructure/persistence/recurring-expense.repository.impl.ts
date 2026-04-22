@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { RecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
+import { IRecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
 import {
   RecurringExpense,
   ExpenseTemplate,
@@ -17,7 +17,7 @@ import { IEventBus } from '../../../../packages/core/src/domain/events/domain-ev
 
 export class PrismaRecurringExpenseRepository
   extends PrismaRepository<RecurringExpense>
-  implements RecurringExpenseRepository
+  implements IRecurringExpenseRepository
 {
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);

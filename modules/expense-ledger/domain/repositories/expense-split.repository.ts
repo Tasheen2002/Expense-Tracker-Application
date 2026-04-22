@@ -6,7 +6,7 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
-export interface ExpenseSplitRepository {
+export interface IExpenseSplitRepository {
   save(split: ExpenseSplit): Promise<void>;
   findById(id: SplitId, workspaceId: string): Promise<ExpenseSplit | null>;
   findByExpenseId(

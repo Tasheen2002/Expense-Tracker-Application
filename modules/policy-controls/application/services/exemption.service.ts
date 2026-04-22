@@ -1,5 +1,5 @@
 import {
-  ExemptionRepository,
+  IExemptionRepository,
   ExemptionFilters,
 } from "../../domain/repositories/exemption.repository";
 import { PolicyExemption, PolicyExemptionDTO } from "../../domain/entities/policy-exemption.entity";
@@ -14,7 +14,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class ExemptionService {
-  constructor(private readonly exemptionRepository: ExemptionRepository) {}
+  constructor(private readonly exemptionRepository: IExemptionRepository) {}
 
   async requestExemption(params: {
     workspaceId: string;

@@ -1,5 +1,5 @@
 import {
-  ViolationRepository,
+  IViolationRepository,
   ViolationFilters,
 } from "../../domain/repositories/violation.repository";
 import { PolicyViolation, PolicyViolationDTO } from "../../domain/entities/policy-violation.entity";
@@ -12,7 +12,7 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export class ViolationService {
-  constructor(private readonly violationRepository: ViolationRepository) {}
+  constructor(private readonly violationRepository: IViolationRepository) {}
 
   async createViolation(params: {
     workspaceId: string;

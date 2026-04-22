@@ -6,7 +6,7 @@ import {
 import { PaymentMethod } from '../../domain/enums/payment-method';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseDTO } from '../../domain/entities/expense.entity';
-import { CategoryRepository } from '../../domain/repositories/category.repository';
+import { ICategoryRepository } from '../../domain/repositories/category.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
 import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
 
@@ -31,7 +31,7 @@ export class UpdateExpenseHandler implements ICommandHandler<
 > {
   constructor(
     private readonly expenseService: ExpenseService,
-    private readonly categoryRepository: CategoryRepository
+    private readonly categoryRepository: ICategoryRepository
   ) {}
 
   async handle(command: UpdateExpenseCommand): Promise<CommandResult<ExpenseDTO>> {
