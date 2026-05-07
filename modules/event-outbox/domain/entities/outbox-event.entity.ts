@@ -1,28 +1,21 @@
-import { OutboxEventId } from '../value-objects/outbox-event-id';
-import { AggregateId } from '../value-objects/aggregate-id';
-import { OutboxEventStatus } from '../enums/outbox-event-status.enum';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { OutboxEventId } from '../value-objects/outbox-event-id.vo';
+import { AggregateId } from '../value-objects/aggregate-id.vo';
+import { OutboxEventStatus } from '../enums/outbox-event-status.enum';
 import { InvalidOutboxEventError } from '../errors/outbox-event.errors';
 
-// ============================================================================
-// DOMAIN EVENTS
-// ============================================================================
+// ── Domain Events ─────────────────────────────────────────────────────────────
 
-/**
- * Generic domain event for outbox pattern.
- * Used to reconstruct events from the outbox table.
- */
 export class OutboxDomainEvent extends DomainEvent {
   constructor(
     aggregateId: string,
     aggregateType: string,
     private readonly _eventType: string,
     private readonly payload: Record<string, unknown>,
-    private readonly _occurredAt?: Date
+    private readonly _occurredAt?: Date,
   ) {
     super(aggregateId, aggregateType);
     if (_occurredAt) {
-      // Override occurredAt with the original timestamp
       Object.assign(this, { occurredAt: _occurredAt });
     }
   }
@@ -36,9 +29,7 @@ export class OutboxDomainEvent extends DomainEvent {
   }
 }
 
-// ============================================================================
-// ENTITY
-// ============================================================================
+// ── Props & DTO ───────────────────────────────────────────────────────────────
 
 export interface OutboxEventProps {
   id: OutboxEventId;
@@ -53,8 +44,25 @@ export interface OutboxEventProps {
   error?: string;
 }
 
+export interface OutboxEventDTO {
+  id: string;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
+  retryCount: number;
+  error: string | null;
+}
+
+// ── Entity ────────────────────────────────────────────────────────────────────
+
 export class OutboxEvent {
-  private constructor(private readonly props: OutboxEventProps) {}
+  private constructor(private props: OutboxEventProps) {
+    OutboxEvent.validate(props);
+  }
 
   static create(params: {
     aggregateType: string;
@@ -78,7 +86,22 @@ export class OutboxEvent {
     return new OutboxEvent(props);
   }
 
-  // Getters
+  // ── Validation ──────────────────────────────────────────────────────────────
+
+  private static validate(props: OutboxEventProps): void {
+    if (!props.aggregateType || props.aggregateType.trim().length === 0) {
+      throw new InvalidOutboxEventError('Aggregate type is required');
+    }
+    if (!props.eventType || props.eventType.trim().length === 0) {
+      throw new InvalidOutboxEventError('Event type is required');
+    }
+    if (props.retryCount < 0) {
+      throw new InvalidOutboxEventError('Retry count cannot be negative');
+    }
+  }
+
+  // ── Getters ─────────────────────────────────────────────────────────────────
+
   get id(): OutboxEventId {
     return this.props.id;
   }
@@ -119,12 +142,11 @@ export class OutboxEvent {
     return this.props.error;
   }
 
-  // State transitions
+  // ── Business Logic ───────────────────────────────────────────────────────────
+
   markAsProcessing(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
-      throw new InvalidOutboxEventError(
-        'Cannot mark processed event as processing'
-      );
+      throw new InvalidOutboxEventError('Cannot mark processed event as processing');
     }
     this.props.status = OutboxEventStatus.PROCESSING;
   }
@@ -143,18 +165,24 @@ export class OutboxEvent {
 
   resetToPending(): void {
     if (this.props.status === OutboxEventStatus.PROCESSED) {
-      throw new InvalidOutboxEventError(
-        'Cannot reset processed event to pending'
-      );
+      throw new InvalidOutboxEventError('Cannot reset processed event to pending');
     }
     this.props.status = OutboxEventStatus.PENDING;
   }
+
+  // ── Query Methods ────────────────────────────────────────────────────────────
 
   canRetry(maxRetries: number = 3): boolean {
     return (
       this.props.retryCount < maxRetries &&
       this.props.status === OutboxEventStatus.FAILED
     );
+  }
+
+  // ── Serialisation ────────────────────────────────────────────────────────────
+
+  equals(other: OutboxEvent): boolean {
+    return this.props.id.getValue() === other.props.id.getValue();
   }
 
   static toDTO(event: OutboxEvent): OutboxEventDTO {
@@ -171,17 +199,4 @@ export class OutboxEvent {
       error: event.props.error ?? null,
     };
   }
-}
-
-export interface OutboxEventDTO {
-  id: string;
-  aggregateType: string;
-  aggregateId: string;
-  eventType: string;
-  payload: Record<string, unknown>;
-  status: string;
-  createdAt: string;
-  processedAt: string | null;
-  retryCount: number;
-  error: string | null;
 }

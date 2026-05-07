@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { FastifyRequest, FastifyReply } from "fastify";
 
 /**
@@ -28,4 +29,13 @@ export async function authenticate(
       message: "Unauthorized",
     });
   }
+=======
+import { FastifyRequest, FastifyReply } from 'fastify';
+
+export async function authenticate(
+  request: FastifyRequest,
+  _reply: FastifyReply,
+): Promise<void> {
+  await (request.server as unknown as { authenticate(req: FastifyRequest): Promise<void> }).authenticate(request);
+>>>>>>> 962cd59028144976e225a2164ead0c0d62f82493
 }

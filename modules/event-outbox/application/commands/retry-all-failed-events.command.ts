@@ -3,20 +3,19 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { OutboxEventService } from '../services/outbox-event.service';
+import { OutboxEventManagementService } from '../services/outbox-event.service';
 
 export interface RetryAllFailedEventsCommand extends ICommand {}
 
-export class RetryAllFailedEventsHandler implements ICommandHandler<
-  RetryAllFailedEventsCommand,
-  CommandResult<{ retried: number; deadLettered: number }>
-> {
-  constructor(private readonly service: OutboxEventService) {}
+export class RetryAllFailedEventsHandler
+  implements ICommandHandler<RetryAllFailedEventsCommand, CommandResult<{ retried: number; deadLettered: number }>>
+{
+  constructor(private readonly outboxEventService: OutboxEventManagementService) {}
 
   async handle(
-    _command: RetryAllFailedEventsCommand
+    _command: RetryAllFailedEventsCommand,
   ): Promise<CommandResult<{ retried: number; deadLettered: number }>> {
-    const result = await this.service.retryAllFailedEvents();
+    const result = await this.outboxEventService.retryAllFailedEvents();
     return CommandResult.success(result);
   }
 }

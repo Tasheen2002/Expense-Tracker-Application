@@ -3,22 +3,19 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { OutboxEventService } from '../services/outbox-event.service';
+import { OutboxEventManagementService } from '../services/outbox-event.service';
 
 export interface ProcessOutboxEventCommand extends ICommand {
-  eventId: string;
+  readonly eventId: string;
 }
 
-export class ProcessOutboxEventHandler implements ICommandHandler<
-  ProcessOutboxEventCommand,
-  CommandResult<void>
-> {
-  constructor(private readonly service: OutboxEventService) {}
+export class ProcessOutboxEventHandler
+  implements ICommandHandler<ProcessOutboxEventCommand, CommandResult<void>>
+{
+  constructor(private readonly outboxEventService: OutboxEventManagementService) {}
 
-  async handle(
-    command: ProcessOutboxEventCommand
-  ): Promise<CommandResult<void>> {
-    await this.service.processEventById(command.eventId);
-    return CommandResult.success();
+  async handle(command: ProcessOutboxEventCommand): Promise<CommandResult<void>> {
+    await this.outboxEventService.processEventById(command.eventId);
+    return CommandResult.success(undefined);
   }
 }
