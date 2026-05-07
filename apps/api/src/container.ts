@@ -463,7 +463,7 @@ import { OutboxEventRepositoryImpl } from '../../../modules/event-outbox/infrast
 import { IOutboxEventRepository } from '../../../modules/event-outbox/domain/repositories/outbox-event.repository';
 
 // Event Outbox Module - Services
-import { OutboxEventService } from '../../../modules/event-outbox/application/services/outbox-event.service';
+import { OutboxEventManagementService } from '../../../modules/event-outbox/application/services/outbox-event.service';
 
 // Event Outbox Module - Command Handlers
 import { StoreOutboxEventHandler } from '../../../modules/event-outbox/application/commands/store-outbox-event.command';
@@ -1875,9 +1875,9 @@ export class Container {
     this.services.set('outboxEventRepository', outboxEventRepository);
 
     // Services
-    const outboxEventService = new OutboxEventService(
+    const outboxEventService = new OutboxEventManagementService(
       outboxEventRepository,
-      eventBus
+      eventBus,
     );
     this.services.set('outboxEventService', outboxEventService);
 

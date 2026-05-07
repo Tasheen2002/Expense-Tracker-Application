@@ -1,2 +1,2 @@
-export * from "./outbox-event.schema";
-export * from "./validator";
+export * from './outbox-event.schema';
+export * from './validator';

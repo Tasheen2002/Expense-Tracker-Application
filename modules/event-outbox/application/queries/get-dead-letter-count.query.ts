@@ -1,13 +1,18 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
-import { OutboxEventService } from '../services/outbox-event.service';
+import {
+  IQuery,
+  IQueryHandler,
+} from '../../../../packages/core/src/application/cqrs';
+import { OutboxEventManagementService } from '../services/outbox-event.service';
 
 export interface GetDeadLetterCountQuery extends IQuery {}
 
-export class GetDeadLetterCountHandler implements IQueryHandler<GetDeadLetterCountQuery, { count: number }> {
-  constructor(private readonly service: OutboxEventService) {}
+export class GetDeadLetterCountHandler
+  implements IQueryHandler<GetDeadLetterCountQuery, { count: number }>
+{
+  constructor(private readonly outboxEventService: OutboxEventManagementService) {}
 
   async handle(_query: GetDeadLetterCountQuery): Promise<{ count: number }> {
-    const count = await this.service.getDeadLetterCount();
+    const count = await this.outboxEventService.getDeadLetterCount();
     return { count };
   }
 }
