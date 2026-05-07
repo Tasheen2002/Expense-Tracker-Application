@@ -10,6 +10,14 @@ import { container } from './container'
 
 export const createServer = async (): Promise<FastifyInstance> => {
   const server = Fastify({
+    // Allow OpenAPI's `example` keyword in JSON Schemas — Fastify's default
+    // Ajv config rejects unknown keywords, which silently drops the
+    // examples Swagger UI uses to render "Try it out" defaults.
+    ajv: {
+      customOptions: {
+        keywords: ['example'],
+      },
+    },
     logger:
       process.env.NODE_ENV === 'development'
         ? {
@@ -36,27 +44,21 @@ export const createServer = async (): Promise<FastifyInstance> => {
     },
   })
 
-  // Register Core Plugins
+  // Core plugins — order matters (config before anything that reads it,
+  // db/auth before container registration, error before swagger).
   await server.register(configPlugin)
-
-  // Register Security Plugins (CORS, Helmet, Rate Limit)
   await server.register(securityPlugin)
-
-  // Register Database Plugin
   await server.register(dbPlugin)
-
-  // Register Authentication Plugin
   await server.register(authPlugin)
-
-  // Register Error Handler Plugin
   await server.register(errorPlugin)
-
-  // Register Swagger (Documentation)
   await server.register(swaggerPlugin)
 
-  // Initialize Dependency Injection Container
-  const prisma = server.prisma
-  container.register(prisma)
+  // Initialize DI container with prisma + env-derived config so services
+  // never reach into `process.env` themselves.
+  container.register(server.prisma, {
+    jwtSecret: server.config.JWT_SECRET,
+    jwtExpiresIn: server.config.JWT_EXPIRES_IN,
+  })
   server.log.info('✓ DI Container initialized')
 
   // Register Domain Modules

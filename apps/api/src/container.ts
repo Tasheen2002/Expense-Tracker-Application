@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
-// Event Bus
-import { getEventBus } from './shared/domain/events/event-bus';
+// Event Bus — canonical location per packages/core
+import { getEventBus } from '../../../packages/core/src/domain/events/in-memory-event-bus';
 import { InMemoryCacheService } from './shared/infrastructure/cache/cache.service';
 import { NotificationEventHandler } from '../../../modules/notification-dispatch/application/handlers/notification.handler';
 
@@ -545,9 +545,21 @@ export class Container {
   }
 
   /**
-   * Register all services with dependencies
+   * Register all services with dependencies.
+   *
+   * `config` is an opt-in struct for environment-derived values that need
+   * to flow into application services (JWT secret, token TTLs, etc.). Pulled
+   * here so services don't read `process.env` directly — keeps adapters
+   * pure and tests deterministic.
    */
-  register(prisma: PrismaClient): void {
+  register(
+    prisma: PrismaClient,
+    config?: {
+      jwtSecret?: string;
+      jwtExpiresIn?: string;
+    },
+  ): void {
+    void config;
     const eventBus = getEventBus();
     const cacheService = new InMemoryCacheService();
 

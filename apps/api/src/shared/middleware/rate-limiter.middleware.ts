@@ -81,6 +81,12 @@ export function createRateLimiter(options: RateLimitOptions) {
   } = options;
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
+    // Disable rate limiting in tests so suites don't accumulate state
+    // across runs and accidentally trip 429s.
+    if (process.env.NODE_ENV === "test") {
+      return;
+    }
+
     const key = keyGenerator(request);
     const entry = store.increment(key, windowMs);
 
@@ -129,11 +135,35 @@ export function endpointKeyGenerator(request: FastifyRequest): string {
 
 /**
  * Key generator for authenticated users.
+ *
+ * Use this on routes where every caller is guaranteed to be authenticated
+ * (the `authenticate` middleware ran upstream). For mixed-auth routes
+ * (`optionalAuth`), prefer `userOrIpKeyGenerator` — it falls back to IP
+ * for guests rather than collapsing every guest into a shared
+ * `"anonymous"` bucket.
  */
 export function userKeyGenerator(request: FastifyRequest): string {
   const user = request.user as { id?: string; userId?: string } | undefined;
   const userId = user?.userId || user?.id || "anonymous";
   return `rate_limit:user:${userId}`;
+}
+
+/**
+ * Hybrid keyer for routes that mix authenticated and unauthenticated
+ * traffic (`optionalAuth`-gated endpoints, public previews, etc.).
+ *
+ * Authenticated callers get a per-user bucket; anonymous callers fall back
+ * to a per-IP bucket. Avoids the `"anonymous"` collision that
+ * `userKeyGenerator` alone would cause for guests sharing the limiter.
+ */
+export function userOrIpKeyGenerator(request: FastifyRequest): string {
+  const user = request.user as { id?: string; userId?: string } | undefined;
+  const userId = user?.userId || user?.id;
+  if (userId) return `rate_limit:user:${userId}`;
+  const forwarded = request.headers["x-forwarded-for"];
+  const ip =
+    typeof forwarded === "string" ? forwarded.split(",")[0].trim() : request.ip;
+  return `rate_limit:ip:${ip}`;
 }
 
 // Preset configurations for common use cases

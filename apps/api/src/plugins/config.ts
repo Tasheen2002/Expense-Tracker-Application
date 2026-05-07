@@ -8,6 +8,8 @@ const envSchema = z.object({
     .default('development'),
   LOG_LEVEL: z.string().default('info'),
   DATABASE_URL: z.string(),
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
 });
 
 export type Config = z.infer<typeof envSchema>;
