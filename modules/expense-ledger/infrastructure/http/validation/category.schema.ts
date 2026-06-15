@@ -1,4 +1,13 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
+
+/**
+ * Params Schema
+ */
+export const categoryParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  categoryId: z.string().uuid('Invalid category ID format'),
+});
 
 /**
  * Create Category Schema
@@ -35,3 +44,9 @@ export const listCategoriesQuerySchema = z.object({
 });
 
 export type ListCategoriesQuery = z.infer<typeof listCategoriesQuerySchema>;
+
+export const categoryParamsJsonSchema = toJsonSchema(categoryParamsSchema);
+export const createCategoryBodyJsonSchema = toJsonSchema(createCategorySchema);
+export const updateCategoryBodyJsonSchema = toJsonSchema(updateCategorySchema);
+export const listCategoriesQueryJsonSchema = toJsonSchema(listCategoriesQuerySchema);
+

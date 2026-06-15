@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
 import {
   EXPENSE_TITLE_MIN_LENGTH,
   EXPENSE_TITLE_MAX_LENGTH,
@@ -95,6 +96,7 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
  * Filter Expenses Query Schema
  */
 export const filterExpensesSchema = z.object({
+  userId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
   status: z.nativeEnum(ExpenseStatus).optional(),
   paymentMethod: z.nativeEnum(PaymentMethod).optional(),
@@ -113,6 +115,8 @@ export const filterExpensesSchema = z.object({
     .transform((val) => val === 'true')
     .pipe(z.boolean())
     .optional(),
+  currency: z.string().length(3).optional(),
+  searchText: z.string().optional(),
   page: z.string().transform(Number).pipe(z.number().min(1)).optional(),
   pageSize: z
     .string()
@@ -131,3 +135,9 @@ export const addTagToExpenseSchema = z.object({
 });
 
 export type AddTagToExpenseInput = z.infer<typeof addTagToExpenseSchema>;
+
+export const createExpenseBodyJsonSchema = toJsonSchema(createExpenseSchema);
+export const updateExpenseBodyJsonSchema = toJsonSchema(updateExpenseSchema);
+export const filterExpensesQueryJsonSchema = toJsonSchema(filterExpensesSchema);
+export const addTagToExpenseBodyJsonSchema = toJsonSchema(addTagToExpenseSchema);
+

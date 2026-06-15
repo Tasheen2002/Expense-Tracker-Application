@@ -1,10 +1,13 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
+import { SplitType } from '../../../domain/enums/split-type';
+import { SettlementStatus } from '../../../domain/enums/settlement-status';
 
 /**
  * Create Split Schema
  */
 export const createSplitSchema = z.object({
-  splitType: z.enum(['EQUAL', 'EXACT', 'PERCENTAGE']),
+  splitType: z.nativeEnum(SplitType),
   participants: z
     .array(
       z.object({
@@ -31,12 +34,13 @@ export type RecordSettlementPaymentInput = z.infer<typeof recordSettlementPaymen
  * List Settlements Query Schema
  */
 export const listSettlementsQuerySchema = z.object({
-  status: z.enum(['PENDING', 'PARTIAL', 'SETTLED']).optional(),
+  status: z.nativeEnum(SettlementStatus).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
 export type ListSettlementsQuery = z.infer<typeof listSettlementsQuerySchema>;
+
 
 /**
  * Split Params Schema
@@ -53,3 +57,10 @@ export const settlementParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
   settlementId: z.string().uuid('Invalid settlement ID format'),
 });
+
+export const createSplitBodyJsonSchema = toJsonSchema(createSplitSchema);
+export const recordSettlementPaymentBodyJsonSchema = toJsonSchema(recordSettlementPaymentSchema);
+export const listSettlementsQueryJsonSchema = toJsonSchema(listSettlementsQuerySchema);
+export const splitParamsJsonSchema = toJsonSchema(splitParamsSchema);
+export const settlementParamsJsonSchema = toJsonSchema(settlementParamsSchema);
+

@@ -1,9 +1,18 @@
 import { z } from 'zod'
+import { toJsonSchema } from './validator'
 import {
   TAG_NAME_MIN_LENGTH,
   TAG_NAME_MAX_LENGTH,
   TAG_COLOR_REGEX,
 } from '../../../domain/constants/expense.constants'
+
+/**
+ * Params Schema
+ */
+export const tagParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  tagId: z.string().uuid('Invalid tag ID format'),
+});
 
 /**
  * Create Tag Schema
@@ -34,3 +43,8 @@ export const updateTagSchema = z.object({
 })
 
 export type UpdateTagInput = z.infer<typeof updateTagSchema>
+
+export const tagParamsJsonSchema = toJsonSchema(tagParamsSchema);
+export const createTagBodyJsonSchema = toJsonSchema(createTagSchema);
+export const updateTagBodyJsonSchema = toJsonSchema(updateTagSchema);
+

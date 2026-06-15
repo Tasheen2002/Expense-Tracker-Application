@@ -1,9 +1,24 @@
 import { z } from 'zod'
+import { toJsonSchema } from './validator'
 import {
   MAX_ATTACHMENT_SIZE,
   MIN_ATTACHMENT_SIZE,
   ALLOWED_ATTACHMENT_MIME_TYPES,
 } from '../../../domain/constants/expense.constants'
+
+/**
+ * Params Schemas
+ */
+export const workspaceExpenseParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  expenseId: z.string().uuid('Invalid expense ID format'),
+});
+
+export const attachmentParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  expenseId: z.string().uuid('Invalid expense ID format'),
+  attachmentId: z.string().uuid('Invalid attachment ID format'),
+});
 
 /**
  * Create Attachment Schema
@@ -24,3 +39,8 @@ export const createAttachmentSchema = z.object({
 })
 
 export type CreateAttachmentInput = z.infer<typeof createAttachmentSchema>
+
+export const workspaceExpenseParamsJsonSchema = toJsonSchema(workspaceExpenseParamsSchema);
+export const attachmentParamsJsonSchema = toJsonSchema(attachmentParamsSchema);
+export const createAttachmentBodyJsonSchema = toJsonSchema(createAttachmentSchema);
+
