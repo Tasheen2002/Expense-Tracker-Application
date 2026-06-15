@@ -4,8 +4,6 @@ import { receiptRoutes } from './receipt.routes';
 import { tagRoutes } from './tag.routes';
 import { ReceiptController } from '../controllers/receipt.controller';
 import { TagController } from '../controllers/tag.controller';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerReceiptVaultRoutes(
   fastify: FastifyInstance,
@@ -17,23 +15,11 @@ export async function registerReceiptVaultRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // First authenticate, then authorize workspace access
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
       // Register receipt routes
-      await receiptRoutes(instance, controllers.receiptController);
+      await receiptRoutes(instance, controllers.receiptController, prisma);
 
       // Register receipt tag routes
-      await tagRoutes(instance, controllers.tagController);
+      await tagRoutes(instance, controllers.tagController, prisma);
     },
     { prefix: '/api/v1' }
   );

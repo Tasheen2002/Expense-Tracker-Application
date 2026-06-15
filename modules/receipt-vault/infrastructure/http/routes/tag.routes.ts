@@ -1,4 +1,5 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { TagController } from '../controllers/tag.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -6,30 +7,44 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody } from '../validation/validator';
-import { createTagSchema, updateTagSchema } from '../validation/tag.schema';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  tagParamsSchema,
+  workspaceParamsJsonSchema,
+  tagParamsJsonSchema,
+  baseResponseJsonSchema,
+} from '../validation/common.schema';
+import {
+  createTagSchema,
+  updateTagSchema,
+  paginationQuerySchema,
+  createTagBodyJsonSchema,
+  updateTagBodyJsonSchema,
+  paginationQueryJsonSchema,
+  tagEnvelopeJsonSchema,
+  tagListEnvelopeJsonSchema,
+} from '../validation/tag.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
 
-const tagDataSchema = {
-  type: 'object',
-  properties: {
-    tagId: { type: 'string' },
-    workspaceId: { type: 'string' },
-    name: { type: 'string' },
-    color: { type: 'string' },
-    description: { type: 'string' },
-    createdAt: { type: 'string' },
-  },
-};
-
 export async function tagRoutes(
   fastify: FastifyInstance,
-  controller: TagController
-) {
+  controller: TagController,
+  prisma: PrismaClient
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -37,40 +52,47 @@ export async function tagRoutes(
     }
   });
 
+  // List all receipt tags for a workspace
+  fastify.get(
+    '/:workspaceId/receipt-tags',
+    {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(paginationQuerySchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
+      schema: {
+        tags: ['Receipt Tag'],
+        description: 'List all receipt tags for a workspace',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
+        response: {
+          200: tagListEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.listTags(request as AuthenticatedRequest, reply)
+  );
+
   // Create receipt tag
   fastify.post(
     '/:workspaceId/receipt-tags',
     {
-      preValidation: [validateBody(createTagSchema)],
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(createTagSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Create a new receipt tag',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 50 },
-            color: { type: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-            description: { type: 'string', maxLength: 255 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: createTagBodyJsonSchema,
         response: {
-          201: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: tagDataSchema,
-            },
-          },
+          201: tagEnvelopeJsonSchema,
         },
       },
     },
@@ -82,36 +104,19 @@ export async function tagRoutes(
   fastify.patch(
     '/:workspaceId/receipt-tags/:tagId',
     {
-      preValidation: [validateBody(updateTagSchema)],
+      preValidation: [
+        validateParams(tagParamsSchema),
+        validateBody(updateTagSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Update a receipt tag',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 50 },
-            color: { type: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-            description: { type: 'string', maxLength: 255 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: tagParamsJsonSchema,
+        body: updateTagBodyJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: tagDataSchema,
-            },
-          },
+          200: tagEnvelopeJsonSchema,
         },
       },
     },
@@ -123,78 +128,19 @@ export async function tagRoutes(
   fastify.delete(
     '/:workspaceId/receipt-tags/:tagId',
     {
+      preValidation: [validateParams(tagParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Delete a receipt tag',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: tagParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
-          },
+          200: baseResponseJsonSchema,
         },
       },
     },
     (request, reply) =>
       controller.deleteTag(request as AuthenticatedRequest, reply)
-  );
-
-  // List all receipt tags for a workspace
-  fastify.get(
-    '/:workspaceId/receipt-tags',
-    {
-      schema: {
-        tags: ['Receipt Tag'],
-        description: 'List all receipt tags for a workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: tagDataSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.listTags(request as AuthenticatedRequest, reply)
   );
 }

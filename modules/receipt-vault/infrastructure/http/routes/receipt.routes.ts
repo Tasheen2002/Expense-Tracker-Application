@@ -1,5 +1,5 @@
-import { ZodSchema } from 'zod';
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { ReceiptController } from '../controllers/receipt.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -7,7 +7,23 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody, validateQuery } from '../validation/validator';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  receiptParamsSchema,
+  receiptTagParamsSchema,
+  expenseParamsSchema,
+  workspaceParamsJsonSchema,
+  receiptParamsJsonSchema,
+  receiptTagParamsJsonSchema,
+  expenseParamsJsonSchema,
+  baseResponseJsonSchema,
+} from '../validation/common.schema';
 import {
   uploadReceiptSchema,
   linkToExpenseSchema,
@@ -15,94 +31,42 @@ import {
   rejectReceiptSchema,
   listReceiptsQuerySchema,
   deleteReceiptQuerySchema,
+  uploadReceiptBodyJsonSchema,
+  linkToExpenseBodyJsonSchema,
+  processReceiptBodyJsonSchema,
+  rejectReceiptBodyJsonSchema,
+  listReceiptsQueryJsonSchema,
+  deleteReceiptQueryJsonSchema,
+  receiptEnvelopeJsonSchema,
+  receiptListEnvelopeJsonSchema,
+  receiptStatsEnvelopeJsonSchema,
 } from '../validation/receipt.schema';
 import {
   addMetadataSchema,
   updateMetadataSchema,
+  addMetadataBodyJsonSchema,
+  updateMetadataBodyJsonSchema,
+  receiptMetadataEnvelopeJsonSchema,
 } from '../validation/metadata.schema';
-import { addTagToReceiptSchema } from '../validation/tag.schema';
+import {
+  addTagToReceiptSchema,
+  addTagToReceiptBodyJsonSchema,
+} from '../validation/tag.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
 
-// Reusable schema fragments
-const receiptDataSchema = {
-  type: 'object',
-  properties: {
-    receiptId: { type: 'string' },
-    workspaceId: { type: 'string' },
-    expenseId: { type: 'string' },
-    userId: { type: 'string' },
-    fileName: { type: 'string' },
-    originalName: { type: 'string' },
-    filePath: { type: 'string' },
-    fileSize: { type: 'number' },
-    mimeType: { type: 'string' },
-    fileHash: { type: 'string' },
-    receiptType: { type: 'string' },
-    status: { type: 'string' },
-    storageProvider: { type: 'string' },
-    storageBucket: { type: 'string' },
-    storageKey: { type: 'string' },
-    thumbnailPath: { type: 'string' },
-    ocrText: { type: 'string' },
-    ocrConfidence: { type: 'number' },
-    processedAt: { type: 'string' },
-    failureReason: { type: 'string' },
-    isLinked: { type: 'boolean' },
-    isDeleted: { type: 'boolean' },
-    createdAt: { type: 'string' },
-    updatedAt: { type: 'string' },
-    deletedAt: { type: 'string' },
-  },
-};
-
-const metadataDataSchema = {
-  type: 'object',
-  properties: {
-    metadataId: { type: 'string' },
-    receiptId: { type: 'string' },
-    merchantName: { type: 'string' },
-    merchantAddress: { type: 'string' },
-    merchantPhone: { type: 'string' },
-    merchantTaxId: { type: 'string' },
-    transactionDate: { type: 'string' },
-    transactionTime: { type: 'string' },
-    subtotal: { type: 'number' },
-    taxAmount: { type: 'number' },
-    tipAmount: { type: 'number' },
-    totalAmount: { type: 'number' },
-    currency: { type: 'string' },
-    paymentMethod: { type: 'string' },
-    lastFourDigits: { type: 'string' },
-    invoiceNumber: { type: 'string' },
-    poNumber: { type: 'string' },
-    lineItems: { type: 'array' },
-    notes: { type: 'string' },
-    customFields: { type: 'object' },
-    createdAt: { type: 'string' },
-    updatedAt: { type: 'string' },
-  },
-};
-
-const successResponse = (statusCode: number, dataSchema?: object) => ({
-  [statusCode]: {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      statusCode: { type: 'number' },
-      message: { type: 'string' },
-      ...(dataSchema ? { data: dataSchema } : {}),
-    },
-  },
-});
-
 export async function receiptRoutes(
   fastify: FastifyInstance,
-  controller: ReceiptController
-) {
+  controller: ReceiptController,
+  prisma: PrismaClient
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -114,41 +78,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/upload',
     {
-      preValidation: [validateBody(uploadReceiptSchema)],
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(uploadReceiptSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Upload a new receipt',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: uploadReceiptBodyJsonSchema,
+        response: {
+          201: receiptEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          required: [
-            'fileName',
-            'originalName',
-            'filePath',
-            'fileSize',
-            'mimeType',
-            'storageProvider',
-          ],
-          properties: {
-            fileName: { type: 'string', minLength: 1, maxLength: 255 },
-            originalName: { type: 'string', minLength: 1, maxLength: 255 },
-            filePath: { type: 'string', minLength: 1, maxLength: 1000 },
-            fileSize: { type: 'number' },
-            mimeType: { type: 'string' },
-            fileHash: { type: 'string' },
-            receiptType: { type: 'string' },
-            storageProvider: { type: 'string' },
-            storageBucket: { type: 'string' },
-            storageKey: { type: 'string' },
-          },
-        },
-        response: successResponse(201, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -159,18 +102,18 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/:receiptId',
     {
+      preValidation: [
+        validateParams(receiptParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get receipt by ID',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        response: {
+          200: receiptEnvelopeJsonSchema,
         },
-        response: successResponse(200, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -181,47 +124,20 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts',
     {
-      preValidation: [validateQuery(listReceiptsQuerySchema as ZodSchema<any>)],
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(listReceiptsQuerySchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'List all receipts in workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listReceiptsQueryJsonSchema,
+        response: {
+          200: receiptListEnvelopeJsonSchema,
         },
-        querystring: {
-          type: 'object',
-          properties: {
-            userId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-            status: { type: 'string' },
-            receiptType: { type: 'string' },
-            isLinked: { type: 'string', enum: ['true', 'false'] },
-            isDeleted: { type: 'string', enum: ['true', 'false'] },
-            fromDate: { type: 'string' },
-            toDate: { type: 'string' },
-            limit: { type: 'string' },
-            offset: { type: 'string' },
-          },
-        },
-        response: successResponse(200, {
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: receiptDataSchema },
-            pagination: {
-              type: 'object',
-              properties: {
-                total: { type: 'number' },
-                limit: { type: 'number' },
-                offset: { type: 'number' },
-                hasMore: { type: 'boolean' },
-              },
-            },
-          },
-        }),
       },
     },
     (request, reply) =>
@@ -232,32 +148,18 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/expenses/:expenseId/receipts',
     {
+      preValidation: [
+        validateParams(expenseParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get all receipts linked to an expense',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: expenseParamsJsonSchema,
+        response: {
+          200: receiptListEnvelopeJsonSchema,
         },
-        response: successResponse(200, {
-          type: 'object',
-          properties: {
-            items: { type: 'array', items: receiptDataSchema },
-            pagination: {
-              type: 'object',
-              properties: {
-                total: { type: 'number' },
-                limit: { type: 'number' },
-                offset: { type: 'number' },
-                hasMore: { type: 'boolean' },
-              },
-            },
-          },
-        }),
       },
     },
     (request, reply) =>
@@ -268,26 +170,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/link-expense',
     {
-      preValidation: [validateBody(linkToExpenseSchema)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(linkToExpenseSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Link receipt to an expense',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: linkToExpenseBodyJsonSchema,
+        response: {
+          200: receiptEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          required: ['expenseId'],
-          properties: {
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
-        response: successResponse(200, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -298,18 +194,18 @@ export async function receiptRoutes(
   fastify.delete(
     '/:workspaceId/receipts/:receiptId/unlink-expense',
     {
+      preValidation: [
+        validateParams(receiptParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Unlink receipt from expense',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        response: {
+          200: baseResponseJsonSchema,
         },
-        response: successResponse(200),
       },
     },
     (request, reply) =>
@@ -320,26 +216,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/process',
     {
-      preValidation: [validateBody(processReceiptSchema)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(processReceiptSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Process receipt to extract metadata',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: processReceiptBodyJsonSchema,
+        response: {
+          200: receiptEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          properties: {
-            ocrText: { type: 'string' },
-            ocrConfidence: { type: 'number', minimum: 0, maximum: 1 },
-          },
-        },
-        response: successResponse(200, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -350,18 +240,18 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/verify',
     {
+      preValidation: [
+        validateParams(receiptParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Mark receipt as verified',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        response: {
+          200: receiptEnvelopeJsonSchema,
         },
-        response: successResponse(200, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -372,25 +262,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/reject',
     {
-      preValidation: [validateBody(rejectReceiptSchema)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(rejectReceiptSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Mark receipt as rejected',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: rejectReceiptBodyJsonSchema,
+        response: {
+          200: receiptEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          properties: {
-            reason: { type: 'string', maxLength: 500 },
-          },
-        },
-        response: successResponse(200, receiptDataSchema),
       },
     },
     (request, reply) =>
@@ -402,26 +287,19 @@ export async function receiptRoutes(
     '/:workspaceId/receipts/:receiptId',
     {
       preValidation: [
-        validateQuery(deleteReceiptQuerySchema as ZodSchema<any>),
+        validateParams(receiptParamsSchema),
+        validateQuery(deleteReceiptQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Delete a receipt',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        querystring: deleteReceiptQueryJsonSchema,
+        response: {
+          200: baseResponseJsonSchema,
         },
-        querystring: {
-          type: 'object',
-          properties: {
-            permanent: { type: 'string', enum: ['true', 'false'] },
-          },
-        },
-        response: successResponse(200),
       },
     },
     (request, reply) =>
@@ -432,40 +310,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
-      preValidation: [validateBody(addMetadataSchema as ZodSchema<any>)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(addMetadataSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Add metadata to receipt',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: addMetadataBodyJsonSchema,
+        response: {
+          201: receiptMetadataEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          properties: {
-            merchantName: { type: 'string', maxLength: 255 },
-            merchantAddress: { type: 'string', maxLength: 500 },
-            merchantPhone: { type: 'string', maxLength: 50 },
-            merchantTaxId: { type: 'string', maxLength: 50 },
-            transactionDate: {},
-            transactionTime: { type: 'string', maxLength: 20 },
-            subtotal: { type: 'number' },
-            taxAmount: { type: 'number' },
-            tipAmount: { type: 'number' },
-            totalAmount: { type: 'number' },
-            currency: { type: 'string', minLength: 3, maxLength: 3 },
-            paymentMethod: { type: 'string', maxLength: 50 },
-            lastFourDigits: { type: 'string', minLength: 4, maxLength: 4 },
-            invoiceNumber: { type: 'string', maxLength: 100 },
-            poNumber: { type: 'string', maxLength: 100 },
-            notes: { type: 'string', maxLength: 1000 },
-          },
-        },
-        response: successResponse(201, metadataDataSchema),
       },
     },
     (request, reply) =>
@@ -476,40 +334,20 @@ export async function receiptRoutes(
   fastify.patch(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
-      preValidation: [validateBody(updateMetadataSchema as ZodSchema<any>)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(updateMetadataSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Update receipt metadata',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: updateMetadataBodyJsonSchema,
+        response: {
+          200: receiptMetadataEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          properties: {
-            merchantName: { type: 'string', maxLength: 255 },
-            merchantAddress: { type: 'string', maxLength: 500 },
-            merchantPhone: { type: 'string', maxLength: 50 },
-            merchantTaxId: { type: 'string', maxLength: 50 },
-            transactionDate: {},
-            transactionTime: { type: 'string', maxLength: 20 },
-            subtotal: { type: 'number' },
-            taxAmount: { type: 'number' },
-            tipAmount: { type: 'number' },
-            totalAmount: { type: 'number' },
-            currency: { type: 'string', minLength: 3, maxLength: 3 },
-            paymentMethod: { type: 'string', maxLength: 50 },
-            lastFourDigits: { type: 'string', minLength: 4, maxLength: 4 },
-            invoiceNumber: { type: 'string', maxLength: 100 },
-            poNumber: { type: 'string', maxLength: 100 },
-            notes: { type: 'string', maxLength: 1000 },
-          },
-        },
-        response: successResponse(200, metadataDataSchema),
       },
     },
     (request, reply) =>
@@ -520,18 +358,18 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
+      preValidation: [
+        validateParams(receiptParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Get receipt metadata',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        response: {
+          200: receiptMetadataEnvelopeJsonSchema,
         },
-        response: successResponse(200, metadataDataSchema),
       },
     },
     (request, reply) =>
@@ -542,26 +380,20 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/tags',
     {
-      preValidation: [validateBody(addTagToReceiptSchema)],
+      preValidation: [
+        validateParams(receiptParamsSchema),
+        validateBody(addTagToReceiptSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Add tag to receipt',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptParamsJsonSchema,
+        body: addTagToReceiptBodyJsonSchema,
+        response: {
+          200: baseResponseJsonSchema,
         },
-        body: {
-          type: 'object',
-          required: ['tagId'],
-          properties: {
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
-        response: successResponse(200),
       },
     },
     (request, reply) =>
@@ -572,19 +404,18 @@ export async function receiptRoutes(
   fastify.delete(
     '/:workspaceId/receipts/:receiptId/tags/:tagId',
     {
+      preValidation: [
+        validateParams(receiptTagParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Remove tag from receipt',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'receiptId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            receiptId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: receiptTagParamsJsonSchema,
+        response: {
+          200: baseResponseJsonSchema,
         },
-        response: successResponse(200),
       },
     },
     (request, reply) =>
@@ -595,27 +426,18 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/stats',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+      ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get receipt statistics for workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        response: {
+          200: receiptStatsEnvelopeJsonSchema,
         },
-        response: successResponse(200, {
-          type: 'object',
-          properties: {
-            total: { type: 'number' },
-            pending: { type: 'number' },
-            processing: { type: 'number' },
-            processed: { type: 'number' },
-            failed: { type: 'number' },
-            verified: { type: 'number' },
-          },
-        }),
       },
     },
     (request, reply) =>
