@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * Reusable JSON-Schema builders for Fastify `schema.response` blocks.
  *
@@ -128,24 +127,4 @@ export const paginatedResponse = (itemSchema: object) =>
       hasMore: { type: "boolean" },
     },
   }) as const;
-=======
-type JsonSchemaObject = Record<string, unknown>;
 
-export function successResponse(dataSchema: JsonSchemaObject, statusCode = 200) {
-  return {
-    [statusCode]: {
-      type: 'object',
-      properties: {
-        success: { type: 'boolean' },
-        statusCode: { type: 'integer' },
-        message: { type: 'string' },
-        data: dataSchema,
-      },
-    } as const,
-  };
-}
-
-export const noContentResponse = {
-  204: { type: 'null', description: 'No Content' },
-} as const;
->>>>>>> 962cd59028144976e225a2164ead0c0d62f82493
