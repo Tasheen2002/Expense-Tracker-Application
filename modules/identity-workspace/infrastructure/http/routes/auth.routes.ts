@@ -7,6 +7,13 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import { validateBody } from '../validation/validator';
 import { registerUserSchema, loginUserSchema } from '../validation/user.schema';
+import {
+  registerUserBodyJsonSchema,
+  loginUserBodyJsonSchema,
+  registerSuccessResponseJsonSchema,
+  loginSuccessResponseJsonSchema,
+  meSuccessResponseJsonSchema,
+} from '../validation/user.schema';
 
 const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 
@@ -19,62 +26,14 @@ export async function registerAuthRoutes(
     '/auth/register',
     {
       onRequest: [authRateLimiter],
-      preValidation: [validateBody(registerUserSchema)],
+      preHandler: [validateBody(registerUserSchema)],
       schema: {
         description: 'Register a new user account',
         tags: ['Authentication'],
         summary: 'Register User',
-        body: {
-          type: 'object',
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 8 },
-            fullName: { type: 'string' },
-          },
-        },
+        body: registerUserBodyJsonSchema,
         response: {
-          201: {
-            description: 'User registered successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              data: {
-                type: 'object',
-                properties: {
-                  userId: { type: 'string', format: 'uuid' },
-                  email: { type: 'string' },
-                  fullName: { type: 'string', nullable: true },
-                  emailVerified: { type: 'boolean' },
-                  isActive: { type: 'boolean' },
-                  createdAt: { type: 'string', format: 'date-time' },
-                  updatedAt: { type: 'string', format: 'date-time' },
-                },
-              },
-              message: { type: 'string' },
-            },
-          },
-          400: {
-            description: 'Bad Request',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          409: {
-            description: 'User already exists',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          201: registerSuccessResponseJsonSchema,
         },
       },
     },
@@ -86,55 +45,14 @@ export async function registerAuthRoutes(
     '/auth/login',
     {
       onRequest: [authRateLimiter],
-      preValidation: [validateBody(loginUserSchema)],
+      preHandler: [validateBody(loginUserSchema)],
       schema: {
         description: 'Login with email and password',
         tags: ['Authentication'],
         summary: 'Login User',
-        body: {
-          type: 'object',
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string' },
-          },
-        },
+        body: loginUserBodyJsonSchema,
         response: {
-          200: {
-            description: 'Login successful',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              data: {
-                type: 'object',
-                properties: {
-                  user: {
-                    type: 'object',
-                    properties: {
-                      userId: { type: 'string', format: 'uuid' },
-                      email: { type: 'string' },
-                      fullName: { type: 'string', nullable: true },
-                      isActive: { type: 'boolean' },
-                      emailVerified: { type: 'boolean' },
-                    },
-                  },
-                  token: { type: 'string' },
-                },
-              },
-              message: { type: 'string' },
-            },
-          },
-          401: {
-            description: 'Unauthorized',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: loginSuccessResponseJsonSchema,
         },
       },
     },
@@ -145,44 +63,14 @@ export async function registerAuthRoutes(
   fastify.get(
     '/auth/me',
     {
-      onRequest: [fastify.authenticate],
+      preHandler: [fastify.authenticate],
       schema: {
         description: 'Get current authenticated user',
         tags: ['Authentication'],
         summary: 'Get Current User',
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            description: 'Current user information',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  userId: { type: 'string', format: 'uuid' },
-                  email: { type: 'string' },
-                  workspaceId: {
-                    type: 'string',
-                    format: 'uuid',
-                    nullable: true,
-                  },
-                },
-              },
-            },
-          },
-          401: {
-            description: 'Unauthorized',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: meSuccessResponseJsonSchema,
         },
       },
     },

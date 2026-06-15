@@ -20,6 +20,14 @@ import {
   tokenParamsSchema,
   inviteMemberSchema,
   paginationQuerySchema,
+  workspaceParamsJsonSchema,
+  invitationParamsJsonSchema,
+  tokenParamsJsonSchema,
+  inviteMemberBodyJsonSchema,
+  paginationQueryJsonSchema,
+  invitationEnvelopeJsonSchema,
+  membershipEnvelopeJsonSchema,
+  invitationListEnvelopeJsonSchema,
 } from '../validation/workspace.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -27,50 +35,8 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
-// Shared Response Schema for Invitation
-const invitationSchema = {
-  type: 'object',
-  properties: {
-    invitationId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    email: { type: 'string', format: 'email' },
-    role: { type: 'string' },
-    token: { type: 'string' },
-    expiresAt: { type: 'string', format: 'date-time' },
-    acceptedAt: { type: 'string', format: 'date-time', nullable: true },
-    isExpired: { type: 'boolean' },
-    isAccepted: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-// Shared Response Schema for Membership (used in accept response)
-const membershipSchema = {
-  type: 'object',
-  properties: {
-    membershipId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    role: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-// Shared Pagination Schema
-const paginationSchema = {
-  type: 'object',
-  properties: {
-    total: { type: 'integer' },
-    limit: { type: 'integer' },
-    offset: { type: 'integer' },
-    hasMore: { type: 'boolean' },
-  },
-};
-
 /**
- * Public invitation routes (no authentication required)
- * - GET /invitations/:token
+ * Public invitation routes
  */
 export async function registerPublicInvitationRoutes(
   fastify: FastifyInstance,
@@ -80,20 +46,13 @@ export async function registerPublicInvitationRoutes(
   fastify.get(
     '/invitations/:token',
     {
-      preHandler: [validateParams(tokenParamsSchema)],
+      preValidation: [validateParams(tokenParamsSchema)],
       schema: {
         tags: ['Invitation'],
         description: 'Get invitation details by token',
+        params: tokenParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: invitationSchema,
-            },
-          },
+          200: invitationEnvelopeJsonSchema,
         },
       },
     },
@@ -103,8 +62,7 @@ export async function registerPublicInvitationRoutes(
 }
 
 /**
- * Token-based invitation routes (authenticated, no workspace auth)
- * - POST /invitations/:token/accept
+ * Token-based invitation routes
  */
 export async function registerTokenInvitationRoutes(
   fastify: FastifyInstance,
@@ -114,21 +72,15 @@ export async function registerTokenInvitationRoutes(
   fastify.post(
     '/invitations/:token/accept',
     {
-      preHandler: [validateParams(tokenParamsSchema)],
+      preValidation: [validateParams(tokenParamsSchema)],
+      preHandler: [fastify.authenticate],
       schema: {
         tags: ['Invitation'],
         description: 'Accept workspace invitation',
         security: [{ bearerAuth: [] }],
+        params: tokenParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: membershipSchema,
-            },
-          },
+          200: membershipEnvelopeJsonSchema,
         },
       },
     },
@@ -138,10 +90,7 @@ export async function registerTokenInvitationRoutes(
 }
 
 /**
- * Workspace-scoped invitation routes (with workspace authorization at route-level preHandler)
- * - POST /workspaces/:workspaceId/invitations (create invitation)
- * - GET /workspaces/:workspaceId/invitations (list pending invitations)
- * - DELETE /workspaces/:workspaceId/invitations/:invitationId (cancel invitation)
+ * Workspace-scoped invitation routes
  */
 export async function registerWorkspaceInvitationRoutes(
   fastify: FastifyInstance,
@@ -162,35 +111,21 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/invitations',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
-        validateBody(inviteMemberSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
+        validateBody(inviteMemberSchema),
       ],
       schema: {
         tags: ['Invitation'],
         description: 'Create invitation for workspace',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['email', 'role'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            role: { type: 'string', enum: ['admin', 'member'] },
-            expiryHours: { type: 'number', minimum: 1, maximum: 720 },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: inviteMemberBodyJsonSchema,
         response: {
-          201: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: invitationSchema,
-            },
-          },
+          201: invitationEnvelopeJsonSchema,
         },
       },
     },
@@ -202,9 +137,12 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/invitations',
     {
-      preHandler: [
+      preValidation: [
         validateParams(workspaceParamsSchema),
         validateQuery(paginationQuerySchema),
+      ],
+      preHandler: [
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
       ],
@@ -212,25 +150,10 @@ export async function registerWorkspaceInvitationRoutes(
         tags: ['Invitation'],
         description: 'List workspace pending invitations',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: invitationSchema,
-                  },
-                  pagination: paginationSchema,
-                },
-              },
-            },
-          },
+          200: invitationListEnvelopeJsonSchema,
         },
       },
     },
@@ -245,8 +168,9 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/invitations/:invitationId',
     {
+      preValidation: [validateParams(invitationParamsSchema)],
       preHandler: [
-        validateParams(invitationParamsSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
       ],
@@ -254,6 +178,7 @@ export async function registerWorkspaceInvitationRoutes(
         tags: ['Invitation'],
         description: 'Cancel workspace invitation',
         security: [{ bearerAuth: [] }],
+        params: invitationParamsJsonSchema,
         response: {
           204: {
             description: 'Invitation cancelled successfully',

@@ -33,7 +33,9 @@ export async function outboxEventRoutes(
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
         querystring: pendingEventsQueryJson,
-        response: successResponse(paginatedOutboxEventResponseSchema),
+        response: {
+          200: successResponse(paginatedOutboxEventResponseSchema),
+        },
       },
     },
     (request, reply) =>
@@ -50,7 +52,9 @@ export async function outboxEventRoutes(
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
         querystring: failedEventsQueryJson,
-        response: successResponse(paginatedOutboxEventResponseSchema),
+        response: {
+          200: successResponse(paginatedOutboxEventResponseSchema),
+        },
       },
     },
     (request, reply) =>
@@ -66,7 +70,9 @@ export async function outboxEventRoutes(
         summary: 'Get dead letter queue count',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
-        response: successResponse(deadLetterCountResponseSchema),
+        response: {
+          200: successResponse(deadLetterCountResponseSchema),
+        },
       },
     },
     (request, reply) =>
@@ -84,7 +90,9 @@ export async function outboxEventRoutes(
         summary: 'Retry all failed events within retry limit',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
-        response: successResponse(retryAllResponseSchema),
+        response: {
+          200: successResponse(retryAllResponseSchema),
+        },
       },
     },
     (request, reply) =>
@@ -101,7 +109,9 @@ export async function outboxEventRoutes(
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
         body: storeOutboxEventBodyJson,
-        response: successResponse(outboxEventResponseSchema, 201),
+        response: {
+          201: successResponse(outboxEventResponseSchema, 201),
+        },
       },
     },
     (request, reply) =>
@@ -117,7 +127,9 @@ export async function outboxEventRoutes(
         summary: 'Manually process a specific outbox event',
         security: [{ bearerAuth: [] }],
         params: eventParamsJson,
-        response: successResponse({ type: 'null' as const }),
+        response: {
+          200: successResponse({ type: 'null' as const }),
+        },
       },
     },
     (request, reply) =>
@@ -133,7 +145,9 @@ export async function outboxEventRoutes(
         summary: 'Reset a failed event to pending for retry',
         security: [{ bearerAuth: [] }],
         params: eventParamsJson,
-        response: successResponse({ type: 'null' as const }),
+        response: {
+          200: successResponse({ type: 'null' as const }),
+        },
       },
     },
     (request, reply) =>
@@ -152,7 +166,9 @@ export async function outboxEventRoutes(
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJson,
         querystring: cleanupEventsQueryJson,
-        response: noContentResponse,
+        response: {
+          204: noContentResponse,
+        },
       },
     },
     (request, reply) =>

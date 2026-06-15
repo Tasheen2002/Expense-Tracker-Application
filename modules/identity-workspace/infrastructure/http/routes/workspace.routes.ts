@@ -19,6 +19,12 @@ import {
   updateWorkspaceSchema,
   workspaceParamsSchema,
   paginationQuerySchema,
+  workspaceParamsJsonSchema,
+  paginationQueryJsonSchema,
+  createWorkspaceBodyJsonSchema,
+  updateWorkspaceBodyJsonSchema,
+  workspaceEnvelopeJsonSchema,
+  workspaceListEnvelopeJsonSchema,
 } from '../validation/workspace.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -26,35 +32,8 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
-// Shared Response Schema for Workspace
-const workspaceSchema = {
-  type: 'object',
-  properties: {
-    workspaceId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    slug: { type: 'string' },
-    ownerId: { type: 'string', format: 'uuid' },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-// Shared Pagination Schema
-const paginationSchema = {
-  type: 'object',
-  properties: {
-    total: { type: 'integer' },
-    limit: { type: 'integer' },
-    offset: { type: 'integer' },
-    hasMore: { type: 'boolean' },
-  },
-};
-
 /**
- * User-level workspace routes (no workspace authorization middleware)
- * - POST /workspaces (create)
- * - GET /workspaces (list user's workspaces)
+ * User-level workspace routes
  */
 export async function registerUserWorkspaceRoutes(
   fastify: FastifyInstance,
@@ -70,28 +49,14 @@ export async function registerUserWorkspaceRoutes(
   fastify.post(
     '/workspaces',
     {
-      preHandler: [validateBody(createWorkspaceSchema)],
+      preHandler: [fastify.authenticate, validateBody(createWorkspaceSchema)],
       schema: {
         tags: ['Workspace'],
         description: 'Create a new workspace',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', minLength: 1 },
-          },
-        },
+        body: createWorkspaceBodyJsonSchema,
         response: {
-          201: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: workspaceSchema,
-            },
-          },
+          201: workspaceEnvelopeJsonSchema,
         },
       },
     },
@@ -103,30 +68,15 @@ export async function registerUserWorkspaceRoutes(
   fastify.get(
     '/workspaces',
     {
-      preHandler: [validateQuery(paginationQuerySchema)],
+      preValidation: [validateQuery(paginationQuerySchema)],
+      preHandler: [fastify.authenticate],
       schema: {
         tags: ['Workspace'],
         description: 'Get all workspaces for the authenticated user',
         security: [{ bearerAuth: [] }],
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: workspaceSchema,
-                  },
-                  pagination: paginationSchema,
-                },
-              },
-            },
-          },
+          200: workspaceListEnvelopeJsonSchema,
         },
       },
     },
@@ -136,10 +86,7 @@ export async function registerUserWorkspaceRoutes(
 }
 
 /**
- * Workspace-scoped routes (with workspace authorization at route-level preHandler)
- * - GET /workspaces/:workspaceId
- * - PATCH /workspaces/:workspaceId
- * - DELETE /workspaces/:workspaceId
+ * Workspace-scoped routes
  */
 export async function registerWorkspaceScopedRoutes(
   fastify: FastifyInstance,
@@ -160,8 +107,9 @@ export async function registerWorkspaceScopedRoutes(
   fastify.get(
     '/workspaces/:workspaceId',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin', 'member']),
       ],
@@ -169,16 +117,9 @@ export async function registerWorkspaceScopedRoutes(
         tags: ['Workspace'],
         description: 'Get workspace by ID',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: workspaceSchema,
-            },
-          },
+          200: workspaceEnvelopeJsonSchema,
         },
       },
     },
@@ -190,32 +131,21 @@ export async function registerWorkspaceScopedRoutes(
   fastify.patch(
     '/workspaces/:workspaceId',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
-        validateBody(updateWorkspaceSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
+        validateBody(updateWorkspaceSchema),
       ],
       schema: {
         tags: ['Workspace'],
         description: 'Update workspace',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1 },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: updateWorkspaceBodyJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: workspaceSchema,
-            },
-          },
+          200: workspaceEnvelopeJsonSchema,
         },
       },
     },
@@ -227,8 +157,9 @@ export async function registerWorkspaceScopedRoutes(
   fastify.delete(
     '/workspaces/:workspaceId',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner']),
       ],
@@ -236,6 +167,7 @@ export async function registerWorkspaceScopedRoutes(
         tags: ['Workspace'],
         description: 'Delete workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
         response: {
           204: {
             description: 'Workspace deleted successfully',

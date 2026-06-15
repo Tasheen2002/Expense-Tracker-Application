@@ -19,36 +19,18 @@ import {
   memberParamsSchema,
   updateMemberRoleSchema,
   paginationQuerySchema,
+  workspaceParamsJsonSchema,
+  memberParamsJsonSchema,
+  updateMemberRoleBodyJsonSchema,
+  paginationQueryJsonSchema,
+  membershipEnvelopeJsonSchema,
+  membershipListEnvelopeJsonSchema,
 } from '../validation/workspace.schema';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
-
-// Shared Response Schema for Membership
-const membershipSchema = {
-  type: 'object',
-  properties: {
-    membershipId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    role: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-// Shared Pagination Schema
-const paginationSchema = {
-  type: 'object',
-  properties: {
-    total: { type: 'integer' },
-    limit: { type: 'integer' },
-    offset: { type: 'integer' },
-    hasMore: { type: 'boolean' },
-  },
-};
 
 export async function registerMemberRoutes(
   fastify: FastifyInstance,
@@ -69,9 +51,12 @@ export async function registerMemberRoutes(
   fastify.get(
     '/workspaces/:workspaceId/members',
     {
-      preHandler: [
+      preValidation: [
         validateParams(workspaceParamsSchema),
         validateQuery(paginationQuerySchema),
+      ],
+      preHandler: [
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin', 'member']),
       ],
@@ -79,46 +64,10 @@ export async function registerMemberRoutes(
         tags: ['Member'],
         description: 'List workspace members',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Members listed successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: membershipSchema,
-                  },
-                  pagination: paginationSchema,
-                },
-              },
-            },
-          },
-          403: {
-            description: 'Forbidden',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          404: {
-            description: 'Workspace not found',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: membershipListEnvelopeJsonSchema,
         },
       },
     },
@@ -130,8 +79,9 @@ export async function registerMemberRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/members/:userId',
     {
+      preValidation: [validateParams(memberParamsSchema)],
       preHandler: [
-        validateParams(memberParamsSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
       ],
@@ -139,40 +89,11 @@ export async function registerMemberRoutes(
         tags: ['Member'],
         description: 'Remove member from workspace',
         security: [{ bearerAuth: [] }],
+        params: memberParamsJsonSchema,
         response: {
           204: {
             description: 'Member removed successfully',
             type: 'null',
-          },
-          400: {
-            description: 'Bad Request',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          403: {
-            description: 'Forbidden',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          404: {
-            description: 'Member not found',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
           },
         },
       },
@@ -185,64 +106,21 @@ export async function registerMemberRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/members/:userId/role',
     {
+      preValidation: [validateParams(memberParamsSchema)],
       preHandler: [
-        validateParams(memberParamsSchema),
-        validateBody(updateMemberRoleSchema),
+        fastify.authenticate,
         workspaceAuth,
         requireRole(['owner', 'admin']),
+        validateBody(updateMemberRoleSchema),
       ],
       schema: {
         tags: ['Member'],
         description: 'Change member role',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['role'],
-          properties: {
-            role: { type: 'string', enum: ['owner', 'admin', 'member'] },
-          },
-        },
+        params: memberParamsJsonSchema,
+        body: updateMemberRoleBodyJsonSchema,
         response: {
-          200: {
-            description: 'Member role updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              message: { type: 'string' },
-              data: membershipSchema,
-            },
-          },
-          400: {
-            description: 'Bad Request',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          403: {
-            description: 'Forbidden',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
-          404: {
-            description: 'Member not found',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'integer' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: membershipEnvelopeJsonSchema,
         },
       },
     },

@@ -16,72 +16,63 @@ import { WorkspaceController } from '../controllers/workspace.controller.js';
 import { InvitationController } from '../controllers/invitation.controller.js';
 import { MemberController } from '../controllers/member.controller.js';
 
+export interface IdentityWorkspaceModuleControllers {
+  authController: AuthController;
+  workspaceController: WorkspaceController;
+  invitationController: InvitationController;
+  memberController: MemberController;
+}
+
 export async function registerIdentityWorkspaceRoutes(
   fastify: FastifyInstance,
-  controllers: {
-    authController: AuthController;
-    workspaceController: WorkspaceController;
-    invitationController: InvitationController;
-    memberController: MemberController;
-  },
+  controllers: IdentityWorkspaceModuleControllers,
   prisma: PrismaClient
-) {
+): Promise<void> {
+  // Flat registration under prefix '/api/v1'.
+  // Authentication is handled at the individual route configuration level.
   await fastify.register(
     async (instance) => {
-      // Auth routes (public - no authentication required)
+      // Auth routes
       await registerAuthRoutes(instance, controllers.authController);
 
-      // Public invitation routes (no auth required)
-      // GET /invitations/:token
+      // Public invitation routes
       await registerPublicInvitationRoutes(
         instance,
         controllers.invitationController
       );
 
-      // Authenticated routes (all require JWT authentication)
-      await instance.register(async (authenticated) => {
-        authenticated.addHook('onRequest', async (request, reply) => {
-          await fastify.authenticate(request);
-        });
+      // User-level workspace routes
+      await registerUserWorkspaceRoutes(
+        instance,
+        controllers.workspaceController
+      );
 
-        // User-level routes (no workspace authorization)
-        // POST /workspaces, GET /workspaces
-        await registerUserWorkspaceRoutes(
-          authenticated,
-          controllers.workspaceController
-        );
+      // Token-based invitation routes
+      await registerTokenInvitationRoutes(
+        instance,
+        controllers.invitationController
+      );
 
-        // Token-based invitation routes (authenticated, no workspace auth)
-        // POST /invitations/:token/accept
-        await registerTokenInvitationRoutes(
-          authenticated,
-          controllers.invitationController
-        );
+      // Workspace-scoped routes
+      await registerWorkspaceScopedRoutes(
+        instance,
+        controllers.workspaceController,
+        prisma
+      );
 
-        // Workspace-scoped routes (workspace auth applied at route-level preHandler)
-        // GET/PATCH/DELETE /workspaces/:workspaceId
-        await registerWorkspaceScopedRoutes(
-          authenticated,
-          controllers.workspaceController,
-          prisma
-        );
+      // Workspace member routes
+      await registerMemberRoutes(
+        instance,
+        controllers.memberController,
+        prisma
+      );
 
-        // Workspace member routes
-        // GET/DELETE/PATCH /workspaces/:workspaceId/members/...
-        await registerMemberRoutes(
-          authenticated,
-          controllers.memberController,
-          prisma
-        );
-
-        // Workspace invitation routes
-        // POST/GET/DELETE /workspaces/:workspaceId/invitations/...
-        await registerWorkspaceInvitationRoutes(
-          authenticated,
-          controllers.invitationController,
-          prisma
-        );
-      });
+      // Workspace invitation routes
+      await registerWorkspaceInvitationRoutes(
+        instance,
+        controllers.invitationController,
+        prisma
+      );
     },
     { prefix: '/api/v1' }
   );
