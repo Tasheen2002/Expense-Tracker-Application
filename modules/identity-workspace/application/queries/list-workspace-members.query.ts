@@ -4,7 +4,7 @@ import { WorkspaceMembershipDTO } from '../../domain/entities/workspace-membersh
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface ListWorkspaceMembersQuery extends IQuery {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class ListWorkspaceMembersHandler implements IQueryHandler<

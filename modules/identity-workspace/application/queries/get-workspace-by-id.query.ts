@@ -3,7 +3,7 @@ import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetWorkspaceByIdQuery extends IQuery {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class GetWorkspaceByIdHandler implements IQueryHandler<

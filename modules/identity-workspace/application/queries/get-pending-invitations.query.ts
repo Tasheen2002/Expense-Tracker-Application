@@ -7,8 +7,8 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetPendingInvitationsQuery extends IQuery {
-  workspaceId: string;
-  options?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly options?: PaginationOptions;
 }
 
 export class GetPendingInvitationsHandler implements IQueryHandler<

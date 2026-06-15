@@ -5,18 +5,17 @@ import {
 } from '../../domain/errors/identity.errors';
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
-// Login User Query
 export interface LoginUserQuery extends IQuery {
-  email: string;
-  password: string;
+  readonly email: string;
+  readonly password: string;
 }
 
 export interface LoginUserResult {
-  userId: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
+  readonly userId: string;
+  readonly email: string;
+  readonly fullName: string | null;
+  readonly isActive: boolean;
+  readonly emailVerified: boolean;
 }
 
 export class LoginUserHandler implements IQueryHandler<

@@ -3,7 +3,7 @@ import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitati
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetUserInvitationsQuery extends IQuery {
-  email: string;
+  readonly email: string;
 }
 
 export class GetUserInvitationsHandler implements IQueryHandler<

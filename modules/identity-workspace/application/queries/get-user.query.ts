@@ -7,8 +7,8 @@ import {
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
 
 export interface GetUserQuery extends IQuery {
-  userId?: string;
-  email?: string;
+  readonly userId?: string;
+  readonly email?: string;
 }
 
 export class GetUserHandler implements IQueryHandler<

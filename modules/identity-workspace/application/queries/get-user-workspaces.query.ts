@@ -7,8 +7,8 @@ import {
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetUserWorkspacesQuery extends IQuery {
-  userId: string;
-  options?: PaginationOptions;
+  readonly userId: string;
+  readonly options?: PaginationOptions;
 }
 
 export class GetUserWorkspacesHandler implements IQueryHandler<
