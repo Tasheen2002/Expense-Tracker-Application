@@ -6,6 +6,38 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  workspaceParamsJsonSchema,
+  paginationQuerySchema,
+  paginationQueryJsonSchema,
+} from '../validation/common.schema';
+import {
+  workspaceExpenseParamsSchema,
+  workspaceExpenseParamsJsonSchema,
+} from '../validation/attachment.schema';
+import {
+  createSplitSchema,
+  createSplitBodyJsonSchema,
+  recordSettlementPaymentSchema,
+  recordSettlementPaymentBodyJsonSchema,
+  listSettlementsQuerySchema,
+  listSettlementsQueryJsonSchema,
+  splitParamsSchema,
+  splitParamsJsonSchema,
+  settlementParamsSchema,
+  settlementParamsJsonSchema,
+} from '../validation/expense-split.schema';
+import {
+  successResponse,
+  noContentResponse,
+  paginatedResponse,
+} from '@shared/http/response-schemas';
 
 const participantSchema = {
   type: 'object',
@@ -74,58 +106,18 @@ export async function expenseSplitRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
+      preValidation: [
+        validateParams(workspaceExpenseParamsSchema),
+        validateBody(createSplitSchema),
+      ],
       schema: {
         tags: ['Expense Split'],
         description: 'Create an expense split',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['splitType', 'participants'],
-          additionalProperties: false,
-          properties: {
-            splitType: {
-              type: 'string',
-              enum: ['EQUAL', 'EXACT', 'PERCENTAGE'],
-            },
-            participants: {
-              type: 'array',
-              minItems: 2,
-              items: {
-                type: 'object',
-                required: ['userId'],
-                additionalProperties: false,
-                properties: {
-                  userId: { type: 'string', format: 'uuid' },
-                  shareAmount: { type: 'number', minimum: 0.01 },
-                  sharePercentage: {
-                    type: 'number',
-                    minimum: 0,
-                    maximum: 100,
-                  },
-                },
-              },
-            },
-          },
-        },
+        params: workspaceExpenseParamsJsonSchema,
+        body: createSplitBodyJsonSchema,
         response: {
-          201: {
-            description: 'Split created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: splitSchema,
-            },
-          },
+          201: successResponse(splitSchema, 201),
         },
       },
     },
@@ -137,29 +129,14 @@ export async function expenseSplitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/splits/:splitId',
     {
+      preValidation: [validateParams(splitParamsSchema)],
       schema: {
         tags: ['Expense Split'],
         description: 'Get split by ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'splitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            splitId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: splitParamsJsonSchema,
         response: {
-          200: {
-            description: 'Split retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: splitSchema,
-            },
-          },
+          200: successResponse(splitSchema),
         },
       },
     },
@@ -171,29 +148,14 @@ export async function expenseSplitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
+      preValidation: [validateParams(workspaceExpenseParamsSchema)],
       schema: {
         tags: ['Expense Split'],
         description: 'Get split by expense ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: workspaceExpenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Split retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: splitSchema,
-            },
-          },
+          200: successResponse(splitSchema),
         },
       },
     },
@@ -205,49 +167,18 @@ export async function expenseSplitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/splits',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(paginationQuerySchema),
+      ],
       schema: {
         tags: ['Expense Split'],
         description: "List user's splits",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            limit: { type: 'string' },
-            offset: { type: 'string' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Splits retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: splitSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(splitSchema)),
         },
       },
     },
@@ -259,23 +190,14 @@ export async function expenseSplitRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/splits/:splitId',
     {
+      preValidation: [validateParams(splitParamsSchema)],
       schema: {
         tags: ['Expense Split'],
         description: 'Delete split',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'splitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            splitId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: splitParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -287,37 +209,18 @@ export async function expenseSplitRoutes(
   fastify.post(
     '/workspaces/:workspaceId/settlements/:settlementId/payment',
     {
+      preValidation: [
+        validateParams(settlementParamsSchema),
+        validateBody(recordSettlementPaymentSchema),
+      ],
       schema: {
         tags: ['Split Settlement'],
         description: 'Record a payment for settlement',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'settlementId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            settlementId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['amount'],
-          additionalProperties: false,
-          properties: {
-            amount: { type: 'number', minimum: 0.01 },
-          },
-        },
+        params: settlementParamsJsonSchema,
+        body: recordSettlementPaymentBodyJsonSchema,
         response: {
-          200: {
-            description: 'Payment recorded successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: settlementSchema,
-            },
-          },
+          200: successResponse(settlementSchema),
         },
       },
     },
@@ -329,53 +232,18 @@ export async function expenseSplitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/settlements',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(listSettlementsQuerySchema),
+      ],
       schema: {
         tags: ['Split Settlement'],
         description: "List user's settlements",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              enum: ['PENDING', 'PARTIAL', 'SETTLED'],
-            },
-            limit: { type: 'string' },
-            offset: { type: 'string' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        querystring: listSettlementsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Settlements retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: settlementSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(settlementSchema)),
         },
       },
     },
@@ -387,34 +255,14 @@ export async function expenseSplitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/splits/:splitId/settlements',
     {
+      preValidation: [validateParams(splitParamsSchema)],
       schema: {
         tags: ['Split Settlement'],
         description: 'Get settlements for a split',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'splitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            splitId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: splitParamsJsonSchema,
         response: {
-          200: {
-            description: 'Split settlements retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: settlementSchema },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(settlementSchema)),
         },
       },
     },

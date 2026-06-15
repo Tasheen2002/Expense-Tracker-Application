@@ -6,6 +6,25 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import {
+  validateBody,
+  validateParams,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  workspaceParamsJsonSchema,
+} from '../validation/common.schema';
+import {
+  recurringExpenseParamsSchema,
+  recurringExpenseParamsJsonSchema,
+  createRecurringExpenseSchema,
+  createRecurringExpenseBodyJsonSchema,
+  recurringTriggerSchema,
+  recurringTriggerBodyJsonSchema,
+} from '../validation/recurring-expense.schema';
+import {
+  successResponse,
+} from '@shared/http/response-schemas';
 
 const templateSchema = {
   type: 'object',
@@ -59,57 +78,18 @@ export async function recurringExpenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/recurring',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(createRecurringExpenseSchema),
+      ],
       schema: {
         tags: ['Recurring Expense'],
         description: 'Create a recurring expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['frequency', 'interval', 'startDate', 'template'],
-          additionalProperties: false,
-          properties: {
-            frequency: {
-              type: 'string',
-              enum: ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'],
-            },
-            interval: { type: 'integer', minimum: 1 },
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-            template: {
-              type: 'object',
-              required: ['title', 'amount', 'currency', 'paymentMethod'],
-              additionalProperties: false,
-              properties: {
-                title: { type: 'string', minLength: 1, maxLength: 255 },
-                description: { type: 'string', maxLength: 5000 },
-                amount: { type: 'number', minimum: 0.01 },
-                currency: { type: 'string', minLength: 3, maxLength: 3 },
-                categoryId: { type: 'string', format: 'uuid' },
-                merchant: { type: 'string', maxLength: 255 },
-                paymentMethod: { type: 'string' },
-                isReimbursable: { type: 'boolean' },
-              },
-            },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createRecurringExpenseBodyJsonSchema,
         response: {
-          201: {
-            description: 'Recurring expense created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: recurringExpenseSchema,
-            },
-          },
+          201: successResponse(recurringExpenseSchema, 201),
         },
       },
     },
@@ -120,29 +100,14 @@ export async function recurringExpenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/recurring/:id/pause',
     {
+      preValidation: [validateParams(recurringExpenseParamsSchema)],
       schema: {
         tags: ['Recurring Expense'],
         description: 'Pause a recurring expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: recurringExpenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Recurring expense paused',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: recurringExpenseSchema,
-            },
-          },
+          200: successResponse(recurringExpenseSchema),
         },
       },
     },
@@ -153,29 +118,14 @@ export async function recurringExpenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/recurring/:id/resume',
     {
+      preValidation: [validateParams(recurringExpenseParamsSchema)],
       schema: {
         tags: ['Recurring Expense'],
         description: 'Resume a recurring expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: recurringExpenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Recurring expense resumed',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: recurringExpenseSchema,
-            },
-          },
+          200: successResponse(recurringExpenseSchema),
         },
       },
     },
@@ -186,29 +136,14 @@ export async function recurringExpenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/recurring/:id/stop',
     {
+      preValidation: [validateParams(recurringExpenseParamsSchema)],
       schema: {
         tags: ['Recurring Expense'],
         description: 'Stop a recurring expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: recurringExpenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Recurring expense stopped',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: recurringExpenseSchema,
-            },
-          },
+          200: successResponse(recurringExpenseSchema),
         },
       },
     },
@@ -219,34 +154,20 @@ export async function recurringExpenseRoutes(
   fastify.post(
     '/recurring/trigger',
     {
+      preValidation: [validateBody(recurringTriggerSchema)],
       schema: {
         tags: ['Recurring Expense'],
         description:
           'System trigger to process due recurring expenses (internal use only)',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            secret: { type: 'string' },
-          },
-        },
+        body: recurringTriggerBodyJsonSchema,
         response: {
-          200: {
-            description: 'Recurring expenses processed',
+          200: successResponse({
             type: 'object',
             properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  count: { type: 'number' },
-                },
-              },
+              count: { type: 'number' },
             },
-          },
+          }),
         },
       },
     },

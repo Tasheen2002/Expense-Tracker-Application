@@ -6,6 +6,22 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import {
+  validateBody,
+  validateParams,
+} from '../validation/validator';
+import {
+  createAttachmentSchema,
+  createAttachmentBodyJsonSchema,
+  workspaceExpenseParamsSchema,
+  workspaceExpenseParamsJsonSchema,
+  attachmentParamsSchema,
+  attachmentParamsJsonSchema,
+} from '../validation/attachment.schema';
+import {
+  successResponse,
+  noContentResponse,
+} from '@shared/http/response-schemas';
 
 const attachmentSchema = {
   type: 'object',
@@ -40,56 +56,18 @@ export async function attachmentRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
+      preValidation: [
+        validateParams(workspaceExpenseParamsSchema),
+        validateBody(createAttachmentSchema),
+      ],
       schema: {
         tags: ['Attachment'],
         description: 'Upload and link attachment to expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['fileName', 'filePath', 'fileSize', 'mimeType'],
-          additionalProperties: false,
-          properties: {
-            fileName: { type: 'string', minLength: 1, maxLength: 255 },
-            filePath: { type: 'string', minLength: 1, maxLength: 500 },
-            fileSize: { type: 'number', minimum: 1, maximum: 10485760 },
-            mimeType: {
-              type: 'string',
-              enum: [
-                'image/jpeg',
-                'image/jpg',
-                'image/png',
-                'image/gif',
-                'image/webp',
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel',
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'text/csv',
-                'text/plain',
-              ],
-            },
-          },
-        },
+        params: workspaceExpenseParamsJsonSchema,
+        body: createAttachmentBodyJsonSchema,
         response: {
-          201: {
-            description: 'Attachment created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: attachmentSchema,
-            },
-          },
+          201: successResponse(attachmentSchema, 201),
         },
       },
     },
@@ -101,24 +79,14 @@ export async function attachmentRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
+      preValidation: [validateParams(attachmentParamsSchema)],
       schema: {
         tags: ['Attachment'],
         description: 'Delete an attachment',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId', 'attachmentId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-            attachmentId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: attachmentParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -130,30 +98,14 @@ export async function attachmentRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
+      preValidation: [validateParams(attachmentParamsSchema)],
       schema: {
         tags: ['Attachment'],
         description: 'Get attachment by ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId', 'attachmentId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-            attachmentId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: attachmentParamsJsonSchema,
         response: {
-          200: {
-            description: 'Attachment retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: attachmentSchema,
-            },
-          },
+          200: successResponse(attachmentSchema),
         },
       },
     },
@@ -165,34 +117,20 @@ export async function attachmentRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
+      preValidation: [validateParams(workspaceExpenseParamsSchema)],
       schema: {
         tags: ['Attachment'],
         description: 'List all attachments for an expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: workspaceExpenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Attachments retrieved successfully',
+          200: successResponse({
             type: 'object',
+            required: ['items'],
             properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: attachmentSchema },
-                },
-              },
+              items: { type: 'array', items: attachmentSchema },
             },
-          },
+          }),
         },
       },
     },

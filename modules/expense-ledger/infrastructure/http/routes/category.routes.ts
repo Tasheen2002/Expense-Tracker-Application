@@ -6,6 +6,30 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  workspaceParamsJsonSchema,
+} from '../validation/common.schema';
+import {
+  categoryParamsSchema,
+  categoryParamsJsonSchema,
+  createCategorySchema,
+  createCategoryBodyJsonSchema,
+  updateCategorySchema,
+  updateCategoryBodyJsonSchema,
+  listCategoriesQuerySchema,
+  listCategoriesQueryJsonSchema,
+} from '../validation/category.schema';
+import {
+  successResponse,
+  noContentResponse,
+  paginatedResponse,
+} from '@shared/http/response-schemas';
 
 const categorySchema = {
   type: 'object',
@@ -41,38 +65,18 @@ export async function categoryRoutes(
   fastify.post(
     '/workspaces/:workspaceId/categories',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(createCategorySchema),
+      ],
       schema: {
         tags: ['Category'],
         description: 'Create a new category',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            color: { type: 'string', pattern: '^#[0-9A-F]{6}$' },
-            icon: { type: 'string', maxLength: 50 },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createCategoryBodyJsonSchema,
         response: {
-          201: {
-            description: 'Category created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: categorySchema,
-            },
-          },
+          201: successResponse(categorySchema, 201),
         },
       },
     },
@@ -84,38 +88,18 @@ export async function categoryRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
+      preValidation: [
+        validateParams(categoryParamsSchema),
+        validateBody(updateCategorySchema),
+      ],
       schema: {
         tags: ['Category'],
         description: 'Update a category',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'categoryId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            categoryId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            color: { type: 'string', pattern: '^#[0-9A-F]{6}$' },
-            icon: { type: 'string', maxLength: 50 },
-          },
-        },
+        params: categoryParamsJsonSchema,
+        body: updateCategoryBodyJsonSchema,
         response: {
-          200: {
-            description: 'Category updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: categorySchema,
-            },
-          },
+          200: successResponse(categorySchema),
         },
       },
     },
@@ -127,23 +111,14 @@ export async function categoryRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
+      preValidation: [validateParams(categoryParamsSchema)],
       schema: {
         tags: ['Category'],
         description: 'Delete a category',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'categoryId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            categoryId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: categoryParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -155,29 +130,14 @@ export async function categoryRoutes(
   fastify.get(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
+      preValidation: [validateParams(categoryParamsSchema)],
       schema: {
         tags: ['Category'],
         description: 'Get category by ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'categoryId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            categoryId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: categoryParamsJsonSchema,
         response: {
-          200: {
-            description: 'Category retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: categorySchema,
-            },
-          },
+          200: successResponse(categorySchema),
         },
       },
     },
@@ -189,48 +149,18 @@ export async function categoryRoutes(
   fastify.get(
     '/workspaces/:workspaceId/categories',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(listCategoriesQuerySchema),
+      ],
       schema: {
         tags: ['Category'],
         description: 'List all categories',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            activeOnly: { type: 'string', enum: ['true', 'false'] },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        querystring: listCategoriesQueryJsonSchema,
         response: {
-          200: {
-            description: 'Categories retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: categorySchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(categorySchema)),
         },
       },
     },

@@ -6,8 +6,30 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody } from '../validation/validator';
-import { createTagSchema, updateTagSchema } from '../validation/tag.schema';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
+import {
+  workspaceParamsSchema,
+  workspaceParamsJsonSchema,
+  paginationQuerySchema,
+  paginationQueryJsonSchema,
+} from '../validation/common.schema';
+import {
+  tagParamsSchema,
+  tagParamsJsonSchema,
+  createTagSchema,
+  createTagBodyJsonSchema,
+  updateTagSchema,
+  updateTagBodyJsonSchema,
+} from '../validation/tag.schema';
+import {
+  successResponse,
+  noContentResponse,
+  paginatedResponse,
+} from '@shared/http/response-schemas';
 
 const tagSchema = {
   type: 'object',
@@ -39,38 +61,18 @@ export async function tagRoutes(
   fastify.post(
     '/workspaces/:workspaceId/tags',
     {
-      preValidation: [validateBody(createTagSchema)],
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateBody(createTagSchema),
+      ],
       schema: {
         tags: ['Tag'],
         description: 'Create a new tag',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name'],
-          additionalProperties: false,
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 50 },
-            color: { type: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createTagBodyJsonSchema,
         response: {
-          201: {
-            description: 'Tag created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: tagSchema,
-            },
-          },
+          201: successResponse(tagSchema, 201),
         },
       },
     },
@@ -82,38 +84,18 @@ export async function tagRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/tags/:tagId',
     {
-      preValidation: [validateBody(updateTagSchema)],
+      preValidation: [
+        validateParams(tagParamsSchema),
+        validateBody(updateTagSchema),
+      ],
       schema: {
         tags: ['Tag'],
         description: 'Update a tag',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 50 },
-            color: { type: 'string', pattern: '^#[0-9A-Fa-f]{6}$' },
-          },
-        },
+        params: tagParamsJsonSchema,
+        body: updateTagBodyJsonSchema,
         response: {
-          200: {
-            description: 'Tag updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: tagSchema,
-            },
-          },
+          200: successResponse(tagSchema),
         },
       },
     },
@@ -125,23 +107,14 @@ export async function tagRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      preValidation: [validateParams(tagParamsSchema)],
       schema: {
         tags: ['Tag'],
         description: 'Delete a tag',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: tagParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -153,29 +126,14 @@ export async function tagRoutes(
   fastify.get(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      preValidation: [validateParams(tagParamsSchema)],
       schema: {
         tags: ['Tag'],
         description: 'Get tag by ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'tagId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            tagId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: tagParamsJsonSchema,
         response: {
-          200: {
-            description: 'Tag retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: tagSchema,
-            },
-          },
+          200: successResponse(tagSchema),
         },
       },
     },
@@ -187,42 +145,18 @@ export async function tagRoutes(
   fastify.get(
     '/workspaces/:workspaceId/tags',
     {
+      preValidation: [
+        validateParams(workspaceParamsSchema),
+        validateQuery(paginationQuerySchema),
+      ],
       schema: {
         tags: ['Tag'],
         description: 'List all tags',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Tags retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: tagSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(tagSchema)),
         },
       },
     },
