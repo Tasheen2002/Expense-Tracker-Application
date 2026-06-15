@@ -147,6 +147,20 @@ export interface UserProps {
   updatedAt: Date;
 }
 
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface UserDTO {
+  userId: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class User extends AggregateRoot {
   private constructor(private props: UserProps) {
     super();
@@ -260,20 +274,6 @@ export class User extends AggregateRoot {
       updatedAt: user.props.updatedAt.toISOString(),
     };
   }
-}
-
-// ============================================================================
-// DTO
-// ============================================================================
-
-export interface UserDTO {
-  userId: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // Supporting types and interfaces
