@@ -2,14 +2,14 @@ import { ReceiptService } from '../services/receipt.service';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface DeleteReceiptCommand extends ICommand {
-  receiptId: string;
-  workspaceId: string;
-  userId: string;
-  permanent?: boolean;
+  readonly receiptId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly permanent?: boolean;
 }
 
 export class DeleteReceiptHandler implements ICommandHandler<

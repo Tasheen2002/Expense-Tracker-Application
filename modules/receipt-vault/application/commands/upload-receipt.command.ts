@@ -6,22 +6,22 @@ import { StorageProvider } from '../../domain/enums/storage-provider';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface UploadReceiptCommand extends ICommand {
-  workspaceId: string;
-  userId: string;
-  fileName: string;
-  originalName: string;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  fileHash?: string;
-  receiptType?: ReceiptType;
-  storageProvider: string;
-  storageBucket?: string;
-  storageKey?: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly fileName: string;
+  readonly originalName: string;
+  readonly filePath: string;
+  readonly fileSize: number;
+  readonly mimeType: string;
+  readonly fileHash?: string;
+  readonly receiptType?: ReceiptType;
+  readonly storageProvider: string;
+  readonly storageBucket?: string;
+  readonly storageKey?: string;
 }
 
 export class UploadReceiptHandler implements ICommandHandler<

@@ -3,14 +3,14 @@ import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface LinkReceiptToExpenseCommand extends ICommand {
-  receiptId: string;
-  expenseId: string;
-  workspaceId: string;
-  userId: string;
+  readonly receiptId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class LinkReceiptToExpenseHandler implements ICommandHandler<

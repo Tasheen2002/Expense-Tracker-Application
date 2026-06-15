@@ -2,14 +2,14 @@ import { ReceiptService } from '../services/receipt.service';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface AddReceiptTagCommand extends ICommand {
-  receiptId: string;
-  tagId: string;
-  workspaceId: string;
-  userId: string;
+  readonly receiptId: string;
+  readonly tagId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class AddReceiptTagHandler implements ICommandHandler<

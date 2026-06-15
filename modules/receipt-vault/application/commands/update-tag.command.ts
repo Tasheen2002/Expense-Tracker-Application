@@ -3,15 +3,15 @@ import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-defin
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface UpdateTagCommand extends ICommand {
-  tagId: string;
-  workspaceId: string;
-  name?: string;
-  color?: string;
-  description?: string;
+  readonly tagId: string;
+  readonly workspaceId: string;
+  readonly name?: string;
+  readonly color?: string;
+  readonly description?: string;
 }
 
 export class UpdateTagHandler implements ICommandHandler<

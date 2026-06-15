@@ -3,29 +3,29 @@ import { ReceiptMetadataDTO } from '../../domain/entities/receipt-metadata.entit
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface UpdateReceiptMetadataCommand extends ICommand {
-  receiptId: string;
-  workspaceId: string;
-  userId: string;
-  merchantName?: string;
-  merchantAddress?: string;
-  merchantPhone?: string;
-  merchantTaxId?: string;
-  transactionDate?: Date;
-  transactionTime?: string;
-  subtotal?: number | string;
-  taxAmount?: number | string;
-  tipAmount?: number | string;
-  totalAmount?: number | string;
-  currency?: string;
-  paymentMethod?: string;
-  lastFourDigits?: string;
-  invoiceNumber?: string;
-  poNumber?: string;
-  notes?: string;
+  readonly receiptId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly merchantName?: string;
+  readonly merchantAddress?: string;
+  readonly merchantPhone?: string;
+  readonly merchantTaxId?: string;
+  readonly transactionDate?: Date;
+  readonly transactionTime?: string;
+  readonly subtotal?: number | string;
+  readonly taxAmount?: number | string;
+  readonly tipAmount?: number | string;
+  readonly totalAmount?: number | string;
+  readonly currency?: string;
+  readonly paymentMethod?: string;
+  readonly lastFourDigits?: string;
+  readonly invoiceNumber?: string;
+  readonly poNumber?: string;
+  readonly notes?: string;
 }
 
 // Keep DTO alias for backward compatibility with service

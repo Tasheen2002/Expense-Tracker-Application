@@ -3,14 +3,14 @@ import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-defin
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface CreateTagCommand extends ICommand {
-  workspaceId: string;
-  name: string;
-  color?: string;
-  description?: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly color?: string;
+  readonly description?: string;
 }
 
 export class CreateTagHandler implements ICommandHandler<

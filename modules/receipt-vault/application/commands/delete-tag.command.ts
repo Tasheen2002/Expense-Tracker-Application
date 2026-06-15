@@ -2,12 +2,12 @@ import { TagService } from '../services/tag.service';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface DeleteTagCommand extends ICommand {
-  tagId: string;
-  workspaceId: string;
+  readonly tagId: string;
+  readonly workspaceId: string;
 }
 
 export class DeleteTagHandler implements ICommandHandler<
