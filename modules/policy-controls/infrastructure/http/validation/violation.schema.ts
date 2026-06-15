@@ -1,9 +1,39 @@
 import { z } from "zod";
+import { toJsonSchema } from "./validator";
+import { ViolationStatus } from "../../../domain/enums/violation-status.enum";
 import {
   VIOLATION_NOTE_MAX_LENGTH,
   OVERRIDE_REASON_MIN_LENGTH,
   OVERRIDE_REASON_MAX_LENGTH,
 } from "../../../domain/constants/policy-controls.constants";
+
+/**
+ * Violation Params Schema
+ */
+export const violationParamsSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID format"),
+  violationId: z.string().uuid("Invalid violation ID format"),
+});
+
+/**
+ * Violation Query Schema
+ */
+export const violationQuerySchema = z.object({
+  status: z.nativeEnum(ViolationStatus).optional(),
+  userId: z.string().uuid().optional(),
+  expenseId: z.string().uuid().optional(),
+  policyId: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  offset: z.string().regex(/^\d+$/).optional(),
+});
+
+/**
+ * Violation Stats Query Schema
+ */
+export const violationStatsQuerySchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+});
 
 /**
  * Acknowledge Violation Schema
@@ -63,3 +93,72 @@ export const exemptViolationSchema = z.object({
 });
 
 export type ExemptViolationInput = z.infer<typeof exemptViolationSchema>;
+
+// Pre-computed JSON schemas
+export const violationParamsJsonSchema = toJsonSchema(violationParamsSchema);
+export const violationQueryJsonSchema = toJsonSchema(violationQuerySchema);
+export const violationStatsQueryJsonSchema = toJsonSchema(violationStatsQuerySchema);
+export const acknowledgeViolationBodyJsonSchema = toJsonSchema(acknowledgeViolationSchema);
+export const resolveViolationBodyJsonSchema = toJsonSchema(resolveViolationSchema);
+export const overrideViolationBodyJsonSchema = toJsonSchema(overrideViolationSchema);
+export const exemptViolationBodyJsonSchema = toJsonSchema(exemptViolationSchema);
+
+import { ViolationSeverity } from "../../../domain/enums/violation-severity.enum";
+
+export const violationResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  policyId: z.string().uuid(),
+  expenseId: z.string(),
+  userId: z.string(),
+  status: z.nativeEnum(ViolationStatus),
+  severity: z.nativeEnum(ViolationSeverity),
+  violationDetails: z.string(),
+  expenseAmount: z.number().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  acknowledgedAt: z.string().nullable().optional(),
+  acknowledgedBy: z.string().nullable().optional(),
+  resolvedAt: z.string().nullable().optional(),
+  resolvedBy: z.string().nullable().optional(),
+  resolutionNotes: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const violationEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: violationResponseSchema,
+  })
+);
+
+export const violationListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(violationResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const violationStatsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      total: z.number().int(),
+      pending: z.number().int(),
+      byStatus: z.record(z.number().int()),
+      bySeverity: z.record(z.number().int()),
+    }),
+  })
+);

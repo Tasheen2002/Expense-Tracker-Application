@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { toJsonSchema } from "./validator";
+import { ExemptionStatus } from "../../../domain/enums/exemption-status.enum";
 import {
   EXEMPTION_REASON_MIN_LENGTH,
   EXEMPTION_REASON_MAX_LENGTH,
@@ -9,7 +11,7 @@ import {
 } from "../../../domain/constants/policy-controls.constants";
 
 /**
- * Exemption scope schema
+ * Exemption Scope Schema
  */
 export const exemptionScopeSchema = z.object({
   categoryIds: z
@@ -17,6 +19,33 @@ export const exemptionScopeSchema = z.object({
     .max(MAX_ALLOWED_CATEGORIES)
     .optional(),
   maxAmount: z.number().min(0).max(MAX_THRESHOLD_AMOUNT).optional(),
+});
+
+/**
+ * Exemption Params Schema
+ */
+export const exemptionParamsSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID format"),
+  exemptionId: z.string().uuid("Invalid exemption ID format"),
+});
+
+/**
+ * Exemption Query Schema
+ */
+export const exemptionQuerySchema = z.object({
+  status: z.nativeEnum(ExemptionStatus).optional(),
+  userId: z.string().uuid().optional(),
+  policyId: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  offset: z.string().regex(/^\d+$/).optional(),
+});
+
+/**
+ * Check Active Exemption Query Schema
+ */
+export const checkActiveExemptionQuerySchema = z.object({
+  userId: z.string().uuid("Invalid user ID format"),
+  policyId: z.string().uuid("Invalid policy ID format"),
 });
 
 /**
@@ -92,3 +121,73 @@ export const rejectExemptionSchema = z.object({
 });
 
 export type RejectExemptionInput = z.infer<typeof rejectExemptionSchema>;
+
+// Pre-computed JSON schemas
+export const exemptionParamsJsonSchema = toJsonSchema(exemptionParamsSchema);
+export const exemptionQueryJsonSchema = toJsonSchema(exemptionQuerySchema);
+export const checkActiveExemptionQueryJsonSchema = toJsonSchema(checkActiveExemptionQuerySchema);
+export const requestExemptionBodyJsonSchema = toJsonSchema(requestExemptionSchema);
+export const approveExemptionBodyJsonSchema = toJsonSchema(approveExemptionSchema);
+export const rejectExemptionBodyJsonSchema = toJsonSchema(rejectExemptionSchema);
+
+export const exemptionResponseSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  policyId: z.string(),
+  userId: z.string(),
+  status: z.nativeEnum(ExemptionStatus),
+  reason: z.string(),
+  requestedBy: z.string(),
+  approvedBy: z.string().nullable().optional(),
+  approvedAt: z.string().nullable().optional(),
+  rejectedBy: z.string().nullable().optional(),
+  rejectedAt: z.string().nullable().optional(),
+  rejectionReason: z.string().nullable().optional(),
+  startDate: z.string(),
+  endDate: z.string(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const exemptionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: exemptionResponseSchema,
+  })
+);
+
+export const createExemptionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: exemptionResponseSchema,
+  })
+);
+
+export const exemptionListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(exemptionResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const activeExemptionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: exemptionResponseSchema.nullable(),
+  })
+);

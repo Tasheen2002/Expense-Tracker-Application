@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toJsonSchema } from "./validator";
 import {
   POLICY_NAME_MIN_LENGTH,
   POLICY_NAME_MAX_LENGTH,
@@ -13,6 +14,31 @@ import {
 } from "../../../domain/constants/policy-controls.constants";
 import { PolicyType } from "../../../domain/enums/policy-type.enum";
 import { ViolationSeverity } from "../../../domain/enums/violation-severity.enum";
+
+/**
+ * Workspace Params Schema
+ */
+export const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID format"),
+});
+
+/**
+ * Policy Params Schema
+ */
+export const policyParamsSchema = z.object({
+  workspaceId: z.string().uuid("Invalid workspace ID format"),
+  policyId: z.string().uuid("Invalid policy ID format"),
+});
+
+/**
+ * Policy Query Schema
+ */
+export const policyQuerySchema = z.object({
+  activeOnly: z.string().optional(),
+  policyType: z.nativeEnum(PolicyType).optional(),
+  limit: z.string().regex(/^\d+$/).optional(),
+  offset: z.string().regex(/^\d+$/).optional(),
+});
 
 /**
  * Policy configuration schema based on policy type
@@ -118,3 +144,66 @@ export const updatePolicySchema = z.object({
 });
 
 export type UpdatePolicyInput = z.infer<typeof updatePolicySchema>;
+
+export const policyResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  policyType: z.nativeEnum(PolicyType),
+  severity: z.nativeEnum(ViolationSeverity),
+  configuration: z.record(z.any()),
+  priority: z.number().int(),
+  isActive: z.boolean(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// Pre-computed JSON schemas
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const policyParamsJsonSchema = toJsonSchema(policyParamsSchema);
+export const policyQueryJsonSchema = toJsonSchema(policyQuerySchema);
+export const createPolicyBodyJsonSchema = toJsonSchema(createPolicySchema);
+export const updatePolicyBodyJsonSchema = toJsonSchema(updatePolicySchema);
+
+export const policyEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: policyResponseSchema,
+  })
+);
+
+export const createPolicyEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: policyResponseSchema,
+  })
+);
+
+export const policyListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(policyResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const policyActionSuccessResponseJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
