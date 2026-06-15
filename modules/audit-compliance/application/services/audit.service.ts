@@ -2,7 +2,7 @@ import { AuditLog, AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import { IAuditLogRepository, AuditLogFilter } from '../../domain/repositories/audit-log.repository';
 import { AuditLogNotFoundError, AuditRetentionViolationError } from '../../domain/errors/audit.errors';
-import { PaginatedResult, PaginationOptions } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult, PaginationOptions } from '@core/domain/interfaces/paginated-result.interface';
 
 export type { AuditLogDTO };
 
