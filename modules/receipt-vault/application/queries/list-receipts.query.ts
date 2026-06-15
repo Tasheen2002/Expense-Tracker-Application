@@ -5,21 +5,21 @@ import { ReceiptType } from '../../domain/enums/receipt-type';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/application/cqrs';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListReceiptsQuery extends IQuery {
-  workspaceId: string;
-  userId?: string;
-  expenseId?: string;
-  status?: ReceiptStatus;
-  receiptType?: ReceiptType;
-  isLinked?: boolean;
-  isDeleted?: boolean;
-  fromDate?: Date;
-  toDate?: Date;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly userId?: string;
+  readonly expenseId?: string;
+  readonly status?: ReceiptStatus;
+  readonly receiptType?: ReceiptType;
+  readonly isLinked?: boolean;
+  readonly isDeleted?: boolean;
+  readonly fromDate?: Date;
+  readonly toDate?: Date;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListReceiptsHandler implements IQueryHandler<ListReceiptsQuery, PaginatedResult<ReceiptDTO>> {

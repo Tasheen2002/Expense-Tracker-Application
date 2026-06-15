@@ -2,19 +2,19 @@ import { ReceiptService } from '../services/receipt.service';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ReceiptStats {
-  total: number;
-  pending: number;
-  processing: number;
-  processed: number;
-  failed: number;
-  verified: number;
+  readonly total: number;
+  readonly pending: number;
+  readonly processing: number;
+  readonly processed: number;
+  readonly failed: number;
+  readonly verified: number;
 }
 
 export interface GetReceiptStatsQuery extends IQuery {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class GetReceiptStatsHandler implements IQueryHandler<GetReceiptStatsQuery, ReceiptStats> {

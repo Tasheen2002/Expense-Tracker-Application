@@ -4,11 +4,11 @@ import { ReceiptMetadataNotFoundError } from '../../domain/errors/receipt.errors
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetReceiptMetadataQuery extends IQuery {
-  receiptId: string;
-  workspaceId: string;
+  readonly receiptId: string;
+  readonly workspaceId: string;
 }
 
 export class GetReceiptMetadataHandler implements IQueryHandler<GetReceiptMetadataQuery, ReceiptMetadataDTO> {

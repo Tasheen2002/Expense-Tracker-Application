@@ -3,12 +3,12 @@ import { ReceiptDTO } from '../../domain/entities/receipt.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/application/cqrs';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface GetReceiptsByExpenseQuery extends IQuery {
-  expenseId: string;
-  workspaceId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
 export class GetReceiptsByExpenseHandler implements IQueryHandler<GetReceiptsByExpenseQuery, PaginatedResult<ReceiptDTO>> {

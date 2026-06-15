@@ -3,15 +3,15 @@ import { ReceiptTagDefinitionDTO } from '../../domain/entities/receipt-tag-defin
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListTagsQuery extends IQuery {
-  workspaceId: string;
-  options?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly options?: PaginationOptions;
 }
 
 export class ListTagsHandler implements IQueryHandler<ListTagsQuery, PaginatedResult<ReceiptTagDefinitionDTO>> {

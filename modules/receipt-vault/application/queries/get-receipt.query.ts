@@ -4,11 +4,11 @@ import { ReceiptNotFoundError } from '../../domain/errors/receipt.errors';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetReceiptQuery extends IQuery {
-  receiptId: string;
-  workspaceId: string;
+  readonly receiptId: string;
+  readonly workspaceId: string;
 }
 
 export class GetReceiptHandler implements IQueryHandler<GetReceiptQuery, ReceiptDTO> {
