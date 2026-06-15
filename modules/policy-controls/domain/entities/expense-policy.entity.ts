@@ -132,6 +132,21 @@ export interface ExpensePolicyProps {
   updatedAt: Date;
 }
 
+export interface ExpensePolicyDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  policyType: PolicyType;
+  severity: ViolationSeverity;
+  configuration: PolicyConfiguration;
+  priority: number;
+  isActive: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class ExpensePolicy extends AggregateRoot {
   private constructor(private props: ExpensePolicyProps) {
     super();
@@ -337,19 +352,4 @@ export class ExpensePolicy extends AggregateRoot {
       updatedAt: policy.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ExpensePolicyDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  description?: string;
-  policyType: PolicyType;
-  severity: ViolationSeverity;
-  configuration: PolicyConfiguration;
-  priority: number;
-  isActive: boolean;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }

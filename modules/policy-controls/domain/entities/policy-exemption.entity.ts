@@ -138,6 +138,26 @@ export interface PolicyExemptionProps {
   updatedAt: Date;
 }
 
+export interface PolicyExemptionDTO {
+  id: string;
+  workspaceId: string;
+  policyId: string;
+  userId: string;
+  status: ExemptionStatus;
+  reason: string;
+  requestedBy: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class PolicyExemption extends AggregateRoot {
   private constructor(private props: PolicyExemptionProps) {
     super();
@@ -315,24 +335,4 @@ export class PolicyExemption extends AggregateRoot {
       updatedAt: exemption.updatedAt.toISOString(),
     };
   }
-}
-
-export interface PolicyExemptionDTO {
-  id: string;
-  workspaceId: string;
-  policyId: string;
-  userId: string;
-  status: ExemptionStatus;
-  reason: string;
-  requestedBy: string;
-  approvedBy?: string;
-  approvedAt?: string;
-  rejectedBy?: string;
-  rejectedAt?: string;
-  rejectionReason?: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

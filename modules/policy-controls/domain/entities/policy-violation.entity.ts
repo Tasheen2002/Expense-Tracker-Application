@@ -111,6 +111,26 @@ export interface PolicyViolationProps {
   updatedAt: Date;
 }
 
+export interface PolicyViolationDTO {
+  id: string;
+  workspaceId: string;
+  policyId: string;
+  expenseId: string;
+  userId: string;
+  status: ViolationStatus;
+  severity: ViolationSeverity;
+  violationDetails: string;
+  expenseAmount?: number;
+  currency?: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  resolutionNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class PolicyViolation extends AggregateRoot {
   private constructor(private props: PolicyViolationProps) {
     super();
@@ -259,24 +279,4 @@ export class PolicyViolation extends AggregateRoot {
       updatedAt: violation.updatedAt.toISOString(),
     };
   }
-}
-
-export interface PolicyViolationDTO {
-  id: string;
-  workspaceId: string;
-  policyId: string;
-  expenseId: string;
-  userId: string;
-  status: ViolationStatus;
-  severity: ViolationSeverity;
-  violationDetails: string;
-  expenseAmount?: number;
-  currency?: string;
-  acknowledgedAt?: string;
-  acknowledgedBy?: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
-  resolutionNotes?: string;
-  createdAt: string;
-  updatedAt: string;
 }
