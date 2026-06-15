@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toJsonSchema } from "./validator";
 import {
   MAX_FILE_SIZE,
   MIN_FILE_SIZE,
@@ -94,15 +95,13 @@ export const listReceiptsQuerySchema = z.object({
     .optional()
     .refine((val) => !val || !isNaN(Date.parse(val)), {
       message: "Invalid date format",
-    })
-    .transform((val) => (val ? new Date(val) : undefined)),
+    }),
   toDate: z
     .string()
     .optional()
     .refine((val) => !val || !isNaN(Date.parse(val)), {
       message: "Invalid date format",
-    })
-    .transform((val) => (val ? new Date(val) : undefined)),
+    }),
   limit: z
     .string()
     .optional()
@@ -130,3 +129,83 @@ export const deleteReceiptQuerySchema = z.object({
 });
 
 export type DeleteReceiptQuery = z.infer<typeof deleteReceiptQuerySchema>;
+
+// Response schemas
+export const receiptResponseSchema = z.object({
+  receiptId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  expenseId: z.string().uuid().nullable().optional(),
+  userId: z.string().uuid(),
+  fileName: z.string(),
+  originalName: z.string(),
+  filePath: z.string(),
+  fileSize: z.number().int(),
+  mimeType: z.string(),
+  fileHash: z.string().optional().nullable(),
+  receiptType: z.string(),
+  status: z.string(),
+  storageProvider: z.string(),
+  storageBucket: z.string().optional().nullable(),
+  storageKey: z.string().optional().nullable(),
+  thumbnailPath: z.string().optional().nullable(),
+  ocrText: z.string().optional().nullable(),
+  ocrConfidence: z.string().optional().nullable(),
+  processedAt: z.string().optional().nullable(),
+  failureReason: z.string().optional().nullable(),
+  isLinked: z.boolean(),
+  isDeleted: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  deletedAt: z.string().optional().nullable(),
+});
+
+export const receiptStatsResponseSchema = z.object({
+  total: z.number().int(),
+  pending: z.number().int(),
+  processing: z.number().int(),
+  processed: z.number().int(),
+  failed: z.number().int(),
+  verified: z.number().int(),
+});
+
+// Pre-computed JSON schemas
+export const uploadReceiptBodyJsonSchema = toJsonSchema(uploadReceiptSchema);
+export const linkToExpenseBodyJsonSchema = toJsonSchema(linkToExpenseSchema);
+export const processReceiptBodyJsonSchema = toJsonSchema(processReceiptSchema);
+export const rejectReceiptBodyJsonSchema = toJsonSchema(rejectReceiptSchema);
+export const listReceiptsQueryJsonSchema = toJsonSchema(listReceiptsQuerySchema);
+export const deleteReceiptQueryJsonSchema = toJsonSchema(deleteReceiptQuerySchema);
+
+// Response envelopes
+export const receiptEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: receiptResponseSchema,
+  })
+);
+
+export const receiptListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(receiptResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const receiptStatsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: receiptStatsResponseSchema,
+  })
+);

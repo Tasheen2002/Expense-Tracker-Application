@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
 
 /**
  * Workspace parameters schema
@@ -39,3 +40,18 @@ export const expenseParamsSchema = workspaceParamsSchema.extend({
  * Metadata parameters schema
  */
 export const metadataParamsSchema = receiptParamsSchema;
+
+// Pre-computed JSON schemas
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const receiptParamsJsonSchema = toJsonSchema(receiptParamsSchema);
+export const tagParamsJsonSchema = toJsonSchema(tagParamsSchema);
+export const receiptTagParamsJsonSchema = toJsonSchema(receiptTagParamsSchema);
+export const expenseParamsJsonSchema = toJsonSchema(expenseParamsSchema);
+export const metadataParamsJsonSchema = toJsonSchema(metadataParamsSchema);
+
+export const baseResponseSchema = z.object({
+  success: z.boolean(),
+  statusCode: z.number(),
+  message: z.string(),
+});
+export const baseResponseJsonSchema = toJsonSchema(baseResponseSchema);

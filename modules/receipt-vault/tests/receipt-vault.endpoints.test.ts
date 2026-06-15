@@ -281,9 +281,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           url: `/api/v1/${testWorkspaceId}/receipts/upload`,
           payload: {
             fileName: 'test.jpg',
-            fileSize: 1024,
+            originalName: 'test.jpg',
+            filePath: '/receipts/test.jpg',
+            fileSize: 1024000,
             mimeType: 'image/jpeg',
-            storageUrl: 'https://example.com/test.jpg',
+            storageProvider: 'LOCAL',
           },
         });
 
@@ -325,7 +327,10 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
+        expect(body.data.limit).toBeDefined();
+        expect(body.data.offset).toBeDefined();
+        expect(body.data.hasMore).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -435,6 +440,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/process`,
+          payload: {},
         });
 
         console.log('Process Receipt No Auth:', response.statusCode);
