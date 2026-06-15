@@ -54,9 +54,9 @@ export class PrismaRecurringExpenseRepository
     await this.dispatchEvents(expense);
   }
 
-  async findById(id: string): Promise<RecurringExpense | null> {
+  async findById(id: RecurringExpenseId): Promise<RecurringExpense | null> {
     const data = await this.prisma.recurringExpense.findUnique({
-      where: { id },
+      where: { id: id.getValue() },
     });
 
     if (!data) return null;
@@ -84,9 +84,9 @@ export class PrismaRecurringExpenseRepository
     );
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(id: RecurringExpenseId): Promise<void> {
     await this.prisma.recurringExpense.delete({
-      where: { id },
+      where: { id: id.getValue() },
     });
   }
 

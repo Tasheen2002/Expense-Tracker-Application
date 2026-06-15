@@ -243,7 +243,8 @@ export class ExpenseRepositoryImpl
   }
 
   async findWithFilters(
-    filters: ExpenseFilters
+    filters: ExpenseFilters,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     const where: Prisma.ExpenseWhereInput = {
       workspaceId: filters.workspaceId,
@@ -277,8 +278,9 @@ export class ExpenseRepositoryImpl
       ];
     }
 
-    const limit = filters.pagination?.limit || 50;
-    const offset = filters.pagination?.offset || 0;
+    const limit = options?.limit || 50;
+    const offset = options?.offset || 0;
+
 
     const [rows, total] = await Promise.all([
       this.prisma.expense.findMany({

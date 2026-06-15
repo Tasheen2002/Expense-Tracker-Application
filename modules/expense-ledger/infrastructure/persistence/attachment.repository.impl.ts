@@ -8,6 +8,9 @@ import {
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+
 export class AttachmentRepositoryImpl
   implements IAttachmentRepository
 {

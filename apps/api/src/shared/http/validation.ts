@@ -58,6 +58,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
           success: false,
           statusCode: 400,
           message: "Validation failed",
+          error: "VALIDATION_ERROR",
           errors: formatZodErrors(error),
         });
       }
@@ -76,6 +77,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
           success: false,
           statusCode: 400,
           message: "Validation failed",
+          error: "VALIDATION_ERROR",
           errors: formatZodErrors(error),
         });
       }
@@ -94,6 +96,7 @@ export function validateParams<T extends ZodSchema>(schema: T) {
           success: false,
           statusCode: 400,
           message: "Validation failed",
+          error: "VALIDATION_ERROR",
           errors: formatZodErrors(error),
         });
       }
