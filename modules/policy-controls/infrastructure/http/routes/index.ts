@@ -6,8 +6,6 @@ import { exemptionRoutes } from './exemption.routes';
 import { PolicyController } from '../controllers/policy.controller';
 import { ViolationController } from '../controllers/violation.controller';
 import { ExemptionController } from '../controllers/exemption.controller';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerPolicyControlsRoutes(
   fastify: FastifyInstance,
@@ -20,28 +18,14 @@ export async function registerPolicyControlsRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // First authenticate the request
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      // Then authorize workspace access
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
       // Register policy routes
-      await policyRoutes(instance, controllers.policyController);
+      await policyRoutes(instance, controllers.policyController, prisma);
 
       // Register violation routes
-      await violationRoutes(instance, controllers.violationController);
+      await violationRoutes(instance, controllers.violationController, prisma);
 
       // Register exemption routes
-      await exemptionRoutes(instance, controllers.exemptionController);
+      await exemptionRoutes(instance, controllers.exemptionController, prisma);
     },
     { prefix: '/api/v1' }
   );

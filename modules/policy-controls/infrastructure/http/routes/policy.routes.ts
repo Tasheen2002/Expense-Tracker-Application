@@ -1,5 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { PolicyController } from '../controllers/policy.controller';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateParams,
@@ -11,38 +14,24 @@ import {
   workspaceParamsSchema,
   policyParamsSchema,
   policyQuerySchema,
+  createPolicyBodyJsonSchema,
+  updatePolicyBodyJsonSchema,
+  workspaceParamsJsonSchema,
+  policyParamsJsonSchema,
+  policyQueryJsonSchema,
+  policyEnvelopeJsonSchema,
+  createPolicyEnvelopeJsonSchema,
+  policyListEnvelopeJsonSchema,
+  policyActionSuccessResponseJsonSchema,
 } from '../validation/policy.schema';
 
 export async function policyRoutes(
   fastify: FastifyInstance,
-  controller: PolicyController
+  controller: PolicyController,
+  prisma: PrismaClient
 ) {
-  // Add authentication hook to all routes in this plugin
-  fastify.addHook('onRequest', fastify.authenticate);
-
-  const policyResponseSchema = {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      message: { type: 'string' },
-      data: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          workspaceId: { type: 'string' },
-          name: { type: 'string' },
-          description: { type: 'string' },
-          policyType: { type: 'string' },
-          severity: { type: 'string' },
-          configuration: { type: 'object' },
-          priority: { type: 'integer' },
-          isActive: { type: 'boolean' },
-          createdBy: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
   };
 
   // Create policy
@@ -50,56 +39,24 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateBody(createPolicySchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(createPolicySchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Create a new expense policy',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name', 'policyType', 'severity', 'configuration'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            policyType: {
-              type: 'string',
-              enum: [
-                'SPENDING_LIMIT',
-                'DAILY_LIMIT',
-                'WEEKLY_LIMIT',
-                'MONTHLY_LIMIT',
-                'CATEGORY_RESTRICTION',
-                'MERCHANT_BLACKLIST',
-                'TIME_RESTRICTION',
-                'RECEIPT_REQUIRED',
-                'DESCRIPTION_REQUIRED',
-                'APPROVAL_REQUIRED',
-              ],
-            },
-            severity: {
-              type: 'string',
-              enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-            },
-            configuration: { type: 'object' },
-            priority: { type: 'integer', minimum: 0, maximum: 1000 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: createPolicyBodyJsonSchema,
         response: {
-          201: policyResponseSchema,
+          201: createPolicyEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.createPolicy(
-        request as Parameters<typeof controller.createPolicy>[0],
-        reply
-      )
+      controller.createPolicy(request as AuthenticatedRequest, reply)
   );
 
   // List policies
@@ -110,95 +67,20 @@ export async function policyRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(policyQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'List all expense policies in workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            activeOnly: { type: 'string', enum: ['true', 'false'] },
-            policyType: {
-              type: 'string',
-              enum: [
-                'SPENDING_LIMIT',
-                'DAILY_LIMIT',
-                'WEEKLY_LIMIT',
-                'MONTHLY_LIMIT',
-                'CATEGORY_RESTRICTION',
-                'MERCHANT_BLACKLIST',
-                'TIME_RESTRICTION',
-                'RECEIPT_REQUIRED',
-                'DESCRIPTION_REQUIRED',
-                'APPROVAL_REQUIRED',
-              ],
-            },
-            limit: {
-              type: 'string',
-              description: 'Number of policies to return',
-            },
-            offset: {
-              type: 'string',
-              description: 'Number of policies to skip',
-            },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: policyQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        workspaceId: { type: 'string' },
-                        name: { type: 'string' },
-                        description: { type: 'string' },
-                        policyType: { type: 'string' },
-                        severity: { type: 'string' },
-                        configuration: { type: 'object' },
-                        priority: { type: 'integer' },
-                        isActive: { type: 'boolean' },
-                        createdBy: { type: 'string' },
-                        createdAt: { type: 'string', format: 'date-time' },
-                        updatedAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: policyListEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.listPolicies(
-        request as Parameters<typeof controller.listPolicies>[0],
-        reply
-      )
+      controller.listPolicies(request as AuthenticatedRequest, reply)
   );
 
   // Get policy
@@ -206,27 +88,19 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId',
     {
       preValidation: [validateParams(policyParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get expense policy by ID',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'policyId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            policyId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: policyParamsJsonSchema,
         response: {
-          200: policyResponseSchema,
+          200: policyEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.getPolicy(
-        request as Parameters<typeof controller.getPolicy>[0],
-        reply
-      )
+      controller.getPolicy(request as AuthenticatedRequest, reply)
   );
 
   // Update policy
@@ -234,41 +108,24 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId',
     {
       preValidation: [validateParams(policyParamsSchema)],
-      preHandler: [validateBody(updatePolicySchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(updatePolicySchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Update expense policy',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'policyId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            policyId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            severity: {
-              type: 'string',
-              enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
-            },
-            configuration: { type: 'object' },
-            priority: { type: 'integer', minimum: 0, maximum: 1000 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: policyParamsJsonSchema,
+        body: updatePolicyBodyJsonSchema,
         response: {
-          200: policyResponseSchema,
+          200: policyEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.updatePolicy(
-        request as Parameters<typeof controller.updatePolicy>[0],
-        reply
-      )
+      controller.updatePolicy(request as AuthenticatedRequest, reply)
   );
 
   // Delete policy
@@ -276,33 +133,19 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId',
     {
       preValidation: [validateParams(policyParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Delete expense policy',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'policyId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            policyId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: policyParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-            },
-          },
+          200: policyActionSuccessResponseJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.deletePolicy(
-        request as Parameters<typeof controller.deletePolicy>[0],
-        reply
-      )
+      controller.deletePolicy(request as AuthenticatedRequest, reply)
   );
 
   // Activate policy
@@ -310,27 +153,19 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId/activate',
     {
       preValidation: [validateParams(policyParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Activate expense policy',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'policyId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            policyId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: policyParamsJsonSchema,
         response: {
-          200: policyResponseSchema,
+          200: policyEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.activatePolicy(
-        request as Parameters<typeof controller.activatePolicy>[0],
-        reply
-      )
+      controller.activatePolicy(request as AuthenticatedRequest, reply)
   );
 
   // Deactivate policy
@@ -338,26 +173,18 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId/deactivate',
     {
       preValidation: [validateParams(policyParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Deactivate expense policy',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'policyId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            policyId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: policyParamsJsonSchema,
         response: {
-          200: policyResponseSchema,
+          200: policyEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.deactivatePolicy(
-        request as Parameters<typeof controller.deactivatePolicy>[0],
-        reply
-      )
+      controller.deactivatePolicy(request as AuthenticatedRequest, reply)
   );
 }

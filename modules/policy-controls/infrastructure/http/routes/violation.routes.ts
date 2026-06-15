@@ -1,4 +1,5 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { ViolationController } from '../controllers/violation.controller';
 import {
   validateBody,
@@ -13,44 +14,31 @@ import {
   violationParamsSchema,
   violationQuerySchema,
   violationStatsQuerySchema,
+  violationParamsJsonSchema,
+  violationQueryJsonSchema,
+  violationStatsQueryJsonSchema,
+  acknowledgeViolationBodyJsonSchema,
+  resolveViolationBodyJsonSchema,
+  overrideViolationBodyJsonSchema,
+  exemptViolationBodyJsonSchema,
+  violationEnvelopeJsonSchema,
+  violationListEnvelopeJsonSchema,
+  violationStatsEnvelopeJsonSchema,
 } from '../validation/violation.schema';
-import { workspaceParamsSchema } from '../validation/policy.schema';
+import {
+  workspaceParamsSchema,
+  workspaceParamsJsonSchema,
+} from '../validation/policy.schema';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function violationRoutes(
   fastify: FastifyInstance,
-  controller: ViolationController
+  controller: ViolationController,
+  prisma: PrismaClient
 ) {
-  // Add authentication hook to all routes in this plugin
-  fastify.addHook('onRequest', fastify.authenticate);
-
-  const violationResponseSchema = {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      message: { type: 'string' },
-      data: {
-        type: 'object',
-        properties: {
-          id: { type: 'string' },
-          workspaceId: { type: 'string' },
-          policyId: { type: 'string' },
-          expenseId: { type: 'string' },
-          userId: { type: 'string' },
-          status: { type: 'string' },
-          severity: { type: 'string' },
-          violationDetails: { type: 'string' },
-          expenseAmount: { type: 'number' },
-          currency: { type: 'string' },
-          acknowledgedAt: { type: 'string', format: 'date-time' },
-          acknowledgedBy: { type: 'string' },
-          resolvedAt: { type: 'string', format: 'date-time' },
-          resolvedBy: { type: 'string' },
-          resolutionNotes: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
-        },
-      },
-    },
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
   };
 
   // List violations
@@ -61,97 +49,20 @@ export async function violationRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(violationQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'List policy violations in workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              enum: [
-                'PENDING',
-                'ACKNOWLEDGED',
-                'RESOLVED',
-                'EXEMPTED',
-                'OVERRIDDEN',
-              ],
-            },
-            userId: { type: 'string' },
-            expenseId: { type: 'string' },
-            policyId: { type: 'string' },
-            limit: {
-              type: 'string',
-              description: 'Number of violations to return',
-            },
-            offset: {
-              type: 'string',
-              description: 'Number of violations to skip',
-            },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: violationQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        workspaceId: { type: 'string' },
-                        policyId: { type: 'string' },
-                        expenseId: { type: 'string' },
-                        userId: { type: 'string' },
-                        status: { type: 'string' },
-                        severity: { type: 'string' },
-                        violationDetails: { type: 'string' },
-                        expenseAmount: { type: 'number' },
-                        currency: { type: 'string' },
-                        acknowledgedAt: { type: 'string', format: 'date-time' },
-                        acknowledgedBy: { type: 'string' },
-                        resolvedAt: { type: 'string', format: 'date-time' },
-                        resolvedBy: { type: 'string' },
-                        resolutionNotes: { type: 'string' },
-                        createdAt: { type: 'string', format: 'date-time' },
-                        updatedAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: violationListEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.listViolations(
-        request as Parameters<typeof controller.listViolations>[0],
-        reply
-      )
+      controller.listViolations(request as AuthenticatedRequest, reply)
   );
 
   // Get violation stats
@@ -162,54 +73,20 @@ export async function violationRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(violationStatsQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get violation statistics for workspace',
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            startDate: { type: 'string', format: 'date-time' },
-            endDate: { type: 'string', format: 'date-time' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: violationStatsQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  total: { type: 'integer' },
-                  pending: { type: 'integer' },
-                  byStatus: {
-                    type: 'object',
-                    additionalProperties: { type: 'integer' },
-                  },
-                  bySeverity: {
-                    type: 'object',
-                    additionalProperties: { type: 'integer' },
-                  },
-                },
-              },
-            },
-          },
+          200: violationStatsEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.getViolationStats(
-        request as Parameters<typeof controller.getViolationStats>[0],
-        reply
-      )
+      controller.getViolationStats(request as AuthenticatedRequest, reply)
   );
 
   // Get violation
@@ -217,27 +94,19 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId',
     {
       preValidation: [validateParams(violationParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get policy violation by ID',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'violationId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            violationId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: violationParamsJsonSchema,
         response: {
-          200: violationResponseSchema,
+          200: violationEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.getViolation(
-        request as Parameters<typeof controller.getViolation>[0],
-        reply
-      )
+      controller.getViolation(request as AuthenticatedRequest, reply)
   );
 
   // Acknowledge violation
@@ -245,34 +114,24 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId/acknowledge',
     {
       preValidation: [validateParams(violationParamsSchema)],
-      preHandler: [validateBody(acknowledgeViolationSchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(acknowledgeViolationSchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Acknowledge a policy violation',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'violationId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            violationId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            note: { type: 'string', maxLength: 500 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: violationParamsJsonSchema,
+        body: acknowledgeViolationBodyJsonSchema,
         response: {
-          200: violationResponseSchema,
+          200: violationEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.acknowledgeViolation(
-        request as Parameters<typeof controller.acknowledgeViolation>[0],
-        reply
-      )
+      controller.acknowledgeViolation(request as AuthenticatedRequest, reply)
   );
 
   // Resolve violation
@@ -280,34 +139,24 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId/resolve',
     {
       preValidation: [validateParams(violationParamsSchema)],
-      preHandler: [validateBody(resolveViolationSchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(resolveViolationSchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Resolve a policy violation',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'violationId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            violationId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            resolutionNote: { type: 'string', maxLength: 500 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: violationParamsJsonSchema,
+        body: resolveViolationBodyJsonSchema,
         response: {
-          200: violationResponseSchema,
+          200: violationEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.resolveViolation(
-        request as Parameters<typeof controller.resolveViolation>[0],
-        reply
-      )
+      controller.resolveViolation(request as AuthenticatedRequest, reply)
   );
 
   // Exempt violation
@@ -315,35 +164,24 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId/exempt',
     {
       preValidation: [validateParams(violationParamsSchema)],
-      preHandler: [validateBody(exemptViolationSchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(exemptViolationSchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Exempt a violation using an exemption',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'violationId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            violationId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['exemptionId'],
-          properties: {
-            exemptionId: { type: 'string' },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: violationParamsJsonSchema,
+        body: exemptViolationBodyJsonSchema,
         response: {
-          200: violationResponseSchema,
+          200: violationEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.exemptViolation(
-        request as Parameters<typeof controller.exemptViolation>[0],
-        reply
-      )
+      controller.exemptViolation(request as AuthenticatedRequest, reply)
   );
 
   // Override violation
@@ -351,34 +189,23 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId/override',
     {
       preValidation: [validateParams(violationParamsSchema)],
-      preHandler: [validateBody(overrideViolationSchema)],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateBody(overrideViolationSchema),
+      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Override a policy violation',
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'violationId'],
-          properties: {
-            workspaceId: { type: 'string' },
-            violationId: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['overrideReason'],
-          properties: {
-            overrideReason: { type: 'string', minLength: 10, maxLength: 500 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: violationParamsJsonSchema,
+        body: overrideViolationBodyJsonSchema,
         response: {
-          200: violationResponseSchema,
+          200: violationEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
-      controller.overrideViolation(
-        request as Parameters<typeof controller.overrideViolation>[0],
-        reply
-      )
+      controller.overrideViolation(request as AuthenticatedRequest, reply)
   );
 }
