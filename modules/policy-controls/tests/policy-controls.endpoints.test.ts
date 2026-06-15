@@ -278,8 +278,8 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
         expect(body.data.items.length).toBeGreaterThan(0);
-        expect(body.data.pagination).toBeDefined();
-        expect(body.data.pagination.total).toBeGreaterThan(0);
+        expect(body.data.total).toBeDefined();
+        expect(body.data.total).toBeGreaterThan(0);
       });
 
       it('✅ should list only active policies', async () => {
@@ -297,7 +297,7 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -584,7 +584,7 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
       });
 
       it('✅ should filter exemptions by status', async () => {
@@ -602,7 +602,7 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
       });
 
       it('✅ should filter exemptions by user', async () => {
@@ -780,7 +780,7 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
+        expect(body.data.total).toBeDefined();
       });
 
       it('✅ should filter violations by status', async () => {
