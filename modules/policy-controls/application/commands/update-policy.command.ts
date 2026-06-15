@@ -4,17 +4,16 @@ import {
   PolicyConfiguration,
 } from '../../domain/entities/expense-policy.entity';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface UpdatePolicyInput extends ICommand {
-  policyId: string;
-  workspaceId: string;
-  name?: string;
-  description?: string;
-  severity?: ViolationSeverity;
-  configuration?: PolicyConfiguration;
-  priority?: number;
+  readonly policyId: string;
+  readonly workspaceId: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly severity?: ViolationSeverity;
+  readonly configuration?: PolicyConfiguration;
+  readonly priority?: number;
 }
 
 export class UpdatePolicyHandler implements ICommandHandler<UpdatePolicyInput, CommandResult<ExpensePolicyDTO>> {

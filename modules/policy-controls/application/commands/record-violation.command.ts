@@ -1,18 +1,17 @@
 import { ViolationService } from '../services/violation.service';
 import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface RecordViolationInput extends ICommand {
-  workspaceId: string;
-  policyId: string;
-  expenseId: string;
-  userId: string;
-  severity: ViolationSeverity;
-  violationDetails: string;
-  expenseAmount: number;
-  currency: string;
+  readonly workspaceId: string;
+  readonly policyId: string;
+  readonly expenseId: string;
+  readonly userId: string;
+  readonly severity: ViolationSeverity;
+  readonly violationDetails: string;
+  readonly expenseAmount: number;
+  readonly currency: string;
 }
 
 export class RecordViolationHandler implements ICommandHandler<RecordViolationInput, CommandResult<PolicyViolationDTO>> {

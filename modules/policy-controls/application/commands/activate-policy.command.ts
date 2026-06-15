@@ -1,11 +1,10 @@
 import { PolicyService } from '../services/policy.service';
 import { ExpensePolicyDTO } from '../../domain/entities/expense-policy.entity';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface ActivatePolicyInput extends ICommand {
-  policyId: string;
-  workspaceId: string;
+  readonly policyId: string;
+  readonly workspaceId: string;
 }
 
 export class ActivatePolicyHandler implements ICommandHandler<ActivatePolicyInput, CommandResult<ExpensePolicyDTO>> {

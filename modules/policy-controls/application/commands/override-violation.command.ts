@@ -1,13 +1,12 @@
 import { ViolationService } from '../services/violation.service';
 import { PolicyViolationDTO } from '../../domain/entities/policy-violation.entity';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface OverrideViolationInput extends ICommand {
-  violationId: string;
-  workspaceId: string;
-  overriddenBy: string;
-  overrideReason: string;
+  readonly violationId: string;
+  readonly workspaceId: string;
+  readonly overriddenBy: string;
+  readonly overrideReason: string;
 }
 
 export class OverrideViolationHandler implements ICommandHandler<OverrideViolationInput, CommandResult<PolicyViolationDTO>> {

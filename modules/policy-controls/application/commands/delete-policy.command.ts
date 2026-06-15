@@ -1,10 +1,9 @@
 import { PolicyService } from '../services/policy.service';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface DeletePolicyInput extends ICommand {
-  policyId: string;
-  workspaceId: string;
+  readonly policyId: string;
+  readonly workspaceId: string;
 }
 
 export class DeletePolicyHandler implements ICommandHandler<DeletePolicyInput, CommandResult<void>> {

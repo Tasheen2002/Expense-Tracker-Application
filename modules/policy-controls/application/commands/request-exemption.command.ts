@@ -1,16 +1,15 @@
 import { ExemptionService } from '../services/exemption.service';
 import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface RequestExemptionInput extends ICommand {
-  workspaceId: string;
-  policyId: string;
-  userId: string;
-  requestedBy: string;
-  reason: string;
-  startDate: Date;
-  endDate: Date;
+  readonly workspaceId: string;
+  readonly policyId: string;
+  readonly userId: string;
+  readonly requestedBy: string;
+  readonly reason: string;
+  readonly startDate: Date;
+  readonly endDate: Date;
 }
 
 export class RequestExemptionHandler implements ICommandHandler<RequestExemptionInput, CommandResult<PolicyExemptionDTO>> {

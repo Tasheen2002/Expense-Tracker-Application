@@ -2,11 +2,7 @@ import {
   PolicyEvaluationService,
   ExpenseContext,
 } from '../services/policy-evaluation.service';
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 export interface EvaluateExpenseInput extends ICommand, ExpenseContext {}
 
 export interface EvaluateExpenseResult {

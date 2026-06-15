@@ -1,10 +1,9 @@
 import { IExemptionRepository } from '../../domain/repositories/exemption.repository';
 import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface ExpireExemptionsInput extends ICommand {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class ExpireExemptionsHandler implements ICommandHandler<ExpireExemptionsInput, CommandResult<void>> {
