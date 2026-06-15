@@ -49,6 +49,7 @@ describe('Identity-Workspace Module - Member Controller', () => {
         fullName: 'Owner',
       },
     });
+    console.log('Member controller test - Reg Response:', regResponse.statusCode, regResponse.body);
     ownerId = JSON.parse(regResponse.body).data.userId;
 
     // Login Owner

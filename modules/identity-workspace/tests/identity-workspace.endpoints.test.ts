@@ -406,7 +406,7 @@ describe('Identity Workspace Module - Endpoint Tests', () => {
           url: `/api/v1/workspaces/${testWorkspaceId}/members`,
         });
 
-        console.log('List Members No Auth:', response.statusCode);
+        console.log('List Members No Auth:', response.statusCode, response.body);
         expect(response.statusCode).toBe(401);
       });
     });
@@ -493,7 +493,7 @@ describe('Identity Workspace Module - Endpoint Tests', () => {
           },
         });
 
-        console.log('Create Invitation No Auth:', response.statusCode);
+        console.log('Create Invitation No Auth:', response.statusCode, response.body);
         expect(response.statusCode).toBe(401);
       });
 
