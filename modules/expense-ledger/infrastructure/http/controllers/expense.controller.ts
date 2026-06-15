@@ -1,18 +1,29 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateExpenseHandler } from '../../../application/commands/create-expense.command';
-import { UpdateExpenseHandler } from '../../../application/commands/update-expense.command';
-import { DeleteExpenseHandler } from '../../../application/commands/delete-expense.command';
-import { SubmitExpenseHandler } from '../../../application/commands/submit-expense.command';
-import { ApproveExpenseHandler } from '../../../application/commands/approve-expense.command';
-import { RejectExpenseHandler } from '../../../application/commands/reject-expense.command';
-import { ReimburseExpenseHandler } from '../../../application/commands/reimburse-expense.command';
-import { GetExpenseHandler } from '../../../application/queries/get-expense.query';
-import { FilterExpensesHandler } from '../../../application/queries/filter-expenses.query';
-import { GetExpenseStatisticsHandler } from '../../../application/queries/get-expense-statistics.query';
+import {
+  CreateExpenseHandler,
+  UpdateExpenseHandler,
+  DeleteExpenseHandler,
+  SubmitExpenseHandler,
+  ApproveExpenseHandler,
+  RejectExpenseHandler,
+  ReimburseExpenseHandler,
+  GetExpenseHandler,
+  FilterExpensesHandler,
+  GetExpenseStatisticsHandler,
+} from '../../../application';
 import { PaymentMethod } from '../../../domain/enums/payment-method';
 import { ExpenseStatus } from '../../../domain/enums/expense-status';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateExpenseInput,
+  UpdateExpenseInput,
+  FilterExpensesQuery,
+} from '../validation/expense.schema';
+import { paginationQuerySchema } from '../validation/common.schema';
+import { z } from 'zod';
+
+type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 export class ExpenseController {
   constructor(
@@ -28,21 +39,123 @@ export class ExpenseController {
     private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler
   ) {}
 
+  async getExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, expenseId } = request.params;
+
+      const result = await this.getExpenseHandler.handle({
+        expenseId,
+        workspaceId,
+      });
+
+      return ResponseHelper.ok(reply, 'Expense retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listExpenses(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: PaginationQuery & { userId?: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { userId, limit, offset } = request.query;
+
+      const result = await this.filterExpensesHandler.handle({
+        workspaceId,
+        userId: userId || request.user?.userId,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Expenses retrieved successfully', {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async filterExpenses(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: FilterExpensesQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const query = request.query;
+
+      const result = await this.filterExpensesHandler.handle({
+        workspaceId,
+        userId: query.userId,
+        categoryId: query.categoryId,
+        status: query.status,
+        paymentMethod: query.paymentMethod,
+        isReimbursable: query.isReimbursable,
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined,
+        minAmount: query.minAmount,
+        maxAmount: query.maxAmount,
+        currency: query.currency,
+        searchText: query.searchText,
+        limit: query.page && query.pageSize ? query.pageSize : undefined,
+        offset: query.page && query.pageSize ? (query.page - 1) * query.pageSize : undefined,
+      });
+
+      return ResponseHelper.ok(reply, 'Expenses filtered successfully', {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getExpenseStatistics(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { userId?: string; currency?: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { userId, currency } = request.query;
+
+      const result = await this.getExpenseStatisticsHandler.handle({
+        workspaceId,
+        userId,
+        currency,
+      });
+
+      return ResponseHelper.ok(reply, 'Expense statistics retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async createExpense(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        title: string;
-        description?: string;
-        amount: number;
-        currency: string;
-        expenseDate: string;
-        categoryId?: string;
-        merchant?: string;
-        paymentMethod: PaymentMethod;
-        isReimbursable: boolean;
-        tagIds?: string[];
-      };
+      Body: CreateExpenseInput;
     }>,
     reply: FastifyReply
   ) {
@@ -59,15 +172,15 @@ export class ExpenseController {
         workspaceId,
         userId,
         title: body.title,
-        description: body.description,
+        description: body.description ?? undefined,
         amount: body.amount,
         currency: body.currency,
-        expenseDate: body.expenseDate,
-        categoryId: body.categoryId,
-        merchant: body.merchant,
+        expenseDate: new Date(body.expenseDate),
+        categoryId: body.categoryId ?? undefined,
+        merchant: body.merchant ?? undefined,
         paymentMethod: body.paymentMethod,
         isReimbursable: body.isReimbursable,
-        tagIds: body.tagIds,
+        tagIds: body.tagIds ?? undefined,
       });
 
       return ResponseHelper.fromCommand(
@@ -85,17 +198,7 @@ export class ExpenseController {
   async updateExpense(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
-      Body: {
-        title?: string;
-        description?: string;
-        amount?: number;
-        currency?: string;
-        expenseDate?: string;
-        categoryId?: string;
-        merchant?: string;
-        paymentMethod?: PaymentMethod;
-        isReimbursable?: boolean;
-      };
+      Body: UpdateExpenseInput;
     }>,
     reply: FastifyReply
   ) {
@@ -112,15 +215,15 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         userId,
-        title: body.title,
-        description: body.description,
-        amount: body.amount,
-        currency: body.currency,
-        expenseDate: body.expenseDate,
-        categoryId: body.categoryId,
-        merchant: body.merchant,
-        paymentMethod: body.paymentMethod,
-        isReimbursable: body.isReimbursable,
+        title: body.title ?? undefined,
+        description: body.description ?? undefined,
+        amount: body.amount ?? undefined,
+        currency: body.currency ?? undefined,
+        expenseDate: body.expenseDate ? new Date(body.expenseDate) : undefined,
+        categoryId: body.categoryId ?? undefined,
+        merchant: body.merchant ?? undefined,
+        paymentMethod: body.paymentMethod ?? undefined,
+        isReimbursable: body.isReimbursable ?? undefined,
       });
 
       return ResponseHelper.fromCommand(
@@ -161,141 +264,6 @@ export class ExpenseController {
         undefined,
         204
       );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, expenseId } = request.params;
-
-      const result = await this.getExpenseHandler.handle({
-        expenseId,
-        workspaceId,
-      });
-
-      return ResponseHelper.ok(reply, 'Expense retrieved successfully', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listExpenses(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        userId?: string;
-        limit?: number;
-        offset?: number;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { userId, limit, offset } = request.query;
-
-      const result = await this.filterExpensesHandler.handle({
-        workspaceId,
-        userId: userId || request.user?.userId,
-        limit,
-        offset,
-      });
-
-      return ResponseHelper.ok(reply, 'Expenses retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async filterExpenses(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        userId?: string;
-        categoryId?: string;
-        status?: string;
-        paymentMethod?: string;
-        isReimbursable?: boolean;
-        startDate?: string;
-        endDate?: string;
-        minAmount?: number;
-        maxAmount?: number;
-        currency?: string;
-        searchText?: string;
-        limit?: number;
-        offset?: number;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const query = request.query;
-
-      const result = await this.filterExpensesHandler.handle({
-        workspaceId,
-        userId: query.userId,
-        categoryId: query.categoryId,
-        status: query.status as ExpenseStatus | undefined,
-        paymentMethod: query.paymentMethod as PaymentMethod | undefined,
-        isReimbursable: query.isReimbursable,
-        startDate: query.startDate ? new Date(query.startDate) : undefined,
-        endDate: query.endDate ? new Date(query.endDate) : undefined,
-        minAmount: query.minAmount,
-        maxAmount: query.maxAmount,
-        currency: query.currency,
-        searchText: query.searchText,
-        limit: query.limit,
-        offset: query.offset,
-      });
-
-      return ResponseHelper.ok(reply, 'Expenses filtered successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getExpenseStatistics(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { userId?: string; currency?: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { userId, currency } = request.query;
-
-      const result = await this.getExpenseStatisticsHandler.handle({
-        workspaceId,
-        userId,
-        currency,
-      });
-
-      return ResponseHelper.ok(reply, 'Expense statistics retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

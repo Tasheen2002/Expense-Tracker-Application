@@ -1,16 +1,25 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateSplitHandler } from '../../../application/commands/create-split.command';
-import { DeleteSplitHandler } from '../../../application/commands/delete-split.command';
-import { RecordPaymentHandler } from '../../../application/commands/record-payment.command';
-import { GetSplitHandler } from '../../../application/queries/get-split.query';
-import { GetSplitByExpenseHandler } from '../../../application/queries/get-split-by-expense.query';
-import { ListUserSplitsHandler } from '../../../application/queries/list-user-splits.query';
-import { ListUserSettlementsHandler } from '../../../application/queries/list-user-settlements.query';
-import { GetSplitSettlementsHandler } from '../../../application/queries/get-split-settlements.query';
-import { SplitType } from '../../../domain/enums/split-type';
-import { SettlementStatus } from '../../../domain/enums/settlement-status';
+import {
+  CreateSplitHandler,
+  DeleteSplitHandler,
+  RecordPaymentHandler,
+  GetSplitHandler,
+  GetSplitByExpenseHandler,
+  ListUserSplitsHandler,
+  ListUserSettlementsHandler,
+  GetSplitSettlementsHandler,
+} from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateSplitInput,
+  RecordSettlementPaymentInput,
+  ListSettlementsQuery,
+} from '../validation/expense-split.schema';
+import { paginationQuerySchema } from '../validation/common.schema';
+import { z } from 'zod';
+
+type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 export class ExpenseSplitController {
   constructor(
@@ -23,45 +32,6 @@ export class ExpenseSplitController {
     private readonly listUserSettlementsHandler: ListUserSettlementsHandler,
     private readonly getSplitSettlementsHandler: GetSplitSettlementsHandler
   ) {}
-
-  async createSplit(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-      Body: {
-        splitType: SplitType;
-        participants: Array<{
-          userId: string;
-          shareAmount?: number;
-          sharePercentage?: number;
-        }>;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId, expenseId } = request.params;
-    const { splitType, participants } = request.body;
-    const userId = request.user.userId;
-
-    try {
-      const result = await this.createSplitHandler.handle({
-        expenseId,
-        workspaceId,
-        userId,
-        splitType,
-        participants,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Split created successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
 
   async getSplit(
     request: AuthenticatedRequest<{
@@ -110,7 +80,7 @@ export class ExpenseSplitController {
   async listUserSplits(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: number; offset?: number };
+      Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -128,13 +98,107 @@ export class ExpenseSplitController {
 
       return ResponseHelper.ok(reply, 'Splits retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listUserSettlements(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: ListSettlementsQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId } = request.params;
+    const { status, limit, offset } = request.query;
+    const userId = request.user.userId;
+
+    try {
+      const result = await this.listUserSettlementsHandler.handle({
+        userId,
+        workspaceId,
+        status,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Settlements retrieved successfully', {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getSplitSettlements(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; splitId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId, splitId } = request.params;
+    const userId = request.user.userId;
+
+    try {
+      const result = await this.getSplitSettlementsHandler.handle({
+        splitId,
+        workspaceId,
+        userId,
+      });
+
+      return ResponseHelper.ok(reply, 'Split settlements retrieved successfully', {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async createSplit(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+      Body: CreateSplitInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId, expenseId } = request.params;
+    const { splitType, participants } = request.body;
+    const userId = request.user.userId;
+
+    try {
+      const result = await this.createSplitHandler.handle({
+        expenseId,
+        workspaceId,
+        userId,
+        splitType,
+        participants: participants.map((p) => ({
+          userId: p.userId,
+          shareAmount: p.shareAmount,
+          sharePercentage: p.sharePercentage,
+        })),
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Split created successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -171,7 +235,7 @@ export class ExpenseSplitController {
   async recordPayment(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; settlementId: string };
-      Body: { amount: number };
+      Body: RecordSettlementPaymentInput;
     }>,
     reply: FastifyReply
   ) {
@@ -193,74 +257,6 @@ export class ExpenseSplitController {
         'Payment recorded successfully',
         result.data
       );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listUserSettlements(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        status?: SettlementStatus;
-        limit?: number;
-        offset?: number;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const { status, limit, offset } = request.query;
-    const userId = request.user.userId;
-
-    try {
-      const result = await this.listUserSettlementsHandler.handle({
-        userId,
-        workspaceId,
-        status,
-        limit,
-        offset,
-      });
-
-      return ResponseHelper.ok(reply, 'Settlements retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getSplitSettlements(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; splitId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId, splitId } = request.params;
-    const userId = request.user.userId;
-
-    try {
-      const result = await this.getSplitSettlementsHandler.handle({
-        splitId,
-        workspaceId,
-        userId,
-      });
-
-      return ResponseHelper.ok(reply, 'Split settlements retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

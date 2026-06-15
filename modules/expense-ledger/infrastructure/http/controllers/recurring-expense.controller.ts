@@ -1,13 +1,17 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateRecurringExpenseHandler } from '../../../application/commands/create-recurring-expense.command';
-import { PauseRecurringExpenseHandler } from '../../../application/commands/pause-recurring-expense.command';
-import { ResumeRecurringExpenseHandler } from '../../../application/commands/resume-recurring-expense.command';
-import { StopRecurringExpenseHandler } from '../../../application/commands/stop-recurring-expense.command';
-import { ProcessRecurringExpensesHandler } from '../../../application/commands/process-recurring-expenses.command';
-import { RecurrenceFrequency } from '../../../domain/enums/recurrence-frequency';
-import { ExpenseTemplate } from '../../../domain/entities/recurring-expense.entity';
+import {
+  CreateRecurringExpenseHandler,
+  PauseRecurringExpenseHandler,
+  ResumeRecurringExpenseHandler,
+  StopRecurringExpenseHandler,
+  ProcessRecurringExpensesHandler,
+} from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateRecurringExpenseInput,
+  RecurringTriggerInput,
+} from '../validation/recurring-expense.schema';
 
 export class RecurringExpenseController {
   constructor(
@@ -21,13 +25,7 @@ export class RecurringExpenseController {
   async create(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        frequency: RecurrenceFrequency;
-        interval: number;
-        startDate: string;
-        endDate?: string;
-        template: ExpenseTemplate;
-      };
+      Body: CreateRecurringExpenseInput;
     }>,
     reply: FastifyReply
   ) {
@@ -46,7 +44,10 @@ export class RecurringExpenseController {
         interval: body.interval,
         startDate: new Date(body.startDate),
         endDate: body.endDate ? new Date(body.endDate) : undefined,
-        template: body.template,
+        template: {
+          ...body.template,
+          tagIds: body.template.categoryId ? [] : undefined, // Maintain template structure
+        },
       });
 
       return ResponseHelper.fromCommand(
@@ -63,7 +64,7 @@ export class RecurringExpenseController {
 
   async pause(
     request: AuthenticatedRequest<{
-      Params: { id: string };
+      Params: { workspaceId: string; id: string };
     }>,
     reply: FastifyReply
   ) {
@@ -84,7 +85,7 @@ export class RecurringExpenseController {
 
   async resume(
     request: AuthenticatedRequest<{
-      Params: { id: string };
+      Params: { workspaceId: string; id: string };
     }>,
     reply: FastifyReply
   ) {
@@ -105,7 +106,7 @@ export class RecurringExpenseController {
 
   async stop(
     request: AuthenticatedRequest<{
-      Params: { id: string };
+      Params: { workspaceId: string; id: string };
     }>,
     reply: FastifyReply
   ) {
@@ -125,7 +126,7 @@ export class RecurringExpenseController {
   }
 
   async trigger(
-    request: AuthenticatedRequest<{ Body: { secret?: string } }>,
+    request: AuthenticatedRequest<{ Body: RecurringTriggerInput }>,
     reply: FastifyReply
   ) {
     const expectedSecret = process.env.CRON_SECRET;
