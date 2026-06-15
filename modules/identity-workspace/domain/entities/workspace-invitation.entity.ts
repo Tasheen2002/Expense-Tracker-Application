@@ -96,6 +96,23 @@ export interface WorkspaceInvitationProps {
   createdAt: Date;
 }
 
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceInvitationDTO {
+  invitationId: string;
+  workspaceId: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  isExpired: boolean;
+  isAccepted: boolean;
+  createdAt: string;
+}
+
 export class WorkspaceInvitation extends AggregateRoot {
   private constructor(private props: WorkspaceInvitationProps) {
     super();
@@ -220,23 +237,6 @@ export class WorkspaceInvitation extends AggregateRoot {
       createdAt: invitation.props.createdAt.toISOString(),
     };
   }
-}
-
-// ============================================================================
-// DTO
-// ============================================================================
-
-export interface WorkspaceInvitationDTO {
-  invitationId: string;
-  workspaceId: string;
-  email: string;
-  role: string;
-  token: string;
-  expiresAt: string;
-  acceptedAt: string | null;
-  isExpired: boolean;
-  isAccepted: boolean;
-  createdAt: string;
 }
 
 // Supporting types and interfaces

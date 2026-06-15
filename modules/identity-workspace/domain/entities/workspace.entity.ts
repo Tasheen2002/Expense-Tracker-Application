@@ -94,6 +94,20 @@ export interface WorkspaceProps {
   updatedAt: Date;
 }
 
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceDTO {
+  workspaceId: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class Workspace extends AggregateRoot {
   private constructor(private props: WorkspaceProps) {
     super();
@@ -238,12 +252,3 @@ export interface WorkspaceData {
   updatedAt: Date;
 }
 
-export interface WorkspaceDTO {
-  workspaceId: string;
-  name: string;
-  slug: string;
-  ownerId: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}

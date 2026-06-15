@@ -100,6 +100,19 @@ export interface WorkspaceMembershipProps {
   updatedAt: Date;
 }
 
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface WorkspaceMembershipDTO {
+  membershipId: string;
+  userId: string;
+  workspaceId: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class WorkspaceMembership extends AggregateRoot {
   private constructor(private props: WorkspaceMembershipProps) {
     super();
@@ -229,19 +242,6 @@ export class WorkspaceMembership extends AggregateRoot {
       updatedAt: membership.props.updatedAt.toISOString(),
     };
   }
-}
-
-// ============================================================================
-// DTO
-// ============================================================================
-
-export interface WorkspaceMembershipDTO {
-  membershipId: string;
-  userId: string;
-  workspaceId: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 // Supporting types and interfaces
