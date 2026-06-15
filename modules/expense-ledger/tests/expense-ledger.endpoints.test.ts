@@ -526,11 +526,10 @@ describe('Expense Ledger Module - Endpoint Tests', () => {
         expect(response.statusCode).toBe(200);
         expect(body.success).toBe(true);
         expect(Array.isArray(body.data.items)).toBe(true);
-        expect(body.data.pagination).toBeDefined();
-        expect(typeof body.data.pagination.total).toBe('number');
-        expect(typeof body.data.pagination.limit).toBe('number');
-        expect(typeof body.data.pagination.offset).toBe('number');
-        expect(typeof body.data.pagination.hasMore).toBe('boolean');
+        expect(typeof body.data.total).toBe('number');
+        expect(typeof body.data.limit).toBe('number');
+        expect(typeof body.data.offset).toBe('number');
+        expect(typeof body.data.hasMore).toBe('boolean');
       });
 
       it('❌ should fail without auth token', async () => {
