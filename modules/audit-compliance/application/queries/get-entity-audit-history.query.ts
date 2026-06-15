@@ -1,17 +1,17 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import { AuditService } from '../services/audit.service';
 
 export interface GetEntityAuditHistoryQuery extends IQuery {
-  workspaceId: string;
-  entityType: string;
-  entityId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetEntityAuditHistoryHandler implements IQueryHandler<
@@ -20,12 +20,12 @@ export class GetEntityAuditHistoryHandler implements IQueryHandler<
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(input: GetEntityAuditHistoryQuery): Promise<PaginatedResult<AuditLogDTO>> {
+  async handle(query: GetEntityAuditHistoryQuery): Promise<PaginatedResult<AuditLogDTO>> {
     return this.auditService.getEntityAuditHistory(
-      input.workspaceId,
-      input.entityType,
-      input.entityId,
-      { limit: input.limit, offset: input.offset }
+      query.workspaceId,
+      query.entityType,
+      query.entityId,
+      { limit: query.limit, offset: query.offset }
     );
   }
 }

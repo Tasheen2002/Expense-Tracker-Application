@@ -1,13 +1,13 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { AuditLogDTO } from '../../domain/entities/audit-log.entity';
 import { AuditService } from '../services/audit.service';
 
 export interface GetAuditLogQuery extends IQuery {
-  workspaceId: string;
-  auditLogId: string;
+  readonly workspaceId: string;
+  readonly auditLogId: string;
 }
 
 export class GetAuditLogHandler implements IQueryHandler<
@@ -16,7 +16,7 @@ export class GetAuditLogHandler implements IQueryHandler<
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(input: GetAuditLogQuery): Promise<AuditLogDTO> {
-    return this.auditService.getAuditLog(input.auditLogId, input.workspaceId);
+  async handle(query: GetAuditLogQuery): Promise<AuditLogDTO> {
+    return this.auditService.getAuditLog(query.auditLogId, query.workspaceId);
   }
 }

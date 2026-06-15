@@ -1,15 +1,15 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { AuditService, AuditSummary } from '../services/audit.service';
 
 export type { AuditSummary };
 
 export interface GetAuditSummaryQuery extends IQuery {
-  workspaceId: string;
-  startDate: Date;
-  endDate: Date;
+  readonly workspaceId: string;
+  readonly startDate: Date;
+  readonly endDate: Date;
 }
 
 export class GetAuditSummaryHandler implements IQueryHandler<
@@ -18,11 +18,11 @@ export class GetAuditSummaryHandler implements IQueryHandler<
 > {
   constructor(private readonly auditService: AuditService) {}
 
-  async handle(input: GetAuditSummaryQuery): Promise<AuditSummary> {
+  async handle(query: GetAuditSummaryQuery): Promise<AuditSummary> {
     return this.auditService.getAuditSummary(
-      input.workspaceId,
-      input.startDate,
-      input.endDate
+      query.workspaceId,
+      query.startDate,
+      query.endDate
     );
   }
 }
