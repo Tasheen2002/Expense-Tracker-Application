@@ -1,4 +1,5 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import {
   createRateLimiter,
@@ -6,6 +7,7 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateParams,
@@ -19,10 +21,18 @@ import {
   listAuditLogsQuerySchema,
   createAuditLogSchema,
   purgeAuditLogsQuerySchema,
-  auditLogResponseSchema,
-  createAuditLogResponseSchema,
-  auditSummaryResponseSchema,
-  paginatedAuditLogsResponseSchema,
+  workspaceParamsJsonSchema,
+  auditLogParamsJsonSchema,
+  listAuditLogsQueryJsonSchema,
+  entityHistoryQueryJsonSchema,
+  auditSummaryQueryJsonSchema,
+  createAuditLogBodyJsonSchema,
+  purgeAuditLogsQueryJsonSchema,
+  auditLogEnvelopeJsonSchema,
+  createAuditLogEnvelopeJsonSchema,
+  auditLogListEnvelopeJsonSchema,
+  entityAuditHistoryEnvelopeJsonSchema,
+  auditSummaryEnvelopeJsonSchema,
 } from '../validation/audit-log.schema';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
@@ -33,8 +43,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function auditLogRoutes(
   fastify: FastifyInstance,
-  controller: AuditLogController
+  controller: AuditLogController,
+  prisma: PrismaClient
 ): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -50,21 +65,15 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(auditSummaryQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get audit summary statistics for a workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: auditSummaryQueryJsonSchema,
         response: {
-          200: {
-            description: 'Audit summary retrieved successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: auditSummaryResponseSchema,
-            },
-          },
+          200: auditSummaryEnvelopeJsonSchema,
         },
       },
     },
@@ -80,21 +89,15 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(entityHistoryQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get audit history for a specific entity',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: entityHistoryQueryJsonSchema,
         response: {
-          200: {
-            description: 'Entity audit history retrieved successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: paginatedAuditLogsResponseSchema,
-            },
-          },
+          200: entityAuditHistoryEnvelopeJsonSchema,
         },
       },
     },
@@ -110,21 +113,15 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(listAuditLogsQuerySchema),
       ],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'List audit logs with optional filters',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listAuditLogsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Audit logs listed successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: paginatedAuditLogsResponseSchema,
-            },
-          },
+          200: auditLogListEnvelopeJsonSchema,
         },
       },
     },
@@ -137,21 +134,14 @@ export async function auditLogRoutes(
     '/workspaces/:workspaceId/audit-logs/:auditLogId',
     {
       preValidation: [validateParams(auditLogParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get a specific audit log by ID',
         security: [{ bearerAuth: [] }],
+        params: auditLogParamsJsonSchema,
         response: {
-          200: {
-            description: 'Audit log retrieved successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: auditLogResponseSchema,
-            },
-          },
+          200: auditLogEnvelopeJsonSchema,
         },
       },
     },
@@ -167,33 +157,19 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateBody(createAuditLogSchema),
       ],
-      preHandler: [RolePermissions.ADMIN_LEVEL],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Audit'],
         description: 'Create an audit log entry (admin only)',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['action', 'entityType', 'entityId'],
-          properties: {
-            action: { type: 'string', minLength: 1 },
-            entityType: { type: 'string', minLength: 1 },
-            entityId: { type: 'string', minLength: 1 },
-            details: { type: 'object', nullable: true },
-            metadata: { type: 'object', nullable: true },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createAuditLogBodyJsonSchema,
         response: {
-          201: {
-            description: 'Audit log created successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: createAuditLogResponseSchema,
-            },
-          },
+          201: createAuditLogEnvelopeJsonSchema,
         },
       },
     },
@@ -209,12 +185,18 @@ export async function auditLogRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(purgeAuditLogsQuerySchema),
       ],
-      preHandler: [RolePermissions.ADMIN_LEVEL],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Audit'],
         description:
           'Purge audit logs older than a specified number of days (admin only, minimum 30 days)',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: purgeAuditLogsQueryJsonSchema,
         response: {
           204: {
             type: 'null',
