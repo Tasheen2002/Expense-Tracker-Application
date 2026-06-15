@@ -2,26 +2,26 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { AuditService } from '../services/audit.service';
 
 export interface PurgeAuditLogsCommand extends ICommand {
-  workspaceId: string;
-  olderThanDays: number;
+  readonly workspaceId: string;
+  readonly olderThanDays: number;
 }
 
 export class PurgeAuditLogsHandler implements ICommandHandler<
   PurgeAuditLogsCommand,
-  CommandResult<{ deletedCount: number }>
+  CommandResult<{ readonly deletedCount: number }>
 > {
   constructor(private readonly auditService: AuditService) {}
 
   async handle(
-    input: PurgeAuditLogsCommand
-  ): Promise<CommandResult<{ deletedCount: number }>> {
+    command: PurgeAuditLogsCommand
+  ): Promise<CommandResult<{ readonly deletedCount: number }>> {
     const deletedCount = await this.auditService.purgeOldLogs(
-      input.workspaceId,
-      input.olderThanDays
+      command.workspaceId,
+      command.olderThanDays
     );
     return CommandResult.success({ deletedCount });
   }
