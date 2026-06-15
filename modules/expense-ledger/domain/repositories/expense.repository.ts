@@ -83,7 +83,8 @@ export interface IExpenseRepository {
   /**
    * Find expenses with filters
    */
-  findWithFilters(filters: ExpenseFilters): Promise<PaginatedResult<Expense>>;
+  findWithFilters(filters: ExpenseFilters, options?: PaginationOptions): Promise<PaginatedResult<Expense>>;
+
 
   /**
    * Delete expense
