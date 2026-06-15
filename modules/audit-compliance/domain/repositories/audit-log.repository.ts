@@ -3,9 +3,9 @@ import { AuditLogId } from '../value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
-export interface AuditLogFilter {
+export interface AuditLogFilter extends PaginationOptions {
   workspaceId: string;
   userId?: string;
   action?: string;
