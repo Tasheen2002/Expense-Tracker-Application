@@ -4,6 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { TagService } from '../services/tag.service';
+import { TagDTO } from '../../domain/entities/tag.entity';
 
 export interface UpdateTagCommand extends ICommand {
   readonly tagId: string;
@@ -14,15 +15,15 @@ export interface UpdateTagCommand extends ICommand {
 
 export class UpdateTagHandler implements ICommandHandler<
   UpdateTagCommand,
-  CommandResult<void>
+  CommandResult<TagDTO>
 > {
   constructor(private readonly tagService: TagService) {}
 
-  async handle(command: UpdateTagCommand): Promise<CommandResult<void>> {
-    await this.tagService.updateTag(command.tagId, command.workspaceId, {
+  async handle(command: UpdateTagCommand): Promise<CommandResult<TagDTO>> {
+    const tag = await this.tagService.updateTag(command.tagId, command.workspaceId, {
       name: command.name,
       color: command.color,
     });
-    return CommandResult.success();
+    return CommandResult.success(tag);
   }
 }

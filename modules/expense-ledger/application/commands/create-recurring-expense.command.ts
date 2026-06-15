@@ -8,13 +8,13 @@ import { ExpenseTemplate, RecurringExpenseDTO } from '../../domain/entities/recu
 import { RecurrenceFrequency } from '../../domain/enums/recurrence-frequency';
 
 export interface CreateRecurringExpenseCommand extends ICommand {
-  workspaceId: string;
-  userId: string;
-  frequency: RecurrenceFrequency;
-  interval: number;
-  startDate: Date;
-  endDate?: Date;
-  template: ExpenseTemplate;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly frequency: RecurrenceFrequency;
+  readonly interval: number;
+  readonly startDate: Date;
+  readonly endDate?: Date;
+  readonly template: ExpenseTemplate;
 }
 
 export class CreateRecurringExpenseHandler implements ICommandHandler<

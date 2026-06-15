@@ -6,7 +6,7 @@ import {
 import { RecurringExpenseService } from '../services/recurring-expense.service';
 
 export interface ProcessRecurringExpensesCommand extends ICommand {
-  limit?: number;
+  readonly limit?: number;
 }
 
 export class ProcessRecurringExpensesHandler implements ICommandHandler<
