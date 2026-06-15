@@ -13,6 +13,10 @@ vi.mock(
   })
 );
 
+vi.mock('@shared/middleware', () => ({
+  workspaceAuthorizationMiddleware: async () => {},
+}));
+
 import { AuditLogController } from '../infrastructure/http/controllers/audit-log.controller';
 import { auditLogRoutes } from '../infrastructure/http/routes/audit-log.routes';
 import { AuditLog } from '../domain/entities/audit-log.entity';
@@ -81,7 +85,7 @@ async function setupTestApp(
         };
       });
 
-      await auditLogRoutes(instance, controller);
+      await auditLogRoutes(instance, controller, {} as any);
     },
     { prefix: '/api/v1' }
   );
@@ -122,7 +126,7 @@ describe('Audit Compliance Endpoints', () => {
         ),
       ];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        items: mockLogs,
+        items: mockLogs.map((log) => AuditLog.toDTO(log)),
         total: 2,
         limit: 50,
         offset: 0,
@@ -138,15 +142,15 @@ describe('Audit Compliance Endpoints', () => {
       const body = JSON.parse(response.body);
       expect(Array.isArray(body.data.items)).toBe(true);
       expect(body.data.items).toHaveLength(2);
-      expect(body.data.pagination.total).toBe(2);
-      expect(body.data.pagination.limit).toBe(50);
-      expect(body.data.pagination.offset).toBe(0);
+      expect(body.data.total).toBe(2);
+      expect(body.data.limit).toBe(50);
+      expect(body.data.offset).toBe(0);
     });
 
     it('should list audit logs with filters', async () => {
       const mockLogs = [createMockAuditLog()];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        items: mockLogs,
+        items: mockLogs.map((log) => AuditLog.toDTO(log)),
         total: 1,
         limit: 10,
         offset: 0,
@@ -209,8 +213,8 @@ describe('Audit Compliance Endpoints', () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data.pagination.limit).toBe(20);
-      expect(body.data.pagination.offset).toBe(40);
+      expect(body.data.limit).toBe(20);
+      expect(body.data.offset).toBe(40);
     });
 
     it('should return empty list when no audit logs found', async () => {
@@ -231,7 +235,7 @@ describe('Audit Compliance Endpoints', () => {
       const body = JSON.parse(response.body);
       expect(Array.isArray(body.data.items)).toBe(true);
       expect(body.data.items).toHaveLength(0);
-      expect(body.data.pagination.total).toBe(0);
+      expect(body.data.total).toBe(0);
     });
   });
 
@@ -347,7 +351,7 @@ describe('Audit Compliance Endpoints', () => {
       (
         mockHandlers.getEntityAuditHistoryHandler.handle as any
       ).mockResolvedValue({
-        items: mockLogs,
+        items: mockLogs.map((log) => AuditLog.toDTO(log)),
         total: 2,
         limit: 50,
         offset: 0,
@@ -362,7 +366,7 @@ describe('Audit Compliance Endpoints', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.data.items).toHaveLength(2);
-      expect(body.data.pagination.total).toBe(2);
+      expect(body.data.total).toBe(2);
     });
 
     it('should return 400 when entityType missing', async () => {
@@ -618,7 +622,7 @@ describe('Audit Compliance Endpoints', () => {
     it('should return properly formatted paginated response', async () => {
       const mockLogs = [createMockAuditLog()];
       (mockHandlers.listAuditLogsHandler.handle as any).mockResolvedValue({
-        items: mockLogs,
+        items: mockLogs.map((log) => AuditLog.toDTO(log)),
         total: 1,
         limit: 50,
         offset: 0,
@@ -634,10 +638,10 @@ describe('Audit Compliance Endpoints', () => {
       const body = JSON.parse(response.body);
 
       expect(body.data).toHaveProperty('items');
-      expect(body.data).toHaveProperty('pagination');
-      expect(body.data.pagination).toHaveProperty('total');
-      expect(body.data.pagination).toHaveProperty('limit');
-      expect(body.data.pagination).toHaveProperty('offset');
+      expect(body.data).toHaveProperty('total');
+      expect(body.data).toHaveProperty('limit');
+      expect(body.data).toHaveProperty('offset');
+      expect(body.data).toHaveProperty('hasMore');
       expect(Array.isArray(body.data.items)).toBe(true);
     });
   });
