@@ -1,11 +1,19 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { ListWorkspaceMembersHandler } from '../../../application/queries/list-workspace-members.query';
-import { RemoveMemberHandler } from '../../../application/commands/remove-member.command';
-import { ChangeMemberRoleHandler } from '../../../application/commands/change-member-role.command';
+import {
+  ListWorkspaceMembersHandler,
+  RemoveMemberHandler,
+  ChangeMemberRoleHandler,
+} from '../../../application';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  workspaceParamsSchema,
+  memberParamsSchema,
+  updateMemberRoleSchema,
+} from '../validation/workspace.schema';
+import { z } from 'zod';
 
 export class MemberController {
   constructor(
@@ -16,7 +24,7 @@ export class MemberController {
   ) {}
 
   async listMembers(
-    request: AuthenticatedRequest<{ Params: { workspaceId: string } }>,
+    request: AuthenticatedRequest<{ Params: z.infer<typeof workspaceParamsSchema> }>,
     reply: FastifyReply
   ) {
     const { workspaceId } = request.params;
@@ -37,15 +45,7 @@ export class MemberController {
         workspaceId,
       });
 
-      return ResponseHelper.ok(reply, 'Members retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
+      return ResponseHelper.ok(reply, 'Members retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -53,7 +53,7 @@ export class MemberController {
 
   async removeMember(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; userId: string };
+      Params: z.infer<typeof memberParamsSchema>;
     }>,
     reply: FastifyReply
   ) {
@@ -98,8 +98,8 @@ export class MemberController {
 
   async changeRole(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; userId: string };
-      Body: { role: WorkspaceRole };
+      Params: z.infer<typeof memberParamsSchema>;
+      Body: z.infer<typeof updateMemberRoleSchema>;
     }>,
     reply: FastifyReply
   ) {
@@ -138,7 +138,7 @@ export class MemberController {
       const result = await this.changeMemberRoleHandler.handle({
         workspaceId,
         userId,
-        role,
+        role: role as WorkspaceRole,
       });
 
       return ResponseHelper.fromCommand(

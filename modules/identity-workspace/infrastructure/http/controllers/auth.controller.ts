@@ -1,20 +1,8 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { RegisterUserHandler } from '../../../application/commands/register-user.command';
-import { LoginUserHandler } from '../../../application/queries/login-user.query';
-import { GetUserHandler } from '../../../application/queries/get-user.query';
+import { RegisterUserHandler, LoginUserHandler, GetUserHandler } from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
-
-interface RegisterRequest {
-  email: string;
-  password: string;
-  fullName?: string;
-}
-
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+import { RegisterUserInput, LoginUserInput } from '../validation/user.schema';
 
 export class AuthController {
   constructor(
@@ -23,33 +11,8 @@ export class AuthController {
     private readonly getUserHandler: GetUserHandler
   ) {}
 
-  async register(
-    request: FastifyRequest<{ Body: RegisterRequest }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { email, password, fullName } = request.body;
-
-      const result = await this.registerUserHandler.handle({
-        email,
-        password,
-        fullName,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'User registered successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async login(
-    request: FastifyRequest<{ Body: LoginRequest }>,
+    request: FastifyRequest<{ Body: LoginUserInput }>,
     reply: FastifyReply
   ) {
     try {
@@ -79,6 +42,31 @@ export class AuthController {
       const result = await this.getUserHandler.handle({ userId: user.userId });
 
       return ResponseHelper.ok(reply, 'User profile retrieved', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async register(
+    request: FastifyRequest<{ Body: RegisterUserInput }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { email, password, fullName } = request.body;
+
+      const result = await this.registerUserHandler.handle({
+        email,
+        password,
+        fullName,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'User registered successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

@@ -1,14 +1,24 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateInvitationHandler } from '../../../application/commands/create-invitation.command';
-import { AcceptInvitationHandler } from '../../../application/commands/accept-invitation.command';
-import { CancelInvitationHandler } from '../../../application/commands/cancel-invitation.command';
-import { GetInvitationByTokenHandler } from '../../../application/queries/get-invitation-by-token.query';
-import { GetWorkspaceInvitationsHandler } from '../../../application/queries/get-workspace-invitations.query';
-import { GetPendingInvitationsHandler } from '../../../application/queries/get-pending-invitations.query';
+import {
+  CreateInvitationHandler,
+  AcceptInvitationHandler,
+  CancelInvitationHandler,
+  GetInvitationByTokenHandler,
+  GetWorkspaceInvitationsHandler,
+  GetPendingInvitationsHandler,
+} from '../../../application';
 import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  workspaceParamsSchema,
+  invitationParamsSchema,
+  tokenParamsSchema,
+  inviteMemberSchema,
+  paginationQuerySchema,
+} from '../validation/workspace.schema';
+import { z } from 'zod';
 
 export class InvitationController {
   constructor(
@@ -21,57 +31,11 @@ export class InvitationController {
     private readonly authHelper: WorkspaceAuthHelper
   ) {}
 
-  async createInvitation(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        email: string;
-        role: WorkspaceRole;
-        expiryHours?: number;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const { email, role, expiryHours } = request.body;
-    const user = request.user;
-
-    // Check if user can manage members (owner or admin)
-    const canManage = await this.authHelper.verifyCanManageMembers(
-      user.userId,
-      workspaceId,
-      reply
-    );
-    if (!canManage) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.createInvitationHandler.handle({
-        workspaceId,
-        email,
-        role,
-        invitedBy: user.userId,
-        expiryHours,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Invitation created successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async getInvitationByToken(
-    request: AuthenticatedRequest,
+    request: AuthenticatedRequest<{ Params: z.infer<typeof tokenParamsSchema> }>,
     reply: FastifyReply
   ) {
-    const { token } = request.params as { token: string };
+    const { token } = request.params;
 
     try {
       const invitation = await this.getInvitationByTokenHandler.handle({ token });
@@ -97,8 +61,86 @@ export class InvitationController {
     }
   }
 
+  async listWorkspaceInvitations(
+    request: AuthenticatedRequest<{
+      Params: z.infer<typeof workspaceParamsSchema>;
+      Querystring: z.infer<typeof paginationQuerySchema>;
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId } = request.params;
+    const { page = 1, limit = 50 } = request.query;
+    const user = request.user;
+
+    // Check if user can manage members (owner or admin)
+    const canManage = await this.authHelper.verifyCanManageMembers(
+      user.userId,
+      workspaceId,
+      reply
+    );
+    if (!canManage) {
+      return; // Response already sent by helper
+    }
+
+    try {
+      const result = await this.getPendingInvitationsHandler.handle({
+        workspaceId,
+        options: {
+          limit: Number(limit),
+          offset: (Number(page) - 1) * Number(limit),
+        },
+      });
+
+      return ResponseHelper.ok(reply, 'Invitations retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async createInvitation(
+    request: AuthenticatedRequest<{
+      Params: z.infer<typeof workspaceParamsSchema>;
+      Body: z.infer<typeof inviteMemberSchema>;
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId } = request.params;
+    const { email, role, expiryHours } = request.body;
+    const user = request.user;
+
+    // Check if user can manage members (owner or admin)
+    const canManage = await this.authHelper.verifyCanManageMembers(
+      user.userId,
+      workspaceId,
+      reply
+    );
+    if (!canManage) {
+      return; // Response already sent by helper
+    }
+
+    try {
+      const result = await this.createInvitationHandler.handle({
+        workspaceId,
+        email,
+        role: role as WorkspaceRole,
+        invitedBy: user.userId,
+        expiryHours,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Invitation created successfully',
+        result.data,
+        201
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async acceptInvitation(
-    request: AuthenticatedRequest<{ Params: { token: string } }>,
+    request: AuthenticatedRequest<{ Params: z.infer<typeof tokenParamsSchema> }>,
     reply: FastifyReply
   ) {
     const { token } = request.params;
@@ -121,63 +163,17 @@ export class InvitationController {
     }
   }
 
-  async listWorkspaceInvitations(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { page?: number; limit?: number };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const { page = 1, limit = 50 } = (request.query || {}) as {
-      page?: number;
-      limit?: number;
-    };
-    const user = request.user;
-
-    // Check if user can manage members (owner or admin)
-    const canManage = await this.authHelper.verifyCanManageMembers(
-      user.userId,
-      workspaceId,
-      reply
-    );
-    if (!canManage) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.getPendingInvitationsHandler.handle({
-        workspaceId,
-        options: {
-          limit: Number(limit),
-          offset: (Number(page) - 1) * Number(limit),
-        },
-      });
-
-      return ResponseHelper.ok(reply, 'Invitations retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async cancelInvitation(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; invitationId: string };
+      Params: z.infer<typeof invitationParamsSchema>;
     }>,
     reply: FastifyReply
   ) {
-    const { workspaceId, invitationId } = request.params;
+    const { invitationId } = request.params;
     const user = request.user;
 
-    // Check if user can manage members (owner or admin)
+    // Wait, check if user can manage members (owner or admin)
+    const { workspaceId } = request.params;
     const canManage = await this.authHelper.verifyCanManageMembers(
       user.userId,
       workspaceId,
