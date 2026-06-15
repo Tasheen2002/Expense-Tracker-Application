@@ -1,4 +1,5 @@
 import { IRecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
+import { RecurringExpenseId } from "../../domain/value-objects/recurring-expense-id";
 import {
   RecurringExpense,
   RecurringExpenseDTO,
@@ -88,7 +89,9 @@ export class RecurringExpenseService {
   }
 
   async pauseRecurringExpense(id: string): Promise<void> {
-    const expense = await this.recurringExpenseRepository.findById(id);
+    const expense = await this.recurringExpenseRepository.findById(
+      RecurringExpenseId.fromString(id)
+    );
     if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.pause();
@@ -96,7 +99,9 @@ export class RecurringExpenseService {
   }
 
   async resumeRecurringExpense(id: string): Promise<void> {
-    const expense = await this.recurringExpenseRepository.findById(id);
+    const expense = await this.recurringExpenseRepository.findById(
+      RecurringExpenseId.fromString(id)
+    );
     if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.resume();
@@ -104,7 +109,9 @@ export class RecurringExpenseService {
   }
 
   async stopRecurringExpense(id: string): Promise<void> {
-    const expense = await this.recurringExpenseRepository.findById(id);
+    const expense = await this.recurringExpenseRepository.findById(
+      RecurringExpenseId.fromString(id)
+    );
     if (!expense) throw new RecurringExpenseNotFoundError(id);
 
     expense.stop();
@@ -112,6 +119,8 @@ export class RecurringExpenseService {
   }
 
   async getRecurringExpense(id: string): Promise<RecurringExpense | null> {
-    return this.recurringExpenseRepository.findById(id);
+    return this.recurringExpenseRepository.findById(
+      RecurringExpenseId.fromString(id)
+    );
   }
 }

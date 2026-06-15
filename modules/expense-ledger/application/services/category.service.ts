@@ -61,6 +61,7 @@ export class CategoryService {
       description?: string;
       color?: string;
       icon?: string;
+      isActive?: boolean;
     }
   ): Promise<CategoryDTO> {
     const category = await this.categoryRepository.findById(
@@ -94,6 +95,14 @@ export class CategoryService {
 
     if (params.icon !== undefined) {
       category.updateIcon(params.icon);
+    }
+
+    if (params.isActive !== undefined) {
+      if (params.isActive) {
+        category.activate();
+      } else {
+        category.deactivate();
+      }
     }
 
     await this.categoryRepository.update(category);

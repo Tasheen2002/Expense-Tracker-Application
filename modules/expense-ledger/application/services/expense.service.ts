@@ -2,7 +2,7 @@ import {
   IExpenseRepository,
   ExpenseFilters,
 } from '../../domain/repositories/expense.repository';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult, PaginationOptions } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { Expense, ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
@@ -195,9 +195,10 @@ export class ExpenseService {
   }
 
   async getExpensesWithFilters(
-    filters: ExpenseFilters
+    filters: ExpenseFilters,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseDTO>> {
-    const result = await this.expenseRepository.findWithFilters(filters);
+    const result = await this.expenseRepository.findWithFilters(filters, options);
     return {
       ...result,
       items: result.items.map((expense) => Expense.toDTO(expense)),
