@@ -13,8 +13,8 @@ import {
   MIN_OCR_CONFIDENCE,
   MAX_OCR_CONFIDENCE,
 } from '../constants/receipt.constants';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
