@@ -4,9 +4,9 @@ import { SplitSettlementDTO } from '../../domain/entities/split-settlement.entit
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface GetSplitSettlementsQuery extends IQuery {
-  splitId: string;
-  workspaceId: string;
-  userId: string;
+  readonly splitId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class GetSplitSettlementsHandler implements IQueryHandler<GetSplitSettlementsQuery, PaginatedResult<SplitSettlementDTO>> {

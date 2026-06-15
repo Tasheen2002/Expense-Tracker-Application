@@ -4,9 +4,9 @@ import { ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 import { SplitNotFoundError } from '../../domain/errors/split-expense.errors';
 
 export interface GetSplitByExpenseQuery extends IQuery {
-  expenseId: string;
-  workspaceId: string;
-  userId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class GetSplitByExpenseHandler implements IQueryHandler<GetSplitByExpenseQuery, ExpenseSplitDTO> {

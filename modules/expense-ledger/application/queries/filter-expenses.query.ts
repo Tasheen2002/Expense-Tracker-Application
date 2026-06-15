@@ -5,11 +5,11 @@ import { ExpenseStatus } from '../../domain/enums/expense-status';
 import { PaymentMethod } from '../../domain/enums/payment-method';
 
 export interface FilterExpensesResult {
-  items: ExpenseDTO[];
-  total: number;
-  limit: number;
-  offset: number;
-  hasMore: boolean;
+  readonly items: readonly ExpenseDTO[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+  readonly hasMore: boolean;
 }
 
 export interface FilterExpensesQuery extends IQuery {
@@ -33,20 +33,23 @@ export class FilterExpensesHandler implements IQueryHandler<FilterExpensesQuery,
   constructor(private readonly expenseService: ExpenseService) {}
 
   async handle(query: FilterExpensesQuery): Promise<FilterExpensesResult> {
-    return this.expenseService.getExpensesWithFilters({
-      workspaceId: query.workspaceId,
-      userId: query.userId,
-      categoryId: query.categoryId,
-      status: query.status,
-      paymentMethod: query.paymentMethod,
-      isReimbursable: query.isReimbursable,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      minAmount: query.minAmount,
-      maxAmount: query.maxAmount,
-      currency: query.currency,
-      searchText: query.searchText,
-      pagination: { limit: query.limit, offset: query.offset },
-    });
+    return this.expenseService.getExpensesWithFilters(
+      {
+        workspaceId: query.workspaceId,
+        userId: query.userId,
+        categoryId: query.categoryId,
+        status: query.status,
+        paymentMethod: query.paymentMethod,
+        isReimbursable: query.isReimbursable,
+        startDate: query.startDate,
+        endDate: query.endDate,
+        minAmount: query.minAmount,
+        maxAmount: query.maxAmount,
+        currency: query.currency,
+        searchText: query.searchText,
+      },
+      { limit: query.limit, offset: query.offset }
+    );
   }
 }
+
