@@ -1,21 +1,23 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { UploadReceiptHandler } from '../../../application/commands/upload-receipt.command';
-import { LinkReceiptToExpenseHandler } from '../../../application/commands/link-receipt-to-expense.command';
-import { UnlinkReceiptFromExpenseHandler } from '../../../application/commands/unlink-receipt-from-expense.command';
-import { ProcessReceiptHandler } from '../../../application/commands/process-receipt.command';
-import { VerifyReceiptHandler } from '../../../application/commands/verify-receipt.command';
-import { RejectReceiptHandler } from '../../../application/commands/reject-receipt.command';
-import { DeleteReceiptHandler } from '../../../application/commands/delete-receipt.command';
-import { AddReceiptMetadataHandler } from '../../../application/commands/add-receipt-metadata.command';
-import { UpdateReceiptMetadataHandler } from '../../../application/commands/update-receipt-metadata.command';
-import { AddReceiptTagHandler } from '../../../application/commands/add-receipt-tag.command';
-import { RemoveReceiptTagHandler } from '../../../application/commands/remove-receipt-tag.command';
-import { GetReceiptHandler } from '../../../application/queries/get-receipt.query';
-import { ListReceiptsHandler } from '../../../application/queries/list-receipts.query';
-import { GetReceiptsByExpenseHandler } from '../../../application/queries/get-receipts-by-expense.query';
-import { GetReceiptMetadataHandler } from '../../../application/queries/get-receipt-metadata.query';
-import { GetReceiptStatsHandler } from '../../../application/queries/get-receipt-stats.query';
+import {
+  UploadReceiptHandler,
+  LinkReceiptToExpenseHandler,
+  UnlinkReceiptFromExpenseHandler,
+  ProcessReceiptHandler,
+  VerifyReceiptHandler,
+  RejectReceiptHandler,
+  DeleteReceiptHandler,
+  AddReceiptMetadataHandler,
+  UpdateReceiptMetadataHandler,
+  AddReceiptTagHandler,
+  RemoveReceiptTagHandler,
+  GetReceiptHandler,
+  ListReceiptsHandler,
+  GetReceiptsByExpenseHandler,
+  GetReceiptMetadataHandler,
+  GetReceiptStatsHandler,
+} from '../../../application';
 import type {
   UploadReceiptInput,
   LinkToExpenseInput,
@@ -51,28 +53,6 @@ export class ReceiptController {
     private readonly getStatsHandler: GetReceiptStatsHandler
   ) {}
 
-  async uploadReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
-    const userId = request.user.userId;
-    const { workspaceId } = request.params as { workspaceId: string };
-
-    try {
-      const result = await this.uploadReceiptHandler.handle({
-        workspaceId,
-        userId,
-        ...(request.body as Omit<UploadReceiptInput, 'workspaceId' | 'userId'>),
-      });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Receipt uploaded successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async getReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
     const { workspaceId, receiptId } = request.params as {
       workspaceId: string;
@@ -103,19 +83,17 @@ export class ReceiptController {
         receiptType: query.receiptType,
         isLinked: query.isLinked,
         isDeleted: query.isDeleted,
-        fromDate: query.fromDate,
-        toDate: query.toDate,
+        fromDate: query.fromDate ? new Date(query.fromDate as any) : undefined,
+        toDate: query.toDate ? new Date(query.toDate as any) : undefined,
         limit: query.limit,
         offset: query.offset,
       });
       return ResponseHelper.ok(reply, 'Receipts retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -137,14 +115,69 @@ export class ReceiptController {
         workspaceId,
       });
       return ResponseHelper.ok(reply, 'Receipts retrieved successfully', {
-        receipts: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getMetadata(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; receiptId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId, receiptId } = request.params;
+
+    try {
+      const result = await this.getMetadataHandler.handle({
+        receiptId,
+        workspaceId,
+      });
+      return ResponseHelper.ok(reply, 'Metadata retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getStats(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId } = request.params;
+
+    try {
+      const result = await this.getStatsHandler.handle({ workspaceId });
+      return ResponseHelper.ok(reply, 'Receipt statistics retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async uploadReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
+    const userId = request.user.userId;
+    const { workspaceId } = request.params as { workspaceId: string };
+
+    try {
+      const result = await this.uploadReceiptHandler.handle({
+        workspaceId,
+        userId,
+        ...(request.body as Omit<UploadReceiptInput, 'workspaceId' | 'userId'>),
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Receipt uploaded successfully',
+        result.data,
+        201
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -326,13 +359,14 @@ export class ReceiptController {
   ) {
     const userId = request.user.userId;
     const { workspaceId, receiptId } = request.params;
-
     try {
+      const { transactionDate, ...restBody } = request.body;
       const result = await this.addMetadataHandler.handle({
         receiptId,
         workspaceId,
         userId,
-        ...request.body,
+        ...restBody,
+        transactionDate: transactionDate ? new Date(transactionDate) : undefined,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -355,13 +389,14 @@ export class ReceiptController {
   ) {
     const userId = request.user.userId;
     const { workspaceId, receiptId } = request.params;
-
     try {
+      const { transactionDate, ...restBody } = request.body;
       const result = await this.updateMetadataHandler.handle({
         receiptId,
         workspaceId,
         userId,
-        ...request.body,
+        ...restBody,
+        transactionDate: transactionDate ? new Date(transactionDate) : undefined,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -369,25 +404,6 @@ export class ReceiptController {
         'Metadata updated successfully',
         result.data
       );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getMetadata(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId, receiptId } = request.params;
-
-    try {
-      const result = await this.getMetadataHandler.handle({
-        receiptId,
-        workspaceId,
-      });
-      return ResponseHelper.ok(reply, 'Metadata retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -442,22 +458,6 @@ export class ReceiptController {
         result,
         'Tag removed from receipt successfully'
       );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getStats(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-
-    try {
-      const result = await this.getStatsHandler.handle({ workspaceId });
-      return ResponseHelper.ok(reply, 'Receipt statistics retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
