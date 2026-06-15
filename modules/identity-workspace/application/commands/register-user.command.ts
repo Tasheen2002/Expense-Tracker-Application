@@ -1,15 +1,12 @@
 import { UserManagementService } from '../services/user-management.service';
 import { UserDTO } from '../../domain/entities/user.entity';
 import bcrypt from 'bcryptjs';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
-
-// Register User Command
 export interface RegisterUserCommand extends ICommand {
-  email: string;
-  password: string;
-  fullName?: string;
+  readonly email: string;
+  readonly password: string;
+  readonly fullName?: string;
 }
 
 export class RegisterUserHandler implements ICommandHandler<

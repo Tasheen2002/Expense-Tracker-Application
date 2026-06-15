@@ -1,10 +1,9 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface DeleteWorkspaceCommand extends ICommand {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class DeleteWorkspaceHandler implements ICommandHandler<
@@ -25,7 +24,7 @@ export class DeleteWorkspaceHandler implements ICommandHandler<
         throw new WorkspaceNotFoundError(command.workspaceId);
       }
 
-      return CommandResult.success();
+      return CommandResult.success(undefined);
     } catch (error) {
       return CommandResult.fromError(error);
     }

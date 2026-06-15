@@ -1,5 +1,4 @@
-import { ICommand, ICommandHandler } from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import {
   WorkspaceMembershipDTO,
@@ -8,9 +7,9 @@ import {
 import { MembershipNotFoundError } from '../../domain/errors/identity.errors';
 
 export interface ChangeMemberRoleCommand extends ICommand {
-  workspaceId: string;
-  userId: string; // The user whose role to change
-  role: WorkspaceRole;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly role: WorkspaceRole;
 }
 
 export class ChangeMemberRoleHandler implements ICommandHandler<
