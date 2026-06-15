@@ -47,12 +47,12 @@ export class PolicyEvaluationService {
     );
 
     // Sort by priority (higher priority first)
-    policies.sort((a, b) => b.getPriority() - a.getPriority());
+    policies.items.sort((a, b) => b.priority - a.priority);
 
     const violations: PolicyViolation[] = [];
     let blockedByPolicy: ExpensePolicy | undefined;
 
-    for (const policy of policies) {
+    for (const policy of policies.items) {
       // Check if policy applies to this expense context
       if (
         !policy.appliesTo({
@@ -233,7 +233,7 @@ export class PolicyEvaluationService {
       details: string;
     }> = [];
 
-    for (const policy of policies) {
+    for (const policy of policies.items) {
       if (
         !policy.appliesTo({
           categoryId: context.categoryId,
