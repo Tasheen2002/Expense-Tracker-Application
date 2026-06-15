@@ -3,6 +3,7 @@ import {
   WORKSPACE_NAME_MIN_LENGTH,
   WORKSPACE_NAME_MAX_LENGTH,
 } from '../../../domain/constants/identity.constants';
+import { toJsonSchema } from './validator';
 
 /**
  * Params Schemas
@@ -91,3 +92,124 @@ export const inviteMemberSchema = z.object({
 });
 
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+
+/**
+ * Response Schemas
+ */
+export const workspaceResponseSchema = z.object({
+  workspaceId: z.string().uuid(),
+  name: z.string(),
+  slug: z.string(),
+  ownerId: z.string().uuid(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const workspaceMembershipResponseSchema = z.object({
+  membershipId: z.string().uuid(),
+  userId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  role: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const workspaceInvitationResponseSchema = z.object({
+  invitationId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  email: z.string().email(),
+  role: z.string(),
+  token: z.string(),
+  expiresAt: z.string(),
+  acceptedAt: z.string().nullable(),
+  isExpired: z.boolean(),
+  isAccepted: z.boolean(),
+  createdAt: z.string(),
+});
+
+// Pre-computed JSON schemas for routes
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const memberParamsJsonSchema = toJsonSchema(memberParamsSchema);
+export const invitationParamsJsonSchema = toJsonSchema(invitationParamsSchema);
+export const tokenParamsJsonSchema = toJsonSchema(tokenParamsSchema);
+export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);
+
+export const createWorkspaceBodyJsonSchema = toJsonSchema(createWorkspaceSchema);
+export const updateWorkspaceBodyJsonSchema = toJsonSchema(updateWorkspaceSchema);
+export const addMemberBodyJsonSchema = toJsonSchema(addMemberSchema);
+export const updateMemberRoleBodyJsonSchema = toJsonSchema(updateMemberRoleSchema);
+export const inviteMemberBodyJsonSchema = toJsonSchema(inviteMemberSchema);
+
+// Response envelopes
+export const workspaceEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: workspaceResponseSchema,
+  })
+);
+
+export const workspaceListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(workspaceResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const membershipEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: workspaceMembershipResponseSchema,
+  })
+);
+
+export const membershipListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(workspaceMembershipResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const invitationEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: workspaceInvitationResponseSchema,
+  })
+);
+
+export const invitationListEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(workspaceInvitationResponseSchema),
+      total: z.number().int(),
+      limit: z.number().int(),
+      offset: z.number().int(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
