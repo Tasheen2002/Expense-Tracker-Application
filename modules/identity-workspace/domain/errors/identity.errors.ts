@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../packages/core/src/domain/domain-error';
+import { DomainError, DomainValidationError } from '../../../../packages/core/src/domain/domain-error';
 
 /**
  * Base error class for Identity-Workspace module
@@ -13,28 +13,114 @@ export class IdentityWorkspaceError extends DomainError {
   }
 }
 
-/**
- * User-related errors
- */
+// ============================================================================
+// 1. Validation Errors (400)
+// ============================================================================
+
+export class InvalidPasswordHashError extends DomainValidationError {
+  constructor() {
+    super('Password hash cannot be empty', 'INVALID_PASSWORD_HASH', 'passwordHash');
+  }
+}
+
+export class InvalidWorkspaceNameError extends DomainValidationError {
+  constructor() {
+    super('Workspace name cannot be empty', 'INVALID_WORKSPACE_NAME', 'name');
+  }
+}
+
+export class UserLookupCriteriaRequiredError extends DomainValidationError {
+  constructor() {
+    super('Either userId or email is required', 'USER_LOOKUP_CRITERIA_REQUIRED');
+  }
+}
+
+// ============================================================================
+// 2. Not Found Errors (404)
+// ============================================================================
+
 export class UserNotFoundError extends IdentityWorkspaceError {
   constructor(identifier: string) {
     super(`User ${identifier} not found`, 'USER_NOT_FOUND', 404);
   }
 }
 
+export class WorkspaceNotFoundError extends IdentityWorkspaceError {
+  constructor(identifier: string) {
+    super(`Workspace ${identifier} not found`, 'WORKSPACE_NOT_FOUND', 404);
+  }
+}
+
+export class MembershipNotFoundError extends IdentityWorkspaceError {
+  constructor(userId: string, workspaceId?: string) {
+    const message = workspaceId
+      ? `Membership for user ${userId} in workspace ${workspaceId} not found`
+      : `Membership ${userId} not found`;
+    super(message, 'MEMBERSHIP_NOT_FOUND', 404);
+  }
+}
+
+export class InvitationNotFoundError extends IdentityWorkspaceError {
+  constructor(token: string) {
+    super(`Invitation with token ${token} not found`, 'INVITATION_NOT_FOUND', 404);
+  }
+}
+
+// ============================================================================
+// 3. Conflict Errors (409)
+// ============================================================================
+
 export class UserAlreadyExistsError extends IdentityWorkspaceError {
   constructor(email: string) {
+    super(`User with email '${email}' already exists`, 'USER_ALREADY_EXISTS', 409);
+  }
+}
+
+export class WorkspaceAlreadyExistsError extends IdentityWorkspaceError {
+  constructor(slug: string) {
+    super(`Workspace with slug '${slug}' already exists`, 'WORKSPACE_ALREADY_EXISTS', 409);
+  }
+}
+
+export class MembershipAlreadyExistsError extends IdentityWorkspaceError {
+  constructor(userId: string, workspaceId: string) {
     super(
-      `User with email '${email}' already exists`,
-      'USER_ALREADY_EXISTS',
+      `User ${userId} is already a member of workspace ${workspaceId}`,
+      'MEMBERSHIP_ALREADY_EXISTS',
       409
     );
   }
 }
 
+export class DuplicateInvitationError extends IdentityWorkspaceError {
+  constructor(email: string, workspaceId: string) {
+    super(
+      `Pending invitation already exists for email ${email} and workspace ${workspaceId}`,
+      'DUPLICATE_INVITATION',
+      409
+    );
+  }
+}
+
+// ============================================================================
+// 4. Authorization / Authentication Errors (401, 403)
+// ============================================================================
+
 export class InvalidCredentialsError extends IdentityWorkspaceError {
   constructor() {
     super('Invalid email or password', 'INVALID_CREDENTIALS', 401);
+  }
+}
+
+export class SessionNotFoundError extends IdentityWorkspaceError {
+  constructor() {
+    super('Session not found or expired', 'SESSION_NOT_FOUND', 401);
+  }
+}
+
+export class SessionExpiredError extends IdentityWorkspaceError {
+  constructor() {
+    super('Session has expired', 'SESSION_EXPIRED', 401);
   }
 }
 
@@ -50,158 +136,28 @@ export class UserInactiveError extends IdentityWorkspaceError {
   }
 }
 
-/**
- * Workspace-related errors
- */
-export class WorkspaceNotFoundError extends IdentityWorkspaceError {
-  constructor(identifier: string) {
-    super(`Workspace ${identifier} not found`, 'WORKSPACE_NOT_FOUND', 404);
-  }
-}
-
-export class WorkspaceAlreadyExistsError extends IdentityWorkspaceError {
-  constructor(slug: string) {
-    super(
-      `Workspace with slug '${slug}' already exists`,
-      'WORKSPACE_ALREADY_EXISTS',
-      409
-    );
-  }
-}
-
 export class WorkspaceInactiveError extends IdentityWorkspaceError {
   constructor(workspaceId: string) {
     super(`Workspace ${workspaceId} is inactive`, 'WORKSPACE_INACTIVE', 403);
   }
 }
 
-/**
- * Membership-related errors
- */
-export class MembershipNotFoundError extends IdentityWorkspaceError {
-  constructor(userId: string, workspaceId?: string) {
-    const message = workspaceId
-      ? `Membership for user ${userId} in workspace ${workspaceId} not found`
-      : `Membership ${userId} not found`;
-    super(message, 'MEMBERSHIP_NOT_FOUND', 404);
-  }
-}
-
-export class MembershipAlreadyExistsError extends IdentityWorkspaceError {
-  constructor(userId: string, workspaceId: string) {
-    super(
-      `User ${userId} is already a member of workspace ${workspaceId}`,
-      'MEMBERSHIP_ALREADY_EXISTS',
-      409
-    );
-  }
-}
-
 export class InsufficientPermissionsError extends IdentityWorkspaceError {
   constructor(operation: string) {
-    super(
-      `Insufficient permissions to ${operation}`,
-      'INSUFFICIENT_PERMISSIONS',
-      403
-    );
+    super(`Insufficient permissions to ${operation}`, 'INSUFFICIENT_PERMISSIONS', 403);
   }
 }
+
+// ============================================================================
+// 5. Business Rule / Lifecycle Errors (422)
+// ============================================================================
 
 export class CannotRemoveOwnerError extends IdentityWorkspaceError {
   constructor() {
     super(
       'Cannot remove the workspace owner. Transfer ownership first.',
       'CANNOT_REMOVE_OWNER',
-      400
-    );
-  }
-}
-
-/**
- * Invitation-related errors
- */
-export class InvitationNotFoundError extends IdentityWorkspaceError {
-  constructor(token: string) {
-    super(
-      `Invitation with token ${token} not found`,
-      'INVITATION_NOT_FOUND',
-      404
-    );
-  }
-}
-
-export class InvitationExpiredError extends IdentityWorkspaceError {
-  constructor() {
-    super('Invitation has expired', 'INVITATION_EXPIRED', 400);
-  }
-}
-
-export class InvitationAlreadyAcceptedError extends IdentityWorkspaceError {
-  constructor() {
-    super(
-      'Invitation has already been accepted',
-      'INVITATION_ALREADY_ACCEPTED',
-      400
-    );
-  }
-}
-
-export class InvitationEmailMismatchError extends IdentityWorkspaceError {
-  constructor() {
-    super(
-      'Invitation email does not match user email',
-      'INVITATION_EMAIL_MISMATCH',
-      400
-    );
-  }
-}
-
-export class DuplicateInvitationError extends IdentityWorkspaceError {
-  constructor(email: string, workspaceId: string) {
-    super(
-      `Pending invitation already exists for email ${email} and workspace ${workspaceId}`,
-      'DUPLICATE_INVITATION',
-      409
-    );
-  }
-}
-
-/**
- * Session-related errors
- */
-export class SessionNotFoundError extends IdentityWorkspaceError {
-  constructor() {
-    super('Session not found or expired', 'SESSION_NOT_FOUND', 401);
-  }
-}
-
-export class SessionExpiredError extends IdentityWorkspaceError {
-  constructor() {
-    super('Session has expired', 'SESSION_EXPIRED', 401);
-  }
-}
-
-/**
- * Validation errors
- */
-export class InvalidPasswordHashError extends IdentityWorkspaceError {
-  constructor() {
-    super('Password hash cannot be empty', 'INVALID_PASSWORD_HASH', 400);
-  }
-}
-
-export class InvalidWorkspaceNameError extends IdentityWorkspaceError {
-  constructor() {
-    super('Workspace name cannot be empty', 'INVALID_WORKSPACE_NAME', 400);
-  }
-}
-
-export class UserLookupCriteriaRequiredError extends IdentityWorkspaceError {
-  constructor() {
-    super(
-      'Either userId or email is required',
-      'USER_LOOKUP_CRITERIA_REQUIRED',
-      400
+      422
     );
   }
 }
@@ -211,7 +167,25 @@ export class CannotChangeOwnerRoleError extends IdentityWorkspaceError {
     super(
       'Cannot change owner role. Transfer ownership first.',
       'CANNOT_CHANGE_OWNER_ROLE',
-      400
+      422
     );
+  }
+}
+
+export class InvitationExpiredError extends IdentityWorkspaceError {
+  constructor() {
+    super('Invitation has expired', 'INVITATION_EXPIRED', 422);
+  }
+}
+
+export class InvitationAlreadyAcceptedError extends IdentityWorkspaceError {
+  constructor() {
+    super('Invitation has already been accepted', 'INVITATION_ALREADY_ACCEPTED', 422);
+  }
+}
+
+export class InvitationEmailMismatchError extends IdentityWorkspaceError {
+  constructor() {
+    super('Invitation email does not match user email', 'INVITATION_EMAIL_MISMATCH', 422);
   }
 }
