@@ -1,12 +1,14 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-import { GetExemptionHandler } from '../../../application/queries/get-exemption.query';
-import { ListExemptionsHandler } from '../../../application/queries/list-exemptions.query';
-import { CheckActiveExemptionHandler } from '../../../application/queries/check-active-exemption.query';
-import { RequestExemptionHandler } from '../../../application/commands/request-exemption.command';
-import { ApproveExemptionHandler } from '../../../application/commands/approve-exemption.command';
-import { RejectExemptionHandler } from '../../../application/commands/reject-exemption.command';
+import {
+  GetExemptionHandler,
+  ListExemptionsHandler,
+  CheckActiveExemptionHandler,
+  RequestExemptionHandler,
+  ApproveExemptionHandler,
+  RejectExemptionHandler,
+} from '../../../application';
 import { ExemptionStatus } from '../../../domain/enums/exemption-status.enum';
 
 export class ExemptionController {
@@ -66,12 +68,10 @@ export class ExemptionController {
 
       return ResponseHelper.ok(reply, 'Exemptions retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

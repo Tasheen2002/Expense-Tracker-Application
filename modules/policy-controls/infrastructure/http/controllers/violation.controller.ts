@@ -1,13 +1,15 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-import { GetViolationHandler } from '../../../application/queries/get-violation.query';
-import { ListViolationsHandler } from '../../../application/queries/list-violations.query';
-import { GetViolationStatsHandler } from '../../../application/queries/get-violation-stats.query';
-import { AcknowledgeViolationHandler } from '../../../application/commands/acknowledge-violation.command';
-import { ResolveViolationHandler } from '../../../application/commands/resolve-violation.command';
-import { ExemptViolationHandler } from '../../../application/commands/exempt-violation.command';
-import { OverrideViolationHandler } from '../../../application/commands/override-violation.command';
+import {
+  GetViolationHandler,
+  ListViolationsHandler,
+  GetViolationStatsHandler,
+  AcknowledgeViolationHandler,
+  ResolveViolationHandler,
+  ExemptViolationHandler,
+  OverrideViolationHandler,
+} from '../../../application';
 import { ViolationStatus } from '../../../domain/enums/violation-status.enum';
 
 export class ViolationController {
@@ -70,12 +72,10 @@ export class ViolationController {
 
       return ResponseHelper.ok(reply, 'Violations retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,13 +1,15 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-import { CreatePolicyHandler } from '../../../application/commands/create-policy.command';
-import { UpdatePolicyHandler } from '../../../application/commands/update-policy.command';
-import { ActivatePolicyHandler } from '../../../application/commands/activate-policy.command';
-import { DeactivatePolicyHandler } from '../../../application/commands/deactivate-policy.command';
-import { DeletePolicyHandler } from '../../../application/commands/delete-policy.command';
-import { GetPolicyHandler } from '../../../application/queries/get-policy.query';
-import { ListPoliciesHandler } from '../../../application/queries/list-policies.query';
+import {
+  CreatePolicyHandler,
+  UpdatePolicyHandler,
+  ActivatePolicyHandler,
+  DeactivatePolicyHandler,
+  DeletePolicyHandler,
+  GetPolicyHandler,
+  ListPoliciesHandler,
+} from '../../../application';
 import { PolicyType } from '../../../domain/enums/policy-type.enum';
 import { ViolationSeverity } from '../../../domain/enums/violation-severity.enum';
 
@@ -21,6 +23,60 @@ export class PolicyController {
     private readonly getPolicyHandler: GetPolicyHandler,
     private readonly listPoliciesHandler: ListPoliciesHandler
   ) {}
+
+  async getPolicy(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; policyId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, policyId } = request.params;
+
+      const policy = await this.getPolicyHandler.handle({ policyId, workspaceId });
+
+      return ResponseHelper.ok(reply, 'Policy retrieved successfully', policy);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listPolicies(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: {
+        activeOnly?: string;
+        policyType?: PolicyType;
+        limit?: string;
+        offset?: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { activeOnly, limit, offset } = request.query;
+
+      const result = await this.listPoliciesHandler.handle({
+        workspaceId,
+        activeOnly: activeOnly === 'true',
+        pagination: {
+          limit: limit ? parseInt(limit, 10) : 50,
+          offset: offset ? parseInt(offset, 10) : 0,
+        },
+      });
+
+      return ResponseHelper.ok(reply, 'Policies retrieved successfully', {
+        items: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
 
   async createPolicy(
     request: AuthenticatedRequest<{
@@ -81,62 +137,6 @@ export class PolicyController {
       });
 
       return ResponseHelper.fromCommand(reply, result, 'Policy updated successfully');
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getPolicy(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; policyId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, policyId } = request.params;
-
-      const policy = await this.getPolicyHandler.handle({ policyId, workspaceId });
-
-      return ResponseHelper.ok(reply, 'Policy retrieved successfully', policy);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listPolicies(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        activeOnly?: string;
-        policyType?: PolicyType;
-        limit?: string;
-        offset?: string;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { activeOnly, limit, offset } = request.query;
-
-      const result = await this.listPoliciesHandler.handle({
-        workspaceId,
-        activeOnly: activeOnly === 'true',
-        pagination: {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
-        },
-      });
-
-      return ResponseHelper.ok(reply, 'Policies retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
