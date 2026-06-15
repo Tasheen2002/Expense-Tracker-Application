@@ -22,18 +22,37 @@ export class WorkspaceRepositoryImpl
     super(prisma, eventBus);
   }
 
-  async save(workspace: Workspace): Promise<void> {
-    await this.prisma.workspace.create({
-      data: {
-        id: workspace.id.getValue(),
-        name: workspace.name,
-        slug: workspace.slug,
-        ownerId: workspace.ownerId.getValue(),
-        isActive: workspace.isActive,
-        createdAt: workspace.createdAt,
-        updatedAt: workspace.updatedAt,
-      },
+  private toDomain(row: Prisma.WorkspaceGetPayload<object>): Workspace {
+    return Workspace.fromPersistence({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      ownerId: row.ownerId,
+      isActive: row.isActive,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
+  }
+
+  async save(workspace: Workspace): Promise<void> {
+    const data = {
+      name: workspace.name,
+      slug: workspace.slug,
+      ownerId: workspace.ownerId.getValue(),
+      isActive: workspace.isActive,
+      updatedAt: workspace.updatedAt,
+    };
+
+    await this.prisma.workspace.upsert({
+      where: { id: workspace.id.getValue() },
+      create: {
+        id: workspace.id.getValue(),
+        createdAt: workspace.createdAt,
+        ...data,
+      },
+      update: data,
+    });
+
     await this.dispatchEvents(workspace);
   }
 
@@ -46,15 +65,7 @@ export class WorkspaceRepositoryImpl
       return null;
     }
 
-    return Workspace.fromPersistence({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      ownerId: row.ownerId,
-      isActive: row.isActive,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+    return this.toDomain(row);
   }
 
   async findBySlug(slug: string): Promise<Workspace | null> {
@@ -66,15 +77,7 @@ export class WorkspaceRepositoryImpl
       return null;
     }
 
-    return Workspace.fromPersistence({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      ownerId: row.ownerId,
-      isActive: row.isActive,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+    return this.toDomain(row);
   }
 
   async findByOwnerId(
@@ -87,16 +90,7 @@ export class WorkspaceRepositoryImpl
         where: { ownerId: ownerId.getValue() },
         orderBy: { createdAt: "desc" },
       },
-      (row) =>
-        Workspace.fromPersistence({
-          id: row.id,
-          name: row.name,
-          slug: row.slug,
-          ownerId: row.ownerId,
-          isActive: row.isActive,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-        }),
+      (row) => this.toDomain(row),
       options,
     );
   }
@@ -125,31 +119,9 @@ export class WorkspaceRepositoryImpl
     return PrismaRepositoryHelper.paginate(
       this.prisma.workspace,
       { where, orderBy },
-      (row) =>
-        Workspace.fromPersistence({
-          id: row.id,
-          name: row.name,
-          slug: row.slug,
-          ownerId: row.ownerId,
-          isActive: row.isActive,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-        }),
+      (row) => this.toDomain(row),
       options,
     );
-  }
-
-  async update(workspace: Workspace): Promise<void> {
-    await this.prisma.workspace.update({
-      where: { id: workspace.id.getValue() },
-      data: {
-        name: workspace.name,
-        slug: workspace.slug,
-        isActive: workspace.isActive,
-        updatedAt: workspace.updatedAt,
-      },
-    });
-    await this.dispatchEvents(workspace);
   }
 
   async delete(id: WorkspaceId): Promise<void> {

@@ -53,16 +53,6 @@ export class WorkspaceMembershipRepositoryImpl
     await this.dispatchEvents(membership);
   }
 
-  async update(membership: WorkspaceMembership): Promise<void> {
-    await this.prisma.workspaceMembership.update({
-      where: { id: membership.id.getValue() },
-      data: {
-        role: membership.role,
-        updatedAt: membership.updatedAt,
-      },
-    });
-    await this.dispatchEvents(membership);
-  }
 
   async findById(id: MembershipId): Promise<WorkspaceMembership | null> {
     const row = await this.prisma.workspaceMembership.findUnique({

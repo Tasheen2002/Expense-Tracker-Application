@@ -22,19 +22,39 @@ export class UserRepositoryImpl
     super(prisma, eventBus);
   }
 
-  async save(user: User): Promise<void> {
-    await this.prisma.userAccount.create({
-      data: {
-        id: user.id.getValue(),
-        email: user.email.getValue(),
-        passwordHash: user.passwordHash,
-        fullName: user.fullName,
-        isActive: user.isActive,
-        emailVerified: user.emailVerified,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
+  private toDomain(row: Prisma.UserAccountGetPayload<object>): User {
+    return User.fromPersistence({
+      id: UserId.fromString(row.id),
+      email: Email.create(row.email),
+      passwordHash: row.passwordHash,
+      fullName: row.fullName,
+      isActive: row.isActive,
+      emailVerified: row.emailVerified,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
+  }
+
+  async save(user: User): Promise<void> {
+    const data = {
+      email: user.email.getValue(),
+      passwordHash: user.passwordHash,
+      fullName: user.fullName,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      updatedAt: user.updatedAt,
+    };
+
+    await this.prisma.userAccount.upsert({
+      where: { id: user.id.getValue() },
+      create: {
+        id: user.id.getValue(),
+        createdAt: user.createdAt,
+        ...data,
+      },
+      update: data,
+    });
+
     await this.dispatchEvents(user);
   }
 
@@ -47,16 +67,7 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.fromPersistence({
-      id: UserId.fromString(row.id),
-      email: Email.create(row.email),
-      passwordHash: row.passwordHash,
-      fullName: row.fullName,
-      isActive: row.isActive,
-      emailVerified: row.emailVerified,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+    return this.toDomain(row);
   }
 
   async findByEmail(email: Email): Promise<User | null> {
@@ -68,16 +79,7 @@ export class UserRepositoryImpl
       return null;
     }
 
-    return User.fromPersistence({
-      id: UserId.fromString(row.id),
-      email: Email.create(row.email),
-      passwordHash: row.passwordHash,
-      fullName: row.fullName,
-      isActive: row.isActive,
-      emailVerified: row.emailVerified,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+    return this.toDomain(row);
   }
 
   async findAll(options?: UserQueryOptions): Promise<PaginatedResult<User>> {
@@ -108,34 +110,9 @@ export class UserRepositoryImpl
     return PrismaRepositoryHelper.paginate(
       this.prisma.userAccount,
       { where, orderBy },
-      (row) =>
-        User.fromPersistence({
-          id: UserId.fromString(row.id),
-          email: Email.create(row.email),
-          passwordHash: row.passwordHash,
-          fullName: row.fullName,
-          isActive: row.isActive,
-          emailVerified: row.emailVerified,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-        }),
+      (row) => this.toDomain(row),
       options,
     );
-  }
-
-  async update(user: User): Promise<void> {
-    await this.prisma.userAccount.update({
-      where: { id: user.id.getValue() },
-      data: {
-        email: user.email.getValue(),
-        passwordHash: user.passwordHash,
-        fullName: user.fullName,
-        isActive: user.isActive,
-        emailVerified: user.emailVerified,
-        updatedAt: user.updatedAt,
-      },
-    });
-    await this.dispatchEvents(user);
   }
 
   async delete(id: UserId): Promise<void> {
