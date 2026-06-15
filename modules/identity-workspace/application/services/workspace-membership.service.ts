@@ -99,7 +99,7 @@ export class WorkspaceMembershipService {
     );
 
     membership.changeRole(newRole);
-    await this.membershipRepository.update(membership);
+    await this.membershipRepository.save(membership);
     return WorkspaceMembership.toDTO(membership);
   }
 
@@ -121,7 +121,7 @@ export class WorkspaceMembershipService {
     );
 
     membership.markAsRemoved();
-    await this.membershipRepository.update(membership);
+    await this.membershipRepository.save(membership);
     await this.membershipRepository.delete(id);
   }
 

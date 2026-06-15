@@ -98,7 +98,7 @@ export class UserManagementService {
       user.updateFullName(updateData.fullName)
     }
 
-    await this.userRepository.update(user)
+    await this.userRepository.save(user)
     return user
   }
 
@@ -115,7 +115,7 @@ export class UserManagementService {
     const passwordHash = await bcrypt.hash(newPassword, bcryptRounds)
 
     user.updatePassword(passwordHash)
-    await this.userRepository.update(user)
+    await this.userRepository.save(user)
     return user
   }
 
@@ -128,7 +128,7 @@ export class UserManagementService {
     }
 
     user.verifyEmail()
-    await this.userRepository.update(user)
+    await this.userRepository.save(user)
     return user
   }
 
@@ -141,7 +141,7 @@ export class UserManagementService {
     }
 
     user.deactivate()
-    await this.userRepository.update(user)
+    await this.userRepository.save(user)
     return user
   }
 
@@ -154,7 +154,7 @@ export class UserManagementService {
     }
 
     user.activate()
-    await this.userRepository.update(user)
+    await this.userRepository.save(user)
     return user
   }
 

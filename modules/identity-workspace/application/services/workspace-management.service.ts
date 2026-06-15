@@ -178,7 +178,7 @@ export class WorkspaceManagementService {
       workspace.updateName(updateData.name);
     }
 
-    await this.workspaceRepository.update(workspace);
+    await this.workspaceRepository.save(workspace);
     return workspace;
   }
 
@@ -191,7 +191,7 @@ export class WorkspaceManagementService {
     }
 
     workspace.deactivate();
-    await this.workspaceRepository.update(workspace);
+    await this.workspaceRepository.save(workspace);
     return workspace;
   }
 
@@ -204,7 +204,7 @@ export class WorkspaceManagementService {
     }
 
     workspace.activate();
-    await this.workspaceRepository.update(workspace);
+    await this.workspaceRepository.save(workspace);
     return workspace;
   }
 
