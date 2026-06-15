@@ -1,13 +1,10 @@
 import { PolicyService } from '../services/policy.service';
 import { ExpensePolicyDTO } from '../../domain/entities/expense-policy.entity';
-import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetPolicyInput extends IQuery {
-  policyId: string;
-  workspaceId: string;
+  readonly policyId: string;
+  readonly workspaceId: string;
 }
 
 export class GetPolicyHandler implements IQueryHandler<GetPolicyInput, ExpensePolicyDTO> {

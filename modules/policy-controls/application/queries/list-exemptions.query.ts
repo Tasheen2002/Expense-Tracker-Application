@@ -5,14 +5,14 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListExemptionsInput extends IQuery {
-  workspaceId: string;
-  status?: ExemptionStatus;
-  userId?: string;
-  policyId?: string;
-  pagination?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly status?: ExemptionStatus;
+  readonly userId?: string;
+  readonly policyId?: string;
+  readonly pagination?: PaginationOptions;
 }
 
 export class ListExemptionsHandler implements IQueryHandler<ListExemptionsInput, PaginatedResult<PolicyExemptionDTO>> {

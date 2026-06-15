@@ -5,15 +5,15 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListViolationsInput extends IQuery {
-  workspaceId: string;
-  status?: ViolationStatus;
-  userId?: string;
-  expenseId?: string;
-  policyId?: string;
-  pagination?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly status?: ViolationStatus;
+  readonly userId?: string;
+  readonly expenseId?: string;
+  readonly policyId?: string;
+  readonly pagination?: PaginationOptions;
 }
 
 export class ListViolationsHandler implements IQueryHandler<ListViolationsInput, PaginatedResult<PolicyViolationDTO>> {

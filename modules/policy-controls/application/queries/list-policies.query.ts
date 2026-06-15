@@ -5,13 +5,13 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListPoliciesInput extends IQuery {
-  workspaceId: string;
-  activeOnly?: boolean;
-  policyType?: PolicyType;
-  pagination?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly activeOnly?: boolean;
+  readonly policyType?: PolicyType;
+  readonly pagination?: PaginationOptions;
 }
 
 export class ListPoliciesHandler implements IQueryHandler<ListPoliciesInput, PaginatedResult<ExpensePolicyDTO>> {

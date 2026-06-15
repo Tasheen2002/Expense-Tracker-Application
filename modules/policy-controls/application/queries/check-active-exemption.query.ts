@@ -1,11 +1,11 @@
 import { ExemptionService } from '../services/exemption.service';
 import { PolicyExemptionDTO } from '../../domain/entities/policy-exemption.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface CheckActiveExemptionInput extends IQuery {
-  workspaceId: string;
-  userId: string;
-  policyId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly policyId: string;
 }
 
 export class CheckActiveExemptionHandler implements IQueryHandler<CheckActiveExemptionInput, PolicyExemptionDTO | null> {

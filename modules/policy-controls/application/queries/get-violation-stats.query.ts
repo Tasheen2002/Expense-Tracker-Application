@@ -1,15 +1,12 @@
 import { ViolationService } from '../services/violation.service';
 import { ViolationStatus } from '../../domain/enums/violation-status.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
-import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetViolationStatsInput extends IQuery {
-  workspaceId: string;
-  startDate?: Date;
-  endDate?: Date;
+  readonly workspaceId: string;
+  readonly startDate?: Date;
+  readonly endDate?: Date;
 }
 
 export interface ViolationStatsResult {
