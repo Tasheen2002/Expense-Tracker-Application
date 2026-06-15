@@ -1,11 +1,13 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateAuditLogHandler } from '../../../application/commands/create-audit-log.command';
-import { PurgeAuditLogsHandler } from '../../../application/commands/purge-audit-logs.command';
-import { GetAuditLogHandler } from '../../../application/queries/get-audit-log.query';
-import { ListAuditLogsHandler } from '../../../application/queries/list-audit-logs.query';
-import { GetEntityAuditHistoryHandler } from '../../../application/queries/get-entity-audit-history.query';
-import { GetAuditSummaryHandler } from '../../../application/queries/get-audit-summary.query';
+import {
+  CreateAuditLogHandler,
+  PurgeAuditLogsHandler,
+  GetAuditLogHandler,
+  ListAuditLogsHandler,
+  GetEntityAuditHistoryHandler,
+  GetAuditSummaryHandler,
+} from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
 
 export class AuditLogController {
@@ -51,15 +53,12 @@ export class AuditLogController {
         limit: query.limit,
         offset: query.offset,
       });
-
       return ResponseHelper.ok(reply, 'Audit logs retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -109,15 +108,12 @@ export class AuditLogController {
         limit,
         offset,
       });
-
       return ResponseHelper.ok(reply, 'Entity audit history retrieved successfully', {
         items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
       });
     } catch (error) {
       return ResponseHelper.error(reply, error);
