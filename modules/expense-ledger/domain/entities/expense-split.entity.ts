@@ -54,6 +54,30 @@ export interface ExpenseSplitProps {
   updatedAt: Date;
 }
 
+export interface ExpenseSplitParticipantDTO {
+  id: string;
+  userId: string;
+  shareAmount: string;
+  sharePercentage?: number;
+  isPaid: boolean;
+  paidAt?: string;
+}
+
+export interface ExpenseSplitDTO {
+  id: string;
+  expenseId: string;
+  workspaceId: string;
+  paidBy: string;
+  totalAmount: string;
+  currency: string;
+  splitType: string;
+  participants: ExpenseSplitParticipantDTO[];
+  isFullySettled: boolean;
+  outstandingAmount: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class ExpenseSplit extends AggregateRoot {
   private constructor(private props: ExpenseSplitProps) {
     super();
@@ -255,28 +279,4 @@ export class ExpenseSplit extends AggregateRoot {
       updatedAt: split.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ExpenseSplitParticipantDTO {
-  id: string;
-  userId: string;
-  shareAmount: string;
-  sharePercentage?: number;
-  isPaid: boolean;
-  paidAt?: string;
-}
-
-export interface ExpenseSplitDTO {
-  id: string;
-  expenseId: string;
-  workspaceId: string;
-  paidBy: string;
-  totalAmount: string;
-  currency: string;
-  splitType: string;
-  participants: ExpenseSplitParticipantDTO[];
-  isFullySettled: boolean;
-  outstandingAmount: string;
-  createdAt: string;
-  updatedAt: string;
 }

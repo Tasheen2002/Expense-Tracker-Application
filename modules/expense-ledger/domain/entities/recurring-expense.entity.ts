@@ -60,6 +60,21 @@ export interface RecurringExpenseProps {
   updatedAt: Date;
 }
 
+export interface RecurringExpenseDTO {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  frequency: string;
+  interval: number;
+  startDate: string;
+  endDate?: string;
+  nextRunDate: string;
+  status: string;
+  template: ExpenseTemplate;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class RecurringExpense extends AggregateRoot {
   private readonly props: RecurringExpenseProps;
 
@@ -220,19 +235,4 @@ export class RecurringExpense extends AggregateRoot {
       updatedAt: expense.updatedAt.toISOString(),
     };
   }
-}
-
-export interface RecurringExpenseDTO {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  frequency: string;
-  interval: number;
-  startDate: string;
-  endDate?: string;
-  nextRunDate: string;
-  status: string;
-  template: ExpenseTemplate;
-  createdAt: string;
-  updatedAt: string;
 }

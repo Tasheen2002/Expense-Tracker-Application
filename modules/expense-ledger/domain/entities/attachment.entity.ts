@@ -22,6 +22,17 @@ export interface AttachmentProps {
   createdAt: Date;
 }
 
+export interface AttachmentDTO {
+  attachmentId: string;
+  expenseId: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  createdAt: string;
+}
+
 export class Attachment {
   private readonly props: AttachmentProps;
 
@@ -183,15 +194,4 @@ export class Attachment {
       createdAt: attachment.createdAt.toISOString(),
     };
   }
-}
-
-export interface AttachmentDTO {
-  attachmentId: string;
-  expenseId: string;
-  fileName: string;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  uploadedBy: string;
-  createdAt: string;
 }

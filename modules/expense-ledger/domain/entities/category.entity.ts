@@ -59,6 +59,18 @@ export interface CategoryProps {
   updatedAt: Date;
 }
 
+export interface CategoryDTO {
+  categoryId: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class Category extends AggregateRoot {
   private readonly props: CategoryProps;
 
@@ -219,16 +231,4 @@ export class Category extends AggregateRoot {
       updatedAt: category.updatedAt.toISOString(),
     };
   }
-}
-
-export interface CategoryDTO {
-  categoryId: string;
-  workspaceId: string;
-  name: string;
-  description?: string;
-  color?: string;
-  icon?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

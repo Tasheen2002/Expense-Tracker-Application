@@ -18,6 +18,21 @@ export interface SplitSettlementProps {
   updatedAt: Date;
 }
 
+export interface SplitSettlementDTO {
+  id: string;
+  splitId: string;
+  fromUserId: string;
+  toUserId: string;
+  totalOwedAmount: string;
+  paidAmount: string;
+  remainingAmount: string;
+  currency: string;
+  status: string;
+  settledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class SplitSettlement {
   private constructor(private props: SplitSettlementProps) {}
 
@@ -132,19 +147,4 @@ export class SplitSettlement {
       updatedAt: settlement.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface SplitSettlementDTO {
-  id: string;
-  splitId: string;
-  fromUserId: string;
-  toUserId: string;
-  totalOwedAmount: string;
-  paidAmount: string;
-  remainingAmount: string;
-  currency: string;
-  status: string;
-  settledAt?: string;
-  createdAt: string;
-  updatedAt: string;
 }

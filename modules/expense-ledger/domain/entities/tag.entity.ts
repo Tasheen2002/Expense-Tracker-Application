@@ -53,6 +53,14 @@ export interface TagProps {
   createdAt: Date;
 }
 
+export interface TagDTO {
+  tagId: string;
+  workspaceId: string;
+  name: string;
+  color?: string;
+  createdAt: string;
+}
+
 export class Tag extends AggregateRoot {
   private readonly props: TagProps;
 
@@ -148,12 +156,4 @@ export class Tag extends AggregateRoot {
       createdAt: tag.createdAt.toISOString(),
     };
   }
-}
-
-export interface TagDTO {
-  tagId: string;
-  workspaceId: string;
-  name: string;
-  color?: string;
-  createdAt: string;
 }
