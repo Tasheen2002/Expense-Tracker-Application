@@ -15,7 +15,6 @@ export interface IWorkspaceRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Workspace>>;
   findAll(options?: WorkspaceQueryOptions): Promise<PaginatedResult<Workspace>>;
-  update(workspace: Workspace): Promise<void>;
   delete(id: WorkspaceId): Promise<void>;
   exists(id: WorkspaceId): Promise<boolean>;
   existsBySlug(slug: string): Promise<boolean>;

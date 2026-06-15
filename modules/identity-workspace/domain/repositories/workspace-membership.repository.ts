@@ -9,7 +9,6 @@ import {
 
 export interface IWorkspaceMembershipRepository {
   save(membership: WorkspaceMembership): Promise<void>;
-  update(membership: WorkspaceMembership): Promise<void>;
   findById(id: MembershipId): Promise<WorkspaceMembership | null>;
   findByUserAndWorkspace(
     userId: UserId,

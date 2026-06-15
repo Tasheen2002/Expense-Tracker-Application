@@ -11,7 +11,6 @@ export interface IUserRepository {
   findById(id: UserId): Promise<User | null>;
   findByEmail(email: Email): Promise<User | null>;
   findAll(options?: UserQueryOptions): Promise<PaginatedResult<User>>;
-  update(user: User): Promise<void>;
   delete(id: UserId): Promise<void>;
   exists(id: UserId): Promise<boolean>;
   existsByEmail(email: Email): Promise<boolean>;
