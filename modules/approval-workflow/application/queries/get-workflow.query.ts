@@ -5,18 +5,18 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface GetWorkflowInput extends IQuery {
-  expenseId: string;
-  workspaceId: string;
+export interface GetWorkflowQuery extends IQuery {
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
 export class GetWorkflowHandler implements IQueryHandler<
-  GetWorkflowInput,
+  GetWorkflowQuery,
   ExpenseWorkflowDTO
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: GetWorkflowInput): Promise<ExpenseWorkflowDTO> {
-    return this.workflowService.getWorkflow(input.expenseId, input.workspaceId);
+  async handle(query: GetWorkflowQuery): Promise<ExpenseWorkflowDTO> {
+    return this.workflowService.getWorkflow(query.expenseId, query.workspaceId);
   }
 }

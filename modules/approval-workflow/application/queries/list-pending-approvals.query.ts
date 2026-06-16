@@ -6,24 +6,24 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListPendingApprovalsInput extends IQuery {
-  approverId: string;
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+export interface ListPendingApprovalsQuery extends IQuery {
+  readonly approverId: string;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListPendingApprovalsHandler implements IQueryHandler<
-  ListPendingApprovalsInput,
+  ListPendingApprovalsQuery,
   PaginatedResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: ListPendingApprovalsInput): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+  async handle(query: ListPendingApprovalsQuery): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
     return this.workflowService.listPendingApprovals(
-      input.approverId,
-      input.workspaceId,
-      { limit: input.limit, offset: input.offset }
+      query.approverId,
+      query.workspaceId,
+      { limit: query.limit, offset: query.offset }
     );
   }
 }

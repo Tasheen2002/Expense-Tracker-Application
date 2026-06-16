@@ -6,24 +6,24 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListApprovalChainsInput extends IQuery {
-  workspaceId: string;
-  activeOnly?: boolean;
-  limit?: number;
-  offset?: number;
+export interface ListApprovalChainsQuery extends IQuery {
+  readonly workspaceId: string;
+  readonly activeOnly?: boolean;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListApprovalChainsHandler implements IQueryHandler<
-  ListApprovalChainsInput,
+  ListApprovalChainsQuery,
   PaginatedResult<ApprovalChainDTO>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: ListApprovalChainsInput): Promise<PaginatedResult<ApprovalChainDTO>> {
+  async handle(query: ListApprovalChainsQuery): Promise<PaginatedResult<ApprovalChainDTO>> {
     return this.approvalChainService.listChains(
-      input.workspaceId,
-      input.activeOnly,
-      { limit: input.limit, offset: input.offset }
+      query.workspaceId,
+      query.activeOnly,
+      { limit: query.limit, offset: query.offset }
     );
   }
 }

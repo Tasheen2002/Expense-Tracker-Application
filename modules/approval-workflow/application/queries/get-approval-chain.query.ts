@@ -5,18 +5,18 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface GetApprovalChainInput extends IQuery {
-  chainId: string;
-  workspaceId: string;
+export interface GetApprovalChainQuery extends IQuery {
+  readonly chainId: string;
+  readonly workspaceId: string;
 }
 
 export class GetApprovalChainHandler implements IQueryHandler<
-  GetApprovalChainInput,
+  GetApprovalChainQuery,
   ApprovalChainDTO
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: GetApprovalChainInput): Promise<ApprovalChainDTO> {
-    return this.approvalChainService.getChain(input.chainId, input.workspaceId);
+  async handle(query: GetApprovalChainQuery): Promise<ApprovalChainDTO> {
+    return this.approvalChainService.getChain(query.chainId, query.workspaceId);
   }
 }

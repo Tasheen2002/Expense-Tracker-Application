@@ -6,24 +6,24 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListUserWorkflowsInput extends IQuery {
-  userId: string;
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+export interface ListUserWorkflowsQuery extends IQuery {
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListUserWorkflowsHandler implements IQueryHandler<
-  ListUserWorkflowsInput,
+  ListUserWorkflowsQuery,
   PaginatedResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: ListUserWorkflowsInput): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+  async handle(query: ListUserWorkflowsQuery): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
     return this.workflowService.listUserWorkflows(
-      input.userId,
-      input.workspaceId,
-      { limit: input.limit, offset: input.offset }
+      query.userId,
+      query.workspaceId,
+      { limit: query.limit, offset: query.offset }
     );
   }
 }
