@@ -64,6 +64,18 @@ export const chainParamsSchema = workspaceParamsSchema.extend({
   chainId: z.string().uuid(),
 });
 
+export type CreateChainBody = z.infer<typeof createChainSchema>;
+export type UpdateChainBody = z.infer<typeof updateChainSchema>;
+export type ListChainsQuery = z.infer<typeof listChainsSchema>;
+export type InitiateWorkflowBody = z.infer<typeof initiateWorkflowSchema>;
+export type ApproveStepBody = z.infer<typeof approveStepSchema>;
+export type RejectStepBody = z.infer<typeof rejectStepSchema>;
+export type DelegateStepBody = z.infer<typeof delegateStepSchema>;
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+export type WorkflowParams = z.infer<typeof workflowParamsSchema>;
+export type ChainParams = z.infer<typeof chainParamsSchema>;
+export type PaginationQuery = z.infer<typeof paginationSchema>;
+
 // ==================== API RESPONSE SCHEMAS (JSON Schema) ====================
 
 export const chainResponseSchema = {

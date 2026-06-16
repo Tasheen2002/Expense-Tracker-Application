@@ -14,6 +14,13 @@ vi.mock(
   })
 );
 
+vi.mock('@shared/middleware', () => ({
+  workspaceAuthorizationMiddleware: async () => {},
+  authenticate: async () => {},
+  requireRole: () => async () => {},
+  hasRole: () => true,
+}));
+
 import Fastify, { FastifyInstance } from 'fastify';
 import { ApprovalChainController } from '../infrastructure/http/controllers/approval-chain.controller';
 import { WorkflowController } from '../infrastructure/http/controllers/workflow.controller';
@@ -128,6 +135,14 @@ async function setupTestApp(
 
   // Mock authentication
   app.decorateRequest('user', null);
+  app.decorate('authenticate', async (request: any, reply: any) => {
+    request.user = {
+      userId: mockUserId,
+      workspaceId: mockWorkspaceId,
+      email: 'test@example.com',
+      role: 'ADMIN',
+    };
+  });
   app.addHook('preHandler', async (request) => {
     (request as any).user = {
       userId: mockUserId,
@@ -187,11 +202,11 @@ async function setupTestApp(
   );
 
   await app.register(async (instance) => {
-    await approvalChainRoutes(instance, chainController);
+    await approvalChainRoutes(instance, chainController, {} as any);
   });
 
   await app.register(async (instance) => {
-    await workflowRoutes(instance, workflowController);
+    await workflowRoutes(instance, workflowController, {} as any);
   });
 
   return app;
