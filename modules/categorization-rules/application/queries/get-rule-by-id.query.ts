@@ -1,35 +1,23 @@
 import { CategoryRuleService } from "../services/category-rule.service";
 import { RuleId } from "../../domain/value-objects/rule-id";
+import { CategoryRule } from "../../domain/entities/category-rule.entity";
 
-export interface GetRuleByIdQuery {
-  ruleId: string;
-  userId: string;
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs'
+
+
+export interface GetRuleByIdQuery extends IQuery {
+  readonly ruleId: string;
+  readonly userId: string;
 }
 
-export class GetRuleByIdHandler {
+export class GetRuleByIdHandler implements IQueryHandler<GetRuleByIdQuery, CategoryRule> {
   constructor(private readonly ruleService: CategoryRuleService) {}
 
-  async execute(query: GetRuleByIdQuery) {
-    const rule = await this.ruleService.getRuleById(
+  async handle(query: GetRuleByIdQuery): Promise<CategoryRule> {
+    return await this.ruleService.getRuleById(
       RuleId.fromString(query.ruleId),
       query.userId,
     );
-
-    return {
-      id: rule.getId().getValue(),
-      workspaceId: rule.getWorkspaceId().getValue(),
-      name: rule.getName(),
-      description: rule.getDescription(),
-      priority: rule.getPriority(),
-      isActive: rule.getIsActive(),
-      condition: {
-        type: rule.getCondition().getType(),
-        value: rule.getCondition().getValue(),
-      },
-      targetCategoryId: rule.getTargetCategoryId().getValue(),
-      createdBy: rule.getCreatedBy().getValue(),
-      createdAt: rule.getCreatedAt(),
-      updatedAt: rule.getUpdatedAt(),
-    };
   }
 }
+

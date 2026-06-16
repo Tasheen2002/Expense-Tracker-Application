@@ -1,37 +1,25 @@
 import { RuleExecutionService } from '../services/rule-execution.service'
 import { RuleId } from '../../domain/value-objects/rule-id'
 import { PaginatedResult } from '../../../../apps/api/src/shared/domain/interfaces/paginated-result.interface'
+import { RuleExecution } from '../../domain/entities/rule-execution.entity'
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs'
 
-export interface GetExecutionsByRuleQuery {
-  ruleId: string
-  limit?: number
-  offset?: number
+export interface GetExecutionsByRuleQuery extends IQuery {
+  readonly ruleId: string
+  readonly limit?: number
+  readonly offset?: number
 }
 
-export class GetExecutionsByRuleHandler {
+export class GetExecutionsByRuleHandler implements IQueryHandler<GetExecutionsByRuleQuery, PaginatedResult<RuleExecution>> {
   constructor(private readonly executionService: RuleExecutionService) {}
 
-  async execute(
+  async handle(
     query: GetExecutionsByRuleQuery,
-  ): Promise<PaginatedResult<any>> {
-    const result = await this.executionService.getExecutionsByRuleId(
+  ): Promise<PaginatedResult<RuleExecution>> {
+    return await this.executionService.getExecutionsByRuleId(
       RuleId.fromString(query.ruleId),
       { limit: query.limit, offset: query.offset },
     )
-
-    return {
-      items: result.items.map((execution) => ({
-        id: execution.getId().getValue(),
-        ruleId: execution.getRuleId().getValue(),
-        expenseId: execution.getExpenseId().getValue(),
-        workspaceId: execution.getWorkspaceId().getValue(),
-        appliedCategoryId: execution.getAppliedCategoryId().getValue(),
-        executedAt: execution.getExecutedAt(),
-      })),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    }
   }
 }
+
