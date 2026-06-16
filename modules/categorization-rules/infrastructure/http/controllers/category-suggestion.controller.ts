@@ -1,43 +1,26 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "../../../../../apps/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "../../../../../apps/api/src/shared/response.helper";
+import { CategorySuggestion } from "../../../domain/entities/category-suggestion.entity";
 import { CreateSuggestionBody } from "../validation/category-suggestion.schema";
-
-// Command Handlers
 import {
   CreateSuggestionCommand,
   CreateSuggestionHandler,
-} from "../../../application/commands/create-suggestion.command";
-import {
   AcceptSuggestionCommand,
   AcceptSuggestionHandler,
-} from "../../../application/commands/accept-suggestion.command";
-import {
   RejectSuggestionCommand,
   RejectSuggestionHandler,
-} from "../../../application/commands/reject-suggestion.command";
-import {
   DeleteSuggestionCommand,
   DeleteSuggestionHandler,
-} from "../../../application/commands/delete-suggestion.command";
-
-// Query Handlers
-import {
   GetSuggestionByIdQuery,
   GetSuggestionByIdHandler,
-} from "../../../application/queries/get-suggestion-by-id.query";
-import {
   GetSuggestionsByExpenseQuery,
   GetSuggestionsByExpenseHandler,
-} from "../../../application/queries/get-suggestions-by-expense.query";
-import {
   GetPendingSuggestionsByWorkspaceQuery,
   GetPendingSuggestionsByWorkspaceHandler,
-} from "../../../application/queries/get-pending-suggestions-by-workspace.query";
-import {
   GetSuggestionsByWorkspaceQuery,
   GetSuggestionsByWorkspaceHandler,
-} from "../../../application/queries/get-suggestions-by-workspace.query";
+} from "../../../application";
 
 export class CategorySuggestionController {
   constructor(
@@ -50,6 +33,140 @@ export class CategorySuggestionController {
     private readonly getPendingSuggestionsByWorkspaceHandler: GetPendingSuggestionsByWorkspaceHandler,
     private readonly getSuggestionsByWorkspaceHandler: GetSuggestionsByWorkspaceHandler,
   ) {}
+
+  // ============================================================================
+  // Serialization Helpers
+  // ============================================================================
+
+  private serializeSuggestion(suggestion: CategorySuggestion) {
+    return {
+      suggestionId: suggestion.getId().getValue(),
+      workspaceId: suggestion.getWorkspaceId().getValue(),
+      expenseId: suggestion.getExpenseId().getValue(),
+      suggestedCategoryId: suggestion.getSuggestedCategoryId().getValue(),
+      confidence: suggestion.getConfidence().getValue(),
+      reason: suggestion.getReason(),
+      isAccepted: suggestion.getIsAccepted(),
+      createdAt: suggestion.getCreatedAt().toISOString(),
+      respondedAt: suggestion.getRespondedAt() ? suggestion.getRespondedAt()!.toISOString() : null,
+    };
+  }
+
+  // ============================================================================
+  // Queries
+  // ============================================================================
+
+  async getSuggestionById(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; suggestionId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userId = request.user.userId;
+      const { suggestionId } = request.params;
+
+      const query: GetSuggestionByIdQuery = { suggestionId };
+      const suggestion = await this.getSuggestionByIdHandler.handle(query);
+
+      return ResponseHelper.success(
+        reply,
+        200,
+        "Category suggestion retrieved successfully",
+        this.serializeSuggestion(suggestion),
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getSuggestionsByExpense(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; expenseId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userId = request.user.userId;
+      const { workspaceId, expenseId } = request.params;
+
+      const query: GetSuggestionsByExpenseQuery = { workspaceId, expenseId };
+      const result = await this.getSuggestionsByExpenseHandler.handle(query);
+
+      return ResponseHelper.success(
+        reply,
+        200,
+        "Category suggestions retrieved successfully",
+        {
+          items: result.items.map(s => this.serializeSuggestion(s)),
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listSuggestions(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: { pendingOnly?: string; limit?: string; offset?: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userId = request.user.userId;
+      const { workspaceId } = request.params;
+      const { pendingOnly, limit: limitStr, offset: offsetStr } = request.query;
+      const limit = limitStr ? parseInt(limitStr) : undefined;
+      const offset = offsetStr ? parseInt(offsetStr) : undefined;
+
+      if (pendingOnly === "true") {
+        const query: GetPendingSuggestionsByWorkspaceQuery = {
+          workspaceId,
+          limit,
+          offset,
+        };
+        const result = await this.getPendingSuggestionsByWorkspaceHandler.handle(query);
+        return ResponseHelper.success(
+          reply,
+          200,
+          "Pending category suggestions retrieved successfully",
+          {
+            items: result.items.map(s => this.serializeSuggestion(s)),
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        );
+      } else {
+        const query: GetSuggestionsByWorkspaceQuery = { workspaceId, limit, offset };
+        const result = await this.getSuggestionsByWorkspaceHandler.handle(query);
+        return ResponseHelper.success(
+          reply,
+          200,
+          "Category suggestions retrieved successfully",
+          {
+            items: result.items.map(s => this.serializeSuggestion(s)),
+            total: result.total,
+            limit: result.limit,
+            offset: result.offset,
+            hasMore: result.hasMore,
+          },
+        );
+      }
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ============================================================================
+  // Commands
+  // ============================================================================
 
   async createSuggestion(
     request: AuthenticatedRequest<{
@@ -70,13 +187,24 @@ export class CategorySuggestionController {
         reason: request.body.reason,
       };
 
-      const suggestion = await this.createSuggestionHandler.execute(command);
+      const result = await this.createSuggestionHandler.handle(command);
 
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: "Bad Request",
+          message: result.error || "Failed to create category suggestion",
+          details: result.errors,
+        });
+      }
+
+      const suggestion = result.data!;
       return ResponseHelper.success(
         reply,
         201,
         "Category suggestion created successfully",
-        suggestion,
+        this.serializeSuggestion(suggestion),
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -94,13 +222,24 @@ export class CategorySuggestionController {
       const { suggestionId } = request.params;
 
       const command: AcceptSuggestionCommand = { suggestionId };
-      const suggestion = await this.acceptSuggestionHandler.execute(command);
+      const result = await this.acceptSuggestionHandler.handle(command);
 
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: "Bad Request",
+          message: result.error || "Failed to accept category suggestion",
+          details: result.errors,
+        });
+      }
+
+      const suggestion = result.data!;
       return ResponseHelper.success(
         reply,
         200,
         "Category suggestion accepted successfully",
-        suggestion,
+        this.serializeSuggestion(suggestion),
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -118,13 +257,24 @@ export class CategorySuggestionController {
       const { suggestionId } = request.params;
 
       const command: RejectSuggestionCommand = { suggestionId };
-      const suggestion = await this.rejectSuggestionHandler.execute(command);
+      const result = await this.rejectSuggestionHandler.handle(command);
 
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: "Bad Request",
+          message: result.error || "Failed to reject category suggestion",
+          details: result.errors,
+        });
+      }
+
+      const suggestion = result.data!;
       return ResponseHelper.success(
         reply,
         200,
         "Category suggestion rejected successfully",
-        suggestion,
+        this.serializeSuggestion(suggestion),
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -142,104 +292,23 @@ export class CategorySuggestionController {
       const { suggestionId } = request.params;
 
       const command: DeleteSuggestionCommand = { suggestionId };
-      await this.deleteSuggestionHandler.execute(command);
+      const result = await this.deleteSuggestionHandler.handle(command);
+
+      if (!result.success) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: "Bad Request",
+          message: result.error || "Failed to delete category suggestion",
+          details: result.errors,
+        });
+      }
 
       return ResponseHelper.success(
         reply,
         200,
         "Category suggestion deleted successfully",
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getSuggestionById(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; suggestionId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user.userId;
-      const { suggestionId } = request.params;
-
-      const query: GetSuggestionByIdQuery = { suggestionId };
-      const suggestion = await this.getSuggestionByIdHandler.execute(query);
-
-      return ResponseHelper.success(
-        reply,
-        200,
-        "Category suggestion retrieved successfully",
-        suggestion,
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getSuggestionsByExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user.userId;
-      const { workspaceId, expenseId } = request.params;
-
-      const query: GetSuggestionsByExpenseQuery = { workspaceId, expenseId };
-      const suggestions =
-        await this.getSuggestionsByExpenseHandler.execute(query);
-
-      return ResponseHelper.success(
-        reply,
-        200,
-        "Category suggestions retrieved successfully",
-        suggestions,
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listSuggestions(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { pendingOnly?: string; limit?: string };
-    }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user.userId;
-      const { workspaceId } = request.params;
-      const { pendingOnly, limit: limitStr } = request.query;
-      const limit = limitStr ? parseInt(limitStr) : undefined;
-
-      if (pendingOnly === "true") {
-        const query: GetPendingSuggestionsByWorkspaceQuery = {
-          workspaceId,
-          limit,
-        };
-        const suggestions =
-          await this.getPendingSuggestionsByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
-          reply,
-          200,
-          "Pending category suggestions retrieved successfully",
-          suggestions,
-        );
-      } else {
-        const query: GetSuggestionsByWorkspaceQuery = { workspaceId, limit };
-        const suggestions =
-          await this.getSuggestionsByWorkspaceHandler.execute(query);
-        return ResponseHelper.success(
-          reply,
-          200,
-          "Category suggestions retrieved successfully",
-          suggestions,
-        );
-      }
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
