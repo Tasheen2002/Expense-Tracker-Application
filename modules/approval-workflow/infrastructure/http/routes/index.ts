@@ -4,8 +4,6 @@ import { approvalChainRoutes } from './approval-chain.routes';
 import { workflowRoutes } from './workflow.routes';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
 import { WorkflowController } from '../controllers/workflow.controller';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerApprovalWorkflowRoutes(
   fastify: FastifyInstance,
@@ -17,25 +15,11 @@ export async function registerApprovalWorkflowRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // First authenticate the request
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      // Add workspace authorization middleware to all routes
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
       // Register approval chain routes
-      await approvalChainRoutes(instance, controllers.approvalChainController);
+      await approvalChainRoutes(instance, controllers.approvalChainController, prisma);
 
       // Register workflow routes
-      await workflowRoutes(instance, controllers.workflowController);
+      await workflowRoutes(instance, controllers.workflowController, prisma);
     },
     { prefix: '/api/v1' }
   );

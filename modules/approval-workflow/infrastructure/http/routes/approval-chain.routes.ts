@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateQuery,
@@ -28,20 +30,26 @@ const writeRateLimiter = createRateLimiter({
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
-  controller: ApprovalChainController
+  controller: ApprovalChainController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
+
   // Create approval chain
   fastify.post(
     '/workspaces/:workspaceId/approval-chains',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateBody(createChainSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(createChainSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Create a new approval chain',
@@ -90,7 +98,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateQuery(listChainsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(listChainsSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all approval chains in workspace',
@@ -118,6 +126,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       preValidation: [validateParams(chainParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get approval chain by ID',
@@ -145,7 +154,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [validateBody(updateChainSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(updateChainSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Update approval chain',
@@ -199,6 +208,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains/:chainId/activate',
     {
       preValidation: [validateParams(chainParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Activate approval chain',
@@ -226,6 +236,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains/:chainId/deactivate',
     {
       preValidation: [validateParams(chainParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Deactivate approval chain',
@@ -253,6 +264,7 @@ export async function approvalChainRoutes(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       preValidation: [validateParams(chainParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delete approval chain',

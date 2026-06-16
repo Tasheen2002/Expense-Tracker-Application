@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { WorkflowController } from '../controllers/workflow.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateQuery,
@@ -30,20 +32,26 @@ const writeRateLimiter = createRateLimiter({
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
-  controller: WorkflowController
+  controller: WorkflowController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
+
   // Initiate workflow
   fastify.post(
     '/workspaces/:workspaceId/workflows',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateBody(initiateWorkflowSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(initiateWorkflowSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Initiate approval workflow for an expense',
@@ -88,6 +96,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/:expenseId',
     {
       preValidation: [validateParams(workflowParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get workflow by expense ID',
@@ -123,7 +132,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/:expenseId/approve',
     {
       preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [validateBody(approveStepSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(approveStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Approve current workflow step',
@@ -165,7 +174,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/:expenseId/reject',
     {
       preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [validateBody(rejectStepSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(rejectStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Reject current workflow step',
@@ -208,7 +217,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/:expenseId/delegate',
     {
       preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [validateBody(delegateStepSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateBody(delegateStepSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delegate current workflow step to another user',
@@ -251,6 +260,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/:expenseId/cancel',
     {
       preValidation: [validateParams(workflowParamsSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Cancel workflow',
@@ -286,7 +296,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/pending-approvals',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateQuery(paginationSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List pending approvals for current user',
@@ -328,7 +338,7 @@ export async function workflowRoutes(
     '/workspaces/:workspaceId/workflows/user-workflows',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateQuery(paginationSchema)],
+      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all workflows for current user',
