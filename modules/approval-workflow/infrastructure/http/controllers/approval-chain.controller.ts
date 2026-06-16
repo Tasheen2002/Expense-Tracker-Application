@@ -8,6 +8,13 @@ import { DeactivateApprovalChainHandler } from '../../../application/commands/de
 import { GetApprovalChainHandler } from '../../../application/queries/get-approval-chain.query';
 import { ListApprovalChainsHandler } from '../../../application/queries/list-approval-chains.query';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateChainBody,
+  UpdateChainBody,
+  ListChainsQuery,
+  WorkspaceParams,
+  ChainParams,
+} from '../validation/approval.schema';
 
 export class ApprovalChainController {
   constructor(
@@ -20,18 +27,62 @@ export class ApprovalChainController {
     private readonly deactivateChainHandler: DeactivateApprovalChainHandler
   ) {}
 
+  async getChain(
+    request: AuthenticatedRequest<{
+      Params: ChainParams;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, chainId } = request.params;
+
+      const chain = await this.getChainHandler.handle({
+        chainId,
+        workspaceId,
+      });
+
+      return ResponseHelper.ok(reply, 'Approval chain retrieved successfully', chain);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listChains(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: ListChainsQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { activeOnly, limit, offset } = request.query;
+
+      const result = await this.listChainsHandler.handle({
+        workspaceId,
+        activeOnly: activeOnly ?? false,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
+
+      return ResponseHelper.ok(reply, 'Approval chains retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async createChain(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        name: string;
-        description?: string;
-        minAmount?: number;
-        maxAmount?: number;
-        categoryIds?: string[];
-        requiresReceipt: boolean;
-        approverSequence: string[];
-      };
+      Params: WorkspaceParams;
+      Body: CreateChainBody;
     }>,
     reply: FastifyReply
   ) {
@@ -57,14 +108,8 @@ export class ApprovalChainController {
 
   async updateChain(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
-      Body: {
-        name?: string;
-        description?: string;
-        minAmount?: number;
-        maxAmount?: number;
-        approverSequence?: string[];
-      };
+      Params: ChainParams;
+      Body: UpdateChainBody;
     }>,
     reply: FastifyReply
   ) {
@@ -88,57 +133,9 @@ export class ApprovalChainController {
     }
   }
 
-  async getChain(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId, chainId } = request.params as {
-        workspaceId: string;
-        chainId: string;
-      };
-
-      const chain = await this.getChainHandler.handle({
-        chainId,
-        workspaceId,
-      });
-
-      return ResponseHelper.ok(reply, 'Approval chain retrieved successfully', chain);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listChains(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { activeOnly, limit, offset } = request.query as {
-        activeOnly?: boolean;
-        limit?: number;
-        offset?: number;
-      };
-
-      const result = await this.listChainsHandler.handle({
-        workspaceId,
-        activeOnly: activeOnly ?? false,
-        limit: limit ?? 50,
-        offset: offset ?? 0,
-      });
-
-      return ResponseHelper.ok(reply, 'Approval chains retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async activateChain(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
+      Params: ChainParams;
     }>,
     reply: FastifyReply
   ) {
@@ -161,7 +158,7 @@ export class ApprovalChainController {
 
   async deactivateChain(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
+      Params: ChainParams;
     }>,
     reply: FastifyReply
   ) {
@@ -184,7 +181,7 @@ export class ApprovalChainController {
 
   async deleteChain(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; chainId: string };
+      Params: ChainParams;
     }>,
     reply: FastifyReply
   ) {
