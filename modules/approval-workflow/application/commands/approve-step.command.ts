@@ -6,21 +6,21 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface ApproveStepInput extends ICommand {
-  expenseId: string;
-  workspaceId: string;
-  approverId: string;
-  comments?: string;
+export interface ApproveStepCommand extends ICommand {
+  readonly expenseId: string;
+  readonly workspaceId: string;
+  readonly approverId: string;
+  readonly comments?: string;
 }
 
 export class ApproveStepHandler implements ICommandHandler<
-  ApproveStepInput,
+  ApproveStepCommand,
   CommandResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: ApproveStepInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
-    const workflow = await this.workflowService.approveStep(input);
+  async handle(command: ApproveStepCommand): Promise<CommandResult<ExpenseWorkflowDTO>> {
+    const workflow = await this.workflowService.approveStep(command);
     return CommandResult.success(workflow);
   }
 }

@@ -6,23 +6,23 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface InitiateWorkflowInput extends ICommand {
-  expenseId: string;
-  workspaceId: string;
-  userId: string;
-  amount: number;
-  categoryId?: string;
-  hasReceipt: boolean;
+export interface InitiateWorkflowCommand extends ICommand {
+  readonly expenseId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly amount: number;
+  readonly categoryId?: string;
+  readonly hasReceipt: boolean;
 }
 
 export class InitiateWorkflowHandler implements ICommandHandler<
-  InitiateWorkflowInput,
+  InitiateWorkflowCommand,
   CommandResult<ExpenseWorkflowDTO>
 > {
   constructor(private readonly workflowService: WorkflowService) {}
 
-  async handle(input: InitiateWorkflowInput): Promise<CommandResult<ExpenseWorkflowDTO>> {
-    const workflow = await this.workflowService.initiateWorkflow(input);
+  async handle(command: InitiateWorkflowCommand): Promise<CommandResult<ExpenseWorkflowDTO>> {
+    const workflow = await this.workflowService.initiateWorkflow(command);
     return CommandResult.success(workflow);
   }
 }

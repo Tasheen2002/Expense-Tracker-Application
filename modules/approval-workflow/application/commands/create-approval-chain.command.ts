@@ -6,27 +6,27 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface CreateApprovalChainInput extends ICommand {
-  workspaceId: string;
-  name: string;
-  description?: string;
-  minAmount?: number;
-  maxAmount?: number;
-  categoryIds?: string[];
-  requiresReceipt: boolean;
-  approverSequence: string[];
+export interface CreateApprovalChainCommand extends ICommand {
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly minAmount?: number;
+  readonly maxAmount?: number;
+  readonly categoryIds?: string[];
+  readonly requiresReceipt: boolean;
+  readonly approverSequence: string[];
 }
 
 export class CreateApprovalChainHandler implements ICommandHandler<
-  CreateApprovalChainInput,
+  CreateApprovalChainCommand,
   CommandResult<ApprovalChainDTO>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
   async handle(
-    input: CreateApprovalChainInput
+    command: CreateApprovalChainCommand
   ): Promise<CommandResult<ApprovalChainDTO>> {
-    const chain = await this.approvalChainService.createChain(input);
+    const chain = await this.approvalChainService.createChain(command);
     return CommandResult.success(chain);
   }
 }

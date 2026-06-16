@@ -5,21 +5,21 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { CommandResult } from '../../../../packages/core/src/application/command-result';
 
-export interface DeleteApprovalChainInput extends ICommand {
-  chainId: string;
-  workspaceId: string;
+export interface DeleteApprovalChainCommand extends ICommand {
+  readonly chainId: string;
+  readonly workspaceId: string;
 }
 
 export class DeleteApprovalChainHandler implements ICommandHandler<
-  DeleteApprovalChainInput,
+  DeleteApprovalChainCommand,
   CommandResult<void>
 > {
   constructor(private readonly approvalChainService: ApprovalChainService) {}
 
-  async handle(input: DeleteApprovalChainInput): Promise<CommandResult<void>> {
+  async handle(command: DeleteApprovalChainCommand): Promise<CommandResult<void>> {
     await this.approvalChainService.deleteChain(
-      input.chainId,
-      input.workspaceId
+      command.chainId,
+      command.workspaceId
     );
     return CommandResult.success();
   }
