@@ -6,7 +6,7 @@ import { SyncStatus } from '../enums/sync-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ISyncSessionRepository {
   save(session: SyncSession): Promise<void>;
