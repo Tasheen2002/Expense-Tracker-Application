@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
 
 // ==================== PARAM SCHEMAS ====================
 
@@ -56,8 +57,8 @@ export const updateBudgetPlanSchema = z.object({
 
 export const budgetPlanQuerySchema = z.object({
   status: planStatusSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 // ==================== FORECAST SCHEMAS ====================
@@ -89,110 +90,208 @@ export const updateScenarioSchema = z.object({
   assumptions: z.record(z.unknown()).optional(),
 });
 
-// ==================== RESPONSE SCHEMAS (JSON Schema for Fastify) ====================
+// ==================== RESPONSE SCHEMAS ====================
 
-export const budgetPlanResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    description: { type: 'string', nullable: true },
-    periodType: { type: 'string', enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'] },
-    period: {
-      type: 'object',
-      properties: {
-        startDate: { type: 'string', format: 'date-time' },
-        endDate: { type: 'string', format: 'date-time' },
-      },
-    },
-    status: { type: 'string', enum: ['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'] },
-    createdBy: { type: 'string', format: 'uuid' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const budgetPlanResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  periodType: periodTypeSchema,
+  period: z.object({
+    startDate: z.string(),
+    endDate: z.string(),
+  }),
+  status: planStatusSchema,
+  createdBy: z.string().uuid(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const paginatedBudgetPlansResponseSchema = {
-  type: 'object',
-  properties: {
-    items: { type: 'array', items: budgetPlanResponseSchema },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export const forecastResponseSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  name: z.string(),
+  type: forecastTypeSchema,
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const forecastResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    planId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    type: { type: 'string', enum: ['BASELINE', 'OPTIMISTIC', 'PESSIMISTIC', 'CUSTOM'] },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const forecastItemResponseSchema = z.object({
+  id: z.string().uuid(),
+  forecastId: z.string().uuid(),
+  categoryId: z.string().uuid(),
+  amount: z.number(),
+  notes: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const forecastItemResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    forecastId: { type: 'string', format: 'uuid' },
-    categoryId: { type: 'string', format: 'uuid' },
-    amount: { type: 'number' },
-    notes: { type: 'string', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const scenarioResponseSchema = z.object({
+  id: z.string().uuid(),
+  planId: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  assumptions: z.record(z.unknown()).nullable(),
+  createdBy: z.string().uuid(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const paginatedForecastsResponseSchema = {
-  type: 'object',
-  properties: {
-    items: { type: 'array', items: forecastResponseSchema },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+// ==================== INFERRED TYPES ====================
 
-export const paginatedForecastItemsResponseSchema = {
-  type: 'object',
-  properties: {
-    items: { type: 'array', items: forecastItemResponseSchema },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+export type PlanParams = z.infer<typeof planParamsSchema>;
+export type PlanIdParams = z.infer<typeof planIdParamsSchema>;
+export type ForecastParams = z.infer<typeof forecastParamsSchema>;
+export type ForecastIdParams = z.infer<typeof forecastIdParamsSchema>;
+export type ScenarioParams = z.infer<typeof scenarioParamsSchema>;
+export type ForecastItemParams = z.infer<typeof forecastItemParamsSchema>;
 
-export const scenarioResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    planId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    description: { type: 'string', nullable: true },
-    assumptions: { type: 'object', nullable: true },
-    createdBy: { type: 'string', format: 'uuid' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export type CreateBudgetPlanBody = z.infer<typeof createBudgetPlanSchema>;
+export type UpdateBudgetPlanBody = z.infer<typeof updateBudgetPlanSchema>;
+export type BudgetPlanQuery = z.infer<typeof budgetPlanQuerySchema>;
 
-export const paginatedScenariosResponseSchema = {
-  type: 'object',
-  properties: {
-    items: { type: 'array', items: scenarioResponseSchema },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export type CreateForecastBody = z.infer<typeof createForecastSchema>;
+export type AddForecastItemBody = z.infer<typeof addForecastItemSchema>;
+
+export type CreateScenarioBody = z.infer<typeof createScenarioSchema>;
+export type UpdateScenarioBody = z.infer<typeof updateScenarioSchema>;
+
+// ==================== PRE-COMPUTED JSON SCHEMAS ====================
+
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const planParamsJsonSchema = toJsonSchema(planParamsSchema);
+export const planIdParamsJsonSchema = toJsonSchema(planIdParamsSchema);
+export const forecastParamsJsonSchema = toJsonSchema(forecastParamsSchema);
+export const forecastIdParamsJsonSchema = toJsonSchema(forecastIdParamsSchema);
+export const scenarioParamsJsonSchema = toJsonSchema(scenarioParamsSchema);
+export const forecastItemParamsJsonSchema = toJsonSchema(forecastItemParamsSchema);
+
+export const createBudgetPlanBodyJsonSchema = (() => {
+  const schema = toJsonSchema(createBudgetPlanSchema) as any;
+  if (schema && schema.properties) {
+    if (schema.properties.startDate) {
+      schema.properties.startDate.format = 'date';
+    }
+    if (schema.properties.endDate) {
+      schema.properties.endDate.format = 'date';
+    }
+  }
+  return schema;
+})();
+export const updateBudgetPlanBodyJsonSchema = toJsonSchema(updateBudgetPlanSchema);
+export const budgetPlanQueryJsonSchema = toJsonSchema(budgetPlanQuerySchema);
+
+export const createForecastBodyJsonSchema = toJsonSchema(createForecastSchema);
+export const addForecastItemBodyJsonSchema = toJsonSchema(addForecastItemSchema);
+
+export const createScenarioBodyJsonSchema = toJsonSchema(createScenarioSchema);
+export const updateScenarioBodyJsonSchema = toJsonSchema(updateScenarioSchema);
+
+// ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const budgetPlanEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: budgetPlanResponseSchema,
+  })
+);
+
+export const paginatedBudgetPlansEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(budgetPlanResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const forecastEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: forecastResponseSchema,
+  })
+);
+
+export const paginatedForecastsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(forecastResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const forecastItemEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: forecastItemResponseSchema,
+  })
+);
+
+export const paginatedForecastItemsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(forecastItemResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const scenarioEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: scenarioResponseSchema,
+  })
+);
+
+export const paginatedScenariosEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(scenarioResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
