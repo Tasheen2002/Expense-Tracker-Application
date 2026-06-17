@@ -1,12 +1,21 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateSpendingLimitHandler } from '../../../application/commands/create-spending-limit.command';
-import { UpdateSpendingLimitHandler } from '../../../application/commands/update-spending-limit.command';
-import { DeleteSpendingLimitHandler } from '../../../application/commands/delete-spending-limit.command';
-import { GetSpendingLimitHandler } from '../../../application/queries/get-spending-limit.query';
-import { ListSpendingLimitsHandler } from '../../../application/queries/list-spending-limits.query';
+import {
+  CreateSpendingLimitHandler,
+  UpdateSpendingLimitHandler,
+  DeleteSpendingLimitHandler,
+  GetSpendingLimitHandler,
+  ListSpendingLimitsHandler,
+} from '../../../application';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  SpendingLimitWorkspaceParams,
+  SpendingLimitParams,
+  CreateSpendingLimitBody,
+  UpdateSpendingLimitBody,
+  ListSpendingLimitsQuery,
+} from '../validation/spending-limit.schema';
 
 export class SpendingLimitController {
   constructor(
@@ -19,7 +28,7 @@ export class SpendingLimitController {
 
   async getLimit(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; limitId: string };
+      Params: SpendingLimitParams;
     }>,
     reply: FastifyReply
   ) {
@@ -37,16 +46,39 @@ export class SpendingLimitController {
     }
   }
 
+  async listLimits(
+    request: AuthenticatedRequest<{
+      Params: SpendingLimitWorkspaceParams;
+      Querystring: ListSpendingLimitsQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { userId, categoryId, isActive, periodType, limit, offset } =
+        request.query;
+
+      const result = await this.listLimitsHandler.handle({
+        workspaceId,
+        userId,
+        categoryId,
+        isActive:
+          isActive === 'true' ? true : isActive === 'false' ? false : undefined,
+        periodType: periodType as BudgetPeriodType | undefined,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Spending limits retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async createLimit(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        userId?: string;
-        categoryId?: string;
-        limitAmount: number | string;
-        currency: string;
-        periodType: string;
-      };
+      Params: SpendingLimitWorkspaceParams;
+      Body: CreateSpendingLimitBody;
     }>,
     reply: FastifyReply
   ) {
@@ -76,10 +108,8 @@ export class SpendingLimitController {
 
   async updateLimit(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; limitId: string };
-      Body: {
-        limitAmount?: number | string;
-      };
+      Params: SpendingLimitParams;
+      Body: UpdateSpendingLimitBody;
     }>,
     reply: FastifyReply
   ) {
@@ -104,7 +134,7 @@ export class SpendingLimitController {
 
   async deleteSpendingLimit(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; limitId: string };
+      Params: SpendingLimitParams;
     }>,
     reply: FastifyReply
   ) {
@@ -125,42 +155,6 @@ export class SpendingLimitController {
         undefined,
         204
       );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listLimits(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        userId?: string;
-        categoryId?: string;
-        isActive?: string;
-        periodType?: string;
-        limit?: string;
-        offset?: string;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { userId, categoryId, isActive, periodType, limit, offset } =
-        request.query;
-
-      const result = await this.listLimitsHandler.handle({
-        workspaceId,
-        userId,
-        categoryId,
-        isActive:
-          isActive === 'true' ? true : isActive === 'false' ? false : undefined,
-        periodType: periodType as BudgetPeriodType | undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
-      });
-
-      return ResponseHelper.ok(reply, 'Spending limits retrieved successfully', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
