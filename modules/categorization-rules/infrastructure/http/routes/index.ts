@@ -6,8 +6,6 @@ import { CategorySuggestionController } from '../controllers/category-suggestion
 import { categoryRuleRoutes } from './category-rule.routes';
 import { ruleExecutionRoutes } from './rule-execution.routes';
 import { categorySuggestionRoutes } from './category-suggestion.routes';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerCategorizationRulesRoutes(
   fastify: FastifyInstance,
@@ -20,25 +18,12 @@ export async function registerCategorizationRulesRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // First authenticate the request
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      // Add workspace authorization middleware to all routes
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
-      await categoryRuleRoutes(instance, controllers.categoryRuleController);
-      await ruleExecutionRoutes(instance, controllers.ruleExecutionController);
+      await categoryRuleRoutes(instance, controllers.categoryRuleController, prisma);
+      await ruleExecutionRoutes(instance, controllers.ruleExecutionController, prisma);
       await categorySuggestionRoutes(
         instance,
-        controllers.categorySuggestionController
+        controllers.categorySuggestionController,
+        prisma
       );
     },
     { prefix: '/api/v1' }

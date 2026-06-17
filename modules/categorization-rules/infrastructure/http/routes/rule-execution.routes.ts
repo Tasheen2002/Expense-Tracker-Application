@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { RuleExecutionController } from '../controllers/rule-execution.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateParams,
@@ -11,6 +13,13 @@ import {
   executionQuerySchema,
   workspaceParamsSchema,
   expenseParamsSchema,
+  workspaceParamsJsonSchema,
+  expenseParamsJsonSchema,
+  evaluateRulesBodyJsonSchema,
+  executionQueryJsonSchema,
+  evaluationEnvelopeJsonSchema,
+  executionListEnvelopeJsonSchema,
+  paginatedExecutionsEnvelopeJsonSchema,
 } from '../validation/categorization-rules.schema';
 import {
   createRateLimiter,
@@ -19,18 +28,6 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
-// Shared Response Schema for Rule Execution
-const ruleExecutionSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    ruleId: { type: 'string', format: 'uuid' },
-    expenseId: { type: 'string', format: 'uuid' },
-    appliedCategoryId: { type: 'string', format: 'uuid' },
-    executedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
@@ -38,8 +35,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function ruleExecutionRoutes(
   fastify: FastifyInstance,
-  controller: RuleExecutionController
+  controller: RuleExecutionController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -50,8 +52,10 @@ export async function ruleExecutionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/evaluate',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(evaluateRulesSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -59,57 +63,10 @@ export async function ruleExecutionRoutes(
         tags: ['Rule Execution'],
         description: 'Evaluate categorization rules for an expense',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['expenseId', 'expenseData'],
-          properties: {
-            expenseId: { type: 'string', format: 'uuid' },
-            expenseData: {
-              type: 'object',
-              required: ['amount'],
-              properties: {
-                merchant: { type: 'string', nullable: true },
-                description: { type: 'string', nullable: true },
-                amount: { type: 'number', minimum: 0 },
-                paymentMethod: { type: 'string', nullable: true },
-              },
-            },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: evaluateRulesBodyJsonSchema,
         response: {
-          200: {
-            description: 'Rules evaluated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  appliedRule: {
-                    type: 'object',
-                    nullable: true,
-                    properties: {
-                      id: { type: 'string', format: 'uuid' },
-                      name: { type: 'string' },
-                      priority: { type: 'integer' },
-                    },
-                  },
-                  suggestedCategoryId: {
-                    type: 'string',
-                    format: 'uuid',
-                    nullable: true,
-                  },
-                  execution: {
-                    type: 'object',
-                    nullable: true,
-                    properties: ruleExecutionSchema.properties,
-                  },
-                },
-              },
-            },
-          },
+          200: evaluationEnvelopeJsonSchema,
         },
       },
     },
@@ -121,28 +78,19 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions/expense/:expenseId',
     {
+      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
-        validateParams(expenseParamsSchema),
+        fastify.authenticate,
+        workspaceAuth,
         requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],
         description: 'Get execution history for a specific expense',
         security: [{ bearerAuth: [] }],
+        params: expenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Executions for expense retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'array',
-                items: ruleExecutionSchema,
-              },
-            },
-          },
+          200: executionListEnvelopeJsonSchema,
         },
       },
     },
@@ -154,8 +102,10 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions',
     {
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
-        validateParams(workspaceParamsSchema),
+        fastify.authenticate,
+        workspaceAuth,
         validateQuery(executionQuerySchema),
         requireRole(['owner', 'admin', 'member']),
       ],
@@ -163,34 +113,10 @@ export async function ruleExecutionRoutes(
         tags: ['Rule Execution'],
         description: 'Get all rule executions in workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: executionQueryJsonSchema,
         response: {
-          200: {
-            description: 'Workspace executions retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: {
-                    type: 'array',
-                    items: ruleExecutionSchema,
-                  },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedExecutionsEnvelopeJsonSchema,
         },
       },
     },
