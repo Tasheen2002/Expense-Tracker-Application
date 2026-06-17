@@ -1,11 +1,19 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-import { CreateScenarioHandler } from '../../../application/commands/create-scenario.command';
-import { UpdateScenarioHandler } from '../../../application/commands/update-scenario.command';
-import { DeleteScenarioHandler } from '../../../application/commands/delete-scenario.command';
-import { GetScenarioHandler } from '../../../application/queries/get-scenario.query';
-import { ListScenariosHandler } from '../../../application/queries/list-scenarios.query';
+import {
+  CreateScenarioHandler,
+  UpdateScenarioHandler,
+  DeleteScenarioHandler,
+  GetScenarioHandler,
+  ListScenariosHandler,
+} from '../../../application';
+import {
+  PlanIdParams,
+  ScenarioParams,
+  CreateScenarioBody,
+  UpdateScenarioBody,
+} from '../validation/budget-planning.schema';
 
 export class ScenarioController {
   constructor(
@@ -16,14 +24,38 @@ export class ScenarioController {
     private readonly listScenariosHandler: ListScenariosHandler
   ) {}
 
+  async get(
+    req: AuthenticatedRequest<{ Params: ScenarioParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, id } = req.params;
+      const scenario = await this.getScenarioHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Scenario retrieved successfully', scenario);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async list(
+    req: AuthenticatedRequest<{ Params: PlanIdParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, planId } = req.params;
+      const result = await this.listScenariosHandler.handle({ planId, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Scenarios retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string; planId: string };
-      Body: {
-        name: string;
-        description?: string;
-        assumptions?: Record<string, unknown>;
-      };
+      Params: PlanIdParams;
+      Body: CreateScenarioBody;
     }>,
     reply: FastifyReply
   ) {
@@ -50,42 +82,10 @@ export class ScenarioController {
     }
   }
 
-  async get(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId, id } = req.params;
-      const scenario = await this.getScenarioHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.ok(reply, 'Scenario retrieved successfully', scenario);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async list(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; planId: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId, planId } = req.params;
-      const result = await this.listScenariosHandler.handle({ planId, workspaceId, userId });
-      return ResponseHelper.ok(reply, 'Scenarios retrieved successfully', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async update(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string; id: string };
-      Body: {
-        name?: string;
-        description?: string;
-        assumptions?: Record<string, unknown>;
-      };
+      Params: ScenarioParams;
+      Body: UpdateScenarioBody;
     }>,
     reply: FastifyReply
   ) {
@@ -111,7 +111,7 @@ export class ScenarioController {
   }
 
   async delete(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
+    req: AuthenticatedRequest<{ Params: ScenarioParams }>,
     reply: FastifyReply
   ) {
     try {

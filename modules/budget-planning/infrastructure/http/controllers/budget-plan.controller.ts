@@ -1,14 +1,23 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { CreateBudgetPlanHandler } from '../../../application/commands/create-budget-plan.command';
-import { UpdateBudgetPlanHandler } from '../../../application/commands/update-budget-plan.command';
-import { ActivateBudgetPlanHandler } from '../../../application/commands/activate-budget-plan.command';
-import { DeleteBudgetPlanHandler } from '../../../application/commands/delete-budget-plan.command';
-import { GetBudgetPlanHandler } from '../../../application/queries/get-budget-plan.query';
-import { ListBudgetPlansHandler } from '../../../application/queries/list-budget-plans.query';
+import {
+  CreateBudgetPlanHandler,
+  UpdateBudgetPlanHandler,
+  ActivateBudgetPlanHandler,
+  DeleteBudgetPlanHandler,
+  GetBudgetPlanHandler,
+  ListBudgetPlansHandler,
+} from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
 import { PlanStatus } from '../../../domain/enums/plan-status.enum';
 import { PeriodType } from '../../../domain/enums/period-type.enum';
+import {
+  WorkspaceParams,
+  PlanParams,
+  CreateBudgetPlanBody,
+  UpdateBudgetPlanBody,
+  BudgetPlanQuery,
+} from '../validation/budget-planning.schema';
 
 export class BudgetPlanController {
   constructor(
@@ -20,16 +29,56 @@ export class BudgetPlanController {
     private readonly listHandler: ListBudgetPlansHandler
   ) {}
 
+  async get(
+    req: AuthenticatedRequest<{ Params: PlanParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, id } = req.params;
+      const plan = await this.getHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(
+        reply,
+        'Budget plan retrieved successfully',
+        plan
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async list(
+    req: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: BudgetPlanQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId } = req.params;
+      const { status, limit, offset } = req.query;
+      const result = await this.listHandler.handle({
+        userId,
+        workspaceId,
+        status: status as PlanStatus | undefined,
+        limit,
+        offset,
+      });
+      return ResponseHelper.ok(
+        reply,
+        'Budget plans retrieved successfully',
+        result
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        name: string;
-        description?: string;
-        periodType: string;
-        startDate: string;
-        endDate: string;
-      };
+      Params: WorkspaceParams;
+      Body: CreateBudgetPlanBody;
     }>,
     reply: FastifyReply
   ) {
@@ -59,11 +108,8 @@ export class BudgetPlanController {
 
   async update(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string; id: string };
-      Body: {
-        name?: string;
-        description?: string | null;
-      };
+      Params: PlanParams;
+      Body: UpdateBudgetPlanBody;
     }>,
     reply: FastifyReply
   ) {
@@ -88,7 +134,7 @@ export class BudgetPlanController {
   }
 
   async activate(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
+    req: AuthenticatedRequest<{ Params: PlanParams }>,
     reply: FastifyReply
   ) {
     try {
@@ -109,58 +155,8 @@ export class BudgetPlanController {
     }
   }
 
-  async get(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId, id } = req.params;
-      const plan = await this.getHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.ok(
-        reply,
-        'Budget plan retrieved successfully',
-        plan
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async list(
-    req: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        status?: string;
-        limit?: string;
-        offset?: string;
-      };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId } = req.params;
-      const { status, limit, offset } = req.query;
-      const result = await this.listHandler.handle({
-        userId,
-        workspaceId,
-        status: status as PlanStatus | undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
-      });
-      return ResponseHelper.ok(
-        reply,
-        'Budget plans retrieved successfully',
-        result
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async delete(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
+    req: AuthenticatedRequest<{ Params: PlanParams }>,
     reply: FastifyReply
   ) {
     try {

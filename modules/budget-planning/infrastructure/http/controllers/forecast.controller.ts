@@ -1,16 +1,24 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-import { CreateForecastHandler } from '../../../application/commands/create-forecast.command';
-import { AddForecastItemHandler } from '../../../application/commands/add-forecast-item.command';
 import {
+  CreateForecastHandler,
+  AddForecastItemHandler,
   DeleteForecastHandler,
   DeleteForecastItemHandler,
-} from '../../../application/commands/delete-forecast.command';
-import { GetForecastHandler } from '../../../application/queries/get-forecast.query';
-import { ListForecastsHandler } from '../../../application/queries/list-forecasts.query';
-import { GetForecastItemsHandler } from '../../../application/queries/get-forecast-items.query';
+  GetForecastHandler,
+  ListForecastsHandler,
+  GetForecastItemsHandler,
+} from '../../../application';
 import { ForecastType } from '../../../domain/enums/forecast-type.enum';
+import {
+  PlanIdParams,
+  ForecastParams,
+  ForecastIdParams,
+  ForecastItemParams,
+  CreateForecastBody,
+  AddForecastItemBody,
+} from '../validation/budget-planning.schema';
 
 export class ForecastController {
   constructor(
@@ -23,13 +31,56 @@ export class ForecastController {
     private readonly getForecastItemsHandler: GetForecastItemsHandler
   ) {}
 
+  async get(
+    req: AuthenticatedRequest<{ Params: ForecastParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, id } = req.params;
+      const forecast = await this.getForecastHandler.handle({ id, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Forecast retrieved successfully', forecast);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async list(
+    req: AuthenticatedRequest<{ Params: PlanIdParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { workspaceId, planId } = req.params;
+      const result = await this.listForecastsHandler.handle({ planId, workspaceId, userId });
+      return ResponseHelper.ok(reply, 'Forecasts retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listItems(
+    req: AuthenticatedRequest<{ Params: ForecastIdParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const userId = req.user.userId;
+      const { forecastId, workspaceId } = req.params;
+      const result = await this.getForecastItemsHandler.handle({
+        forecastId,
+        workspaceId,
+        userId,
+      });
+      return ResponseHelper.ok(reply, 'Forecast items retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string; planId: string };
-      Body: {
-        name: string;
-        type: string;
-      };
+      Params: PlanIdParams;
+      Body: CreateForecastBody;
     }>,
     reply: FastifyReply
   ) {
@@ -57,12 +108,8 @@ export class ForecastController {
 
   async addItem(
     req: AuthenticatedRequest<{
-      Params: { workspaceId: string; forecastId: string };
-      Body: {
-        categoryId: string;
-        amount: number;
-        notes?: string;
-      };
+      Params: ForecastIdParams;
+      Body: AddForecastItemBody;
     }>,
     reply: FastifyReply
   ) {
@@ -89,54 +136,8 @@ export class ForecastController {
     }
   }
 
-  async get(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId, id } = req.params;
-      const forecast = await this.getForecastHandler.handle({ id, workspaceId, userId });
-      return ResponseHelper.ok(reply, 'Forecast retrieved successfully', forecast);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async list(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; planId: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { workspaceId, planId } = req.params;
-      const result = await this.listForecastsHandler.handle({ planId, workspaceId, userId });
-      return ResponseHelper.ok(reply, 'Forecasts retrieved successfully', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listItems(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; forecastId: string } }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const userId = req.user.userId;
-      const { forecastId, workspaceId } = req.params;
-      const result = await this.getForecastItemsHandler.handle({
-        forecastId,
-        workspaceId,
-        userId,
-      });
-      return ResponseHelper.ok(reply, 'Forecast items retrieved successfully', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async delete(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; id: string } }>,
+    req: AuthenticatedRequest<{ Params: ForecastParams }>,
     reply: FastifyReply
   ) {
     try {
@@ -156,7 +157,7 @@ export class ForecastController {
   }
 
   async deleteItem(
-    req: AuthenticatedRequest<{ Params: { workspaceId: string; itemId: string } }>,
+    req: AuthenticatedRequest<{ Params: ForecastItemParams }>,
     reply: FastifyReply
   ) {
     try {
