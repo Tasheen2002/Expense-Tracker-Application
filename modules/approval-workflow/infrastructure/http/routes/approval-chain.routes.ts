@@ -14,8 +14,14 @@ import {
   listChainsSchema,
   chainParamsSchema,
   workspaceParamsSchema,
-  chainResponseSchema,
-  paginatedChainsResponseSchema,
+  workspaceParamsJsonSchema,
+  chainParamsJsonSchema,
+  createChainBodyJsonSchema,
+  updateChainBodyJsonSchema,
+  listChainsQueryJsonSchema,
+  chainEnvelopeJsonSchema,
+  updateChainEnvelopeJsonSchema,
+  paginatedChainsEnvelopeJsonSchema,
 } from '../validation/approval.schema';
 import {
   createRateLimiter,
@@ -54,38 +60,10 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Create a new approval chain',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['name', 'requiresReceipt', 'approverSequence'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', nullable: true },
-            minAmount: { type: 'number', minimum: 0, nullable: true },
-            maxAmount: { type: 'number', minimum: 0, nullable: true },
-            categoryIds: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              nullable: true,
-            },
-            requiresReceipt: { type: 'boolean' },
-            approverSequence: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              minItems: 1,
-            },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createChainBodyJsonSchema,
         response: {
-          201: {
-            description: 'Approval chain created successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: chainResponseSchema,
-            },
-          },
+          201: chainEnvelopeJsonSchema,
         },
       },
     },
@@ -103,17 +81,10 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'List all approval chains in workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listChainsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Approval chains retrieved successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: paginatedChainsResponseSchema,
-            },
-          },
+          200: paginatedChainsEnvelopeJsonSchema,
         },
       },
     },
@@ -131,17 +102,9 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Get approval chain by ID',
         security: [{ bearerAuth: [] }],
+        params: chainParamsJsonSchema,
         response: {
-          200: {
-            description: 'Approval chain retrieved successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: chainResponseSchema,
-            },
-          },
+          200: chainEnvelopeJsonSchema,
         },
       },
     },
@@ -159,43 +122,10 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Update approval chain',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          properties: {
-            name: {
-              type: 'string',
-              minLength: 1,
-              maxLength: 100,
-              nullable: true,
-            },
-            description: { type: 'string', nullable: true },
-            minAmount: { type: 'number', minimum: 0, nullable: true },
-            maxAmount: { type: 'number', minimum: 0, nullable: true },
-            categoryIds: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              nullable: true,
-            },
-            requiresReceipt: { type: 'boolean', nullable: true },
-            approverSequence: {
-              type: 'array',
-              items: { type: 'string', format: 'uuid' },
-              minItems: 1,
-              nullable: true,
-            },
-          },
-        },
+        params: chainParamsJsonSchema,
+        body: updateChainBodyJsonSchema,
         response: {
-          200: {
-            description: 'Approval chain updated successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: chainResponseSchema,
-            },
-          },
+          200: updateChainEnvelopeJsonSchema,
         },
       },
     },
@@ -213,17 +143,9 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Activate approval chain',
         security: [{ bearerAuth: [] }],
+        params: chainParamsJsonSchema,
         response: {
-          200: {
-            description: 'Approval chain activated successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: chainResponseSchema,
-            },
-          },
+          200: chainEnvelopeJsonSchema,
         },
       },
     },
@@ -241,17 +163,9 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Deactivate approval chain',
         security: [{ bearerAuth: [] }],
+        params: chainParamsJsonSchema,
         response: {
-          200: {
-            description: 'Approval chain deactivated successfully',
-            type: 'object',
-            properties: {
-              statusCode: { type: 'number' },
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: chainResponseSchema,
-            },
-          },
+          200: chainEnvelopeJsonSchema,
         },
       },
     },
@@ -269,6 +183,7 @@ export async function approvalChainRoutes(
         tags: ['Approval Workflow'],
         description: 'Delete approval chain',
         security: [{ bearerAuth: [] }],
+        params: chainParamsJsonSchema,
         response: {
           204: {
             type: 'null',
