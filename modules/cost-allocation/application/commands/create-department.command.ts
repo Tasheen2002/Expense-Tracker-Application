@@ -4,16 +4,16 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateDepartmentCommand extends ICommand {
-  workspaceId: string;
-  actorId: string;
-  name: string;
-  code: string;
-  description?: string;
-  managerId?: string;
-  parentDepartmentId?: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
+  readonly name: string;
+  readonly code: string;
+  readonly description?: string;
+  readonly managerId?: string;
+  readonly parentDepartmentId?: string;
 }
 
 export class CreateDepartmentHandler implements ICommandHandler<

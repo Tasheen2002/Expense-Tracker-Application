@@ -4,17 +4,17 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateDepartmentCommand extends ICommand {
-  id: string;
-  workspaceId: string;
-  actorId: string;
-  name?: string;
-  code?: string;
-  description?: string | null;
-  managerId?: string | null;
-  parentDepartmentId?: string | null;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
+  readonly name?: string;
+  readonly code?: string;
+  readonly description?: string | null;
+  readonly managerId?: string | null;
+  readonly parentDepartmentId?: string | null;
 }
 
 export class UpdateDepartmentHandler implements ICommandHandler<

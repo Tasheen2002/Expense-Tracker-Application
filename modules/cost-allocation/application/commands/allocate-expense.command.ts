@@ -4,19 +4,19 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface AllocateExpenseCommand extends ICommand {
-  workspaceId: string;
-  expenseId: string;
-  createdBy: string;
-  allocations: Array<{
-    amount: number;
-    percentage?: number;
-    departmentId?: string;
-    costCenterId?: string;
-    projectId?: string;
-    notes?: string;
+  readonly workspaceId: string;
+  readonly expenseId: string;
+  readonly createdBy: string;
+  readonly allocations: Array<{
+    readonly amount: number;
+    readonly percentage?: number;
+    readonly departmentId?: string;
+    readonly costCenterId?: string;
+    readonly projectId?: string;
+    readonly notes?: string;
   }>;
 }
 

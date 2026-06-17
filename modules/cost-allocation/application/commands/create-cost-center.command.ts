@@ -4,14 +4,14 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateCostCenterCommand extends ICommand {
-  workspaceId: string;
-  actorId: string;
-  name: string;
-  code: string;
-  description?: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
+  readonly name: string;
+  readonly code: string;
+  readonly description?: string;
 }
 
 export class CreateCostCenterHandler implements ICommandHandler<
