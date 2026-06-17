@@ -1,16 +1,16 @@
 import { RuleExecutionService } from '../services/rule-execution.service';
 import { WorkspaceId } from '../../../identity-workspace';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetExecutionsByWorkspaceQuery extends IQuery {
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetExecutionsByWorkspaceHandler implements IQueryHandler<

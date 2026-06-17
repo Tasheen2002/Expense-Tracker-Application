@@ -1,17 +1,17 @@
 import { CategoryRuleService } from '../services/category-rule.service';
 import { WorkspaceId } from '../../../identity-workspace';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetRulesByWorkspaceQuery extends IQuery {
-  workspaceId: string;
-  userId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetRulesByWorkspaceHandler implements IQueryHandler<

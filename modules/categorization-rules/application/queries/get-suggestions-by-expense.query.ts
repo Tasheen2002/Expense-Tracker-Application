@@ -5,11 +5,11 @@ import { CategorySuggestionDTO } from '../../domain/entities/category-suggestion
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetSuggestionsByExpenseQuery extends IQuery {
-  expenseId: string;
-  workspaceId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
 export class GetSuggestionsByExpenseHandler implements IQueryHandler<

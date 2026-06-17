@@ -5,11 +5,11 @@ import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetExecutionsByExpenseQuery extends IQuery {
-  expenseId: string;
-  workspaceId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
 export class GetExecutionsByExpenseHandler implements IQueryHandler<

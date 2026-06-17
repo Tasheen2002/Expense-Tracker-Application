@@ -4,12 +4,12 @@ import { CategoryRuleDTO } from '../../domain/entities/category-rule.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetRuleByIdQuery extends IQuery {
-  ruleId: string;
-  workspaceId: string;
-  userId: string;
+  readonly ruleId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class GetRuleByIdHandler implements IQueryHandler<
