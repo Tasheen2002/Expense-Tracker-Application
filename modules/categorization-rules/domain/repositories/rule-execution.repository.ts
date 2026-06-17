@@ -7,7 +7,7 @@ import { CategorySuggestion } from "../entities/category-suggestion.entity";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IRuleExecutionRepository {
   save(execution: RuleExecution): Promise<void>;
