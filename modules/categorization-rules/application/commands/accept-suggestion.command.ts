@@ -6,11 +6,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface AcceptSuggestionCommand extends ICommand {
-  suggestionId: string;
-  workspaceId: string;
+  readonly suggestionId: string;
+  readonly workspaceId: string;
 }
 
 export class AcceptSuggestionHandler implements ICommandHandler<

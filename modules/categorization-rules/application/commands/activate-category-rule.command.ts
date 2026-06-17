@@ -5,12 +5,12 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ActivateCategoryRuleCommand extends ICommand {
-  ruleId: string;
-  workspaceId: string;
-  userId: string;
+  readonly ruleId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class ActivateCategoryRuleHandler implements ICommandHandler<

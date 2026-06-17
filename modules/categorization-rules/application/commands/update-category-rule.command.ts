@@ -12,18 +12,18 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateCategoryRuleCommand extends ICommand {
-  ruleId: string;
-  workspaceId: string;
-  userId: string;
-  name?: string;
-  description?: string | null;
-  priority?: number;
-  conditionType?: string;
-  conditionValue?: string;
-  targetCategoryId?: string;
+  readonly ruleId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly name?: string;
+  readonly description?: string | null;
+  readonly priority?: number;
+  readonly conditionType?: string;
+  readonly conditionValue?: string;
+  readonly targetCategoryId?: string;
 }
 
 export class UpdateCategoryRuleHandler implements ICommandHandler<

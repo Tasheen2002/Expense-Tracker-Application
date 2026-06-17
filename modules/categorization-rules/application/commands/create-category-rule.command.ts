@@ -12,17 +12,17 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateCategoryRuleCommand extends ICommand {
-  workspaceId: string;
-  name: string;
-  description?: string;
-  priority?: number;
-  conditionType: string;
-  conditionValue: string;
-  targetCategoryId: string;
-  createdBy: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly priority?: number;
+  readonly conditionType: string;
+  readonly conditionValue: string;
+  readonly targetCategoryId: string;
+  readonly createdBy: string;
 }
 
 export class CreateCategoryRuleHandler implements ICommandHandler<

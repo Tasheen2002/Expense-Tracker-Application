@@ -5,16 +5,16 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface EvaluateRulesCommand extends ICommand {
-  workspaceId: string;
-  expenseId: string;
-  expenseData: {
-    merchant?: string;
-    description?: string;
-    amount: number;
-    paymentMethod?: string;
+  readonly workspaceId: string;
+  readonly expenseId: string;
+  readonly expenseData: {
+    readonly merchant?: string;
+    readonly description?: string;
+    readonly amount: number;
+    readonly paymentMethod?: string;
   };
 }
 

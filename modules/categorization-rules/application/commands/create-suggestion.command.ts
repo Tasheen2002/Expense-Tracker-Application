@@ -7,14 +7,14 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateSuggestionCommand extends ICommand {
-  workspaceId: string;
-  expenseId: string;
-  suggestedCategoryId: string;
-  confidence: number;
-  reason?: string;
+  readonly workspaceId: string;
+  readonly expenseId: string;
+  readonly suggestedCategoryId: string;
+  readonly confidence: number;
+  readonly reason?: string;
 }
 
 export class CreateSuggestionHandler implements ICommandHandler<
