@@ -6,7 +6,7 @@ import { Decimal } from '@prisma/client/runtime/library';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IBudgetAllocationRepository {
   save(allocation: BudgetAllocation): Promise<void>;
