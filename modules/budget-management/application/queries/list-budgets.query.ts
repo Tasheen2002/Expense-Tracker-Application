@@ -4,20 +4,20 @@ import { BudgetStatus } from '../../domain/enums/budget-status';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ListBudgetsQuery extends IQuery {
-  workspaceId: string;
-  status?: BudgetStatus;
-  isActive?: boolean;
-  createdBy?: string;
-  currency?: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly status?: BudgetStatus;
+  readonly isActive?: boolean;
+  readonly createdBy?: string;
+  readonly currency?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListBudgetsHandler implements IQueryHandler<

@@ -3,16 +3,16 @@ import { BudgetAlertDTO } from '../../domain/entities/budget-alert.entity';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetUnreadAlertsQuery extends IQuery {
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetUnreadAlertsHandler implements IQueryHandler<

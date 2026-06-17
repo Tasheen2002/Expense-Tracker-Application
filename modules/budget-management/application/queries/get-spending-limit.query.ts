@@ -4,11 +4,11 @@ import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetSpendingLimitQuery extends IQuery {
-  limitId: string;
-  workspaceId: string;
+  readonly limitId: string;
+  readonly workspaceId: string;
 }
 
 export class GetSpendingLimitHandler implements IQueryHandler<

@@ -4,11 +4,11 @@ import { BudgetNotFoundError } from '../../domain/errors/budget.errors';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetBudgetQuery extends IQuery {
-  budgetId: string;
-  workspaceId: string;
+  readonly budgetId: string;
+  readonly workspaceId: string;
 }
 
 export class GetBudgetHandler implements IQueryHandler<
