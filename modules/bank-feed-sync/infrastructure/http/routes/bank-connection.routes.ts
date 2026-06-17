@@ -12,8 +12,12 @@ import {
   connectionParamsSchema,
   updateConnectionTokenBodySchema,
   workspaceParamsSchema,
-  bankConnectionResponseSchema,
-  paginatedConnectionsResponseSchema,
+  workspaceParamsJsonSchema,
+  connectionParamsJsonSchema,
+  connectBankBodyJsonSchema,
+  updateConnectionTokenBodyJsonSchema,
+  bankConnectionEnvelopeJsonSchema,
+  paginatedConnectionsEnvelopeJsonSchema,
 } from '../validation/bank-sync.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -42,44 +46,10 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Create a bank connection',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: [
-            'institutionId',
-            'institutionName',
-            'accountId',
-            'accountName',
-            'accountType',
-            'currency',
-            'accessToken',
-          ],
-          properties: {
-            institutionId: { type: 'string' },
-            institutionName: { type: 'string' },
-            accountId: { type: 'string' },
-            accountName: { type: 'string' },
-            accountType: { type: 'string' },
-            currency: { type: 'string', minLength: 3, maxLength: 3 },
-            accessToken: { type: 'string' },
-            accountMask: { type: 'string', nullable: true },
-            tokenExpiresAt: {
-              type: 'string',
-              format: 'date-time',
-              nullable: true,
-            },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: connectBankBodyJsonSchema,
         response: {
-          201: {
-            description: 'Bank connection created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: bankConnectionResponseSchema,
-            },
-          },
+          201: bankConnectionEnvelopeJsonSchema,
         },
       },
     },
@@ -96,17 +66,9 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Get all bank connections in a workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
         response: {
-          200: {
-            description: 'Bank connections retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedConnectionsResponseSchema,
-            },
-          },
+          200: paginatedConnectionsEnvelopeJsonSchema,
         },
       },
     },
@@ -123,17 +85,9 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Get a specific bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
         response: {
-          200: {
-            description: 'Bank connection retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: bankConnectionResponseSchema,
-            },
-          },
+          200: bankConnectionEnvelopeJsonSchema,
         },
       },
     },
@@ -151,29 +105,10 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Update bank connection token',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['accessToken'],
-          properties: {
-            accessToken: { type: 'string' },
-            tokenExpiresAt: {
-              type: 'string',
-              format: 'date-time',
-              nullable: true,
-            },
-          },
-        },
+        params: connectionParamsJsonSchema,
+        body: updateConnectionTokenBodyJsonSchema,
         response: {
-          200: {
-            description: 'Bank connection token updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: bankConnectionResponseSchema,
-            },
-          },
+          200: bankConnectionEnvelopeJsonSchema,
         },
       },
     },
@@ -190,6 +125,7 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Disconnect a bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
         response: {
           204: {
             description: 'No Content',
@@ -211,6 +147,7 @@ export async function bankConnectionRoutes(
         tags: ['Bank Connection'],
         description: 'Delete a bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
         response: {
           204: {
             description: 'No Content',

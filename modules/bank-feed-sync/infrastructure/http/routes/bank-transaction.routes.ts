@@ -14,12 +14,19 @@ import {
 import {
   transactionParamsSchema,
   workspaceParamsSchema,
-  bankTransactionResponseSchema,
-  paginatedTransactionsResponseSchema,
   pendingTransactionsQuerySchema,
   processTransactionBodySchema,
   connectionParamsSchema,
   paginationQuerySchema,
+  workspaceParamsJsonSchema,
+  connectionParamsJsonSchema,
+  transactionParamsJsonSchema,
+  processTransactionBodyJsonSchema,
+  paginationQueryJsonSchema,
+  pendingTransactionsQueryJsonSchema,
+  bankTransactionEnvelopeJsonSchema,
+  paginatedTransactionsEnvelopeJsonSchema,
+  processTransactionEnvelopeJsonSchema,
 } from '../validation/bank-sync.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -49,17 +56,10 @@ export async function bankTransactionRoutes(
         tags: ['Bank Transaction'],
         description: 'Get pending bank transactions in a workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: pendingTransactionsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Pending bank transactions retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedTransactionsResponseSchema,
-            },
-          },
+          200: paginatedTransactionsEnvelopeJsonSchema,
         },
       },
     },
@@ -76,17 +76,9 @@ export async function bankTransactionRoutes(
         tags: ['Bank Transaction'],
         description: 'Get a specific bank transaction',
         security: [{ bearerAuth: [] }],
+        params: transactionParamsJsonSchema,
         response: {
-          200: {
-            description: 'Bank transaction retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: bankTransactionResponseSchema,
-            },
-          },
+          200: bankTransactionEnvelopeJsonSchema,
         },
       },
     },
@@ -106,25 +98,10 @@ export async function bankTransactionRoutes(
         tags: ['Bank Transaction'],
         description: 'Process a bank transaction (import, match, or ignore)',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['action'],
-          properties: {
-            action: { type: 'string', enum: ['import', 'match', 'ignore'] },
-            expenseId: { type: 'string', format: 'uuid', nullable: true },
-          },
-        },
+        params: transactionParamsJsonSchema,
+        body: processTransactionBodyJsonSchema,
         response: {
-          200: {
-            description: 'Bank transaction processed successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: { type: 'null' },
-            },
-          },
+          200: processTransactionEnvelopeJsonSchema,
         },
       },
     },
@@ -144,17 +121,10 @@ export async function bankTransactionRoutes(
         tags: ['Bank Transaction'],
         description: 'Get all transactions for a specific bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Bank transactions retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedTransactionsResponseSchema,
-            },
-          },
+          200: paginatedTransactionsEnvelopeJsonSchema,
         },
       },
     },

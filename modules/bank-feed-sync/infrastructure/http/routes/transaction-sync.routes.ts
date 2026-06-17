@@ -10,11 +10,16 @@ import {
   connectionParamsSchema,
   paginationQuerySchema,
   sessionParamsSchema,
-  syncSessionResponseSchema,
-  paginatedSyncSessionsResponseSchema,
   syncTransactionsBodySchema,
   workspaceParamsSchema,
-  syncAcceptedResponseSchema,
+  workspaceParamsJsonSchema,
+  connectionParamsJsonSchema,
+  sessionParamsJsonSchema,
+  syncTransactionsBodyJsonSchema,
+  paginationQueryJsonSchema,
+  syncSessionEnvelopeJsonSchema,
+  paginatedSyncSessionsEnvelopeJsonSchema,
+  syncAcceptedEnvelopeJsonSchema,
 } from '../validation/bank-sync.schema';
 import {
   createRateLimiter,
@@ -37,6 +42,7 @@ export async function transactionSyncRoutes(
       await writeRateLimiter(request, reply);
     }
   });
+
   // Trigger sync for a connection
   fastify.post(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync',
@@ -47,17 +53,10 @@ export async function transactionSyncRoutes(
         tags: ['Transaction Sync'],
         description: 'Trigger sync for a bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
+        body: syncTransactionsBodyJsonSchema,
         response: {
-          202: {
-            description: 'Sync request accepted successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: syncAcceptedResponseSchema,
-            },
-          },
+          202: syncAcceptedEnvelopeJsonSchema,
         },
       },
     },
@@ -77,17 +76,10 @@ export async function transactionSyncRoutes(
         tags: ['Transaction Sync'],
         description: 'Get sync history for a bank connection',
         security: [{ bearerAuth: [] }],
+        params: connectionParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Sync history retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedSyncSessionsResponseSchema,
-            },
-          },
+          200: paginatedSyncSessionsEnvelopeJsonSchema,
         },
       },
     },
@@ -104,17 +96,9 @@ export async function transactionSyncRoutes(
         tags: ['Transaction Sync'],
         description: 'Get specific sync session details',
         security: [{ bearerAuth: [] }],
+        params: sessionParamsJsonSchema,
         response: {
-          200: {
-            description: 'Sync session retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: syncSessionResponseSchema,
-            },
-          },
+          200: syncSessionEnvelopeJsonSchema,
         },
       },
     },
@@ -134,17 +118,10 @@ export async function transactionSyncRoutes(
         tags: ['Transaction Sync'],
         description: 'Get all active sync sessions in a workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
-          200: {
-            description: 'Active sync sessions retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedSyncSessionsResponseSchema,
-            },
-          },
+          200: paginatedSyncSessionsEnvelopeJsonSchema,
         },
       },
     },
