@@ -7,6 +7,13 @@ import { UpdateConnectionTokenHandler } from '../../../application/commands/upda
 import { DeleteConnectionHandler } from '../../../application/commands/delete-connection.command';
 import { GetBankConnectionsHandler } from '../../../application/queries/get-bank-connections.query';
 import { GetBankConnectionHandler } from '../../../application/queries/get-bank-connection.query';
+import {
+  ConnectBankBody,
+  ConnectionParams,
+  PaginationQuery,
+  UpdateConnectionTokenBody,
+  WorkspaceParams,
+} from '../validation/bank-sync.schema';
 
 export class BankConnectionController {
   constructor(
@@ -18,21 +25,66 @@ export class BankConnectionController {
     private readonly getBankConnectionHandler: GetBankConnectionHandler
   ) {}
 
-  async connectBank(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getConnections(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: PaginationQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
+
+      const result = await this.getBankConnectionsHandler.handle({
+        workspaceId,
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
+
+      return ResponseHelper.ok(reply, 'Bank connections retrieved successfully', {
+        connections: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getConnection(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, connectionId } = request.params;
+
+      const connection = await this.getBankConnectionHandler.handle({
+        workspaceId,
+        connectionId,
+      });
+
+      return ResponseHelper.ok(reply, 'Bank connection retrieved successfully', connection);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async connectBank(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Body: ConnectBankBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
       const { userId } = request.user;
-      const body = request.body as {
-        institutionId: string;
-        institutionName: string;
-        accountId: string;
-        accountName: string;
-        accountType: string;
-        currency: string;
-        accessToken: string;
-        accountMask?: string;
-        tokenExpiresAt?: string;
-      };
+      const body = request.body;
 
       const result = await this.connectBankHandler.handle({
         workspaceId,
@@ -45,9 +97,7 @@ export class BankConnectionController {
         currency: body.currency,
         accessToken: body.accessToken,
         accountMask: body.accountMask,
-        tokenExpiresAt: body.tokenExpiresAt
-          ? new Date(body.tokenExpiresAt)
-          : undefined,
+        tokenExpiresAt: body.tokenExpiresAt,
       });
 
       return ResponseHelper.fromCommand(
@@ -57,82 +107,27 @@ export class BankConnectionController {
         result.data ?? undefined,
         201
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getConnections(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
-
-      const parsedLimit = limit ? parseInt(limit, 10) : 50;
-      const parsedOffset = offset ? parseInt(offset, 10) : 0;
-
-      const result = await this.getBankConnectionsHandler.handle({
-        workspaceId,
-        limit: Math.min(
-          Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit),
-          100
-        ),
-        offset: Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset),
-      });
-
-      return ResponseHelper.ok(reply, 'Bank connections retrieved successfully', {
-        connections: result.items,
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-        hasMore: result.hasMore,
-      });
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getConnection(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
-
-      const connection = await this.getBankConnectionHandler.handle({
-        workspaceId,
-        connectionId,
-      });
-
-      return ResponseHelper.ok(reply, 'Bank connection retrieved successfully', connection);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateConnectionToken(
-    request: AuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+      Body: UpdateConnectionTokenBody;
+    }>,
     reply: FastifyReply
   ) {
     try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
-      const body = request.body as {
-        accessToken: string;
-        tokenExpiresAt?: string;
-      };
+      const { workspaceId, connectionId } = request.params;
+      const body = request.body;
 
       const result = await this.updateConnectionTokenHandler.handle({
         workspaceId,
         connectionId,
         accessToken: body.accessToken,
-        tokenExpiresAt: body.tokenExpiresAt
-          ? new Date(body.tokenExpiresAt)
-          : undefined,
+        tokenExpiresAt: body.tokenExpiresAt,
       });
 
       return ResponseHelper.fromCommand(
@@ -141,17 +136,19 @@ export class BankConnectionController {
         'Connection token updated successfully',
         undefined
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async disconnectBank(request: AuthenticatedRequest, reply: FastifyReply) {
+  async disconnectBank(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
+      const { workspaceId, connectionId } = request.params;
 
       const result = await this.disconnectBankHandler.handle({
         workspaceId,
@@ -165,17 +162,19 @@ export class BankConnectionController {
         undefined,
         204
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async deleteConnection(request: AuthenticatedRequest, reply: FastifyReply) {
+  async deleteConnection(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
+      const { workspaceId, connectionId } = request.params;
 
       const result = await this.deleteConnectionHandler.handle({
         workspaceId,
@@ -189,7 +188,7 @@ export class BankConnectionController {
         undefined,
         204
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

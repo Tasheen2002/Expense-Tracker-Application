@@ -5,6 +5,13 @@ import { SyncTransactionsHandler } from '../../../application/commands/sync-tran
 import { GetSyncHistoryHandler } from '../../../application/queries/get-sync-history.query';
 import { GetSyncSessionHandler } from '../../../application/queries/get-sync-session.query';
 import { GetActiveSyncsHandler } from '../../../application/queries/get-active-syncs.query';
+import {
+  ConnectionParams,
+  PaginationQuery,
+  SessionParams,
+  SyncTransactionsBody,
+  WorkspaceParams,
+} from '../validation/bank-sync.schema';
 
 export class TransactionSyncController {
   constructor(
@@ -14,54 +21,23 @@ export class TransactionSyncController {
     private readonly getActiveSyncsHandler: GetActiveSyncsHandler
   ) {}
 
-  async syncTransactions(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getSyncHistory(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+      Querystring: PaginationQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
-      const body =
-        (request.body as {
-          startDate?: string;
-          endDate?: string;
-        }) ?? {};
-
-      const result = await this.syncTransactionsHandler.handle({
-        workspaceId,
-        connectionId,
-        fromDate: body.startDate ? new Date(body.startDate) : undefined,
-        toDate: body.endDate ? new Date(body.endDate) : undefined,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Sync initiated successfully',
-        result.data ? { sessionId: result.data.id } : undefined,
-        202
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getSyncHistory(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
+      const { workspaceId, connectionId } = request.params;
+      const { limit, offset } = request.query;
 
       const result = await this.getSyncHistoryHandler.handle({
         workspaceId,
         connectionId,
         options: {
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
+          limit,
+          offset,
         },
       });
 
@@ -72,17 +48,19 @@ export class TransactionSyncController {
         offset: result.offset,
         hasMore: result.hasMore,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getSyncSession(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getSyncSession(
+    request: AuthenticatedRequest<{
+      Params: SessionParams;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, sessionId } = request.params as {
-        workspaceId: string;
-        sessionId: string;
-      };
+      const { workspaceId, sessionId } = request.params;
 
       const session = await this.getSyncSessionHandler.handle({
         workspaceId,
@@ -90,24 +68,27 @@ export class TransactionSyncController {
       });
 
       return ResponseHelper.ok(reply, 'Sync session retrieved successfully', session);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getActiveSyncs(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getActiveSyncs(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: PaginationQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
 
       const result = await this.getActiveSyncsHandler.handle({
         workspaceId,
         options: {
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
+          limit,
+          offset,
         },
       });
 
@@ -118,7 +99,41 @@ export class TransactionSyncController {
         offset: result.offset,
         hasMore: result.hasMore,
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async syncTransactions(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+      Body: SyncTransactionsBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, connectionId } = request.params;
+      const body = request.body ?? {};
+
+      // Fallback: Support startDate/endDate if sent instead of fromDate/toDate
+      const fromDate = body.fromDate ?? body.startDate;
+      const toDate = body.toDate ?? body.endDate;
+
+      const result = await this.syncTransactionsHandler.handle({
+        workspaceId,
+        connectionId,
+        fromDate,
+        toDate,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Sync initiated successfully',
+        result.data ? { sessionId: result.data.id } : undefined,
+        202
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

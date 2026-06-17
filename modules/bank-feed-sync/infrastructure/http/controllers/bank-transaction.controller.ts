@@ -5,6 +5,14 @@ import { ProcessTransactionHandler } from '../../../application/commands/process
 import { GetPendingTransactionsHandler } from '../../../application/queries/get-pending-transactions.query';
 import { GetBankTransactionHandler } from '../../../application/queries/get-bank-transaction.query';
 import { GetTransactionsByConnectionHandler } from '../../../application/queries/get-transactions-by-connection.query';
+import {
+  WorkspaceParams,
+  PendingTransactionsQuery,
+  TransactionParams,
+  ProcessTransactionBody,
+  ConnectionParams,
+  PaginationQuery,
+} from '../validation/bank-sync.schema';
 
 export class BankTransactionController {
   constructor(
@@ -15,35 +23,22 @@ export class BankTransactionController {
   ) {}
 
   async getPendingTransactions(
-    request: AuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: PendingTransactionsQuery;
+    }>,
     reply: FastifyReply
   ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { connectionId, limit, offset } = request.query as {
-        connectionId?: string;
-        limit?: string;
-        offset?: string;
-      };
-
-      const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-      const parsedOffset = offset ? parseInt(offset, 10) : undefined;
+      const { workspaceId } = request.params;
+      const { connectionId, limit, offset } = request.query;
 
       const result = await this.getPendingTransactionsHandler.handle({
         workspaceId,
         connectionId,
         options: {
-          limit:
-            parsedLimit !== undefined
-              ? Math.min(
-                  Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit),
-                  100
-                )
-              : undefined,
-          offset:
-            parsedOffset !== undefined
-              ? Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset)
-              : undefined,
+          limit,
+          offset,
         },
       });
 
@@ -54,17 +49,19 @@ export class BankTransactionController {
         offset: result.offset,
         hasMore: result.hasMore,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getTransaction(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getTransaction(
+    request: AuthenticatedRequest<{
+      Params: TransactionParams;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, transactionId } = request.params as {
-        workspaceId: string;
-        transactionId: string;
-      };
+      const { workspaceId, transactionId } = request.params;
 
       const transaction = await this.getBankTransactionHandler.handle({
         workspaceId,
@@ -72,21 +69,53 @@ export class BankTransactionController {
       });
 
       return ResponseHelper.ok(reply, 'Bank transaction retrieved successfully', transaction);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async processTransaction(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getTransactionsByConnection(
+    request: AuthenticatedRequest<{
+      Params: ConnectionParams;
+      Querystring: PaginationQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, transactionId } = request.params as {
-        workspaceId: string;
-        transactionId: string;
-      };
-      const body = request.body as {
-        action: 'import' | 'match' | 'ignore';
-        expenseId?: string;
-      };
+      const { workspaceId, connectionId } = request.params;
+      const { limit, offset } = request.query;
+
+      const result = await this.getTransactionsByConnectionHandler.handle({
+        workspaceId,
+        connectionId,
+        options: {
+          limit,
+          offset,
+        },
+      });
+
+      return ResponseHelper.ok(reply, 'Transactions by connection retrieved successfully', {
+        transactions: result.items,
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async processTransaction(
+    request: AuthenticatedRequest<{
+      Params: TransactionParams;
+      Body: ProcessTransactionBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, transactionId } = request.params;
+      const body = request.body;
 
       const result = await this.processTransactionHandler.handle({
         workspaceId,
@@ -101,54 +130,7 @@ export class BankTransactionController {
         'Transaction processed successfully',
         undefined
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getTransactionsByConnection(
-    request: AuthenticatedRequest,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, connectionId } = request.params as {
-        workspaceId: string;
-        connectionId: string;
-      };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
-
-      const parsedLimit = limit ? parseInt(limit, 10) : undefined;
-      const parsedOffset = offset ? parseInt(offset, 10) : undefined;
-
-      const result = await this.getTransactionsByConnectionHandler.handle({
-        workspaceId,
-        connectionId,
-        options: {
-          limit:
-            parsedLimit !== undefined
-              ? Math.min(
-                  Math.max(1, isNaN(parsedLimit) ? 50 : parsedLimit),
-                  100
-                )
-              : undefined,
-          offset:
-            parsedOffset !== undefined
-              ? Math.max(0, isNaN(parsedOffset) ? 0 : parsedOffset)
-              : undefined,
-        },
-      });
-
-      return ResponseHelper.ok(reply, 'Transactions by connection retrieved successfully', {
-        transactions: result.items,
-        total: result.total,
-        limit: result.limit,
-        offset: result.offset,
-        hasMore: result.hasMore,
-      });
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
