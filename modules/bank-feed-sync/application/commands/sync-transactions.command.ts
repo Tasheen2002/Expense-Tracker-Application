@@ -1,16 +1,16 @@
 import { TransactionSyncService } from '../services/transaction-sync.service';
 import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface SyncTransactionsCommand extends ICommand {
-  workspaceId: string;
-  connectionId: string;
-  fromDate?: Date;
-  toDate?: Date;
+  readonly workspaceId: string;
+  readonly connectionId: string;
+  readonly fromDate?: Date;
+  readonly toDate?: Date;
 }
 
 export class SyncTransactionsHandler implements ICommandHandler<

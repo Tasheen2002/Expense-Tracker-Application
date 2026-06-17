@@ -1,15 +1,15 @@
 import { TransactionSyncService } from '../services/transaction-sync.service';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface ProcessTransactionCommand extends ICommand {
-  workspaceId: string;
-  transactionId: string;
-  action: 'import' | 'match' | 'ignore';
-  expenseId?: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
+  readonly action: 'import' | 'match' | 'ignore';
+  readonly expenseId?: string;
 }
 
 export class ProcessTransactionHandler implements ICommandHandler<

@@ -1,13 +1,13 @@
 import { TransactionSyncService } from '../services/transaction-sync.service';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface DeleteConnectionCommand extends ICommand {
-  workspaceId: string;
-  connectionId: string;
+  readonly workspaceId: string;
+  readonly connectionId: string;
 }
 
 export class DeleteConnectionHandler implements ICommandHandler<

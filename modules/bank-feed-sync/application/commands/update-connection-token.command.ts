@@ -1,15 +1,15 @@
 import { TransactionSyncService } from '../services/transaction-sync.service';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface UpdateConnectionTokenCommand extends ICommand {
-  workspaceId: string;
-  connectionId: string;
-  accessToken: string;
-  tokenExpiresAt?: Date;
+  readonly workspaceId: string;
+  readonly connectionId: string;
+  readonly accessToken: string;
+  readonly tokenExpiresAt?: Date;
 }
 
 export class UpdateConnectionTokenHandler implements ICommandHandler<
