@@ -11,8 +11,29 @@ import {
 } from '../errors/budget.errors';
 import { BudgetPeriodType } from '../enums/budget-period-type';
 import { Decimal } from '@prisma/client/runtime/library';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface BudgetDTO {
+  budgetId: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  totalAmount: string;
+  currency: string;
+  period: {
+    startDate: string;
+    endDate: string;
+    type: string;
+  };
+  status: string;
+  createdBy: string;
+  isRecurring: boolean;
+  rolloverUnused: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 // ============================================================================
 // DOMAIN EVENTS
@@ -310,25 +331,6 @@ export interface CreateBudgetData {
   rolloverUnused?: boolean;
 }
 
-export interface BudgetDTO {
-  budgetId: string;
-  workspaceId: string;
-  name: string;
-  description: string | null;
-  totalAmount: string;
-  currency: string;
-  period: {
-    startDate: string;
-    endDate: string;
-    type: string;
-  };
-  status: string;
-  createdBy: string;
-  isRecurring: boolean;
-  rolloverUnused: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export class Budget extends AggregateRoot {
   private constructor(private props: BudgetProps) {

@@ -7,8 +7,22 @@ import {
   BudgetAlreadyActiveError,
   SpendingLimitAlreadyInactiveError,
 } from '../errors/budget.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface SpendingLimitDTO {
+  limitId: string;
+  workspaceId: string;
+  userId: string | null;
+  categoryId: string | null;
+  limitAmount: string;
+  currency: string;
+  periodType: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 // ============================================================================
 // Domain Events
@@ -144,18 +158,6 @@ export interface CreateSpendingLimitData {
   periodType: BudgetPeriodType;
 }
 
-export interface SpendingLimitDTO {
-  limitId: string;
-  workspaceId: string;
-  userId: string | null;
-  categoryId: string | null;
-  limitAmount: string;
-  currency: string;
-  periodType: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export class SpendingLimit extends AggregateRoot {
   private constructor(private props: SpendingLimitProps) {
