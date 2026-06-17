@@ -6,6 +6,17 @@ import { UserId } from '../../../identity-workspace';
 // Entity
 // ============================================================================
 
+export interface ScenarioDTO {
+  id: string;
+  planId: string;
+  name: string;
+  description: string | null;
+  assumptions: Record<string, unknown> | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ScenarioProps {
   id: ScenarioId;
   planId: PlanId;
@@ -93,15 +104,4 @@ export class Scenario {
       updatedAt: scenario.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ScenarioDTO {
-  id: string;
-  planId: string;
-  name: string;
-  description: string | null;
-  assumptions: Record<string, unknown> | null;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }

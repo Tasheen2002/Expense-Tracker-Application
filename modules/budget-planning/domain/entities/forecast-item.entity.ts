@@ -7,6 +7,16 @@ import { ForecastAmount } from '../value-objects/forecast-amount';
 // Entity
 // ============================================================================
 
+export interface ForecastItemDTO {
+  id: string;
+  forecastId: string;
+  categoryId: string;
+  amount: number;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ForecastItemProps {
   id: ForecastItemId;
   forecastId: ForecastId;
@@ -82,14 +92,4 @@ export class ForecastItem {
       updatedAt: item.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ForecastItemDTO {
-  id: string;
-  forecastId: string;
-  categoryId: string;
-  amount: number;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
 }

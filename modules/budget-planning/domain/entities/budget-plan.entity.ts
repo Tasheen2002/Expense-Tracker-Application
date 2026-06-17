@@ -4,8 +4,8 @@ import { UserId } from '../../../identity-workspace';
 import { PlanPeriod } from '../value-objects/plan-period';
 import { PlanStatus } from '../enums/plan-status.enum';
 import { PeriodType } from '../enums/period-type.enum';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -331,6 +331,19 @@ export class ScenarioDeletedEvent extends DomainEvent {
 // Entity
 // ============================================================================
 
+export interface BudgetPlanDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  periodType: PeriodType;
+  period: { startDate: string; endDate: string };
+  status: PlanStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface BudgetPlanProps {
   id: PlanId;
   workspaceId: WorkspaceId;
@@ -525,17 +538,4 @@ export class BudgetPlan extends AggregateRoot {
       updatedAt: plan.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface BudgetPlanDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  description: string | null;
-  periodType: PeriodType;
-  period: { startDate: string; endDate: string };
-  status: PlanStatus;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }

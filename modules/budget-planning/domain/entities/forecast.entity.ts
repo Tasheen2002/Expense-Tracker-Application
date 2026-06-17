@@ -6,6 +6,16 @@ import { ForecastType } from '../enums/forecast-type.enum';
 // Entity
 // ============================================================================
 
+export interface ForecastDTO {
+  id: string;
+  planId: string;
+  name: string;
+  type: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ForecastProps {
   id: ForecastId;
   planId: PlanId;
@@ -91,14 +101,4 @@ export class Forecast {
       updatedAt: forecast.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ForecastDTO {
-  id: string;
-  planId: string;
-  name: string;
-  type: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
