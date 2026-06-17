@@ -9,6 +9,15 @@ import {
   GetAuditSummaryHandler,
 } from '../../../application';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  WorkspaceParams,
+  ListAuditLogsQuery,
+  AuditLogParams,
+  EntityHistoryQuery,
+  AuditSummaryQuery,
+  CreateAuditLogBody,
+  PurgeAuditLogsQuery,
+} from '../validation/audit-log.schema';
 
 export class AuditLogController {
   constructor(
@@ -22,17 +31,8 @@ export class AuditLogController {
 
   async listAuditLogs(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        userId?: string;
-        action?: string;
-        entityType?: string;
-        entityId?: string;
-        startDate?: string;
-        endDate?: string;
-        limit?: number;
-        offset?: number;
-      };
+      Params: WorkspaceParams;
+      Querystring: ListAuditLogsQuery;
     }>,
     reply: FastifyReply
   ): Promise<void> {
@@ -67,7 +67,7 @@ export class AuditLogController {
 
   async getAuditLog(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; auditLogId: string };
+      Params: AuditLogParams;
     }>,
     reply: FastifyReply
   ): Promise<void> {
@@ -87,13 +87,8 @@ export class AuditLogController {
 
   async getEntityAuditHistory(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: {
-        entityType: string;
-        entityId: string;
-        limit?: number;
-        offset?: number;
-      };
+      Params: WorkspaceParams;
+      Querystring: EntityHistoryQuery;
     }>,
     reply: FastifyReply
   ): Promise<void> {
@@ -122,8 +117,8 @@ export class AuditLogController {
 
   async getAuditSummary(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { startDate: string; endDate: string };
+      Params: WorkspaceParams;
+      Querystring: AuditSummaryQuery;
     }>,
     reply: FastifyReply
   ): Promise<void> {
@@ -145,14 +140,8 @@ export class AuditLogController {
 
   async createAuditLog(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: {
-        action: string;
-        entityType: string;
-        entityId: string;
-        details?: Record<string, unknown>;
-        metadata?: Record<string, unknown>;
-      };
+      Params: WorkspaceParams;
+      Body: CreateAuditLogBody;
     }>,
     reply: FastifyReply
   ): Promise<void> {
@@ -167,8 +156,8 @@ export class AuditLogController {
         action: body.action,
         entityType: body.entityType,
         entityId: body.entityId,
-        details: body.details,
-        metadata: body.metadata,
+        details: body.details ?? undefined,
+        metadata: body.metadata ?? undefined,
         ipAddress:
           (request.headers['x-forwarded-for'] as string) ||
           request.ip ||
@@ -190,8 +179,8 @@ export class AuditLogController {
 
   async purgeAuditLogs(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { olderThanDays: number };
+      Params: WorkspaceParams;
+      Querystring: PurgeAuditLogsQuery;
     }>,
     reply: FastifyReply
   ): Promise<void> {
