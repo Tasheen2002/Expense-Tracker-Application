@@ -5,7 +5,7 @@ import { WorkspaceId } from '../../../identity-workspace'
 import { ExpenseId, CategoryId } from '../../../expense-ledger'
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score'
 import { SuggestionNotFoundError } from '../../domain/errors/categorization-rules.errors'
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface'
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface'
 
 export class CategorySuggestionService {
   constructor(

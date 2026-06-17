@@ -9,7 +9,7 @@ import { RuleId } from "../../domain/value-objects/rule-id";
 import { RuleExecutionId } from "../../domain/value-objects/rule-execution-id";
 import { CategoryRuleNotFoundError } from "../../domain/errors/categorization-rules.errors";
 import { ConfidenceScore } from "../../domain/value-objects/confidence-score";
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface EvaluationResult {
   appliedRule: CategoryRuleDTO | null;
