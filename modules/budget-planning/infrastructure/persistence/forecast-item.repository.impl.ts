@@ -7,7 +7,7 @@ import { CategoryId } from "../../../expense-ledger";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class ForecastItemRepositoryImpl
