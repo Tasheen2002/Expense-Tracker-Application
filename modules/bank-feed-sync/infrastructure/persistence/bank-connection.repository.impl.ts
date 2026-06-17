@@ -7,10 +7,10 @@ import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 
 export class PrismaBankConnectionRepository
   extends PrismaRepository<BankConnection>

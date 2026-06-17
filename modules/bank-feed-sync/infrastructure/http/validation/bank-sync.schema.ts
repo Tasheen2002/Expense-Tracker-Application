@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
+
 
 /**
  * Common parameters
@@ -74,6 +76,14 @@ export const syncTransactionsBodySchema = z.object({
     (val) => (typeof val === 'string' ? new Date(val) : val),
     z.date().optional()
   ),
+  startDate: z.preprocess(
+    (val) => (typeof val === 'string' ? new Date(val) : val),
+    z.date().optional()
+  ),
+  endDate: z.preprocess(
+    (val) => (typeof val === 'string' ? new Date(val) : val),
+    z.date().optional()
+  ),
   forceSync: z.preprocess(
     (val) => (typeof val === 'string' ? val === 'true' : val),
     z.boolean().optional().default(false)
@@ -124,123 +134,184 @@ export type UpdateConnectionTokenInput = UpdateConnectionTokenBody;
 export type SyncTransactionsInput = SyncTransactionsBody;
 export type ProcessTransactionInput = ProcessTransactionBody;
 
-// ==================== API RESPONSE SCHEMAS (JSON Schema) ====================
+// ==================== API RESPONSE SCHEMAS (ZOD) ====================
 
-export const bankConnectionResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    institutionId: { type: 'string' },
-    institutionName: { type: 'string' },
-    accountId: { type: 'string' },
-    accountName: { type: 'string' },
-    accountType: { type: 'string' },
-    accountMask: { type: 'string', nullable: true },
-    currency: { type: 'string' },
-    status: { type: 'string' },
-    lastSyncAt: {
-      type: 'string',
-      format: 'date-time',
-      nullable: true,
-    },
-    tokenExpiresAt: {
-      type: 'string',
-      format: 'date-time',
-      nullable: true,
-    },
-    errorMessage: { type: 'string', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const bankConnectionResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  userId: z.string().uuid(),
+  institutionId: z.string(),
+  institutionName: z.string(),
+  accountId: z.string(),
+  accountName: z.string(),
+  accountType: z.string(),
+  accountMask: z.string().nullable().optional(),
+  currency: z.string(),
+  status: z.string(),
+  lastSyncAt: z.union([z.date(), z.string()]).nullable().optional(),
+  tokenExpiresAt: z.union([z.date(), z.string()]).nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  createdAt: z.union([z.date(), z.string()]),
+  updatedAt: z.union([z.date(), z.string()]),
+});
 
-export const paginatedConnectionsResponseSchema = {
-  type: 'object',
-  properties: {
-    connections: {
-      type: 'array',
-      items: bankConnectionResponseSchema,
-    },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export const paginatedConnectionsResponseSchema = z.object({
+  connections: z.array(bankConnectionResponseSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  hasMore: z.boolean(),
+});
 
-export const bankTransactionResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    connectionId: { type: 'string', format: 'uuid' },
-    sessionId: { type: 'string', format: 'uuid' },
-    externalId: { type: 'string' },
-    amount: { type: 'number' },
-    currency: { type: 'string' },
-    description: { type: 'string' },
-    merchantName: { type: 'string', nullable: true },
-    categoryName: { type: 'string', nullable: true },
-    transactionDate: { type: 'string', format: 'date-time' },
-    postedDate: { type: 'string', format: 'date-time', nullable: true },
-    status: { type: 'string' },
-    expenseId: { type: 'string', format: 'uuid', nullable: true },
-    metadata: { type: 'object', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const bankTransactionResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  connectionId: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  externalId: z.string(),
+  amount: z.number(),
+  currency: z.string(),
+  description: z.string(),
+  merchantName: z.string().nullable().optional(),
+  categoryName: z.string().nullable().optional(),
+  transactionDate: z.union([z.date(), z.string()]),
+  postedDate: z.union([z.date(), z.string()]).nullable().optional(),
+  status: z.string(),
+  expenseId: z.string().uuid().nullable().optional(),
+  metadata: z.record(z.unknown()).nullable().optional(),
+  createdAt: z.union([z.date(), z.string()]),
+  updatedAt: z.union([z.date(), z.string()]),
+});
 
-export const paginatedTransactionsResponseSchema = {
-  type: 'object',
-  properties: {
-    transactions: {
-      type: 'array',
-      items: bankTransactionResponseSchema,
-    },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export const paginatedTransactionsResponseSchema = z.object({
+  transactions: z.array(bankTransactionResponseSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  hasMore: z.boolean(),
+});
 
-export const syncSessionResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    connectionId: { type: 'string', format: 'uuid' },
-    status: { type: 'string' },
-    startedAt: { type: 'string', format: 'date-time' },
-    completedAt: { type: 'string', format: 'date-time', nullable: true },
-    errorMessage: { type: 'string', nullable: true },
-    transactionsFetched: { type: 'number' },
-    transactionsImported: { type: 'number' },
-    transactionsDuplicate: { type: 'number' },
-  },
-};
+export const syncSessionResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  connectionId: z.string().uuid(),
+  status: z.string(),
+  startedAt: z.union([z.date(), z.string()]),
+  completedAt: z.union([z.date(), z.string()]).nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  transactionsFetched: z.number().int(),
+  transactionsImported: z.number().int(),
+  transactionsDuplicate: z.number().int(),
+});
 
-export const syncAcceptedResponseSchema = {
-  type: 'object',
-  properties: {
-    sessionId: { type: 'string', format: 'uuid' },
-  },
-};
+export const syncAcceptedResponseSchema = z.object({
+  sessionId: z.string().uuid(),
+});
 
-export const paginatedSyncSessionsResponseSchema = {
-  type: 'object',
-  properties: {
-    sessions: {
-      type: 'array',
-      items: syncSessionResponseSchema,
-    },
-    total: { type: 'number' },
-    limit: { type: 'number' },
-    offset: { type: 'number' },
-    hasMore: { type: 'boolean' },
-  },
-};
+export const paginatedSyncSessionsResponseSchema = z.object({
+  sessions: z.array(syncSessionResponseSchema),
+  total: z.number().int(),
+  limit: z.number().int(),
+  offset: z.number().int(),
+  hasMore: z.boolean(),
+});
+
+// ==================== PRE-COMPUTED JSON SCHEMAS ====================
+
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const connectionParamsJsonSchema = toJsonSchema(connectionParamsSchema);
+export const sessionParamsJsonSchema = toJsonSchema(sessionParamsSchema);
+export const transactionParamsJsonSchema = toJsonSchema(transactionParamsSchema);
+
+export const connectBankBodyJsonSchema = toJsonSchema(connectBankBodySchema);
+export const updateConnectionTokenBodyJsonSchema = toJsonSchema(updateConnectionTokenBodySchema);
+export const syncTransactionsBodyJsonSchema = toJsonSchema(syncTransactionsBodySchema);
+export const processTransactionBodyJsonSchema = toJsonSchema(processTransactionBodySchema);
+
+export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);
+export const pendingTransactionsQueryJsonSchema = toJsonSchema(pendingTransactionsQuerySchema);
+export const syncHistoryQueryJsonSchema = toJsonSchema(syncHistoryQuerySchema);
+
+// ==================== RESPONSE ENVELOPES ====================
+
+export const bankConnectionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: bankConnectionResponseSchema.optional(),
+  })
+);
+
+export const paginatedConnectionsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: paginatedConnectionsResponseSchema,
+  })
+);
+
+export const bankTransactionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: bankTransactionResponseSchema,
+  })
+);
+
+export const paginatedTransactionsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: paginatedTransactionsResponseSchema,
+  })
+);
+
+export const syncSessionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: syncSessionResponseSchema,
+  })
+);
+
+export const paginatedSyncSessionsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: paginatedSyncSessionsResponseSchema,
+  })
+);
+
+export const syncAcceptedEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: syncAcceptedResponseSchema,
+  })
+);
+
+export const processTransactionEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.null().optional(),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
+
 
