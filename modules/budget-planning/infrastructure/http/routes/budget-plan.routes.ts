@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { BudgetPlanController } from '../controllers/budget-plan.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -18,8 +20,14 @@ import {
   createBudgetPlanSchema,
   updateBudgetPlanSchema,
   budgetPlanQuerySchema,
-  budgetPlanResponseSchema,
-  paginatedBudgetPlansResponseSchema,
+  workspaceParamsJsonSchema,
+  planParamsJsonSchema,
+  createBudgetPlanBodyJsonSchema,
+  updateBudgetPlanBodyJsonSchema,
+  budgetPlanQueryJsonSchema,
+  budgetPlanEnvelopeJsonSchema,
+  paginatedBudgetPlansEnvelopeJsonSchema,
+  baseResponseEnvelopeJsonSchema,
 } from '../validation/budget-planning.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -29,20 +37,28 @@ const writeRateLimiter = createRateLimiter({
 
 export async function budgetPlanningRoutes(
   fastify: FastifyInstance,
-  controller: BudgetPlanController
+  controller: BudgetPlanController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
+
   // Create budget plan
   fastify.post(
     '/workspaces/:workspaceId/budget-plans',
     {
       preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(createBudgetPlanSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -50,38 +66,10 @@ export async function budgetPlanningRoutes(
         tags: ['Budget Planning - Plans'],
         description: 'Create a new budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name', 'periodType', 'startDate', 'endDate'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            periodType: {
-              type: 'string',
-              enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'],
-            },
-            startDate: { type: 'string', format: 'date' },
-            endDate: { type: 'string', format: 'date' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createBudgetPlanBodyJsonSchema,
         response: {
-          201: {
-            description: 'Budget plan created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: budgetPlanResponseSchema,
-            },
-          },
+          201: budgetPlanEnvelopeJsonSchema,
         },
       },
     },
@@ -97,40 +85,19 @@ export async function budgetPlanningRoutes(
         validateParams(workspaceParamsSchema),
         validateQuery(budgetPlanQuerySchema),
       ],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'List all budget plans in workspace',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              enum: ['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'],
-            },
-            limit: { type: 'string', pattern: '^[0-9]+$' },
-            offset: { type: 'string', pattern: '^[0-9]+$' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        querystring: budgetPlanQueryJsonSchema,
         response: {
-          200: {
-            description: 'Budget plans retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedBudgetPlansResponseSchema,
-            },
-          },
+          200: paginatedBudgetPlansEnvelopeJsonSchema,
         },
       },
     },
@@ -143,30 +110,18 @@ export async function budgetPlanningRoutes(
     '/workspaces/:workspaceId/budget-plans/:id',
     {
       preValidation: [validateParams(planParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'Get a specific budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: planParamsJsonSchema,
         response: {
-          200: {
-            description: 'Budget plan retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: budgetPlanResponseSchema,
-            },
-          },
+          200: budgetPlanEnvelopeJsonSchema,
         },
       },
     },
@@ -180,6 +135,8 @@ export async function budgetPlanningRoutes(
     {
       preValidation: [validateParams(planParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(updateBudgetPlanSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -187,31 +144,10 @@ export async function budgetPlanningRoutes(
         tags: ['Budget Planning - Plans'],
         description: 'Update a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            description: { type: ['string', 'null'], maxLength: 500 },
-          },
-        },
+        params: planParamsJsonSchema,
+        body: updateBudgetPlanBodyJsonSchema,
         response: {
-          200: {
-            description: 'Budget plan updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
-          },
+          200: budgetPlanEnvelopeJsonSchema,
         },
       },
     },
@@ -224,19 +160,16 @@ export async function budgetPlanningRoutes(
     '/workspaces/:workspaceId/budget-plans/:id',
     {
       preValidation: [validateParams(planParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'Delete a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: planParamsJsonSchema,
         response: {
           204: {
             type: 'null',
@@ -254,29 +187,18 @@ export async function budgetPlanningRoutes(
     '/workspaces/:workspaceId/budget-plans/:id/activate',
     {
       preValidation: [validateParams(planParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Budget Planning - Plans'],
         description: 'Activate a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: planParamsJsonSchema,
         response: {
-          200: {
-            description: 'Budget plan activated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
-          },
+          200: budgetPlanEnvelopeJsonSchema,
         },
       },
     },

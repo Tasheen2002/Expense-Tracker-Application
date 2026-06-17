@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { ForecastController } from '../controllers/forecast.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -15,9 +17,16 @@ import {
   forecastItemParamsSchema,
   createForecastSchema,
   addForecastItemSchema,
-  forecastResponseSchema,
-  paginatedForecastsResponseSchema,
-  paginatedForecastItemsResponseSchema,
+  planIdParamsJsonSchema,
+  forecastParamsJsonSchema,
+  forecastIdParamsJsonSchema,
+  forecastItemParamsJsonSchema,
+  createForecastBodyJsonSchema,
+  addForecastItemBodyJsonSchema,
+  forecastEnvelopeJsonSchema,
+  paginatedForecastsEnvelopeJsonSchema,
+  forecastItemEnvelopeJsonSchema,
+  paginatedForecastItemsEnvelopeJsonSchema,
 } from '../validation/budget-planning.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -27,8 +36,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function forecastRoutes(
   fastify: FastifyInstance,
-  controller: ForecastController
+  controller: ForecastController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -46,6 +60,8 @@ export async function forecastRoutes(
     {
       preValidation: [validateParams(planIdParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(createForecastSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -53,41 +69,10 @@ export async function forecastRoutes(
         tags: ['Budget Planning - Forecasts'],
         description: 'Create a new forecast for a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'planId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            planId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name', 'type'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            type: {
-              type: 'string',
-              enum: ['BASELINE', 'OPTIMISTIC', 'PESSIMISTIC', 'CUSTOM'],
-            },
-          },
-        },
+        params: planIdParamsJsonSchema,
+        body: createForecastBodyJsonSchema,
         response: {
-          201: {
-            description: 'Forecast created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  forecastId: { type: 'string', format: 'uuid' },
-                },
-              },
-            },
-          },
+          201: forecastEnvelopeJsonSchema,
         },
       },
     },
@@ -100,30 +85,18 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/budget-plans/:planId/forecasts',
     {
       preValidation: [validateParams(planIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
         description: 'List all forecasts for a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'planId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            planId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: planIdParamsJsonSchema,
         response: {
-          200: {
-            description: 'Forecasts retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedForecastsResponseSchema,
-            },
-          },
+          200: paginatedForecastsEnvelopeJsonSchema,
         },
       },
     },
@@ -136,30 +109,18 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecasts/:id',
     {
       preValidation: [validateParams(forecastParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
         description: 'Get a specific forecast',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: forecastParamsJsonSchema,
         response: {
-          200: {
-            description: 'Forecast retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: forecastResponseSchema,
-            },
-          },
+          200: forecastEnvelopeJsonSchema,
         },
       },
     },
@@ -172,19 +133,16 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecasts/:id',
     {
       preValidation: [validateParams(forecastParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
         description: 'Delete a forecast',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: forecastParamsJsonSchema,
         response: {
           204: {
             type: 'null',
@@ -207,6 +165,8 @@ export async function forecastRoutes(
     {
       preValidation: [validateParams(forecastIdParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(addForecastItemSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -214,39 +174,10 @@ export async function forecastRoutes(
         tags: ['Budget Planning - Forecast Items'],
         description: 'Add an item to a forecast',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'forecastId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            forecastId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['categoryId', 'amount'],
-          properties: {
-            categoryId: { type: 'string', format: 'uuid' },
-            amount: { type: 'number', minimum: 0 },
-            notes: { type: 'string', maxLength: 500 },
-          },
-        },
+        params: forecastIdParamsJsonSchema,
+        body: addForecastItemBodyJsonSchema,
         response: {
-          201: {
-            description: 'Forecast item added successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  forecastItemId: { type: 'string', format: 'uuid' },
-                },
-              },
-            },
-          },
+          201: forecastItemEnvelopeJsonSchema,
         },
       },
     },
@@ -259,30 +190,18 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecasts/:forecastId/items',
     {
       preValidation: [validateParams(forecastIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
         description: 'List all items in a forecast',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'forecastId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            forecastId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: forecastIdParamsJsonSchema,
         response: {
-          200: {
-            description: 'Forecast items retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedForecastItemsResponseSchema,
-            },
-          },
+          200: paginatedForecastItemsEnvelopeJsonSchema,
         },
       },
     },
@@ -295,19 +214,16 @@ export async function forecastRoutes(
     '/workspaces/:workspaceId/forecast-items/:itemId',
     {
       preValidation: [validateParams(forecastItemParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
         description: 'Delete a forecast item',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'itemId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            itemId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: forecastItemParamsJsonSchema,
         response: {
           204: {
             type: 'null',

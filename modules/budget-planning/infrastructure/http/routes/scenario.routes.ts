@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { ScenarioController } from '../controllers/scenario.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -13,8 +15,12 @@ import {
   scenarioParamsSchema,
   createScenarioSchema,
   updateScenarioSchema,
-  scenarioResponseSchema,
-  paginatedScenariosResponseSchema,
+  planIdParamsJsonSchema,
+  scenarioParamsJsonSchema,
+  createScenarioBodyJsonSchema,
+  updateScenarioBodyJsonSchema,
+  scenarioEnvelopeJsonSchema,
+  paginatedScenariosEnvelopeJsonSchema,
 } from '../validation/budget-planning.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -24,8 +30,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function scenarioRoutes(
   fastify: FastifyInstance,
-  controller: ScenarioController
+  controller: ScenarioController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -39,6 +50,8 @@ export async function scenarioRoutes(
     {
       preValidation: [validateParams(planIdParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(createScenarioSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -46,39 +59,10 @@ export async function scenarioRoutes(
         tags: ['Budget Planning - Scenarios'],
         description: 'Create a new scenario for a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'planId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            planId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', minLength: 3, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            assumptions: { type: 'object' },
-          },
-        },
+        params: planIdParamsJsonSchema,
+        body: createScenarioBodyJsonSchema,
         response: {
-          201: {
-            description: 'Scenario created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  scenarioId: { type: 'string', format: 'uuid' },
-                },
-              },
-            },
-          },
+          201: scenarioEnvelopeJsonSchema,
         },
       },
     },
@@ -91,30 +75,18 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/budget-plans/:planId/scenarios',
     {
       preValidation: [validateParams(planIdParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'List all scenarios for a budget plan',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'planId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            planId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: planIdParamsJsonSchema,
         response: {
-          200: {
-            description: 'Scenarios retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: paginatedScenariosResponseSchema,
-            },
-          },
+          200: paginatedScenariosEnvelopeJsonSchema,
         },
       },
     },
@@ -127,30 +99,18 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/scenarios/:id',
     {
       preValidation: [validateParams(scenarioParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'Get a specific scenario',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: scenarioParamsJsonSchema,
         response: {
-          200: {
-            description: 'Scenario retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: scenarioResponseSchema,
-            },
-          },
+          200: scenarioEnvelopeJsonSchema,
         },
       },
     },
@@ -164,6 +124,8 @@ export async function scenarioRoutes(
     {
       preValidation: [validateParams(scenarioParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(updateScenarioSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -171,32 +133,10 @@ export async function scenarioRoutes(
         tags: ['Budget Planning - Scenarios'],
         description: 'Update a scenario',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 3, maxLength: 100 },
-            description: { type: 'string', maxLength: 500 },
-            assumptions: { type: 'object' },
-          },
-        },
+        params: scenarioParamsJsonSchema,
+        body: updateScenarioBodyJsonSchema,
         response: {
-          200: {
-            description: 'Scenario updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
-          },
+          200: scenarioEnvelopeJsonSchema,
         },
       },
     },
@@ -209,19 +149,16 @@ export async function scenarioRoutes(
     '/workspaces/:workspaceId/scenarios/:id',
     {
       preValidation: [validateParams(scenarioParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
         description: 'Delete a scenario',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'id'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            id: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: scenarioParamsJsonSchema,
         response: {
           204: {
             type: 'null',
@@ -234,3 +171,4 @@ export async function scenarioRoutes(
       controller.delete(request as AuthenticatedRequest, reply)
   );
 }
+

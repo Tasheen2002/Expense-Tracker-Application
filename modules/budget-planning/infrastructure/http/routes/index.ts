@@ -6,8 +6,6 @@ import { ScenarioController } from '../controllers/scenario.controller';
 import { budgetPlanningRoutes } from './budget-plan.routes';
 import { forecastRoutes } from './forecast.routes';
 import { scenarioRoutes } from './scenario.routes';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerBudgetPlanningRoutes(
   fastify: FastifyInstance,
@@ -20,23 +18,9 @@ export async function registerBudgetPlanningRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add authentication hook first
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      // Add workspace authorization middleware
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
-      await budgetPlanningRoutes(instance, controllers.budgetPlanController);
-      await forecastRoutes(instance, controllers.forecastController);
-      await scenarioRoutes(instance, controllers.scenarioController);
+      await budgetPlanningRoutes(instance, controllers.budgetPlanController, prisma);
+      await forecastRoutes(instance, controllers.forecastController, prisma);
+      await scenarioRoutes(instance, controllers.scenarioController, prisma);
     },
     { prefix: '/api/v1' }
   );
