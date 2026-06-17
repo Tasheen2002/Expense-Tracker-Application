@@ -12,7 +12,7 @@ import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class SpendingLimitService {
   constructor(private readonly limitRepository: ISpendingLimitRepository) {}
