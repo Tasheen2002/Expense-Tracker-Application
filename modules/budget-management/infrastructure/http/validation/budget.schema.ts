@@ -9,9 +9,31 @@ import {
 } from '../../../domain/constants/budget.constants';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { BudgetStatus } from '../../../domain/enums/budget-status';
+import { toJsonSchema } from './validator';
 
 /**
- * Create Budget Schema
+ * Route Params Schemas
+ */
+export const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+});
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+
+export const budgetParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  budgetId: z.string().uuid('Invalid budget ID format'),
+});
+export type BudgetParams = z.infer<typeof budgetParamsSchema>;
+
+export const allocationParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  budgetId: z.string().uuid('Invalid budget ID format').optional(),
+  allocationId: z.string().uuid('Invalid allocation ID format'),
+});
+export type AllocationParams = z.infer<typeof allocationParamsSchema>;
+
+/**
+ * Body & Query Schemas
  */
 export const createBudgetSchema = z.object({
   name: z
@@ -47,12 +69,8 @@ export const createBudgetSchema = z.object({
   isRecurring: z.boolean().default(false),
   rolloverUnused: z.boolean().default(false),
 });
+export type CreateBudgetBody = z.infer<typeof createBudgetSchema>;
 
-export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
-
-/**
- * Update Budget Schema
- */
 export const updateBudgetSchema = z
   .object({
     name: z
@@ -83,30 +101,8 @@ export const updateBudgetSchema = z
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one budget field must be provided',
   });
+export type UpdateBudgetBody = z.infer<typeof updateBudgetSchema>;
 
-export type UpdateBudgetInput = z.infer<typeof updateBudgetSchema>;
-
-/**
- * Route Params Schemas
- */
-export const workspaceParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
-});
-
-export const budgetParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
-  budgetId: z.string().uuid('Invalid budget ID format'),
-});
-
-export const allocationParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
-  budgetId: z.string().uuid('Invalid budget ID format').optional(),
-  allocationId: z.string().uuid('Invalid allocation ID format'),
-});
-
-/**
- * Allocation Body Schemas
- */
 export const addAllocationSchema = z.object({
   categoryId: z.string().uuid('Invalid category ID format').optional(),
   allocatedAmount: z
@@ -127,6 +123,7 @@ export const addAllocationSchema = z.object({
     )
     .optional(),
 });
+export type AddAllocationBody = z.infer<typeof addAllocationSchema>;
 
 export const updateAllocationSchema = z
   .object({
@@ -144,10 +141,8 @@ export const updateAllocationSchema = z
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one allocation field must be provided',
   });
+export type UpdateAllocationBody = z.infer<typeof updateAllocationSchema>;
 
-/**
- * List Budgets Query Schema
- */
 export const listBudgetsSchema = z.object({
   status: z.nativeEnum(BudgetStatus).optional(),
   isActive: z.enum(['true', 'false']).optional(),
@@ -164,5 +159,141 @@ export const listBudgetsSchema = z.object({
     .optional(),
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 });
-
 export type ListBudgetsQuery = z.infer<typeof listBudgetsSchema>;
+
+/**
+ * Response DTO Schemas
+ */
+export const budgetResponseSchema = z.object({
+  budgetId: z.string().uuid(),
+  workspaceId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  totalAmount: z.string(),
+  currency: z.string(),
+  period: z.object({
+    startDate: z.string(),
+    endDate: z.string().nullable(),
+    type: z.string(),
+  }),
+  status: z.string(),
+  createdBy: z.string(),
+  isRecurring: z.boolean(),
+  rolloverUnused: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const budgetAllocationResponseSchema = z.object({
+  allocationId: z.string().uuid(),
+  budgetId: z.string(),
+  categoryId: z.string().nullable(),
+  allocatedAmount: z.string(),
+  spentAmount: z.string(),
+  description: z.string().nullable(),
+  remainingAmount: z.string(),
+  spentPercentage: z.number(),
+  isOverBudget: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const budgetAlertResponseSchema = z.object({
+  id: z.string().uuid(),
+  budgetId: z.string(),
+  allocationId: z.string().nullable(),
+  level: z.string(),
+  threshold: z.string(),
+  currentSpent: z.string(),
+  allocatedAmount: z.string(),
+  message: z.string(),
+  isRead: z.boolean(),
+  notifiedAt: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+/**
+ * Pre-computed JSON Validation Schemas
+ */
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const budgetParamsJsonSchema = toJsonSchema(budgetParamsSchema);
+export const allocationParamsJsonSchema = toJsonSchema(allocationParamsSchema);
+export const createBudgetBodyJsonSchema = toJsonSchema(createBudgetSchema);
+export const updateBudgetBodyJsonSchema = toJsonSchema(updateBudgetSchema);
+export const addAllocationBodyJsonSchema = toJsonSchema(addAllocationSchema);
+export const updateAllocationBodyJsonSchema = toJsonSchema(updateAllocationSchema);
+export const listBudgetsQueryJsonSchema = toJsonSchema(listBudgetsSchema);
+
+/**
+ * Pre-computed JSON Response Envelope Schemas
+ */
+export const budgetEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: budgetResponseSchema,
+  })
+);
+
+export const paginatedBudgetsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(budgetResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const budgetAllocationEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: budgetAllocationResponseSchema,
+  })
+);
+
+export const paginatedAllocationsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(budgetAllocationResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const paginatedAlertsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(budgetAlertResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
