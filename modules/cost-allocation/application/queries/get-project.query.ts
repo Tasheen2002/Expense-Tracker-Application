@@ -1,9 +1,9 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { ProjectDTO } from '../../domain/entities/project.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetProjectQuery extends IQuery {
-  id: string;
+  readonly id: string;
 }
 
 export class GetProjectHandler implements IQueryHandler<GetProjectQuery, ProjectDTO> {

@@ -1,12 +1,12 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { DepartmentDTO } from '../../domain/entities/department.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListDepartmentsQuery extends IQuery {
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListDepartmentsHandler implements IQueryHandler<ListDepartmentsQuery, PaginatedResult<DepartmentDTO>> {

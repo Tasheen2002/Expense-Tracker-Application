@@ -1,13 +1,13 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface AllocationSummaryData {
-  totalAllocations: number;
-  byDepartment: Array<{
-    departmentId: string;
-    departmentName: string;
-    total: number;
-    count: number;
+  readonly totalAllocations: number;
+  readonly byDepartment: Array<{
+    readonly departmentId: string;
+    readonly departmentName: string;
+    readonly total: number;
+    readonly count: number;
   }>;
   byCostCenter: Array<{
     costCenterId: string;
@@ -24,7 +24,7 @@ export interface AllocationSummaryData {
 }
 
 export interface GetAllocationSummaryQuery extends IQuery {
-  workspaceId: string;
+  readonly workspaceId: string;
 }
 
 export class GetAllocationSummaryHandler implements IQueryHandler<GetAllocationSummaryQuery, AllocationSummaryData> {

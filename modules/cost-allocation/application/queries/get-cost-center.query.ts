@@ -1,9 +1,9 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { CostCenterDTO } from '../../domain/entities/cost-center.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetCostCenterQuery extends IQuery {
-  id: string;
+  readonly id: string;
 }
 
 export class GetCostCenterHandler implements IQueryHandler<GetCostCenterQuery, CostCenterDTO> {
