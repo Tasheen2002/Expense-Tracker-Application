@@ -15,7 +15,7 @@ import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 import {
   PaginatedResult,
   PaginationOptions,
-} from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class ScenarioService {
   constructor(
