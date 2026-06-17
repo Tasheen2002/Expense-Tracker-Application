@@ -3,8 +3,20 @@ import { ConfidenceScore } from '../value-objects/confidence-score';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId, CategoryId } from '../../../expense-ledger';
 import { InvalidSuggestionError } from '../errors/categorization-rules.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface CategorySuggestionDTO {
+  id: string;
+  workspaceId: string;
+  expenseId: string;
+  suggestedCategoryId: string;
+  confidence: number;
+  reason: string | null;
+  isAccepted: boolean | null;
+  createdAt: Date;
+  respondedAt: Date | null;
+}
 
 // ============================================================================
 // Domain Events
@@ -258,16 +270,4 @@ export class CategorySuggestion extends AggregateRoot {
       respondedAt: suggestion.props.respondedAt,
     };
   }
-}
-
-export interface CategorySuggestionDTO {
-  id: string;
-  workspaceId: string;
-  expenseId: string;
-  suggestedCategoryId: string;
-  confidence: number;
-  reason: string | null;
-  isAccepted: boolean | null;
-  createdAt: Date;
-  respondedAt: Date | null;
 }

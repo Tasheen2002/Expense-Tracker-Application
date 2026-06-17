@@ -3,6 +3,15 @@ import { RuleId } from '../value-objects/rule-id';
 import { WorkspaceId } from '../../../identity-workspace';
 import { ExpenseId, CategoryId } from '../../../expense-ledger';
 
+export interface RuleExecutionDTO {
+  id: string;
+  ruleId: string;
+  expenseId: string;
+  workspaceId: string;
+  appliedCategoryId: string;
+  executedAt: Date;
+}
+
 // ============================================================================
 // Entity
 // ============================================================================
@@ -76,13 +85,4 @@ export class RuleExecution {
       executedAt: execution.props.executedAt,
     };
   }
-}
-
-export interface RuleExecutionDTO {
-  id: string;
-  ruleId: string;
-  expenseId: string;
-  workspaceId: string;
-  appliedCategoryId: string;
-  executedAt: Date;
 }

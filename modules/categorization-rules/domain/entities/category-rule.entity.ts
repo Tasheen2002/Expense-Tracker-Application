@@ -3,8 +3,25 @@ import { RuleCondition } from '../value-objects/rule-condition';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { CategoryId } from '../../../expense-ledger';
 import { InvalidRuleError } from '../errors/categorization-rules.errors';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+
+export interface CategoryRuleDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string | null;
+  priority: number;
+  isActive: boolean;
+  condition: {
+    type: string;
+    value: string;
+  };
+  targetCategoryId: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events
@@ -374,21 +391,4 @@ export class CategoryRule extends AggregateRoot {
       updatedAt: rule.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface CategoryRuleDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  description: string | null;
-  priority: number;
-  isActive: boolean;
-  condition: {
-    type: string;
-    value: string;
-  };
-  targetCategoryId: string;
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
 }
