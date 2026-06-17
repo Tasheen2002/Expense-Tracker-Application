@@ -1,17 +1,31 @@
-﻿import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { SpendingLimitController } from '../controllers/spending-limit.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody, validateParams } from '../validation/validator';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
 import {
   createSpendingLimitSchema,
   updateSpendingLimitSchema,
+  listSpendingLimitsSchema,
   spendingLimitWorkspaceParamsSchema,
   spendingLimitParamsSchema,
+  spendingLimitWorkspaceParamsJsonSchema,
+  spendingLimitParamsJsonSchema,
+  createSpendingLimitBodyJsonSchema,
+  updateSpendingLimitBodyJsonSchema,
+  listSpendingLimitsQueryJsonSchema,
+  spendingLimitEnvelopeJsonSchema,
+  paginatedSpendingLimitsEnvelopeJsonSchema,
 } from '../validation/spending-limit.schema';
 import { requireRole } from '@shared/middleware/role-authorization.middleware';
 
@@ -20,51 +34,30 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
-const spendingLimitDataSchema = {
-  type: 'object',
-  properties: {
-    limitId: { type: 'string' },
-    workspaceId: { type: 'string' },
-    userId: { type: 'string' },
-    categoryId: { type: 'string' },
-    limitAmount: { type: 'string' },
-    currency: { type: 'string' },
-    periodType: { type: 'string' },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string' },
-    updatedAt: { type: 'string' },
-  },
-};
-
-const singleResponse = (statusCode: number, dataSchema?: object, description?: string) => ({
-  [statusCode]: {
-    description: description || 'Successful response',
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      statusCode: { type: 'number' },
-      message: { type: 'string' },
-      ...(dataSchema ? { data: dataSchema } : {}),
-    },
-  },
-});
-
 export async function spendingLimitRoutes(
   fastify: FastifyInstance,
-  controller: SpendingLimitController
+  controller: SpendingLimitController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
+
   // Create spending limit
   fastify.post(
     '/workspaces/:workspaceId/spending-limits',
     {
       preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(createSpendingLimitSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -72,28 +65,11 @@ export async function spendingLimitRoutes(
         tags: ['Spending Limit'],
         description: 'Create a new spending limit',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
+        params: spendingLimitWorkspaceParamsJsonSchema,
+        body: createSpendingLimitBodyJsonSchema,
+        response: {
+          201: spendingLimitEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          required: ['limitAmount', 'currency', 'periodType'],
-          properties: {
-            userId: { type: 'string', format: 'uuid' },
-            categoryId: { type: 'string', format: 'uuid' },
-            limitAmount: { type: 'number', minimum: 0.01 },
-            currency: { type: 'string', minLength: 3, maxLength: 3 },
-            periodType: {
-              type: 'string',
-              enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'],
-            },
-          },
-        },
-        response: singleResponse(201, spendingLimitDataSchema, 'Spending limit created successfully'),
       },
     },
     (request, reply) =>
@@ -105,57 +81,20 @@ export async function spendingLimitRoutes(
     '/workspaces/:workspaceId/spending-limits',
     {
       preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        validateQuery(listSpendingLimitsSchema),
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'List all spending limits in workspace',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            userId: { type: 'string', format: 'uuid' },
-            categoryId: { type: 'string', format: 'uuid' },
-            isActive: { type: 'string', enum: ['true', 'false'] },
-            periodType: {
-              type: 'string',
-              enum: ['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM'],
-            },
-            limit: { type: 'string', pattern: '^[0-9]+$' },
-            offset: { type: 'string', pattern: '^[0-9]+$' },
-          },
-        },
+        params: spendingLimitWorkspaceParamsJsonSchema,
+        querystring: listSpendingLimitsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Spending limits retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: spendingLimitDataSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'number' },
-                      limit: { type: 'number' },
-                      offset: { type: 'number' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedSpendingLimitsEnvelopeJsonSchema,
         },
       },
     },
@@ -168,20 +107,19 @@ export async function spendingLimitRoutes(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       preValidation: [validateParams(spendingLimitParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin', 'member']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Get spending limit by ID',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'limitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            limitId: { type: 'string', format: 'uuid' },
-          },
+        params: spendingLimitParamsJsonSchema,
+        response: {
+          200: spendingLimitEnvelopeJsonSchema,
         },
-        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit retrieved successfully'),
       },
     },
     (request, reply) =>
@@ -194,6 +132,8 @@ export async function spendingLimitRoutes(
     {
       preValidation: [validateParams(spendingLimitParamsSchema)],
       preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
         validateBody(updateSpendingLimitSchema),
         requireRole(['owner', 'admin']),
       ],
@@ -201,21 +141,11 @@ export async function spendingLimitRoutes(
         tags: ['Spending Limit'],
         description: 'Update spending limit',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'limitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            limitId: { type: 'string', format: 'uuid' },
-          },
+        params: spendingLimitParamsJsonSchema,
+        body: updateSpendingLimitBodyJsonSchema,
+        response: {
+          200: spendingLimitEnvelopeJsonSchema,
         },
-        body: {
-          type: 'object',
-          properties: {
-            limitAmount: { type: 'number', minimum: 0.01 },
-          },
-        },
-        response: singleResponse(200, spendingLimitDataSchema, 'Spending limit updated successfully'),
       },
     },
     (request, reply) =>
@@ -227,22 +157,19 @@ export async function spendingLimitRoutes(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
       preValidation: [validateParams(spendingLimitParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      preHandler: [
+        fastify.authenticate,
+        workspaceAuth,
+        requireRole(['owner', 'admin']),
+      ],
       schema: {
         tags: ['Spending Limit'],
         description: 'Delete spending limit',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'limitId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            limitId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: spendingLimitParamsJsonSchema,
         response: {
           204: {
-            description: 'No Content',
+            description: 'Spending limit deleted successfully',
             type: 'null',
           },
         },
