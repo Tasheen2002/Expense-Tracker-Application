@@ -4,14 +4,14 @@ import { SpendingLimitDTO } from '../../domain/entities/spending-limit.entity';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface UpdateSpendingLimitCommand extends ICommand {
-  limitId: string;
-  workspaceId: string;
-  userId?: string;
-  limitAmount?: number | string;
+  readonly limitId: string;
+  readonly workspaceId: string;
+  readonly userId?: string;
+  readonly limitAmount?: number | string;
 }
 
 export class UpdateSpendingLimitHandler implements ICommandHandler<

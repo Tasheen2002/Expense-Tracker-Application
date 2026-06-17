@@ -4,16 +4,16 @@ import { BudgetAllocationDTO } from '../../domain/entities/budget-allocation.ent
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface AddAllocationCommand extends ICommand {
-  budgetId: string;
-  workspaceId: string;
-  userId: string;
-  categoryId?: string;
-  allocatedAmount: number | string;
-  description?: string;
+  readonly budgetId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly categoryId?: string;
+  readonly allocatedAmount: number | string;
+  readonly description?: string;
 }
 
 export class AddAllocationHandler implements ICommandHandler<

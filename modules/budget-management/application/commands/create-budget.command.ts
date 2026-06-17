@@ -5,21 +5,21 @@ import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface CreateBudgetCommand extends ICommand {
-  workspaceId: string;
-  name: string;
-  description?: string;
-  totalAmount: number | string;
-  currency: string;
-  periodType: BudgetPeriodType;
-  startDate: Date;
-  endDate?: Date;
-  createdBy: string;
-  isRecurring?: boolean;
-  rolloverUnused?: boolean;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly totalAmount: number | string;
+  readonly currency: string;
+  readonly periodType: BudgetPeriodType;
+  readonly startDate: Date;
+  readonly endDate?: Date;
+  readonly createdBy: string;
+  readonly isRecurring?: boolean;
+  readonly rolloverUnused?: boolean;
 }
 
 export class CreateBudgetHandler implements ICommandHandler<

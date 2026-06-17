@@ -5,16 +5,16 @@ import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface CreateSpendingLimitCommand extends ICommand {
-  workspaceId: string;
-  userId?: string;
-  categoryId?: string;
-  limitAmount: number | string;
-  currency: string;
-  periodType: BudgetPeriodType;
+  readonly workspaceId: string;
+  readonly userId?: string;
+  readonly categoryId?: string;
+  readonly limitAmount: number | string;
+  readonly currency: string;
+  readonly periodType: BudgetPeriodType;
 }
 
 export class CreateSpendingLimitHandler implements ICommandHandler<

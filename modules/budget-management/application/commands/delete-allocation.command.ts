@@ -3,13 +3,13 @@ import { BudgetService } from '../services/budget.service';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface DeleteAllocationCommand extends ICommand {
-  allocationId: string;
-  workspaceId: string;
-  userId: string;
+  readonly allocationId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteAllocationHandler implements ICommandHandler<

@@ -3,13 +3,13 @@ import { SpendingLimitService } from '../services/spending-limit.service';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface DeleteSpendingLimitCommand extends ICommand {
-  limitId: string;
-  workspaceId: string;
-  userId: string;
+  readonly limitId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteSpendingLimitHandler implements ICommandHandler<

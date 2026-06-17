@@ -4,13 +4,13 @@ import { BudgetDTO } from '../../domain/entities/budget.entity';
 import {
   ICommand,
   ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  CommandResult,
+} from '@core/application/cqrs';
 
 export interface ActivateBudgetCommand extends ICommand {
-  budgetId: string;
-  workspaceId: string;
-  userId: string;
+  readonly budgetId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class ActivateBudgetHandler implements ICommandHandler<
