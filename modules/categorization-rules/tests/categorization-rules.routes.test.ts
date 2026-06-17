@@ -28,6 +28,13 @@ vi.mock(
   })
 );
 
+vi.mock('@shared/middleware', () => ({
+  workspaceAuthorizationMiddleware: async () => {},
+  authenticate: async () => {},
+  requireRole: () => async () => {},
+  hasRole: () => true,
+}));
+
 import Fastify, { FastifyInstance } from 'fastify';
 import { CategoryRuleController } from '../infrastructure/http/controllers/category-rule.controller';
 import { CategorySuggestionController } from '../infrastructure/http/controllers/category-suggestion.controller';
@@ -102,12 +109,14 @@ function createMockRule(
     description: 'Test description',
     priority: 10,
     isActive,
-    conditionType: 'MERCHANT_CONTAINS',
-    conditionValue: 'Amazon',
+    condition: {
+      type: 'MERCHANT_CONTAINS',
+      value: 'Amazon',
+    },
     targetCategoryId: mockCategoryId,
     createdBy: mockUserId,
-    createdAt: new Date('2024-01-15T10:30:00Z'),
-    updatedAt: new Date('2024-01-15T10:30:00Z'),
+    createdAt: new Date('2024-01-15T10:30:00Z').toISOString(),
+    updatedAt: new Date('2024-01-15T10:30:00Z').toISOString(),
   };
   return { ...rule, toJSON: () => rule };
 }
@@ -191,6 +200,14 @@ async function setupTestApp(
 
   // Mock authentication
   app.decorateRequest('user', null);
+  app.decorate('authenticate', async (request: any, reply: any) => {
+    request.user = {
+      userId: mockUserId,
+      workspaceId: mockWorkspaceId,
+      email: 'test@example.com',
+      role: 'ADMIN',
+    };
+  });
   app.addHook('preHandler', async (request) => {
     (request as any).user = {
       userId: mockUserId,
@@ -231,9 +248,9 @@ async function setupTestApp(
 
   await app.register(
     async (instance) => {
-      await categoryRuleRoutes(instance, ruleController);
-      await categorySuggestionRoutes(instance, suggestionController);
-      await ruleExecutionRoutes(instance, executionController);
+      await categoryRuleRoutes(instance, ruleController, {} as any);
+      await categorySuggestionRoutes(instance, suggestionController, {} as any);
+      await ruleExecutionRoutes(instance, executionController, {} as any);
     },
     { prefix: '/' }
   );
@@ -283,7 +300,7 @@ describe('Category Rule Routes', () => {
     it('should create category rule successfully', async () => {
       const mockRule = createMockRule();
       ruleHandlers.createRuleHandler.handle.mockResolvedValue(
-        CommandResult.success({ ruleId: mockRule.id })
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -527,7 +544,7 @@ describe('Category Rule Routes', () => {
     it('should update category rule name', async () => {
       const mockRule = createMockRule();
       ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
-        CommandResult.success(undefined)
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -544,7 +561,7 @@ describe('Category Rule Routes', () => {
     it('should update category rule priority', async () => {
       const mockRule = createMockRule();
       ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
-        CommandResult.success(undefined)
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -559,7 +576,7 @@ describe('Category Rule Routes', () => {
     it('should update category rule condition', async () => {
       const mockRule = createMockRule();
       ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
-        CommandResult.success(undefined)
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -660,7 +677,7 @@ describe('Category Rule Routes', () => {
     it('should activate category rule', async () => {
       const mockRule = createMockRule(mockRuleId, 'Test', true);
       ruleHandlers.activateRuleHandler.handle.mockResolvedValue(
-        CommandResult.success(undefined)
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -703,7 +720,7 @@ describe('Category Rule Routes', () => {
     it('should deactivate category rule', async () => {
       const mockRule = createMockRule(mockRuleId, 'Test', false);
       ruleHandlers.deactivateRuleHandler.handle.mockResolvedValue(
-        CommandResult.success(undefined)
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
@@ -816,7 +833,7 @@ describe('Category Suggestion Routes', () => {
     it('should create suggestion successfully', async () => {
       const mockSuggestion = createMockSuggestion();
       suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
-        CommandResult.success({ suggestionId: mockSuggestion.id })
+        CommandResult.success(mockSuggestion)
       );
 
       const response = await app.inject({
@@ -1165,10 +1182,23 @@ describe('Rule Execution Routes', () => {
     };
 
     it('should evaluate rules successfully', async () => {
+      const mockRule = createMockRule();
+      const mockExecution = createMockExecution();
       const mockResult = {
-        matchedRules: [createMockRule()],
-        appliedCategory: mockCategoryId,
-        executions: [createMockExecution()],
+        appliedRule: {
+          id: mockRule.id,
+          name: mockRule.name,
+          priority: mockRule.priority,
+        },
+        suggestedCategoryId: mockCategoryId,
+        execution: {
+          id: mockExecution.id,
+          ruleId: mockExecution.ruleId,
+          expenseId: mockExecution.expenseId,
+          appliedCategoryId: mockExecution.appliedCategoryId,
+          executedAt: mockExecution.executedAt,
+        },
+        suggestion: createMockSuggestion(),
       };
       executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
         CommandResult.success(mockResult)
@@ -1467,7 +1497,7 @@ describe('Categorization Rules Edge Cases', () => {
   it('should handle unicode characters in rule name', async () => {
     const mockRule = createMockRule();
     ruleHandlers.createRuleHandler.handle.mockResolvedValue(
-      CommandResult.success({ ruleId: mockRule.id })
+      CommandResult.success(mockRule)
     );
 
     const response = await app.inject({
@@ -1487,7 +1517,7 @@ describe('Categorization Rules Edge Cases', () => {
   it('should handle special characters in condition value', async () => {
     const mockRule = createMockRule();
     ruleHandlers.createRuleHandler.handle.mockResolvedValue(
-      CommandResult.success({ ruleId: mockRule.id })
+      CommandResult.success(mockRule)
     );
 
     const response = await app.inject({
@@ -1507,7 +1537,7 @@ describe('Categorization Rules Edge Cases', () => {
   it('should handle boundary confidence values (0)', async () => {
     const mockSuggestion = createMockSuggestion();
     suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
-      CommandResult.success({ suggestionId: mockSuggestion.id })
+      CommandResult.success(mockSuggestion)
     );
 
     const response = await app.inject({
@@ -1526,7 +1556,7 @@ describe('Categorization Rules Edge Cases', () => {
   it('should handle boundary confidence values (1)', async () => {
     const mockSuggestion = createMockSuggestion();
     suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
-      CommandResult.success({ suggestionId: mockSuggestion.id })
+      CommandResult.success(mockSuggestion)
     );
 
     const response = await app.inject({
@@ -1544,9 +1574,10 @@ describe('Categorization Rules Edge Cases', () => {
 
   it('should handle very large amount values in evaluation', async () => {
     const mockResult = {
-      matchedRules: [],
-      appliedCategory: null,
-      executions: [],
+      appliedRule: null,
+      suggestedCategoryId: null,
+      execution: null,
+      suggestion: null,
     };
     executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
       CommandResult.success(mockResult)
@@ -1606,7 +1637,7 @@ describe('Categorization Rules Edge Cases', () => {
     for (const conditionType of conditionTypes) {
       const mockRule = createMockRule();
       ruleHandlers.createRuleHandler.handle.mockResolvedValue(
-        CommandResult.success({ ruleId: mockRule.id })
+        CommandResult.success(mockRule)
       );
 
       const response = await app.inject({
