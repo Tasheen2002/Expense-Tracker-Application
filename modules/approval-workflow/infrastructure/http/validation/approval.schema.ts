@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toJsonSchema } from "./validator";
 
 // ==================== APPROVAL CHAIN SCHEMAS ====================
 
@@ -76,103 +77,144 @@ export type WorkflowParams = z.infer<typeof workflowParamsSchema>;
 export type ChainParams = z.infer<typeof chainParamsSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
 
-// ==================== API RESPONSE SCHEMAS (JSON Schema) ====================
+// ==================== RESPONSE SCHEMAS (ZOD) ====================
 
-export const chainResponseSchema = {
-  type: 'object',
-  properties: {
-    chainId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    description: { type: 'string', nullable: true },
-    minAmount: { type: 'number', nullable: true },
-    maxAmount: { type: 'number', nullable: true },
-    categoryIds: {
-      type: 'array',
-      items: { type: 'string', format: 'uuid' },
-      nullable: true,
-    },
-    requiresReceipt: { type: 'boolean' },
-    approverSequence: {
-      type: 'array',
-      items: { type: 'string', format: 'uuid' },
-    },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const approvalChainResponseSchema = z.object({
+  chainId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  minAmount: z.number().nullable().optional(),
+  maxAmount: z.number().nullable().optional(),
+  categoryIds: z.array(z.string().uuid()).nullable().optional(),
+  requiresReceipt: z.boolean(),
+  approverSequence: z.array(z.string().uuid()),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const paginatedChainsResponseSchema = {
-  type: 'object',
-  properties: {
-    items: {
-      type: 'array',
-      items: chainResponseSchema,
-    },
-    pagination: {
-      type: 'object',
-      properties: {
-        total: { type: 'number' },
-        limit: { type: 'number' },
-        offset: { type: 'number' },
-        hasMore: { type: 'boolean' },
-      },
-    },
-  },
-};
+export const approvalStepResponseSchema = z.object({
+  stepId: z.string().uuid(),
+  workflowId: z.string().uuid(),
+  stepNumber: z.number(),
+  approverId: z.string().uuid(),
+  delegatedTo: z.string().uuid().nullable().optional(),
+  status: z.string(),
+  comments: z.string().nullable().optional(),
+  processedAt: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
-export const approvalStepSchema = {
-  type: 'object',
-  properties: {
-    stepId: { type: 'string', format: 'uuid' },
-    workflowId: { type: 'string', format: 'uuid' },
-    stepNumber: { type: 'number' },
-    approverId: { type: 'string', format: 'uuid' },
-    delegatedTo: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    comments: { type: 'string', nullable: true },
-    processedAt: { type: 'string', format: 'date-time', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+export const workflowResponseSchema = z.object({
+  workflowId: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  userId: z.string().uuid(),
+  chainId: z.string().uuid().nullable().optional(),
+  status: z.string(),
+  currentStepNumber: z.number(),
+  steps: z.array(approvalStepResponseSchema),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  completedAt: z.string().nullable().optional(),
+});
 
-export const workflowSchema = {
-  type: 'object',
-  properties: {
-    workflowId: { type: 'string', format: 'uuid' },
-    expenseId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    userId: { type: 'string', format: 'uuid' },
-    chainId: { type: 'string', format: 'uuid', nullable: true },
-    status: { type: 'string' },
-    currentStepNumber: { type: 'number' },
-    steps: {
-      type: 'array',
-      items: approvalStepSchema,
-    },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-    completedAt: { type: 'string', format: 'date-time', nullable: true },
-  },
-};
+// ==================== PRE-COMPUTED JSON SCHEMAS ====================
 
-export const paginatedWorkflowsResponseSchema = {
-  type: 'object',
-  properties: {
-    items: {
-      type: 'array',
-      items: workflowSchema,
-    },
-    pagination: {
-      type: 'object',
-      properties: {
-        total: { type: 'number' },
-        limit: { type: 'number' },
-        offset: { type: 'number' },
-        hasMore: { type: 'boolean' },
-      },
-    },
-  },
-};
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const chainParamsJsonSchema = toJsonSchema(chainParamsSchema);
+export const workflowParamsJsonSchema = toJsonSchema(workflowParamsSchema);
+export const createChainBodyJsonSchema = toJsonSchema(createChainSchema);
+export const updateChainBodyJsonSchema = toJsonSchema(updateChainSchema);
+export const listChainsQueryJsonSchema = toJsonSchema(listChainsSchema);
+export const initiateWorkflowBodyJsonSchema = toJsonSchema(initiateWorkflowSchema);
+export const approveStepBodyJsonSchema = toJsonSchema(approveStepSchema);
+export const rejectStepBodyJsonSchema = toJsonSchema(rejectStepSchema);
+export const delegateStepBodyJsonSchema = toJsonSchema(delegateStepSchema);
+export const paginationQueryJsonSchema = toJsonSchema(paginationSchema);
+
+// ==================== RESPONSE ENVELOPES ====================
+
+export const chainEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: approvalChainResponseSchema,
+  })
+);
+
+export const paginatedChainsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(approvalChainResponseSchema),
+      pagination: z.object({
+        total: z.number().int(),
+        limit: z.number().int(),
+        offset: z.number().int(),
+        hasMore: z.boolean(),
+      }),
+    }),
+  })
+);
+
+export const workflowEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: workflowResponseSchema,
+  })
+);
+
+export const paginatedWorkflowsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(workflowResponseSchema),
+      pagination: z.object({
+        total: z.number().int(),
+        limit: z.number().int(),
+        offset: z.number().int(),
+        hasMore: z.boolean(),
+      }),
+    }),
+  })
+);
+
+export const updateChainEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      chainId: z.string().uuid(),
+    }),
+  })
+);
+
+export const expenseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      expenseId: z.string().uuid(),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);

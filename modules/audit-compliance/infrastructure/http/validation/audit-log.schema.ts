@@ -85,6 +85,14 @@ export const auditSummaryResponseSchema = z.object({
   }),
 });
 
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+export type AuditLogParams = z.infer<typeof auditLogParamsSchema>;
+export type ListAuditLogsQuery = z.infer<typeof listAuditLogsQuerySchema>;
+export type EntityHistoryQuery = z.infer<typeof entityHistoryQuerySchema>;
+export type AuditSummaryQuery = z.infer<typeof auditSummaryQuerySchema>;
+export type CreateAuditLogBody = z.infer<typeof createAuditLogSchema>;
+export type PurgeAuditLogsQuery = z.infer<typeof purgeAuditLogsQuerySchema>;
+
 // Pre-computed JSON schemas
 export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
 export const auditLogParamsJsonSchema = toJsonSchema(auditLogParamsSchema);
