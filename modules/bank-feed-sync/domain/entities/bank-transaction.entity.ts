@@ -3,8 +3,8 @@ import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { BankTransactionId } from '../value-objects/bank-transaction-id';
 import { SyncSessionId } from '../value-objects/sync-session-id';
 import { TransactionStatus } from '../enums/transaction-status.enum';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -122,6 +122,26 @@ export class BankTransactionDuplicateDetectedEvent extends DomainEvent {
       externalId: this.externalId,
     };
   }
+}
+
+export interface BankTransactionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  sessionId: string;
+  externalId: string;
+  amount: number;
+  currency: string;
+  description: string;
+  merchantName?: string;
+  categoryName?: string;
+  transactionDate: Date;
+  postedDate?: Date;
+  status: string;
+  expenseId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface BankTransactionProps {
@@ -344,24 +364,4 @@ export class BankTransaction extends AggregateRoot {
       updatedAt: transaction.updatedAt,
     };
   }
-}
-
-export interface BankTransactionDTO {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  sessionId: string;
-  externalId: string;
-  amount: number;
-  currency: string;
-  description: string;
-  merchantName?: string;
-  categoryName?: string;
-  transactionDate: Date;
-  postedDate?: Date;
-  status: string;
-  expenseId?: string;
-  metadata?: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
 }

@@ -1,8 +1,8 @@
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { ConnectionStatus } from '../enums/connection-status.enum';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -182,6 +182,25 @@ export class BankConnectionDeletedEvent extends DomainEvent {
       workspaceId: this.workspaceId,
     };
   }
+}
+
+export interface BankConnectionDTO {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  institutionId: string;
+  institutionName: string;
+  accountId: string;
+  accountName: string;
+  accountType: string;
+  accountMask?: string;
+  currency: string;
+  status: string;
+  lastSyncAt?: Date;
+  tokenExpiresAt?: Date;
+  errorMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface BankConnectionProps {
@@ -463,23 +482,4 @@ export class BankConnection extends AggregateRoot {
       updatedAt: connection.updatedAt,
     };
   }
-}
-
-export interface BankConnectionDTO {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  institutionId: string;
-  institutionName: string;
-  accountId: string;
-  accountName: string;
-  accountType: string;
-  accountMask?: string;
-  currency: string;
-  status: string;
-  lastSyncAt?: Date;
-  tokenExpiresAt?: Date;
-  errorMessage?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }

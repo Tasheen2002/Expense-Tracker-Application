@@ -2,8 +2,8 @@ import { WorkspaceId } from '../../../identity-workspace';
 import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { SyncSessionId } from '../value-objects/sync-session-id';
 import { SyncStatus } from '../enums/sync-status.enum';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 // ============================================================================
 // Domain Events
@@ -133,6 +133,19 @@ export class SyncSessionPartiallyCompletedEvent extends DomainEvent {
       errorMessage: this.errorMessage,
     };
   }
+}
+
+export interface SyncSessionDTO {
+  id: string;
+  workspaceId: string;
+  connectionId: string;
+  status: string;
+  startedAt: Date;
+  completedAt?: Date;
+  transactionsFetched: number;
+  transactionsImported: number;
+  transactionsDuplicate: number;
+  errorMessage?: string;
 }
 
 export interface SyncSessionProps {
@@ -338,17 +351,4 @@ export class SyncSession extends AggregateRoot {
       errorMessage: session.errorMessage,
     };
   }
-}
-
-export interface SyncSessionDTO {
-  id: string;
-  workspaceId: string;
-  connectionId: string;
-  status: string;
-  startedAt: Date;
-  completedAt?: Date;
-  transactionsFetched: number;
-  transactionsImported: number;
-  transactionsDuplicate: number;
-  errorMessage?: string;
 }
