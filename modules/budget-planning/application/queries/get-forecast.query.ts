@@ -4,12 +4,12 @@ import { ForecastNotFoundError } from '../../domain/errors/budget-planning.error
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetForecastQuery extends IQuery {
-  id: string;
-  workspaceId: string;
-  userId: string;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class GetForecastHandler implements IQueryHandler<

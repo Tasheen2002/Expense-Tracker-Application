@@ -1,15 +1,15 @@
 import { ForecastService } from '../services/forecast.service';
 import { ForecastDTO } from '../../domain/entities/forecast.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ListForecastsQuery extends IQuery {
-  planId: string;
-  workspaceId: string;
-  userId: string;
+  readonly planId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class ListForecastsHandler implements IQueryHandler<

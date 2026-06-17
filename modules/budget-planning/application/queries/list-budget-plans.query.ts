@@ -1,18 +1,18 @@
 import { BudgetPlanService } from '../services/budget-plan.service';
 import { BudgetPlanDTO } from '../../domain/entities/budget-plan.entity';
 import { PlanStatus } from '../../domain/enums/plan-status.enum';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ListBudgetPlansQuery extends IQuery {
-  userId: string;
-  workspaceId: string;
-  status?: PlanStatus;
-  limit?: number;
-  offset?: number;
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly status?: PlanStatus;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListBudgetPlansHandler implements IQueryHandler<

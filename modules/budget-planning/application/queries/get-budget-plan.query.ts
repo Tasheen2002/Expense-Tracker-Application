@@ -4,12 +4,12 @@ import { BudgetPlanNotFoundError } from '../../domain/errors/budget-planning.err
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetBudgetPlanQuery extends IQuery {
-  id: string;
-  workspaceId: string;
-  userId: string;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class GetBudgetPlanHandler implements IQueryHandler<
