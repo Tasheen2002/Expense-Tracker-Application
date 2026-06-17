@@ -3,15 +3,15 @@ import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetActiveSyncsQuery extends IQuery {
-  workspaceId: string;
-  options?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly options?: PaginationOptions;
 }
 
 export class GetActiveSyncsHandler implements IQueryHandler<

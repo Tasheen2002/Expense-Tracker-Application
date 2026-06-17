@@ -3,11 +3,11 @@ import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetSyncSessionQuery extends IQuery {
-  workspaceId: string;
-  sessionId: string;
+  readonly workspaceId: string;
+  readonly sessionId: string;
 }
 
 export class GetSyncSessionHandler implements IQueryHandler<

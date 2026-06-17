@@ -3,11 +3,11 @@ import { BankConnectionDTO } from '../../domain/entities/bank-connection.entity'
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetBankConnectionQuery extends IQuery {
-  workspaceId: string;
-  connectionId: string;
+  readonly workspaceId: string;
+  readonly connectionId: string;
 }
 
 export class GetBankConnectionHandler implements IQueryHandler<

@@ -3,16 +3,16 @@ import { SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetSyncHistoryQuery extends IQuery {
-  workspaceId: string;
-  connectionId: string;
-  options?: PaginationOptions;
+  readonly workspaceId: string;
+  readonly connectionId: string;
+  readonly options?: PaginationOptions;
 }
 
 export class GetSyncHistoryHandler implements IQueryHandler<

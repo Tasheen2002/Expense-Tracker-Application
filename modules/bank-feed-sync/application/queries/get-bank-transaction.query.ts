@@ -3,11 +3,11 @@ import { BankTransactionDTO } from '../../domain/entities/bank-transaction.entit
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetBankTransactionQuery extends IQuery {
-  workspaceId: string;
-  transactionId: string;
+  readonly workspaceId: string;
+  readonly transactionId: string;
 }
 
 export class GetBankTransactionHandler implements IQueryHandler<
