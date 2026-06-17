@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../packages/core/src/domain/domain-error';
+import { DomainError } from '@core/domain/domain-error';
 
 export class BankFeedSyncDomainError extends DomainError {
   constructor(message: string, code: string = 'BANK_FEED_SYNC_ERROR', statusCode: number = 500) {
