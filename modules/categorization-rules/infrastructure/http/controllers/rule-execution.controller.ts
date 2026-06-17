@@ -1,21 +1,17 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-
-interface EvaluateRulesBody {
-  expenseId: string;
-  expenseData: {
-    merchant?: string;
-    description?: string;
-    amount: number;
-    paymentMethod?: string;
-  };
-}
-
-import { EvaluateRulesHandler } from '../../../application/commands/evaluate-rules.command';
-
-import { GetExecutionsByExpenseHandler } from '../../../application/queries/get-executions-by-expense.query';
-import { GetExecutionsByWorkspaceHandler } from '../../../application/queries/get-executions-by-workspace.query';
+import {
+  EvaluateRulesHandler,
+  GetExecutionsByExpenseHandler,
+  GetExecutionsByWorkspaceHandler,
+} from '../../../application';
+import {
+  WorkspaceParams,
+  ExpenseParams,
+  EvaluateRulesBody,
+  ExecutionQuery,
+} from '../validation/categorization-rules.schema';
 
 export class RuleExecutionController {
   constructor(
@@ -24,37 +20,10 @@ export class RuleExecutionController {
     private readonly getExecutionsByWorkspaceHandler: GetExecutionsByWorkspaceHandler
   ) {}
 
-  async evaluateRules(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: EvaluateRulesBody;
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-
-      const result = await this.evaluateRulesHandler.handle({
-        workspaceId,
-        expenseId: request.body.expenseId,
-        expenseData: request.body.expenseData,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Rules evaluated successfully',
-        result.data
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ==================== READS / QUERIES ====================
 
   async getExecutionsByExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; expenseId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: ExpenseParams }>,
     reply: FastifyReply
   ) {
     try {
@@ -66,26 +35,21 @@ export class RuleExecutionController {
       });
 
       return ResponseHelper.ok(reply, 'Executions retrieved successfully', executions);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getExecutionsByWorkspace(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Params: WorkspaceParams;
+      Querystring: ExecutionQuery;
     }>,
     reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
-      const limit = request.query.limit
-        ? parseInt(request.query.limit)
-        : undefined;
-      const offset = request.query.offset
-        ? parseInt(request.query.offset)
-        : undefined;
+      const { limit, offset } = request.query;
 
       const result = await this.getExecutionsByWorkspaceHandler.handle({
         workspaceId,
@@ -106,7 +70,36 @@ export class RuleExecutionController {
           },
         }
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ==================== WRITES / COMMANDS ====================
+
+  async evaluateRules(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Body: EvaluateRulesBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+
+      const result = await this.evaluateRulesHandler.handle({
+        workspaceId,
+        expenseId: request.body.expenseId,
+        expenseData: request.body.expenseData,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Rules evaluated successfully',
+        result.data
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

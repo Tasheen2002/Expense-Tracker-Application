@@ -1,37 +1,25 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-
-interface CreateCategoryRuleBody {
-  name: string;
-  description?: string;
-  priority?: number;
-  conditionType: string;
-  conditionValue: string;
-  targetCategoryId: string;
-}
-
-interface UpdateCategoryRuleBody {
-  name?: string;
-  description?: string | null;
-  priority?: number;
-  conditionType?: string;
-  conditionValue?: string;
-  targetCategoryId?: string;
-}
-
-// Command Handlers
-import { CreateCategoryRuleHandler } from '../../../application/commands/create-category-rule.command';
-import { UpdateCategoryRuleHandler } from '../../../application/commands/update-category-rule.command';
-import { DeleteCategoryRuleHandler } from '../../../application/commands/delete-category-rule.command';
-import { ActivateCategoryRuleHandler } from '../../../application/commands/activate-category-rule.command';
-import { DeactivateCategoryRuleHandler } from '../../../application/commands/deactivate-category-rule.command';
-
-// Query Handlers
-import { GetRuleByIdHandler } from '../../../application/queries/get-rule-by-id.query';
-import { GetRulesByWorkspaceHandler } from '../../../application/queries/get-rules-by-workspace.query';
-import { GetActiveRulesByWorkspaceHandler } from '../../../application/queries/get-active-rules-by-workspace.query';
-import { GetExecutionsByRuleHandler } from '../../../application/queries/get-executions-by-rule.query';
+import {
+  CreateCategoryRuleHandler,
+  UpdateCategoryRuleHandler,
+  DeleteCategoryRuleHandler,
+  ActivateCategoryRuleHandler,
+  DeactivateCategoryRuleHandler,
+  GetRuleByIdHandler,
+  GetRulesByWorkspaceHandler,
+  GetActiveRulesByWorkspaceHandler,
+  GetExecutionsByRuleHandler,
+} from '../../../application';
+import {
+  WorkspaceParams,
+  RuleParams,
+  CreateRuleBody,
+  UpdateRuleBody,
+  RuleQuery,
+  ExecutionQuery,
+} from '../validation/categorization-rules.schema';
 
 export class CategoryRuleController {
   constructor(
@@ -46,147 +34,10 @@ export class CategoryRuleController {
     private readonly getExecutionsByRuleHandler: GetExecutionsByRuleHandler
   ) {}
 
-  async createRule(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: CreateCategoryRuleBody;
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const userId = request.user.userId;
-
-      const result = await this.createRuleHandler.handle({
-        workspaceId,
-        name: request.body.name,
-        description: request.body.description,
-        priority: request.body.priority,
-        conditionType: request.body.conditionType,
-        conditionValue: request.body.conditionValue,
-        targetCategoryId: request.body.targetCategoryId,
-        createdBy: userId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category rule created successfully',
-        result.data,
-        201
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updateRule(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-      Body: UpdateCategoryRuleBody;
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, ruleId } = request.params;
-      const userId = request.user.userId;
-
-      const result = await this.updateRuleHandler.handle({
-        ruleId,
-        workspaceId,
-        userId,
-        name: request.body.name,
-        description: request.body.description,
-        priority: request.body.priority,
-        conditionType: request.body.conditionType,
-        conditionValue: request.body.conditionValue,
-        targetCategoryId: request.body.targetCategoryId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category rule updated successfully'
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async deleteRule(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, ruleId } = request.params;
-      const userId = request.user.userId;
-
-      const result = await this.deleteRuleHandler.handle({ ruleId, workspaceId, userId });
-
-      if (!result.success) {
-        return ResponseHelper.fromCommand(reply, result, 'Category rule deletion failed');
-      }
-
-      return reply.status(204).send();
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async activateRule(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, ruleId } = request.params;
-      const userId = request.user.userId;
-
-      const result = await this.activateRuleHandler.handle({ ruleId, workspaceId, userId });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category rule activated successfully'
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async deactivateRule(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, ruleId } = request.params;
-      const userId = request.user.userId;
-
-      const result = await this.deactivateRuleHandler.handle({
-        ruleId,
-        workspaceId,
-        userId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Category rule deactivated successfully'
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ==================== READS / QUERIES ====================
 
   async getRuleById(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: RuleParams }>,
     reply: FastifyReply
   ) {
     try {
@@ -196,15 +47,15 @@ export class CategoryRuleController {
       const rule = await this.getRuleByIdHandler.handle({ ruleId, workspaceId, userId });
 
       return ResponseHelper.ok(reply, 'Category rule retrieved successfully', rule);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async listRules(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { activeOnly?: string | boolean; limit?: string; offset?: string };
+      Params: WorkspaceParams;
+      Querystring: RuleQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -213,12 +64,12 @@ export class CategoryRuleController {
       const { activeOnly, limit, offset } = request.query;
       const userId = request.user.userId;
 
-      if (activeOnly === true || activeOnly === 'true') {
+      if (activeOnly === true) {
         const result = await this.getActiveRulesByWorkspaceHandler.handle({
           workspaceId,
           userId,
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
+          limit,
+          offset,
         });
         return ResponseHelper.ok(
           reply,
@@ -237,8 +88,8 @@ export class CategoryRuleController {
         const result = await this.getRulesByWorkspaceHandler.handle({
           workspaceId,
           userId,
-          limit: limit ? parseInt(limit) : undefined,
-          offset: offset ? parseInt(offset) : undefined,
+          limit,
+          offset,
         });
         return ResponseHelper.ok(
           reply,
@@ -254,28 +105,27 @@ export class CategoryRuleController {
           }
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getRuleExecutions(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; ruleId: string };
-      Querystring: { limit?: string; offset?: string };
+      Params: RuleParams;
+      Querystring: ExecutionQuery;
     }>,
     reply: FastifyReply
   ) {
     try {
       const { workspaceId, ruleId } = request.params;
+      const { limit, offset } = request.query;
 
       const result = await this.getExecutionsByRuleHandler.handle({
         ruleId,
         workspaceId,
-        limit: request.query.limit ? parseInt(request.query.limit) : undefined,
-        offset: request.query.offset
-          ? parseInt(request.query.offset)
-          : undefined,
+        limit,
+        offset,
       });
 
       return ResponseHelper.ok(
@@ -291,7 +141,140 @@ export class CategoryRuleController {
           },
         }
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ==================== WRITES / COMMANDS ====================
+
+  async createRule(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Body: CreateRuleBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const userId = request.user.userId;
+
+      const result = await this.createRuleHandler.handle({
+        workspaceId,
+        name: request.body.name,
+        description: request.body.description ?? undefined,
+        priority: request.body.priority,
+        conditionType: request.body.conditionType,
+        conditionValue: request.body.conditionValue,
+        targetCategoryId: request.body.targetCategoryId,
+        createdBy: userId,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category rule created successfully',
+        result.data,
+        201
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async updateRule(
+    request: AuthenticatedRequest<{
+      Params: RuleParams;
+      Body: UpdateRuleBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, ruleId } = request.params;
+      const userId = request.user.userId;
+
+      const result = await this.updateRuleHandler.handle({
+        ruleId,
+        workspaceId,
+        userId,
+        name: request.body.name,
+        description: request.body.description ?? undefined,
+        priority: request.body.priority,
+        conditionType: request.body.conditionType,
+        conditionValue: request.body.conditionValue,
+        targetCategoryId: request.body.targetCategoryId,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category rule updated successfully'
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async deleteRule(
+    request: AuthenticatedRequest<{ Params: RuleParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, ruleId } = request.params;
+      const userId = request.user.userId;
+
+      const result = await this.deleteRuleHandler.handle({ ruleId, workspaceId, userId });
+
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Category rule deletion failed');
+      }
+
+      return reply.status(204).send();
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async activateRule(
+    request: AuthenticatedRequest<{ Params: RuleParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, ruleId } = request.params;
+      const userId = request.user.userId;
+
+      const result = await this.activateRuleHandler.handle({ ruleId, workspaceId, userId });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category rule activated successfully'
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async deactivateRule(
+    request: AuthenticatedRequest<{ Params: RuleParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, ruleId } = request.params;
+      const userId = request.user.userId;
+
+      const result = await this.deactivateRuleHandler.handle({
+        ruleId,
+        workspaceId,
+        userId,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Category rule deactivated successfully'
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
