@@ -3,12 +3,12 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface DeleteForecastCommand extends ICommand {
-  id: string;
-  workspaceId: string;
-  userId: string;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteForecastHandler implements ICommandHandler<
@@ -24,9 +24,9 @@ export class DeleteForecastHandler implements ICommandHandler<
 }
 
 export interface DeleteForecastItemCommand extends ICommand {
-  itemId: string;
-  workspaceId: string;
-  userId: string;
+  readonly itemId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteForecastItemHandler implements ICommandHandler<

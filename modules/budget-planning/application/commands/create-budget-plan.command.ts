@@ -5,16 +5,16 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateBudgetPlanCommand extends ICommand {
-  workspaceId: string;
-  name: string;
-  periodType: PeriodType;
-  startDate: Date;
-  endDate: Date;
-  createdBy: string;
-  description?: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly periodType: PeriodType;
+  readonly startDate: Date;
+  readonly endDate: Date;
+  readonly createdBy: string;
+  readonly description?: string;
 }
 
 export class CreateBudgetPlanHandler implements ICommandHandler<

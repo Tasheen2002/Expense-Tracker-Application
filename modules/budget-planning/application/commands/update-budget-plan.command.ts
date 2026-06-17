@@ -4,14 +4,14 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateBudgetPlanCommand extends ICommand {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  name?: string;
-  description?: string;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly name?: string;
+  readonly description?: string;
 }
 
 export class UpdateBudgetPlanHandler implements ICommandHandler<

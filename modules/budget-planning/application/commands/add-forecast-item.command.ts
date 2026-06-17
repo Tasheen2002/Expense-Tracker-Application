@@ -4,15 +4,15 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface AddForecastItemCommand extends ICommand {
-  forecastId: string;
-  workspaceId: string;
-  categoryId: string;
-  amount: number;
-  userId: string;
-  notes?: string;
+  readonly forecastId: string;
+  readonly workspaceId: string;
+  readonly categoryId: string;
+  readonly amount: number;
+  readonly userId: string;
+  readonly notes?: string;
 }
 
 export class AddForecastItemHandler implements ICommandHandler<

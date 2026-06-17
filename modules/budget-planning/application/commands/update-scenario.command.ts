@@ -4,15 +4,15 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateScenarioCommand extends ICommand {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  name?: string;
-  description?: string;
-  assumptions?: Record<string, unknown>;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly assumptions?: Record<string, unknown>;
 }
 
 export class UpdateScenarioHandler implements ICommandHandler<

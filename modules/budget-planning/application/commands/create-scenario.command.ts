@@ -4,15 +4,15 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateScenarioCommand extends ICommand {
-  planId: string;
-  workspaceId: string;
-  name: string;
-  createdBy: string;
-  description?: string;
-  assumptions?: Record<string, unknown>;
+  readonly planId: string;
+  readonly workspaceId: string;
+  readonly name: string;
+  readonly createdBy: string;
+  readonly description?: string;
+  readonly assumptions?: Record<string, unknown>;
 }
 
 export class CreateScenarioHandler implements ICommandHandler<
