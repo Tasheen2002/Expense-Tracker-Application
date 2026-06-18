@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 

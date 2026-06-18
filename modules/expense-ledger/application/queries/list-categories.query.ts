@@ -1,7 +1,7 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { CategoryDTO } from '../../domain/entities/category.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListCategoriesQuery extends IQuery {
   readonly workspaceId: string;

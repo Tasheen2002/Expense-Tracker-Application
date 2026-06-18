@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
 import { AttachmentDTO } from '../../domain/entities/attachment.entity';
 import { AttachmentNotFoundError } from '../../domain/errors/expense.errors';

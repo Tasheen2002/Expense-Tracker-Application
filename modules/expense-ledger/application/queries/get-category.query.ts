@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { CategoryDTO } from '../../domain/entities/category.entity';
 import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
