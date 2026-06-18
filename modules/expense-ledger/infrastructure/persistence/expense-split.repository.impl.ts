@@ -14,8 +14,8 @@ import { SplitType } from '../../domain/enums/split-type';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+} from '@core/domain/interfaces/paginated-result.interface';
+import { IEventBus } from '@core/domain/events/domain-event';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 
 export class ExpenseSplitRepositoryImpl

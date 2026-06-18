@@ -2,13 +2,13 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { ICategoryRepository } from "../../domain/repositories/category.repository";
 import { Category } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id";
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class CategoryRepositoryImpl
   extends PrismaRepository<Category>
