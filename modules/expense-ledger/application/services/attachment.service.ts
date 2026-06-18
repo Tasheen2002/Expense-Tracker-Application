@@ -5,7 +5,7 @@ import {
   AttachmentNotFoundError,
   FileSizeLimitExceededError,
 } from '../../domain/errors/expense.errors';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export class AttachmentService {
   constructor(private readonly attachmentRepository: IAttachmentRepository) {}

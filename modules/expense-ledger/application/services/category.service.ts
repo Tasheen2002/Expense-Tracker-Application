@@ -8,8 +8,8 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { ICacheService } from '../../../../packages/core/src/domain/interfaces/cache.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
+import { ICacheService } from '@core/domain/interfaces/cache.interface';
 
 export class CategoryService {
   constructor(

@@ -2,7 +2,7 @@ import {
   IExpenseRepository,
   ExpenseFilters,
 } from '../../domain/repositories/expense.repository';
-import { PaginatedResult, PaginationOptions } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult, PaginationOptions } from '@core/domain/interfaces/paginated-result.interface';
 import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { Expense, ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
