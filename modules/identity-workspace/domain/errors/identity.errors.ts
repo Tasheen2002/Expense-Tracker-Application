@@ -1,4 +1,4 @@
-import { DomainError, DomainValidationError } from '../../../../packages/core/src/domain/domain-error';
+import { DomainError, DomainValidationError } from '@core/domain/domain-error';
 
 /**
  * Base error class for Identity-Workspace module
