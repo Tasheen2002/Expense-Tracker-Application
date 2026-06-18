@@ -1,8 +1,8 @@
 import { RecurrenceFrequency } from '../enums/recurrence-frequency';
 import { RecurrenceStatus } from '../enums/recurrence-status';
 import { RecurringExpenseId } from '../value-objects/recurring-expense-id';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 
 export interface ExpenseTemplate {
   title: string;
@@ -14,6 +14,21 @@ export interface ExpenseTemplate {
   paymentMethod?: string;
   isReimbursable?: boolean;
   tagIds?: string[];
+}
+
+export interface RecurringExpenseDTO {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  frequency: string;
+  interval: number;
+  startDate: string;
+  endDate?: string;
+  nextRunDate: string;
+  status: string;
+  template: ExpenseTemplate;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class RecurringExpenseCreatedEvent extends DomainEvent {
@@ -58,21 +73,6 @@ export interface RecurringExpenseProps {
   template: ExpenseTemplate;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface RecurringExpenseDTO {
-  id: string;
-  workspaceId: string;
-  userId: string;
-  frequency: string;
-  interval: number;
-  startDate: string;
-  endDate?: string;
-  nextRunDate: string;
-  status: string;
-  template: ExpenseTemplate;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export class RecurringExpense extends AggregateRoot {

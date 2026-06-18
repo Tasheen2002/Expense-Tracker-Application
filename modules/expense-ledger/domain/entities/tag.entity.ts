@@ -1,6 +1,6 @@
 import { TagId } from '../value-objects/tag-id';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import {
   TagNameRequiredError,
   TagNameTooLongError,
@@ -45,20 +45,20 @@ export class TagDeletedEvent extends DomainEvent {
   }
 }
 
-export interface TagProps {
-  id: TagId;
-  workspaceId: string;
-  name: string;
-  color?: string;
-  createdAt: Date;
-}
-
 export interface TagDTO {
   tagId: string;
   workspaceId: string;
   name: string;
   color?: string;
   createdAt: string;
+}
+
+export interface TagProps {
+  id: TagId;
+  workspaceId: string;
+  name: string;
+  color?: string;
+  createdAt: Date;
 }
 
 export class Tag extends AggregateRoot {

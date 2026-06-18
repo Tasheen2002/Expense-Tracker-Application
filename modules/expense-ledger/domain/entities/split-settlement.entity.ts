@@ -5,19 +5,6 @@ import { SettlementStatus } from '../enums/settlement-status';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library'; // Decimal used only for arithmetic
 
-export interface SplitSettlementProps {
-  id: SettlementId;
-  splitId: SplitId;
-  fromUserId: string;
-  toUserId: string;
-  totalOwedAmount: Money;
-  paidAmount: Money;
-  status: SettlementStatus;
-  settledAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface SplitSettlementDTO {
   id: string;
   splitId: string;
@@ -31,6 +18,19 @@ export interface SplitSettlementDTO {
   settledAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SplitSettlementProps {
+  id: SettlementId;
+  splitId: SplitId;
+  fromUserId: string;
+  toUserId: string;
+  totalOwedAmount: Money;
+  paidAmount: Money;
+  status: SettlementStatus;
+  settledAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class SplitSettlement {

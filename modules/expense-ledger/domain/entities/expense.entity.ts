@@ -6,8 +6,8 @@ import { Money } from '../value-objects/money';
 import { ExpenseDate } from '../value-objects/expense-date';
 import { PaymentMethod } from '../enums/payment-method';
 import { ExpenseStatus, canTransitionTo } from '../enums/expense-status';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import {
   ExpenseTitleRequiredError,
   ExpenseTitleTooLongError,
@@ -16,6 +16,26 @@ import {
   InvalidExpenseStatusError,
   NonReimbursableError,
 } from '../errors/expense.errors';
+
+export interface ExpenseDTO {
+  expenseId: string;
+  workspaceId: string;
+  userId: string;
+  title: string;
+  description?: string;
+  amount: string;
+  currency: string;
+  expenseDate: string;
+  categoryId?: string;
+  merchant?: string;
+  paymentMethod: PaymentMethod;
+  isReimbursable: boolean;
+  status: ExpenseStatus;
+  tagIds: string[];
+  attachmentIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 /**
  * Emitted when a new expense is created.
@@ -308,25 +328,7 @@ export interface ExpenseProps {
   updatedAt: Date;
 }
 
-export interface ExpenseDTO {
-  expenseId: string;
-  workspaceId: string;
-  userId: string;
-  title: string;
-  description?: string;
-  amount: string;
-  currency: string;
-  expenseDate: string;
-  categoryId?: string;
-  merchant?: string;
-  paymentMethod: PaymentMethod;
-  isReimbursable: boolean;
-  status: ExpenseStatus;
-  tagIds: string[];
-  attachmentIds: string[];
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 export class Expense extends AggregateRoot {
   private readonly props: ExpenseProps;
