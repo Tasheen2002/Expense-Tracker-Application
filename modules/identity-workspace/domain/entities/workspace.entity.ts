@@ -1,8 +1,22 @@
 import { WorkspaceId } from '../value-objects/workspace-id.vo';
 import { UserId } from '../value-objects/user-id.vo';
 import { InvalidWorkspaceNameError } from '../errors/identity.errors';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+
+// ============================================================================
+// DTOs
+// ============================================================================
+
+export interface WorkspaceDTO {
+  workspaceId: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events

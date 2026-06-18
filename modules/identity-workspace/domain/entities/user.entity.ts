@@ -1,8 +1,22 @@
 import { UserId } from '../value-objects/user-id.vo';
 import { Email } from '../value-objects/email.vo';
 import { InvalidPasswordHashError } from '../errors/identity.errors';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+
+// ============================================================================
+// DTOs
+// ============================================================================
+
+export interface UserDTO {
+  userId: string;
+  email: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events
