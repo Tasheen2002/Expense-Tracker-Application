@@ -1,4 +1,4 @@
-import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import { MembershipNotFoundError } from '../../domain/errors/identity.errors';
 

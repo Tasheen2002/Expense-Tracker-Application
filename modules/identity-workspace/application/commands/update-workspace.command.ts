@@ -1,7 +1,7 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface UpdateWorkspaceCommand extends ICommand {
   readonly workspaceId: string;

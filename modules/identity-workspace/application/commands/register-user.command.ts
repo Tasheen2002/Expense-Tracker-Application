@@ -1,7 +1,7 @@
 import { UserManagementService } from '../services/user-management.service';
 import { UserDTO } from '../../domain/entities/user.entity';
 import bcrypt from 'bcryptjs';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface RegisterUserCommand extends ICommand {
   readonly email: string;

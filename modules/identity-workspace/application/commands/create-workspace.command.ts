@@ -1,6 +1,6 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface CreateWorkspaceCommand extends ICommand {
   readonly name: string;
