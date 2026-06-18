@@ -1,7 +1,7 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { OutboxEventManagementService } from '../services/outbox-event.service';
 
 export interface GetDeadLetterCountQuery extends IQuery {}
