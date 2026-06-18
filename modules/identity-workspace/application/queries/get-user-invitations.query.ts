@@ -1,6 +1,6 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
 import { WorkspaceInvitationDTO } from '../../domain/entities/workspace-invitation.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetUserInvitationsQuery extends IQuery {
   readonly email: string;

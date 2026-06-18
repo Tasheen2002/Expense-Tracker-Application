@@ -4,7 +4,7 @@ import {
   UserLookupCriteriaRequiredError,
   UserNotFoundError,
 } from '../../domain/errors/identity.errors';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetUserQuery extends IQuery {
   readonly userId?: string;
