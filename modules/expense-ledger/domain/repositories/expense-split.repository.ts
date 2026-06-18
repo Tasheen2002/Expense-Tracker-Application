@@ -4,7 +4,7 @@ import { ExpenseId } from "../value-objects/expense-id";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IExpenseSplitRepository {
   save(split: ExpenseSplit): Promise<void>;
