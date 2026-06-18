@@ -14,6 +14,20 @@ vi.mock(
   })
 );
 
+vi.mock(
+  '../../../apps/api/src/shared/middleware/role-authorization.middleware',
+  () => ({
+    requireRole: () => async () => {},
+    RolePermissions: {
+      OWNER_ONLY: async () => {},
+      ADMIN_LEVEL: async () => {},
+      MANAGER_LEVEL: async () => {},
+      MEMBER_LEVEL: async () => {},
+    },
+    hasRole: () => true,
+  })
+);
+
 vi.mock('@shared/middleware', () => ({
   workspaceAuthorizationMiddleware: async () => {},
   authenticate: async () => {},
@@ -201,12 +215,14 @@ async function setupTestApp(
     listUserWorkflowsHandler
   );
 
+  app.decorate('prisma', {} as any);
+
   await app.register(async (instance) => {
-    await approvalChainRoutes(instance, chainController, {} as any);
+    await approvalChainRoutes(instance, chainController);
   });
 
   await app.register(async (instance) => {
-    await workflowRoutes(instance, workflowController, {} as any);
+    await workflowRoutes(instance, workflowController);
   });
 
   return app;

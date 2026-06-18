@@ -18,9 +18,9 @@ export async function registerBudgetPlanningRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      await budgetPlanningRoutes(instance, controllers.budgetPlanController, prisma);
-      await forecastRoutes(instance, controllers.forecastController, prisma);
-      await scenarioRoutes(instance, controllers.scenarioController, prisma);
+      await budgetPlanningRoutes(instance, controllers.budgetPlanController);
+      await forecastRoutes(instance, controllers.forecastController);
+      await scenarioRoutes(instance, controllers.scenarioController);
     },
     { prefix: '/api/v1' }
   );

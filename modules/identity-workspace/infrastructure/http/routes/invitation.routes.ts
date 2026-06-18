@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { InvitationController } from '../controllers/invitation.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -7,17 +6,13 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  invitationParamsSchema,
-  tokenParamsSchema,
   inviteMemberSchema,
   paginationQuerySchema,
   workspaceParamsJsonSchema,
@@ -46,7 +41,6 @@ export async function registerPublicInvitationRoutes(
   fastify.get(
     '/invitations/:token',
     {
-      preValidation: [validateParams(tokenParamsSchema)],
       schema: {
         tags: ['Invitation'],
         description: 'Get invitation details by token',
@@ -72,8 +66,7 @@ export async function registerTokenInvitationRoutes(
   fastify.post(
     '/invitations/:token/accept',
     {
-      preValidation: [validateParams(tokenParamsSchema)],
-      preHandler: [fastify.authenticate],
+      onRequest: [fastify.authenticate],
       schema: {
         tags: ['Invitation'],
         description: 'Accept workspace invitation',
@@ -94,11 +87,14 @@ export async function registerTokenInvitationRoutes(
  */
 export async function registerWorkspaceInvitationRoutes(
   fastify: FastifyInstance,
-  controller: InvitationController,
-  prisma: PrismaClient
-) {
+  controller: InvitationController
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -111,12 +107,11 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/invitations',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
-        requireRole(['owner', 'admin']),
         validateBody(inviteMemberSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Invitation'],
@@ -137,14 +132,11 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/invitations',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Invitation'],
@@ -168,11 +160,10 @@ export async function registerWorkspaceInvitationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/invitations/:invitationId',
     {
-      preValidation: [validateParams(invitationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Invitation'],

@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ExpenseController } from '../controllers/expense.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -10,13 +10,10 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
-  expenseParamsSchema,
   expenseParamsJsonSchema,
   paginationQuerySchema,
   paginationQueryJsonSchema,
@@ -44,10 +41,13 @@ const writeRateLimiter = createRateLimiter({
 export async function expenseRoutes(
   fastify: FastifyInstance,
   controller: ExpenseController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -61,11 +61,8 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createExpenseSchema),
-      ],
       preHandler: [
+        validateBody(createExpenseSchema),
         workspaceAuth,
       ],
       schema: {
@@ -88,11 +85,8 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
       preHandler: [
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -115,11 +109,8 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/filter',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(filterExpensesSchema),
-      ],
       preHandler: [
+        validateQuery(filterExpensesSchema),
         workspaceAuth,
       ],
       schema: {
@@ -142,11 +133,8 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/statistics',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
       preHandler: [
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -169,7 +157,6 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -192,11 +179,8 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(expenseParamsSchema),
-        validateBody(updateExpenseSchema),
-      ],
       preHandler: [
+        validateBody(updateExpenseSchema),
         workspaceAuth,
       ],
       schema: {
@@ -219,7 +203,6 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -242,7 +225,6 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/submit',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -265,9 +247,9 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/approve',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Expenses'],
@@ -288,12 +270,10 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/reject',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(expenseParamsSchema),
-        validateBody(rejectExpenseBodySchema),
-      ],
       preHandler: [
+        validateBody(rejectExpenseBodySchema),
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Expenses'],
@@ -315,9 +295,9 @@ export async function expenseRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/reimburse',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(expenseParamsSchema)],
       preHandler: [
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Expenses'],

@@ -14,7 +14,7 @@ export async function registerEventOutboxRoutes(
 ): Promise<void> {
   await fastify.register(
     async (instance) => {
-      await outboxEventRoutes(instance, controllers.outboxEventController, prisma);
+      await outboxEventRoutes(instance, controllers.outboxEventController);
     },
     { prefix: '/api/v1' },
   );

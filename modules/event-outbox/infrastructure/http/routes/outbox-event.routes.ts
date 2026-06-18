@@ -1,17 +1,13 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { OutboxEventController } from '../controllers/outbox-event.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  eventParamsSchema,
   storeOutboxEventSchema,
   pendingEventsQuerySchema,
   failedEventsQuerySchema,
@@ -32,10 +28,13 @@ import {
 export async function outboxEventRoutes(
   fastify: FastifyInstance,
   controller: OutboxEventController,
-  prisma: PrismaClient,
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   // ── GET routes ──────────────────────────────────────────────────────────────
@@ -43,12 +42,11 @@ export async function outboxEventRoutes(
   fastify.get(
     '/:workspaceId/event-outbox/events/pending',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(pendingEventsQuerySchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -68,12 +66,11 @@ export async function outboxEventRoutes(
   fastify.get(
     '/:workspaceId/event-outbox/events/failed',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(failedEventsQuerySchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -93,11 +90,10 @@ export async function outboxEventRoutes(
   fastify.get(
     '/:workspaceId/event-outbox/events/dead-letter/count',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -118,11 +114,10 @@ export async function outboxEventRoutes(
   fastify.post(
     '/:workspaceId/event-outbox/events/retry-all',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -141,12 +136,11 @@ export async function outboxEventRoutes(
   fastify.post(
     '/:workspaceId/event-outbox/events',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(storeOutboxEventSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -166,11 +160,10 @@ export async function outboxEventRoutes(
   fastify.post(
     '/:workspaceId/event-outbox/events/:eventId/process',
     {
-      preValidation: [validateParams(eventParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -189,11 +182,10 @@ export async function outboxEventRoutes(
   fastify.post(
     '/:workspaceId/event-outbox/events/:eventId/retry',
     {
-      preValidation: [validateParams(eventParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],
@@ -214,12 +206,11 @@ export async function outboxEventRoutes(
   fastify.delete(
     '/:workspaceId/event-outbox/events/processed',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(cleanupEventsQuerySchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Event Outbox'],

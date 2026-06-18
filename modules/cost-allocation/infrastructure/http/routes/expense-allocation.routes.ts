@@ -1,15 +1,11 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
 } from '../validation/validator';
 import {
-  expenseParamsSchema,
-  workspaceParamsSchema,
   allocateExpenseSchema,
   expenseParamsJsonSchema,
   workspaceParamsJsonSchema,
@@ -22,7 +18,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -31,11 +27,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseAllocationController,
-  prisma: PrismaClient
+  controller: ExpenseAllocationController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes via hooks
@@ -49,12 +44,11 @@ export async function expenseAllocationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(allocateExpenseSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
@@ -75,11 +69,9 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
@@ -99,11 +91,10 @@ export async function expenseAllocationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
@@ -126,11 +117,9 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/allocations/summary',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],

@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { BankConnectionController } from '../controllers/bank-connection.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -6,12 +6,12 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { validateBody, validateParams } from '../validation/validator';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { validateBody } from '../validation/validator';
 import {
   connectBankBodySchema,
-  connectionParamsSchema,
   updateConnectionTokenBodySchema,
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   connectionParamsJsonSchema,
   connectBankBodyJsonSchema,
@@ -29,6 +29,10 @@ export async function bankConnectionRoutes(
   fastify: FastifyInstance,
   controller: BankConnectionController
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -40,8 +44,12 @@ export async function bankConnectionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/bank-feed-sync/connections',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [validateBody(connectBankBodySchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(connectBankBodySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Bank Connection'],
         description: 'Create a bank connection',
@@ -61,7 +69,8 @@ export async function bankConnectionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/connections',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Bank Connection'],
         description: 'Get all bank connections in a workspace',
@@ -80,7 +89,8 @@ export async function bankConnectionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId',
     {
-      preValidation: [validateParams(connectionParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Bank Connection'],
         description: 'Get a specific bank connection',
@@ -99,8 +109,12 @@ export async function bankConnectionRoutes(
   fastify.put(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/token',
     {
-      preValidation: [validateParams(connectionParamsSchema)],
-      preHandler: [validateBody(updateConnectionTokenBodySchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateConnectionTokenBodySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Bank Connection'],
         description: 'Update bank connection token',
@@ -116,11 +130,12 @@ export async function bankConnectionRoutes(
       controller.updateConnectionToken(request as AuthenticatedRequest, reply)
   );
 
-  // Disconnect bank
+  // Disconnect bank connection
   fastify.post(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/disconnect',
     {
-      preValidation: [validateParams(connectionParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Bank Connection'],
         description: 'Disconnect a bank connection',
@@ -138,11 +153,12 @@ export async function bankConnectionRoutes(
       controller.disconnectBank(request as AuthenticatedRequest, reply)
   );
 
-  // Delete connection
+  // Delete bank connection
   fastify.delete(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId',
     {
-      preValidation: [validateParams(connectionParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Bank Connection'],
         description: 'Delete a bank connection',
@@ -160,4 +176,3 @@ export async function bankConnectionRoutes(
       controller.deleteConnection(request as AuthenticatedRequest, reply)
   );
 }
-

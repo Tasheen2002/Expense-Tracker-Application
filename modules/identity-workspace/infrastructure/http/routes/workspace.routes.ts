@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { WorkspaceController } from '../controllers/workspace.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -7,17 +6,15 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
-  workspaceParamsSchema,
   paginationQuerySchema,
   workspaceParamsJsonSchema,
   paginationQueryJsonSchema,
@@ -49,7 +46,8 @@ export async function registerUserWorkspaceRoutes(
   fastify.post(
     '/workspaces',
     {
-      preHandler: [fastify.authenticate, validateBody(createWorkspaceSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(createWorkspaceSchema)],
       schema: {
         tags: ['Workspace'],
         description: 'Create a new workspace',
@@ -68,8 +66,8 @@ export async function registerUserWorkspaceRoutes(
   fastify.get(
     '/workspaces',
     {
-      preValidation: [validateQuery(paginationQuerySchema)],
-      preHandler: [fastify.authenticate],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema)],
       schema: {
         tags: ['Workspace'],
         description: 'Get all workspaces for the authenticated user',
@@ -90,11 +88,14 @@ export async function registerUserWorkspaceRoutes(
  */
 export async function registerWorkspaceScopedRoutes(
   fastify: FastifyInstance,
-  controller: WorkspaceController,
-  prisma: PrismaClient
-) {
+  controller: WorkspaceController
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -107,11 +108,9 @@ export async function registerWorkspaceScopedRoutes(
   fastify.get(
     '/workspaces/:workspaceId',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Workspace'],
@@ -131,12 +130,11 @@ export async function registerWorkspaceScopedRoutes(
   fastify.patch(
     '/workspaces/:workspaceId',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
-        requireRole(['owner', 'admin']),
         validateBody(updateWorkspaceSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Workspace'],
@@ -157,11 +155,10 @@ export async function registerWorkspaceScopedRoutes(
   fastify.delete(
     '/workspaces/:workspaceId',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner']),
+        RolePermissions.OWNER_ONLY,
       ],
       schema: {
         tags: ['Workspace'],

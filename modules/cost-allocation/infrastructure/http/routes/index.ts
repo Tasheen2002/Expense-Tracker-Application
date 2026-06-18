@@ -17,13 +17,11 @@ export async function registerCostAllocationRoutes(
     async (instance) => {
       await allocationManagementRoutes(
         instance,
-        controllers.allocationManagementController,
-        prisma
+        controllers.allocationManagementController
       );
       await expenseAllocationRoutes(
         instance,
-        controllers.expenseAllocationController,
-        prisma
+        controllers.expenseAllocationController
       );
     },
     { prefix: '/api/v1' }

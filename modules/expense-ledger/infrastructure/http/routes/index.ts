@@ -27,16 +27,15 @@ export async function registerExpenseLedgerRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      await expenseRoutes(instance, controllers.expenseController, prisma);
-      await categoryRoutes(instance, controllers.categoryController, prisma);
-      await tagRoutes(instance, controllers.tagController, prisma);
-      await attachmentRoutes(instance, controllers.attachmentController, prisma);
+      await expenseRoutes(instance, controllers.expenseController);
+      await categoryRoutes(instance, controllers.categoryController);
+      await tagRoutes(instance, controllers.tagController);
+      await attachmentRoutes(instance, controllers.attachmentController);
       await recurringExpenseRoutes(
         instance,
         controllers.recurringExpenseController,
-        prisma,
       );
-      await expenseSplitRoutes(instance, controllers.expenseSplitController, prisma);
+      await expenseSplitRoutes(instance, controllers.expenseSplitController);
     },
     { prefix: "/api/v1" },
   );

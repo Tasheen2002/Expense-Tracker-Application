@@ -1,18 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { RuleExecutionController } from '../controllers/rule-execution.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   evaluateRulesSchema,
   executionQuerySchema,
-  workspaceParamsSchema,
-  expenseParamsSchema,
   workspaceParamsJsonSchema,
   expenseParamsJsonSchema,
   evaluateRulesBodyJsonSchema,
@@ -26,7 +22,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -35,11 +31,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function ruleExecutionRoutes(
   fastify: FastifyInstance,
-  controller: RuleExecutionController,
-  prisma: PrismaClient
+  controller: RuleExecutionController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -52,12 +47,11 @@ export async function ruleExecutionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/evaluate',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(evaluateRulesSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -78,11 +72,9 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions/expense/:expenseId',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -102,12 +94,10 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(executionQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Rule Execution'],

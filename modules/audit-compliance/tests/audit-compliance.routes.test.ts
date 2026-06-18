@@ -68,9 +68,25 @@ async function setupTestApp(
 ): Promise<FastifyInstance> {
   const app = Fastify();
 
+  // Mock prisma decorator
+  app.decorate('prisma', {} as any);
+
   // Mock authenticate decorator
   app.decorate('authenticate', async (request: any) => {
     request.user = { userId: mockUserId, email: 'test@example.com' };
+  });
+
+  // Map Fastify validation errors to VALIDATION_ERROR format
+  app.setErrorHandler((error, request, reply) => {
+    if (error.code === 'FST_ERR_VALIDATION') {
+      return reply.status(400).send({
+        success: false,
+        statusCode: 400,
+        error: 'VALIDATION_ERROR',
+        message: error.message,
+      });
+    }
+    return reply.send(error);
   });
 
   // Register routes with mock workspace context
@@ -85,7 +101,7 @@ async function setupTestApp(
         };
       });
 
-      await auditLogRoutes(instance, controller, {} as any);
+      await auditLogRoutes(instance, controller);
     },
     { prefix: '/api/v1' }
   );

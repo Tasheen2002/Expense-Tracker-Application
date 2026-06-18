@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { AttachmentController } from '../controllers/attachment.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -10,14 +9,11 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
 } from '../validation/validator';
 import {
   createAttachmentSchema,
   createAttachmentBodyJsonSchema,
-  workspaceExpenseParamsSchema,
   workspaceExpenseParamsJsonSchema,
-  attachmentParamsSchema,
   attachmentParamsJsonSchema,
   attachmentEnvelopeJsonSchema,
   listAttachmentsEnvelopeJsonSchema,
@@ -32,10 +28,13 @@ const writeRateLimiter = createRateLimiter({
 export async function attachmentRoutes(
   fastify: FastifyInstance,
   controller: AttachmentController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -49,11 +48,8 @@ export async function attachmentRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceExpenseParamsSchema),
-        validateBody(createAttachmentSchema),
-      ],
       preHandler: [
+        validateBody(createAttachmentSchema),
         workspaceAuth,
       ],
       schema: {
@@ -76,7 +72,6 @@ export async function attachmentRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(attachmentParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -99,7 +94,6 @@ export async function attachmentRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(attachmentParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -122,7 +116,6 @@ export async function attachmentRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(workspaceExpenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],

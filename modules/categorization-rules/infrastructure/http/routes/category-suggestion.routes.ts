@@ -1,19 +1,14 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { CategorySuggestionController } from '../controllers/category-suggestion.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createSuggestionSchema,
   suggestionQuerySchema,
-  workspaceParamsSchema,
-  suggestionParamsSchema,
-  expenseParamsSchema,
   workspaceParamsJsonSchema,
   suggestionParamsJsonSchema,
   expenseParamsJsonSchema,
@@ -29,7 +24,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -38,11 +33,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function categorySuggestionRoutes(
   fastify: FastifyInstance,
-  controller: CategorySuggestionController,
-  prisma: PrismaClient
+  controller: CategorySuggestionController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -55,12 +49,11 @@ export async function categorySuggestionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/suggestions',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createSuggestionSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -81,12 +74,10 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(suggestionQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -107,11 +98,9 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions/:suggestionId',
     {
-      preValidation: [validateParams(suggestionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -131,11 +120,9 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions/expense/:expenseId',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -155,11 +142,10 @@ export async function categorySuggestionRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/suggestions/:suggestionId/accept',
     {
-      preValidation: [validateParams(suggestionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -179,11 +165,10 @@ export async function categorySuggestionRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/suggestions/:suggestionId/reject',
     {
-      preValidation: [validateParams(suggestionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -203,11 +188,10 @@ export async function categorySuggestionRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/suggestions/:suggestionId',
     {
-      preValidation: [validateParams(suggestionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],

@@ -7,8 +7,8 @@ import { User } from "../../domain/entities/user.entity";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import { Email } from "../../domain/value-objects/email.vo";
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { IEventBus } from '@core/domain/events/domain-event';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class UserRepositoryImpl

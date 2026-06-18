@@ -11,7 +11,7 @@ export async function registerAuditComplianceRoutes(
   await fastify.register(
     async (instance) => {
       // Register audit log routes
-      await auditLogRoutes(instance, controllers.auditLogController, prisma);
+      await auditLogRoutes(instance, controllers.auditLogController);
     },
     { prefix: '/api/v1' }
   );

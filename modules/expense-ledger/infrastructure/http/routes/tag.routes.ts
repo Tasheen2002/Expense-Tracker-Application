@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { TagController } from '../controllers/tag.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -10,17 +10,14 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   paginationQuerySchema,
   paginationQueryJsonSchema,
 } from '../validation/common.schema';
 import {
-  tagParamsSchema,
   tagParamsJsonSchema,
   createTagSchema,
   createTagBodyJsonSchema,
@@ -39,10 +36,13 @@ const writeRateLimiter = createRateLimiter({
 export async function tagRoutes(
   fastify: FastifyInstance,
   controller: TagController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -56,12 +56,10 @@ export async function tagRoutes(
     '/workspaces/:workspaceId/tags',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createTagSchema),
-      ],
       preHandler: [
+        validateBody(createTagSchema),
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Tag'],
@@ -83,12 +81,10 @@ export async function tagRoutes(
     '/workspaces/:workspaceId/tags/:tagId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(tagParamsSchema),
-        validateBody(updateTagSchema),
-      ],
       preHandler: [
+        validateBody(updateTagSchema),
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Tag'],
@@ -110,9 +106,9 @@ export async function tagRoutes(
     '/workspaces/:workspaceId/tags/:tagId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(tagParamsSchema)],
       preHandler: [
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Tag'],
@@ -133,7 +129,6 @@ export async function tagRoutes(
     '/workspaces/:workspaceId/tags/:tagId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(tagParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -156,11 +151,8 @@ export async function tagRoutes(
     '/workspaces/:workspaceId/tags',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
       preHandler: [
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
       ],
       schema: {

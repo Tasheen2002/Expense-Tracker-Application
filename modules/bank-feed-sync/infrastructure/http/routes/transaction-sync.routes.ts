@@ -1,17 +1,10 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TransactionSyncController } from '../controllers/transaction-sync.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
-  validateBody,
-  validateParams,
-  validateQuery,
-} from '../validation/validator';
-import {
-  connectionParamsSchema,
   paginationQuerySchema,
-  sessionParamsSchema,
   syncTransactionsBodySchema,
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   connectionParamsJsonSchema,
   sessionParamsJsonSchema,
@@ -26,6 +19,8 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -36,6 +31,10 @@ export async function transactionSyncRoutes(
   fastify: FastifyInstance,
   controller: TransactionSyncController
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -47,8 +46,12 @@ export async function transactionSyncRoutes(
   fastify.post(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync',
     {
-      preValidation: [validateParams(connectionParamsSchema)],
-      preHandler: [validateBody(syncTransactionsBodySchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(syncTransactionsBodySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Transaction Sync'],
         description: 'Trigger sync for a bank connection',
@@ -68,10 +71,8 @@ export async function transactionSyncRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/connections/:connectionId/sync/history',
     {
-      preValidation: [
-        validateParams(connectionParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema), workspaceAuth],
       schema: {
         tags: ['Transaction Sync'],
         description: 'Get sync history for a bank connection',
@@ -91,7 +92,8 @@ export async function transactionSyncRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/sync/:sessionId',
     {
-      preValidation: [validateParams(sessionParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Transaction Sync'],
         description: 'Get specific sync session details',
@@ -110,10 +112,8 @@ export async function transactionSyncRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/sync/active',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema), workspaceAuth],
       schema: {
         tags: ['Transaction Sync'],
         description: 'Get all active sync sessions in a workspace',
@@ -129,4 +129,3 @@ export async function transactionSyncRoutes(
       controller.getActiveSyncs(request as AuthenticatedRequest, reply)
   );
 }
-

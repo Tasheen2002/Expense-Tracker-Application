@@ -1,8 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { CategoryController } from '../controllers/category.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -10,15 +10,12 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
 } from '../validation/common.schema';
 import {
-  categoryParamsSchema,
   categoryParamsJsonSchema,
   createCategorySchema,
   createCategoryBodyJsonSchema,
@@ -39,10 +36,13 @@ const writeRateLimiter = createRateLimiter({
 export async function categoryRoutes(
   fastify: FastifyInstance,
   controller: CategoryController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -56,12 +56,10 @@ export async function categoryRoutes(
     '/workspaces/:workspaceId/categories',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createCategorySchema),
-      ],
       preHandler: [
+        validateBody(createCategorySchema),
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category'],
@@ -83,12 +81,10 @@ export async function categoryRoutes(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(categoryParamsSchema),
-        validateBody(updateCategorySchema),
-      ],
       preHandler: [
+        validateBody(updateCategorySchema),
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category'],
@@ -110,9 +106,9 @@ export async function categoryRoutes(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(categoryParamsSchema)],
       preHandler: [
         workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category'],
@@ -133,7 +129,6 @@ export async function categoryRoutes(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(categoryParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -156,11 +151,8 @@ export async function categoryRoutes(
     '/workspaces/:workspaceId/categories',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(listCategoriesQuerySchema),
-      ],
       preHandler: [
+        validateQuery(listCategoriesQuerySchema),
         workspaceAuth,
       ],
       schema: {

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ScenarioController } from '../controllers/scenario.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -8,11 +7,9 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
-import { validateBody, validateParams } from '../validation/validator';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { validateBody } from '../validation/validator';
 import {
-  planIdParamsSchema,
-  scenarioParamsSchema,
   createScenarioSchema,
   updateScenarioSchema,
   planIdParamsJsonSchema,
@@ -30,11 +27,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function scenarioRoutes(
   fastify: FastifyInstance,
-  controller: ScenarioController,
-  prisma: PrismaClient
+  controller: ScenarioController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -48,12 +44,11 @@ export async function scenarioRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budget-plans/:planId/scenarios',
     {
-      preValidation: [validateParams(planIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createScenarioSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -74,11 +69,9 @@ export async function scenarioRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budget-plans/:planId/scenarios',
     {
-      preValidation: [validateParams(planIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -98,11 +91,9 @@ export async function scenarioRoutes(
   fastify.get(
     '/workspaces/:workspaceId/scenarios/:id',
     {
-      preValidation: [validateParams(scenarioParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -122,12 +113,11 @@ export async function scenarioRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/scenarios/:id',
     {
-      preValidation: [validateParams(scenarioParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateScenarioSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -148,11 +138,10 @@ export async function scenarioRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/scenarios/:id',
     {
-      preValidation: [validateParams(scenarioParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Scenarios'],
@@ -171,4 +160,3 @@ export async function scenarioRoutes(
       controller.delete(request as AuthenticatedRequest, reply)
   );
 }
-

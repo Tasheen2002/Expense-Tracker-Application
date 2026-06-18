@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ExpenseSplitController } from '../controllers/expense-split.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -10,17 +9,14 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   paginationQuerySchema,
   paginationQueryJsonSchema,
 } from '../validation/common.schema';
 import {
-  workspaceExpenseParamsSchema,
   workspaceExpenseParamsJsonSchema,
 } from '../validation/attachment.schema';
 import {
@@ -30,9 +26,7 @@ import {
   recordSettlementPaymentBodyJsonSchema,
   listSettlementsQuerySchema,
   listSettlementsQueryJsonSchema,
-  splitParamsSchema,
   splitParamsJsonSchema,
-  settlementParamsSchema,
   settlementParamsJsonSchema,
   splitEnvelopeJsonSchema,
   paginatedSplitsEnvelopeJsonSchema,
@@ -49,10 +43,13 @@ const writeRateLimiter = createRateLimiter({
 export async function expenseSplitRoutes(
   fastify: FastifyInstance,
   controller: ExpenseSplitController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -66,11 +63,8 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceExpenseParamsSchema),
-        validateBody(createSplitSchema),
-      ],
       preHandler: [
+        validateBody(createSplitSchema),
         workspaceAuth,
       ],
       schema: {
@@ -93,7 +87,6 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/splits/:splitId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(splitParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -116,7 +109,6 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/split',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(workspaceExpenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -139,11 +131,8 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/splits',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
       preHandler: [
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -166,7 +155,6 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/splits/:splitId',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(splitParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -189,11 +177,8 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/settlements/:settlementId/payment',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(settlementParamsSchema),
-        validateBody(recordSettlementPaymentSchema),
-      ],
       preHandler: [
+        validateBody(recordSettlementPaymentSchema),
         workspaceAuth,
       ],
       schema: {
@@ -216,11 +201,8 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/settlements',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(listSettlementsQuerySchema),
-      ],
       preHandler: [
+        validateQuery(listSettlementsQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -243,7 +225,6 @@ export async function expenseSplitRoutes(
     '/workspaces/:workspaceId/splits/:splitId/settlements',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(splitParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],

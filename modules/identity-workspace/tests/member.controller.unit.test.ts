@@ -3,7 +3,7 @@ import { MemberController } from '../infrastructure/http/controllers/member.cont
 import { WorkspaceAuthHelper } from '../infrastructure/http/middleware/workspace-auth.helper';
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '../../../apps/api/src/shared/interfaces/authenticated-request.interface';
-import { CommandResult } from '../../../packages/core/src/application/command-result';
+import { CommandResult } from '@core/application/command-result';
 
 // Mock handlers
 const mockListMembersHandler = {

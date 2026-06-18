@@ -18,12 +18,11 @@ export async function registerCategorizationRulesRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      await categoryRuleRoutes(instance, controllers.categoryRuleController, prisma);
-      await ruleExecutionRoutes(instance, controllers.ruleExecutionController, prisma);
+      await categoryRuleRoutes(instance, controllers.categoryRuleController);
+      await ruleExecutionRoutes(instance, controllers.ruleExecutionController);
       await categorySuggestionRoutes(
         instance,
-        controllers.categorySuggestionController,
-        prisma
+        controllers.categorySuggestionController
       );
     },
     { prefix: '/api/v1' }

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { RecurringExpenseController } from '../controllers/recurring-expense.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -10,14 +9,11 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
 } from '../validation/common.schema';
 import {
-  recurringExpenseParamsSchema,
   recurringExpenseParamsJsonSchema,
   createRecurringExpenseSchema,
   createRecurringExpenseBodyJsonSchema,
@@ -35,10 +31,13 @@ const writeRateLimiter = createRateLimiter({
 export async function recurringExpenseRoutes(
   fastify: FastifyInstance,
   controller: RecurringExpenseController,
-  prisma: PrismaClient
-) {
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -52,11 +51,8 @@ export async function recurringExpenseRoutes(
     '/workspaces/:workspaceId/recurring',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createRecurringExpenseSchema),
-      ],
       preHandler: [
+        validateBody(createRecurringExpenseSchema),
         workspaceAuth,
       ],
       schema: {
@@ -78,7 +74,6 @@ export async function recurringExpenseRoutes(
     '/workspaces/:workspaceId/recurring/:id/pause',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(recurringExpenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -100,7 +95,6 @@ export async function recurringExpenseRoutes(
     '/workspaces/:workspaceId/recurring/:id/resume',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(recurringExpenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -122,7 +116,6 @@ export async function recurringExpenseRoutes(
     '/workspaces/:workspaceId/recurring/:id/stop',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateParams(recurringExpenseParamsSchema)],
       preHandler: [
         workspaceAuth,
       ],
@@ -144,7 +137,9 @@ export async function recurringExpenseRoutes(
     '/recurring/trigger',
     {
       onRequest: [fastify.authenticate],
-      preValidation: [validateBody(recurringTriggerSchema)],
+      preHandler: [
+        validateBody(recurringTriggerSchema),
+      ],
       schema: {
         tags: ['Recurring Expense'],
         description:

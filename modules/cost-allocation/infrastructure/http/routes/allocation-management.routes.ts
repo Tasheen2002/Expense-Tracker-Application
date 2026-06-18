@@ -1,18 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { AllocationManagementController } from '../controllers/allocation-management.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  departmentParamsSchema,
-  costCenterParamsSchema,
-  projectParamsSchema,
   createDepartmentSchema,
   updateDepartmentSchema,
   createCostCenterSchema,
@@ -44,7 +38,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -53,11 +47,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function allocationManagementRoutes(
   fastify: FastifyInstance,
-  controller: AllocationManagementController,
-  prisma: PrismaClient
+  controller: AllocationManagementController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes via hooks
@@ -75,12 +68,11 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/departments',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createDepartmentSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -101,12 +93,10 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/departments',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(paginationQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -127,11 +117,9 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/departments/:departmentId',
     {
-      preValidation: [validateParams(departmentParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -151,12 +139,11 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/departments/:departmentId',
     {
-      preValidation: [validateParams(departmentParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateDepartmentSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -177,11 +164,10 @@ export async function allocationManagementRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/departments/:departmentId',
     {
-      preValidation: [validateParams(departmentParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -204,11 +190,10 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/departments/:departmentId/activate',
     {
-      preValidation: [validateParams(departmentParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Departments'],
@@ -232,12 +217,11 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/cost-centers',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createCostCenterSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -258,12 +242,10 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/cost-centers',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(paginationQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -284,11 +266,9 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
-      preValidation: [validateParams(costCenterParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -308,12 +288,11 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
-      preValidation: [validateParams(costCenterParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateCostCenterSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -334,11 +313,10 @@ export async function allocationManagementRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/cost-centers/:costCenterId',
     {
-      preValidation: [validateParams(costCenterParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -361,11 +339,10 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/cost-centers/:costCenterId/activate',
     {
-      preValidation: [validateParams(costCenterParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Cost Centers'],
@@ -389,12 +366,11 @@ export async function allocationManagementRoutes(
   fastify.post(
     '/workspaces/:workspaceId/projects',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createProjectSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
@@ -415,12 +391,10 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/projects',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(paginationQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
@@ -441,11 +415,9 @@ export async function allocationManagementRoutes(
   fastify.get(
     '/workspaces/:workspaceId/projects/:projectId',
     {
-      preValidation: [validateParams(projectParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
@@ -465,12 +437,11 @@ export async function allocationManagementRoutes(
   fastify.put(
     '/workspaces/:workspaceId/projects/:projectId',
     {
-      preValidation: [validateParams(projectParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateProjectSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
@@ -491,11 +462,10 @@ export async function allocationManagementRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/projects/:projectId',
     {
-      preValidation: [validateParams(projectParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
@@ -518,11 +488,10 @@ export async function allocationManagementRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/projects/:projectId/activate',
     {
-      preValidation: [validateParams(projectParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Projects'],
