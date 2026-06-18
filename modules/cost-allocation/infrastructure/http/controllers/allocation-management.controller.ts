@@ -1,76 +1,39 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@shared/response.helper';
-
-interface CreateDepartmentBody {
-  name: string;
-  code: string;
-  description?: string;
-  managerId?: string;
-  parentDepartmentId?: string;
-}
-
-interface UpdateDepartmentBody {
-  name?: string;
-  code?: string;
-  description?: string | null;
-  managerId?: string | null;
-  parentDepartmentId?: string | null;
-}
-
-interface CreateCostCenterBody {
-  name: string;
-  code: string;
-  description?: string;
-}
-
-interface UpdateCostCenterBody {
-  name?: string;
-  code?: string;
-  description?: string | null;
-}
-
-interface CreateProjectBody {
-  name: string;
-  code: string;
-  startDate: string | Date;
-  description?: string;
-  endDate?: string | Date;
-  managerId?: string;
-  budget?: number;
-}
-
-interface UpdateProjectBody {
-  name?: string;
-  code?: string;
-  description?: string | null;
-  startDate?: Date;
-  endDate?: Date | null;
-  managerId?: string | null;
-  budget?: number | null;
-}
-
-// Command Handlers
-import { CreateDepartmentHandler } from '../../../application/commands/create-department.command';
-import { UpdateDepartmentHandler } from '../../../application/commands/update-department.command';
-import { DeleteDepartmentHandler } from '../../../application/commands/delete-department.command';
-import { ActivateDepartmentHandler } from '../../../application/commands/activate-department.command';
-import { CreateCostCenterHandler } from '../../../application/commands/create-cost-center.command';
-import { UpdateCostCenterHandler } from '../../../application/commands/update-cost-center.command';
-import { DeleteCostCenterHandler } from '../../../application/commands/delete-cost-center.command';
-import { ActivateCostCenterHandler } from '../../../application/commands/activate-cost-center.command';
-import { CreateProjectHandler } from '../../../application/commands/create-project.command';
-import { UpdateProjectHandler } from '../../../application/commands/update-project.command';
-import { DeleteProjectHandler } from '../../../application/commands/delete-project.command';
-import { ActivateProjectHandler } from '../../../application/commands/activate-project.command';
-
-// Query Handlers
-import { GetDepartmentHandler } from '../../../application/queries/get-department.query';
-import { ListDepartmentsHandler } from '../../../application/queries/list-departments.query';
-import { GetCostCenterHandler } from '../../../application/queries/get-cost-center.query';
-import { ListCostCentersHandler } from '../../../application/queries/list-cost-centers.query';
-import { GetProjectHandler } from '../../../application/queries/get-project.query';
-import { ListProjectsHandler } from '../../../application/queries/list-projects.query';
+import {
+  CreateDepartmentHandler,
+  UpdateDepartmentHandler,
+  DeleteDepartmentHandler,
+  ActivateDepartmentHandler,
+  GetDepartmentHandler,
+  ListDepartmentsHandler,
+  CreateCostCenterHandler,
+  UpdateCostCenterHandler,
+  DeleteCostCenterHandler,
+  ActivateCostCenterHandler,
+  GetCostCenterHandler,
+  ListCostCentersHandler,
+  CreateProjectHandler,
+  UpdateProjectHandler,
+  DeleteProjectHandler,
+  ActivateProjectHandler,
+  GetProjectHandler,
+  ListProjectsHandler,
+} from '../../../application';
+import {
+  WorkspaceParamsInput,
+  DepartmentParamsInput,
+  CostCenterParamsInput,
+  ProjectParamsInput,
+  CreateDepartmentInput,
+  UpdateDepartmentInput,
+  CreateCostCenterInput,
+  UpdateCostCenterInput,
+  CreateProjectInput,
+  UpdateProjectInput,
+  PaginationQueryInput,
+} from '../validation/cost-allocation.schema';
 
 export class AllocationManagementController {
   constructor(
@@ -94,22 +57,175 @@ export class AllocationManagementController {
     private readonly listProjectsHandler: ListProjectsHandler
   ) {}
 
-  // ==========================================
-  // Department
-  // ==========================================
+  // ==========================================================================
+  // Reads (Queries)
+  // ==========================================================================
 
-  async createDepartment(request: AuthenticatedRequest, reply: FastifyReply) {
+  // --- Department ---
+
+  async getDepartment(
+    request: AuthenticatedRequest<{
+      Params: DepartmentParamsInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { departmentId } = request.params;
+      const department = await this.getDepartmentHandler.handle({
+        id: departmentId,
+      });
+
+      return ResponseHelper.ok(reply, 'Department retrieved successfully', department);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listDepartments(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParamsInput;
+      Querystring: PaginationQueryInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
+      const result = await this.listDepartmentsHandler.handle({
+        workspaceId,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Departments retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Cost Center ---
+
+  async getCostCenter(
+    request: AuthenticatedRequest<{
+      Params: CostCenterParamsInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { costCenterId } = request.params;
+      const costCenter = await this.getCostCenterHandler.handle({
+        id: costCenterId,
+      });
+
+      return ResponseHelper.ok(reply, 'Cost Center retrieved successfully', costCenter);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listCostCenters(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParamsInput;
+      Querystring: PaginationQueryInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
+      const result = await this.listCostCentersHandler.handle({
+        workspaceId,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Cost Centers retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Project ---
+
+  async getProject(
+    request: AuthenticatedRequest<{
+      Params: ProjectParamsInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { projectId } = request.params;
+      const project = await this.getProjectHandler.handle({ id: projectId });
+
+      return ResponseHelper.ok(reply, 'Project retrieved successfully', project);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listProjects(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParamsInput;
+      Querystring: PaginationQueryInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
+      const result = await this.listProjectsHandler.handle({
+        workspaceId,
+        limit,
+        offset,
+      });
+
+      return ResponseHelper.ok(reply, 'Projects retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ==========================================================================
+  // Writes (Commands)
+  // ==========================================================================
+
+  // --- Department ---
+
+  async createDepartment(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParamsInput;
+      Body: CreateDepartmentInput;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const userId = request.user.userId;
-
-      const { workspaceId } = request.params as { workspaceId: string };
-      const body = request.body as {
-        name: string;
-        code: string;
-        description?: string;
-        managerId?: string;
-        parentDepartmentId?: string;
-      };
+      const { workspaceId } = request.params;
+      const body = request.body;
       const result = await this.createDepartmentHandler.handle({
         workspaceId,
         actorId: userId,
@@ -127,66 +243,20 @@ export class AllocationManagementController {
         result.data,
         201
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listDepartments(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as {
-        limit?: string;
-        offset?: string;
-      };
-      const result = await this.listDepartmentsHandler.handle({
-        workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
-      });
-
-      return ResponseHelper.ok(reply, 'Departments retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getDepartment(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; departmentId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { departmentId } = request.params;
-      const department = await this.getDepartmentHandler.handle({
-        id: departmentId,
-      });
-
-      return ResponseHelper.ok(reply, 'Department retrieved successfully', department);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateDepartment(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; departmentId: string };
-      Body: UpdateDepartmentBody;
+      Params: DepartmentParamsInput;
+      Body: UpdateDepartmentInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, departmentId } = request.params;
       const result = await this.updateDepartmentHandler.handle({
         id: departmentId,
@@ -195,8 +265,8 @@ export class AllocationManagementController {
         name: request.body.name,
         code: request.body.code,
         description: request.body.description,
-        managerId: request.body.managerId,
-        parentDepartmentId: request.body.parentDepartmentId,
+        managerId: request.body.managerId ?? undefined,
+        parentDepartmentId: request.body.parentDepartmentId ?? undefined,
       });
 
       return ResponseHelper.fromCommand(
@@ -204,20 +274,19 @@ export class AllocationManagementController {
         result,
         'Department updated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteDepartment(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; departmentId: string };
+      Params: DepartmentParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, departmentId } = request.params;
       const result = await this.deleteDepartmentHandler.handle({
         id: departmentId,
@@ -230,20 +299,19 @@ export class AllocationManagementController {
       }
 
       return reply.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async activateDepartment(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; departmentId: string };
+      Params: DepartmentParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, departmentId } = request.params;
       const result = await this.activateDepartmentHandler.handle({
         id: departmentId,
@@ -256,25 +324,22 @@ export class AllocationManagementController {
         result,
         'Department activated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  // ==========================================
-  // Cost Center
-  // ==========================================
+  // --- Cost Center ---
 
   async createCostCenter(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: CreateCostCenterBody;
+      Params: WorkspaceParamsInput;
+      Body: CreateCostCenterInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId } = request.params;
       const result = await this.createCostCenterHandler.handle({
         workspaceId,
@@ -291,69 +356,20 @@ export class AllocationManagementController {
         result.data,
         201
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listCostCenters(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
-      const result = await this.listCostCentersHandler.handle({
-        workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
-      });
-
-      return ResponseHelper.ok(reply, 'Cost Centers retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCostCenter(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; costCenterId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { costCenterId } = request.params;
-      const costCenter = await this.getCostCenterHandler.handle({
-        id: costCenterId,
-      });
-
-      return ResponseHelper.ok(reply, 'Cost Center retrieved successfully', costCenter);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateCostCenter(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; costCenterId: string };
-      Body: UpdateCostCenterBody;
+      Params: CostCenterParamsInput;
+      Body: UpdateCostCenterInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, costCenterId } = request.params;
       const result = await this.updateCostCenterHandler.handle({
         id: costCenterId,
@@ -369,20 +385,19 @@ export class AllocationManagementController {
         result,
         'Cost Center updated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteCostCenter(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; costCenterId: string };
+      Params: CostCenterParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, costCenterId } = request.params;
       const result = await this.deleteCostCenterHandler.handle({
         id: costCenterId,
@@ -395,20 +410,19 @@ export class AllocationManagementController {
       }
 
       return reply.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async activateCostCenter(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; costCenterId: string };
+      Params: CostCenterParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, costCenterId } = request.params;
       const result = await this.activateCostCenterHandler.handle({
         id: costCenterId,
@@ -421,40 +435,32 @@ export class AllocationManagementController {
         result,
         'Cost Center activated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  // ==========================================
-  // Project
-  // ==========================================
+  // --- Project ---
 
   async createProject(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Body: CreateProjectBody;
+      Params: WorkspaceParamsInput;
+      Body: CreateProjectInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId } = request.params;
-
-      const startDate = new Date(request.body.startDate);
-      const endDate = request.body.endDate
-        ? new Date(request.body.endDate)
-        : undefined;
 
       const result = await this.createProjectHandler.handle({
         workspaceId,
         actorId: userId,
         name: request.body.name,
         code: request.body.code,
-        startDate,
+        startDate: request.body.startDate,
         description: request.body.description,
-        endDate,
+        endDate: request.body.endDate,
         managerId: request.body.managerId,
         budget: request.body.budget,
       });
@@ -466,67 +472,20 @@ export class AllocationManagementController {
         result.data,
         201
       );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listProjects(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
-      const result = await this.listProjectsHandler.handle({
-        workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
-      });
-
-      return ResponseHelper.ok(reply, 'Projects retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getProject(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; projectId: string };
-    }>,
-    reply: FastifyReply
-  ) {
-    try {
-      const { projectId } = request.params;
-      const project = await this.getProjectHandler.handle({ id: projectId });
-
-      return ResponseHelper.ok(reply, 'Project retrieved successfully', project);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateProject(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; projectId: string };
-      Body: UpdateProjectBody;
+      Params: ProjectParamsInput;
+      Body: UpdateProjectInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, projectId } = request.params;
       const result = await this.updateProjectHandler.handle({
         id: projectId,
@@ -536,9 +495,9 @@ export class AllocationManagementController {
         code: request.body.code,
         description: request.body.description,
         startDate: request.body.startDate,
-        endDate: request.body.endDate,
-        managerId: request.body.managerId,
-        budget: request.body.budget,
+        endDate: request.body.endDate ?? undefined,
+        managerId: request.body.managerId ?? undefined,
+        budget: request.body.budget ?? undefined,
       });
 
       return ResponseHelper.fromCommand(
@@ -546,20 +505,19 @@ export class AllocationManagementController {
         result,
         'Project updated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteProject(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; projectId: string };
+      Params: ProjectParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, projectId } = request.params;
       const result = await this.deleteProjectHandler.handle({
         id: projectId,
@@ -572,20 +530,19 @@ export class AllocationManagementController {
       }
 
       return reply.status(204).send();
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async activateProject(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; projectId: string };
+      Params: ProjectParamsInput;
     }>,
     reply: FastifyReply
   ) {
     try {
       const userId = request.user.userId;
-
       const { workspaceId, projectId } = request.params;
       const result = await this.activateProjectHandler.handle({
         id: projectId,
@@ -598,7 +555,7 @@ export class AllocationManagementController {
         result,
         'Project activated successfully'
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
