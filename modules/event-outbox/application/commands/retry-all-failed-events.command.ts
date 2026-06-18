@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { OutboxEventManagementService } from '../services/outbox-event.service';
 
 export interface RetryAllFailedEventsCommand extends ICommand {}
