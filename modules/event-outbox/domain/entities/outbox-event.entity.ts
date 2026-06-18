@@ -1,8 +1,21 @@
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import { OutboxEventId } from '../value-objects/outbox-event-id.vo';
 import { AggregateId } from '../value-objects/aggregate-id.vo';
 import { OutboxEventStatus } from '../enums/outbox-event-status.enum';
 import { InvalidOutboxEventError } from '../errors/outbox-event.errors';
+
+export interface OutboxEventDTO {
+  id: string;
+  aggregateType: string;
+  aggregateId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  status: string;
+  createdAt: string;
+  processedAt: string | null;
+  retryCount: number;
+  error: string | null;
+}
 
 // ── Domain Events ─────────────────────────────────────────────────────────────
 
@@ -29,7 +42,7 @@ export class OutboxDomainEvent extends DomainEvent {
   }
 }
 
-// ── Props & DTO ───────────────────────────────────────────────────────────────
+// ── Props ───────────────────────────────────────────────────────────────
 
 export interface OutboxEventProps {
   id: OutboxEventId;
@@ -42,19 +55,6 @@ export interface OutboxEventProps {
   processedAt?: Date;
   retryCount: number;
   error?: string;
-}
-
-export interface OutboxEventDTO {
-  id: string;
-  aggregateType: string;
-  aggregateId: string;
-  eventType: string;
-  payload: Record<string, unknown>;
-  status: string;
-  createdAt: string;
-  processedAt: string | null;
-  retryCount: number;
-  error: string | null;
 }
 
 // ── Entity ────────────────────────────────────────────────────────────────────
