@@ -3,7 +3,7 @@ import { ExpenseAllocation } from "../../domain/entities/expense-allocation.enti
 import { IExpenseAllocationRepository } from "../../domain/repositories/expense-allocation.repository";
 import { WorkspaceId } from "../../../identity-workspace";
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 import { AllocationAmount } from "../../domain/value-objects/allocation-amount";
 
 export class ExpenseAllocationRepositoryImpl
