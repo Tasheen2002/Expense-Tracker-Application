@@ -141,3 +141,89 @@ export const updateExpenseBodyJsonSchema = toJsonSchema(updateExpenseSchema);
 export const filterExpensesQueryJsonSchema = toJsonSchema(filterExpensesSchema);
 export const addTagToExpenseBodyJsonSchema = toJsonSchema(addTagToExpenseSchema);
 
+// ==================== RESPONSE SCHEMAS ====================
+
+export const expenseResponseSchema = z.object({
+  expenseId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  amount: z.string(),
+  currency: z.string(),
+  expenseDate: z.string(),
+  categoryId: z.string().uuid().nullable().optional(),
+  merchant: z.string().nullable().optional(),
+  paymentMethod: z.string(),
+  status: z.string(),
+  isReimbursable: z.boolean(),
+  receiptUrl: z.string().nullable().optional(),
+  tagIds: z.array(z.string().uuid()).optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const expenseStatisticsResponseSchema = z.object({
+  totalExpense: z.number(),
+  currency: z.string(),
+  expenseCountByStatus: z.object({
+    draft: z.number(),
+    submitted: z.number(),
+    approved: z.number(),
+    rejected: z.number(),
+    reimbursed: z.number(),
+  }),
+  totalCount: z.number(),
+});
+
+export const rejectExpenseBodySchema = z.object({
+  reason: z.string().min(1, 'Reason is required'),
+});
+
+export type RejectExpenseBodyInput = z.infer<typeof rejectExpenseBodySchema>;
+
+// JSON schemas
+export const rejectExpenseBodyJsonSchema = toJsonSchema(rejectExpenseBodySchema);
+
+// ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const expenseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: expenseResponseSchema,
+  })
+);
+
+export const paginatedExpensesEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(expenseResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const expenseStatisticsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: expenseStatisticsResponseSchema,
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
+

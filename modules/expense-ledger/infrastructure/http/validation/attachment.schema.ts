@@ -40,7 +40,50 @@ export const createAttachmentSchema = z.object({
 
 export type CreateAttachmentInput = z.infer<typeof createAttachmentSchema>
 
+export const attachmentResponseSchema = z.object({
+  attachmentId: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  fileName: z.string(),
+  filePath: z.string(),
+  fileSize: z.number(),
+  mimeType: z.string(),
+  uploadedBy: z.string().uuid(),
+  createdAt: z.string(),
+});
+
+export type AttachmentResponse = z.infer<typeof attachmentResponseSchema>;
+
 export const workspaceExpenseParamsJsonSchema = toJsonSchema(workspaceExpenseParamsSchema);
 export const attachmentParamsJsonSchema = toJsonSchema(attachmentParamsSchema);
 export const createAttachmentBodyJsonSchema = toJsonSchema(createAttachmentSchema);
+
+// ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const attachmentEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: attachmentResponseSchema,
+  })
+);
+
+export const listAttachmentsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(attachmentResponseSchema),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
 
