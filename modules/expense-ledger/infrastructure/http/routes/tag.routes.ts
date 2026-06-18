@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { TagController } from '../controllers/tag.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -24,23 +26,10 @@ import {
   createTagBodyJsonSchema,
   updateTagSchema,
   updateTagBodyJsonSchema,
+  tagEnvelopeJsonSchema,
+  paginatedTagsEnvelopeJsonSchema,
 } from '../validation/tag.schema';
-import {
-  successResponse,
-  noContentResponse,
-  paginatedResponse,
-} from '@shared/http/response-schemas';
-
-const tagSchema = {
-  type: 'object',
-  properties: {
-    tagId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    color: { type: 'string', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -49,8 +38,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function tagRoutes(
   fastify: FastifyInstance,
-  controller: TagController
+  controller: TagController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -61,9 +55,13 @@ export async function tagRoutes(
   fastify.post(
     '/workspaces/:workspaceId/tags',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [
         validateParams(workspaceParamsSchema),
         validateBody(createTagSchema),
+      ],
+      preHandler: [
+        workspaceAuth,
       ],
       schema: {
         tags: ['Tag'],
@@ -72,7 +70,7 @@ export async function tagRoutes(
         params: workspaceParamsJsonSchema,
         body: createTagBodyJsonSchema,
         response: {
-          201: successResponse(tagSchema, 201),
+          201: tagEnvelopeJsonSchema,
         },
       },
     },
@@ -84,9 +82,13 @@ export async function tagRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [
         validateParams(tagParamsSchema),
         validateBody(updateTagSchema),
+      ],
+      preHandler: [
+        workspaceAuth,
       ],
       schema: {
         tags: ['Tag'],
@@ -95,7 +97,7 @@ export async function tagRoutes(
         params: tagParamsJsonSchema,
         body: updateTagBodyJsonSchema,
         response: {
-          200: successResponse(tagSchema),
+          200: tagEnvelopeJsonSchema,
         },
       },
     },
@@ -107,7 +109,11 @@ export async function tagRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [validateParams(tagParamsSchema)],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Tag'],
         description: 'Delete a tag',
@@ -126,14 +132,18 @@ export async function tagRoutes(
   fastify.get(
     '/workspaces/:workspaceId/tags/:tagId',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [validateParams(tagParamsSchema)],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Tag'],
         description: 'Get tag by ID',
         security: [{ bearerAuth: [] }],
         params: tagParamsJsonSchema,
         response: {
-          200: successResponse(tagSchema),
+          200: tagEnvelopeJsonSchema,
         },
       },
     },
@@ -145,9 +155,13 @@ export async function tagRoutes(
   fastify.get(
     '/workspaces/:workspaceId/tags',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [
         validateParams(workspaceParamsSchema),
         validateQuery(paginationQuerySchema),
+      ],
+      preHandler: [
+        workspaceAuth,
       ],
       schema: {
         tags: ['Tag'],
@@ -156,7 +170,7 @@ export async function tagRoutes(
         params: workspaceParamsJsonSchema,
         querystring: paginationQueryJsonSchema,
         response: {
-          200: successResponse(paginatedResponse(tagSchema)),
+          200: paginatedTagsEnvelopeJsonSchema,
         },
       },
     },

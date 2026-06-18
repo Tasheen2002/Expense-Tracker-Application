@@ -12,8 +12,6 @@ import { TagController } from "../controllers/tag.controller";
 import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
 import { ExpenseSplitController } from "../controllers/expense-split.controller";
-import { workspaceAuthorizationMiddleware } from "@shared/middleware";
-import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerExpenseLedgerRoutes(
   fastify: FastifyInstance,
@@ -29,27 +27,16 @@ export async function registerExpenseLedgerRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // First authenticate, then authorize workspace access
-      instance.addHook("onRequest", async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-      instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma,
-        );
-      });
-
-      await expenseRoutes(instance, controllers.expenseController);
-      await categoryRoutes(instance, controllers.categoryController);
-      await tagRoutes(instance, controllers.tagController);
-      await attachmentRoutes(instance, controllers.attachmentController);
+      await expenseRoutes(instance, controllers.expenseController, prisma);
+      await categoryRoutes(instance, controllers.categoryController, prisma);
+      await tagRoutes(instance, controllers.tagController, prisma);
+      await attachmentRoutes(instance, controllers.attachmentController, prisma);
       await recurringExpenseRoutes(
         instance,
         controllers.recurringExpenseController,
+        prisma,
       );
-      await expenseSplitRoutes(instance, controllers.expenseSplitController);
+      await expenseSplitRoutes(instance, controllers.expenseSplitController, prisma);
     },
     { prefix: "/api/v1" },
   );

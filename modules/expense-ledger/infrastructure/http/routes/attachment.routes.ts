@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 import { AttachmentController } from '../controllers/attachment.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -17,25 +19,10 @@ import {
   workspaceExpenseParamsJsonSchema,
   attachmentParamsSchema,
   attachmentParamsJsonSchema,
+  attachmentEnvelopeJsonSchema,
+  listAttachmentsEnvelopeJsonSchema,
 } from '../validation/attachment.schema';
-import {
-  successResponse,
-  noContentResponse,
-} from '@shared/http/response-schemas';
-
-const attachmentSchema = {
-  type: 'object',
-  properties: {
-    attachmentId: { type: 'string', format: 'uuid' },
-    expenseId: { type: 'string', format: 'uuid' },
-    fileName: { type: 'string' },
-    filePath: { type: 'string' },
-    fileSize: { type: 'number' },
-    mimeType: { type: 'string' },
-    uploadedBy: { type: 'string', format: 'uuid' },
-    createdAt: { type: 'string', format: 'date-time' },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -44,8 +31,13 @@ const writeRateLimiter = createRateLimiter({
 
 export async function attachmentRoutes(
   fastify: FastifyInstance,
-  controller: AttachmentController
+  controller: AttachmentController,
+  prisma: PrismaClient
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -56,9 +48,13 @@ export async function attachmentRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [
         validateParams(workspaceExpenseParamsSchema),
         validateBody(createAttachmentSchema),
+      ],
+      preHandler: [
+        workspaceAuth,
       ],
       schema: {
         tags: ['Attachment'],
@@ -67,7 +63,7 @@ export async function attachmentRoutes(
         params: workspaceExpenseParamsJsonSchema,
         body: createAttachmentBodyJsonSchema,
         response: {
-          201: successResponse(attachmentSchema, 201),
+          201: attachmentEnvelopeJsonSchema,
         },
       },
     },
@@ -79,7 +75,11 @@ export async function attachmentRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [validateParams(attachmentParamsSchema)],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Attachment'],
         description: 'Delete an attachment',
@@ -98,14 +98,18 @@ export async function attachmentRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments/:attachmentId',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [validateParams(attachmentParamsSchema)],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Attachment'],
         description: 'Get attachment by ID',
         security: [{ bearerAuth: [] }],
         params: attachmentParamsJsonSchema,
         response: {
-          200: successResponse(attachmentSchema),
+          200: attachmentEnvelopeJsonSchema,
         },
       },
     },
@@ -117,20 +121,18 @@ export async function attachmentRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/attachments',
     {
+      onRequest: [fastify.authenticate],
       preValidation: [validateParams(workspaceExpenseParamsSchema)],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Attachment'],
         description: 'List all attachments for an expense',
         security: [{ bearerAuth: [] }],
         params: workspaceExpenseParamsJsonSchema,
         response: {
-          200: successResponse({
-            type: 'object',
-            required: ['items'],
-            properties: {
-              items: { type: 'array', items: attachmentSchema },
-            },
-          }),
+          200: listAttachmentsEnvelopeJsonSchema,
         },
       },
     },
