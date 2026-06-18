@@ -4,8 +4,6 @@ import { allocationManagementRoutes } from './allocation-management.routes';
 import { expenseAllocationRoutes } from './expense-allocation.routes';
 import { AllocationManagementController } from '../controllers/allocation-management.controller';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerCostAllocationRoutes(
   fastify: FastifyInstance,
@@ -17,26 +15,15 @@ export async function registerCostAllocationRoutes(
 ) {
   await fastify.register(
     async (instance) => {
-      // Add authentication hook first
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
       await allocationManagementRoutes(
         instance,
-        controllers.allocationManagementController
+        controllers.allocationManagementController,
+        prisma
       );
       await expenseAllocationRoutes(
         instance,
-        controllers.expenseAllocationController
+        controllers.expenseAllocationController,
+        prisma
       );
     },
     { prefix: '/api/v1' }
