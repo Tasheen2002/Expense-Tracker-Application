@@ -41,10 +41,18 @@ export class OutboxEventController {
     try {
       const { limit, offset } = request.query;
       const result = await this.getPendingHandler.handle({
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
-      return ResponseHelper.ok(reply, 'Pending events retrieved successfully', result);
+      return ResponseHelper.ok(reply, 'Pending events retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -57,11 +65,19 @@ export class OutboxEventController {
     try {
       const { maxRetries, limit, offset } = request.query;
       const result = await this.getFailedHandler.handle({
-        maxRetries: maxRetries ? parseInt(maxRetries, 10) : undefined,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        maxRetries,
+        limit,
+        offset,
       });
-      return ResponseHelper.ok(reply, 'Failed events retrieved successfully', result);
+      return ResponseHelper.ok(reply, 'Failed events retrieved successfully', {
+        items: result.items,
+        pagination: {
+          total: result.total,
+          limit: result.limit,
+          offset: result.offset,
+          hasMore: result.hasMore,
+        },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -144,7 +160,7 @@ export class OutboxEventController {
     try {
       const { retentionDays } = request.query;
       const result = await this.cleanupHandler.handle({
-        retentionDays: retentionDays ? parseInt(retentionDays, 10) : undefined,
+        retentionDays,
       });
       return ResponseHelper.fromCommand(reply, result, 'Processed events cleaned up successfully', undefined, 204);
     } catch (error: unknown) {
