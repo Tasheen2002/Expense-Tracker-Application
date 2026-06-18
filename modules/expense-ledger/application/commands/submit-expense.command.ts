@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { ExpenseService } from '../services/expense.service';
 import { ExpenseDTO } from '../../domain/entities/expense.entity';
 

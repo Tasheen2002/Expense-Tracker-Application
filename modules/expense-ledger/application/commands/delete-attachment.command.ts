@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
 import { ExpenseService } from '../services/expense.service';
 import { AttachmentId } from '../../domain/value-objects/attachment-id';
