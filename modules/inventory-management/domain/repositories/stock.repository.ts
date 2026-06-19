@@ -3,7 +3,7 @@ import { StockId } from '../value-objects/stock-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IStockRepository {
   save(stock: Stock): Promise<void>;
