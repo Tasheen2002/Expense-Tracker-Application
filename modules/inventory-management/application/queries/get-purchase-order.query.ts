@@ -3,13 +3,12 @@ import { PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
 import { PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import { PurchaseOrderNotFoundError } from '../../domain/errors/inventory.errors';
 import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  IQuery, IQueryHandler } from '@core/application/cqrs';
+
 
 export interface GetPurchaseOrderQuery extends IQuery {
-  purchaseOrderId: string;
-  workspaceId: string;
+  readonly purchaseOrderId: string;
+  readonly workspaceId: string;
 }
 
 export interface PurchaseOrderWithItemsDTO extends PurchaseOrderDTO {
