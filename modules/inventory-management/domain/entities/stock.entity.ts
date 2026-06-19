@@ -1,5 +1,5 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import { StockId } from '../value-objects/stock-id.vo';
 import { InsufficientStockError, InvalidQuantityError } from '../errors/inventory.errors';
 

@@ -1,5 +1,5 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import { SupplierId } from '../value-objects/supplier-id.vo';
 import { InvalidInventoryDataError } from '../errors/inventory.errors';
 import {

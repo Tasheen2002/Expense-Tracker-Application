@@ -1,5 +1,5 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import { LocationId } from '../value-objects/location-id.vo';
 import { LocationType } from '../enums/location-type';
 import { InvalidInventoryDataError } from '../errors/inventory.errors';
