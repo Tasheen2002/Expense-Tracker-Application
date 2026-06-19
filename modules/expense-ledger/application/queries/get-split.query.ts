@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
 import { ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 

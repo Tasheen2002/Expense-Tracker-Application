@@ -1,15 +1,14 @@
+
 import { SupplierService } from '../services/supplier.service';
 import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+  IQuery, IQueryHandler } from '@core/application/cqrs';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListSuppliersQuery extends IQuery {
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListSuppliersHandler

@@ -8,8 +8,6 @@ import { SupplierController } from '../controllers/supplier.controller';
 import { LocationController } from '../controllers/location.controller';
 import { PurchaseOrderController } from '../controllers/purchase-order.controller';
 import { StockController } from '../controllers/stock.controller';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 
 export async function registerInventoryRoutes(
   fastify: FastifyInstance,
@@ -20,21 +18,9 @@ export async function registerInventoryRoutes(
     stockController: StockController;
   },
   prisma: PrismaClient
-) {
+): Promise<void> {
   await fastify.register(
     async (instance) => {
-      // First authenticate, then authorize workspace access
-      instance.addHook('onRequest', async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-      instance.addHook('preHandler', async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma
-        );
-      });
-
       await supplierRoutes(instance, controllers.supplierController);
       await locationRoutes(instance, controllers.locationController);
       await purchaseOrderRoutes(instance, controllers.purchaseOrderController);

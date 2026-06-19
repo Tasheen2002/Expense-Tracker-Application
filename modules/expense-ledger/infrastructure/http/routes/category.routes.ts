@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { CategoryController } from '../controllers/category.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -8,15 +10,12 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
 } from '../validation/common.schema';
 import {
-  categoryParamsSchema,
   categoryParamsJsonSchema,
   createCategorySchema,
   createCategoryBodyJsonSchema,
@@ -24,27 +23,10 @@ import {
   updateCategoryBodyJsonSchema,
   listCategoriesQuerySchema,
   listCategoriesQueryJsonSchema,
+  categoryEnvelopeJsonSchema,
+  paginatedCategoriesEnvelopeJsonSchema,
 } from '../validation/category.schema';
-import {
-  successResponse,
-  noContentResponse,
-  paginatedResponse,
-} from '@shared/http/response-schemas';
-
-const categorySchema = {
-  type: 'object',
-  properties: {
-    categoryId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    name: { type: 'string' },
-    description: { type: 'string', nullable: true },
-    color: { type: 'string', nullable: true },
-    icon: { type: 'string', nullable: true },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -53,8 +35,16 @@ const writeRateLimiter = createRateLimiter({
 
 export async function categoryRoutes(
   fastify: FastifyInstance,
-  controller: CategoryController
-) {
+  controller: CategoryController,
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -65,9 +55,11 @@ export async function categoryRoutes(
   fastify.post(
     '/workspaces/:workspaceId/categories',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(createCategorySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category'],
@@ -76,7 +68,7 @@ export async function categoryRoutes(
         params: workspaceParamsJsonSchema,
         body: createCategoryBodyJsonSchema,
         response: {
-          201: successResponse(categorySchema, 201),
+          201: categoryEnvelopeJsonSchema,
         },
       },
     },
@@ -88,9 +80,11 @@ export async function categoryRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
-      preValidation: [
-        validateParams(categoryParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(updateCategorySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category'],
@@ -99,7 +93,7 @@ export async function categoryRoutes(
         params: categoryParamsJsonSchema,
         body: updateCategoryBodyJsonSchema,
         response: {
-          200: successResponse(categorySchema),
+          200: categoryEnvelopeJsonSchema,
         },
       },
     },
@@ -111,7 +105,11 @@ export async function categoryRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
-      preValidation: [validateParams(categoryParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Category'],
         description: 'Delete a category',
@@ -130,14 +128,17 @@ export async function categoryRoutes(
   fastify.get(
     '/workspaces/:workspaceId/categories/:categoryId',
     {
-      preValidation: [validateParams(categoryParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Category'],
         description: 'Get category by ID',
         security: [{ bearerAuth: [] }],
         params: categoryParamsJsonSchema,
         response: {
-          200: successResponse(categorySchema),
+          200: categoryEnvelopeJsonSchema,
         },
       },
     },
@@ -149,9 +150,10 @@ export async function categoryRoutes(
   fastify.get(
     '/workspaces/:workspaceId/categories',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(listCategoriesQuerySchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Category'],
@@ -160,7 +162,7 @@ export async function categoryRoutes(
         params: workspaceParamsJsonSchema,
         querystring: listCategoriesQueryJsonSchema,
         response: {
-          200: successResponse(paginatedResponse(categorySchema)),
+          200: paginatedCategoriesEnvelopeJsonSchema,
         },
       },
     },

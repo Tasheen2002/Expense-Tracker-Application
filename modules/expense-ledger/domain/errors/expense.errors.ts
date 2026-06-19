@@ -1,4 +1,4 @@
-import { DomainError } from '../../../../packages/core/src/domain/domain-error';
+import { DomainError } from '@core/domain/domain-error';
 
 /**
  * Base error class for Expense Ledger module

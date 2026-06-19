@@ -1,12 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { WorkflowController } from '../controllers/workflow.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateQuery,
-  validateParams,
 } from '../validation/validator';
 import {
   initiateWorkflowSchema,
@@ -14,8 +12,6 @@ import {
   rejectStepSchema,
   delegateStepSchema,
   paginationSchema,
-  workflowParamsSchema,
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   workflowParamsJsonSchema,
   initiateWorkflowBodyJsonSchema,
@@ -41,11 +37,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
-  controller: WorkflowController,
-  prisma: PrismaClient
+  controller: WorkflowController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -59,8 +54,8 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(initiateWorkflowSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(initiateWorkflowSchema), workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Initiate approval workflow for an expense',
@@ -76,12 +71,54 @@ export async function workflowRoutes(
       controller.initiateWorkflow(request as AuthenticatedRequest, reply)
   );
 
-  // Get workflow
+  // List pending approvals (Registered before dynamic :expenseId to avoid matching conflict)
+  fastify.get(
+    '/workspaces/:workspaceId/workflows/pending-approvals',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationSchema), workspaceAuth],
+      schema: {
+        tags: ['Approval Workflow'],
+        description: 'List pending approvals for current user',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
+        response: {
+          200: paginatedWorkflowsEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.listPendingApprovals(request as AuthenticatedRequest, reply)
+  );
+
+  // List user workflows (Registered before dynamic :expenseId to avoid matching conflict)
+  fastify.get(
+    '/workspaces/:workspaceId/workflows/user-workflows',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationSchema), workspaceAuth],
+      schema: {
+        tags: ['Approval Workflow'],
+        description: 'List all workflows for current user',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
+        response: {
+          200: paginatedWorkflowsEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.listUserWorkflows(request as AuthenticatedRequest, reply)
+  );
+
+  // Get workflow by expense ID
   fastify.get(
     '/workspaces/:workspaceId/workflows/:expenseId',
     {
-      preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get workflow by expense ID',
@@ -100,8 +137,8 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/approve',
     {
-      preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(approveStepSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(approveStepSchema), workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Approve current workflow step',
@@ -121,8 +158,8 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/reject',
     {
-      preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(rejectStepSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(rejectStepSchema), workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Reject current workflow step',
@@ -142,8 +179,8 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/delegate',
     {
-      preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(delegateStepSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(delegateStepSchema), workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delegate current workflow step to another user',
@@ -163,8 +200,8 @@ export async function workflowRoutes(
   fastify.post(
     '/workspaces/:workspaceId/workflows/:expenseId/cancel',
     {
-      preValidation: [validateParams(workflowParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Cancel workflow',
@@ -177,47 +214,5 @@ export async function workflowRoutes(
     },
     (request, reply) =>
       controller.cancelWorkflow(request as AuthenticatedRequest, reply)
-  );
-
-  // List pending approvals
-  fastify.get(
-    '/workspaces/:workspaceId/workflows/pending-approvals',
-    {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(paginationSchema)],
-      schema: {
-        tags: ['Approval Workflow'],
-        description: 'List pending approvals for current user',
-        security: [{ bearerAuth: [] }],
-        params: workspaceParamsJsonSchema,
-        querystring: paginationQueryJsonSchema,
-        response: {
-          200: paginatedWorkflowsEnvelopeJsonSchema,
-        },
-      },
-    },
-    (request, reply) =>
-      controller.listPendingApprovals(request as AuthenticatedRequest, reply)
-  );
-
-  // List user workflows
-  fastify.get(
-    '/workspaces/:workspaceId/workflows/user-workflows',
-    {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(paginationSchema)],
-      schema: {
-        tags: ['Approval Workflow'],
-        description: 'List all workflows for current user',
-        security: [{ bearerAuth: [] }],
-        params: workspaceParamsJsonSchema,
-        querystring: paginationQueryJsonSchema,
-        response: {
-          200: paginatedWorkflowsEnvelopeJsonSchema,
-        },
-      },
-    },
-    (request, reply) =>
-      controller.listUserWorkflows(request as AuthenticatedRequest, reply)
   );
 }

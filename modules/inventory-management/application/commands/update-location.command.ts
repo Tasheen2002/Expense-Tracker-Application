@@ -2,17 +2,16 @@ import { LocationService } from '../services/location.service';
 import { LocationDTO } from '../../domain/entities/location.entity';
 import { LocationType } from '../../domain/enums/location-type';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface UpdateLocationCommand extends ICommand {
-  locationId: string;
-  workspaceId: string;
-  name?: string;
-  type?: LocationType;
-  address?: string | null;
+  readonly locationId: string;
+  readonly workspaceId: string;
+  readonly name?: string;
+  readonly type?: LocationType;
+  readonly address?: string | null;
 }
 
 export class UpdateLocationHandler

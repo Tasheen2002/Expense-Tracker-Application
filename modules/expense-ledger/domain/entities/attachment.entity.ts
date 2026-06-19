@@ -11,17 +11,6 @@ import {
   InvalidFileTypeError,
 } from '../errors/expense.errors';
 
-export interface AttachmentProps {
-  id: AttachmentId;
-  expenseId: string;
-  fileName: string;
-  filePath: string;
-  fileSize: number;
-  mimeType: string;
-  uploadedBy: string;
-  createdAt: Date;
-}
-
 export interface AttachmentDTO {
   attachmentId: string;
   expenseId: string;
@@ -31,6 +20,17 @@ export interface AttachmentDTO {
   mimeType: string;
   uploadedBy: string;
   createdAt: string;
+}
+
+export interface AttachmentProps {
+  id: AttachmentId;
+  expenseId: string;
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedBy: string;
+  createdAt: Date;
 }
 
 export class Attachment {

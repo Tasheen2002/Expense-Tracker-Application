@@ -1,7 +1,7 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { WorkspaceMembershipService } from '../services/workspace-membership.service';
 import { WorkspaceMembershipDTO } from '../../domain/entities/workspace-membership.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListWorkspaceMembersQuery extends IQuery {
   readonly workspaceId: string;

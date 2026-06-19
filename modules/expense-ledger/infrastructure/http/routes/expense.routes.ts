@@ -1,6 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseController } from '../controllers/expense.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -8,13 +10,10 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
-  expenseParamsSchema,
   expenseParamsJsonSchema,
   paginationQuerySchema,
   paginationQueryJsonSchema,
@@ -26,68 +25,13 @@ import {
   updateExpenseBodyJsonSchema,
   filterExpensesSchema,
   filterExpensesQueryJsonSchema,
+  rejectExpenseBodySchema,
+  rejectExpenseBodyJsonSchema,
+  expenseEnvelopeJsonSchema,
+  paginatedExpensesEnvelopeJsonSchema,
+  expenseStatisticsEnvelopeJsonSchema,
 } from '../validation/expense.schema';
-import { z } from 'zod';
-import {
-  successResponse,
-  noContentResponse,
-  paginatedResponse,
-} from '@shared/http/response-schemas';
-
-const rejectBodySchema = z.object({
-  reason: z.string().min(1, 'Reason is required'),
-});
-const rejectBodyJsonSchema = {
-  type: 'object',
-  required: ['reason'],
-  properties: {
-    reason: { type: 'string', minLength: 1 },
-  },
-} as const;
-
-/**
- * Shared Expense Schema for Responses
- */
-const expenseSchema = {
-  type: 'object',
-  properties: {
-    expenseId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string', format: 'uuid' },
-    title: { type: 'string' },
-    description: { type: 'string', nullable: true },
-    amount: { type: 'string' },
-    currency: { type: 'string' },
-    expenseDate: { type: 'string', format: 'date-time' },
-    categoryId: { type: 'string', format: 'uuid', nullable: true },
-    merchant: { type: 'string', nullable: true },
-    paymentMethod: { type: 'string' },
-    status: { type: 'string' },
-    isReimbursable: { type: 'boolean' },
-    receiptUrl: { type: 'string', nullable: true },
-    tagIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const expenseStatisticsSchema = {
-  type: 'object',
-  properties: {
-    totalExpense: { type: 'number' },
-    currency: { type: 'string' },
-    expenseCountByStatus: {
-      type: 'object',
-      properties: {
-        draft: { type: 'number' },
-        submitted: { type: 'number' },
-        approved: { type: 'number' },
-        rejected: { type: 'number' },
-        reimbursed: { type: 'number' },
-      },
-    },
-    totalCount: { type: 'number' },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -96,8 +40,16 @@ const writeRateLimiter = createRateLimiter({
 
 export async function expenseRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseController
-) {
+  controller: ExpenseController,
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
+
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -108,9 +60,10 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(createExpenseSchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Expenses'],
@@ -119,7 +72,7 @@ export async function expenseRoutes(
         params: workspaceParamsJsonSchema,
         body: createExpenseBodyJsonSchema,
         response: {
-          201: successResponse(expenseSchema, 201),
+          201: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -131,9 +84,10 @@ export async function expenseRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(paginationQuerySchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Expenses'],
@@ -142,7 +96,7 @@ export async function expenseRoutes(
         params: workspaceParamsJsonSchema,
         querystring: paginationQueryJsonSchema,
         response: {
-          200: successResponse(paginatedResponse(expenseSchema)),
+          200: paginatedExpensesEnvelopeJsonSchema,
         },
       },
     },
@@ -154,9 +108,10 @@ export async function expenseRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/filter',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(filterExpensesSchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Expenses'],
@@ -165,7 +120,7 @@ export async function expenseRoutes(
         params: workspaceParamsJsonSchema,
         querystring: filterExpensesQueryJsonSchema,
         response: {
-          200: successResponse(paginatedResponse(expenseSchema)),
+          200: paginatedExpensesEnvelopeJsonSchema,
         },
       },
     },
@@ -177,9 +132,10 @@ export async function expenseRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/statistics',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(paginationQuerySchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Expenses'],
@@ -188,7 +144,7 @@ export async function expenseRoutes(
         params: workspaceParamsJsonSchema,
         querystring: paginationQueryJsonSchema,
         response: {
-          200: successResponse(expenseStatisticsSchema),
+          200: expenseStatisticsEnvelopeJsonSchema,
         },
       },
     },
@@ -200,14 +156,17 @@ export async function expenseRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Expenses'],
         description: 'Get an expense by ID',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -219,9 +178,10 @@ export async function expenseRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
-      preValidation: [
-        validateParams(expenseParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(updateExpenseSchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Expenses'],
@@ -230,7 +190,7 @@ export async function expenseRoutes(
         params: expenseParamsJsonSchema,
         body: updateExpenseBodyJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -242,7 +202,10 @@ export async function expenseRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Expenses'],
         description: 'Delete an expense',
@@ -261,14 +224,17 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/submit',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Expenses'],
         description: 'Submit an expense for approval',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -280,14 +246,18 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/approve',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Expenses'],
         description: 'Approve a submitted expense',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -299,18 +269,20 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/reject',
     {
-      preValidation: [
-        validateParams(expenseParamsSchema),
-        validateBody(rejectBodySchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(rejectExpenseBodySchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Expenses'],
         description: 'Reject a submitted expense',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
-        body: rejectBodyJsonSchema,
+        body: rejectExpenseBodyJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },
@@ -322,14 +294,18 @@ export async function expenseRoutes(
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/reimburse',
     {
-      preValidation: [validateParams(expenseParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Expenses'],
         description: 'Mark an approved expense as reimbursed',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
         response: {
-          200: successResponse(expenseSchema),
+          200: expenseEnvelopeJsonSchema,
         },
       },
     },

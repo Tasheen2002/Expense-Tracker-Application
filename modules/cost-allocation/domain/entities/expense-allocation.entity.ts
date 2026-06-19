@@ -5,8 +5,22 @@ import { CostCenterId } from '../value-objects/cost-center-id';
 import { ProjectId } from '../value-objects/project-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
 import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface ExpenseAllocationDTO {
+  id: string;
+  workspaceId: string;
+  expenseId: string;
+  amount: string;
+  percentage: string | null;
+  departmentId: string | null;
+  costCenterId: string | null;
+  projectId: string | null;
+  notes: string | null;
+  createdBy: string;
+  createdAt: string;
+}
 
 // ============================================================================
 // Domain Events
@@ -255,18 +269,4 @@ export class ExpenseAllocation extends AggregateRoot {
       createdAt: allocation.props.createdAt.toISOString(),
     };
   }
-}
-
-export interface ExpenseAllocationDTO {
-  id: string;
-  workspaceId: string;
-  expenseId: string;
-  amount: string;
-  percentage: string | null;
-  departmentId: string | null;
-  costCenterId: string | null;
-  projectId: string | null;
-  notes: string | null;
-  createdBy: string;
-  createdAt: string;
 }

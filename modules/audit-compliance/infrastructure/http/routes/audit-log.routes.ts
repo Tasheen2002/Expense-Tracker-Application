@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import {
   createRateLimiter,
@@ -10,12 +9,9 @@ import { RolePermissions } from '@shared/middleware/role-authorization.middlewar
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  auditLogParamsSchema,
   auditSummaryQuerySchema,
   entityHistoryQuerySchema,
   listAuditLogsQuerySchema,
@@ -43,11 +39,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function auditLogRoutes(
   fastify: FastifyInstance,
-  controller: AuditLogController,
-  prisma: PrismaClient
+  controller: AuditLogController
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -61,11 +56,8 @@ export async function auditLogRoutes(
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/summary',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(auditSummaryQuerySchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(auditSummaryQuerySchema), workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get audit summary statistics for a workspace',
@@ -85,11 +77,8 @@ export async function auditLogRoutes(
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/entity-history',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(entityHistoryQuerySchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(entityHistoryQuerySchema), workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get audit history for a specific entity',
@@ -109,11 +98,8 @@ export async function auditLogRoutes(
   fastify.get(
     '/workspaces/:workspaceId/audit-logs',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(listAuditLogsQuerySchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(listAuditLogsQuerySchema), workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'List audit logs with optional filters',
@@ -133,8 +119,8 @@ export async function auditLogRoutes(
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/:auditLogId',
     {
-      preValidation: [validateParams(auditLogParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Audit'],
         description: 'Get a specific audit log by ID',
@@ -153,12 +139,9 @@ export async function auditLogRoutes(
   fastify.post(
     '/workspaces/:workspaceId/audit-logs',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateBody(createAuditLogSchema),
-      ],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
+        validateBody(createAuditLogSchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
       ],
@@ -181,12 +164,9 @@ export async function auditLogRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/audit-logs',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(purgeAuditLogsQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
+        validateQuery(purgeAuditLogsQuerySchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
       ],

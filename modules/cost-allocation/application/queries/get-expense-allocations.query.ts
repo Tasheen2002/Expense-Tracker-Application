@@ -1,10 +1,10 @@
 import { ExpenseAllocationService } from '../services/expense-allocation.service';
 import { ExpenseAllocationDTO } from '../../domain/entities/expense-allocation.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetExpenseAllocationsQuery extends IQuery {
-  expenseId: string;
-  workspaceId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
 }
 
 export class GetExpenseAllocationsHandler implements IQueryHandler<GetExpenseAllocationsQuery, ExpenseAllocationDTO[]> {

@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { TagService } from '../services/tag.service';
 
 export interface DeleteTagCommand extends ICommand {

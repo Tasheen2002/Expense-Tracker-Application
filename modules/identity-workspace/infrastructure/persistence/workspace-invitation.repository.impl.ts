@@ -5,11 +5,11 @@ import { WorkspaceMembership } from "../../domain/entities/workspace-membership.
 import { InvitationId } from "../../domain/value-objects/invitation-id.vo";
 import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class WorkspaceInvitationRepositoryImpl

@@ -7,7 +7,7 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { Expense } from '../../domain/entities/expense.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
 import { CategoryId } from '../../domain/value-objects/category-id';
@@ -22,7 +22,7 @@ import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prism
 
 // ... (imports)
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 
 type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
   include: { category: true; tags: true; attachments: true };

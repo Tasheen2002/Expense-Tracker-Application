@@ -16,10 +16,10 @@ export async function registerApprovalWorkflowRoutes(
   await fastify.register(
     async (instance) => {
       // Register approval chain routes
-      await approvalChainRoutes(instance, controllers.approvalChainController, prisma);
+      await approvalChainRoutes(instance, controllers.approvalChainController);
 
       // Register workflow routes
-      await workflowRoutes(instance, controllers.workflowController, prisma);
+      await workflowRoutes(instance, controllers.workflowController);
     },
     { prefix: '/api/v1' }
   );

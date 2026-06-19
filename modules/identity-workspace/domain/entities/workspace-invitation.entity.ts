@@ -6,8 +6,25 @@ import {
   InvitationAlreadyAcceptedError,
   InvitationExpiredError,
 } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+
+// ============================================================================
+// DTOs
+// ============================================================================
+
+export interface WorkspaceInvitationDTO {
+  invitationId: string;
+  workspaceId: string;
+  email: string;
+  role: string;
+  token: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  isExpired: boolean;
+  isAccepted: boolean;
+  createdAt: string;
+}
 
 // ============================================================================
 // Domain Events

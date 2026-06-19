@@ -4,19 +4,19 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateProjectCommand extends ICommand {
-  id: string;
-  workspaceId: string;
-  actorId: string;
-  name?: string;
-  code?: string;
-  description?: string | null;
-  startDate?: string | Date;
-  endDate?: string | Date | null;
-  managerId?: string | null;
-  budget?: number | null;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
+  readonly name?: string;
+  readonly code?: string;
+  readonly description?: string | null;
+  readonly startDate?: string | Date;
+  readonly endDate?: string | Date | null;
+  readonly managerId?: string | null;
+  readonly budget?: number | null;
 }
 
 export class UpdateProjectHandler implements ICommandHandler<

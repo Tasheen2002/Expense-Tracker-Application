@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { TagService } from '../services/tag.service';
 import { TagDTO } from '../../domain/entities/tag.entity';
 import { TagNotFoundError } from '../../domain/errors/expense.errors';

@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { RecurringExpenseService } from '../services/recurring-expense.service';
 
 export interface ProcessRecurringExpensesCommand extends ICommand {

@@ -64,3 +64,102 @@ export const listSettlementsQueryJsonSchema = toJsonSchema(listSettlementsQueryS
 export const splitParamsJsonSchema = toJsonSchema(splitParamsSchema);
 export const settlementParamsJsonSchema = toJsonSchema(settlementParamsSchema);
 
+// ==================== RESPONSE SCHEMAS ====================
+
+export const participantResponseSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  shareAmount: z.string(),
+  sharePercentage: z.number().nullable().optional(),
+  isPaid: z.boolean(),
+  paidAt: z.string().nullable().optional(),
+});
+
+export const splitResponseSchema = z.object({
+  id: z.string().uuid(),
+  expenseId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  paidBy: z.string().uuid(),
+  totalAmount: z.string(),
+  currency: z.string(),
+  splitType: z.enum(['EQUAL', 'EXACT', 'PERCENTAGE']),
+  participants: z.array(participantResponseSchema),
+  isFullySettled: z.boolean(),
+  outstandingAmount: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const settlementResponseSchema = z.object({
+  id: z.string().uuid(),
+  splitId: z.string().uuid(),
+  fromUserId: z.string().uuid(),
+  toUserId: z.string().uuid(),
+  totalOwedAmount: z.string(),
+  paidAmount: z.string(),
+  remainingAmount: z.string(),
+  currency: z.string(),
+  status: z.enum(['PENDING', 'PARTIAL', 'SETTLED']),
+  settledAt: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const splitEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: splitResponseSchema,
+  })
+);
+
+export const paginatedSplitsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(splitResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const settlementEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: settlementResponseSchema,
+  })
+);
+
+export const paginatedSettlementsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      items: z.array(settlementResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
+

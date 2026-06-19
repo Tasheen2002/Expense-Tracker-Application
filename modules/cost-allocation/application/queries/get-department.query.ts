@@ -1,9 +1,9 @@
 import { AllocationManagementService } from '../services/allocation-management.service';
 import { DepartmentDTO } from '../../domain/entities/department.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetDepartmentQuery extends IQuery {
-  id: string;
+  readonly id: string;
 }
 
 export class GetDepartmentHandler implements IQueryHandler<GetDepartmentQuery, DepartmentDTO> {

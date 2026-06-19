@@ -1,7 +1,22 @@
 import { ProjectId } from '../value-objects/project-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface ProjectDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  startDate: string;
+  endDate: string | null;
+  managerId: string | null;
+  budget: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events
@@ -290,19 +305,4 @@ export class Project extends AggregateRoot {
       updatedAt: project.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ProjectDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  code: string;
-  description: string | null;
-  startDate: string;
-  endDate: string | null;
-  managerId: string | null;
-  budget: number | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

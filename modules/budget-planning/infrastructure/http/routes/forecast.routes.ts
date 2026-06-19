@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ForecastController } from '../controllers/forecast.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -8,13 +7,9 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
-import { validateBody, validateParams } from '../validation/validator';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { validateBody } from '../validation/validator';
 import {
-  planIdParamsSchema,
-  forecastParamsSchema,
-  forecastIdParamsSchema,
-  forecastItemParamsSchema,
   createForecastSchema,
   addForecastItemSchema,
   planIdParamsJsonSchema,
@@ -36,11 +31,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function forecastRoutes(
   fastify: FastifyInstance,
-  controller: ForecastController,
-  prisma: PrismaClient
+  controller: ForecastController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -58,12 +52,11 @@ export async function forecastRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budget-plans/:planId/forecasts',
     {
-      preValidation: [validateParams(planIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createForecastSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
@@ -84,11 +77,9 @@ export async function forecastRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budget-plans/:planId/forecasts',
     {
-      preValidation: [validateParams(planIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
@@ -108,11 +99,9 @@ export async function forecastRoutes(
   fastify.get(
     '/workspaces/:workspaceId/forecasts/:id',
     {
-      preValidation: [validateParams(forecastParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
@@ -132,11 +121,10 @@ export async function forecastRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/forecasts/:id',
     {
-      preValidation: [validateParams(forecastParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Forecasts'],
@@ -163,12 +151,11 @@ export async function forecastRoutes(
   fastify.post(
     '/workspaces/:workspaceId/forecasts/:forecastId/items',
     {
-      preValidation: [validateParams(forecastIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(addForecastItemSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
@@ -189,11 +176,9 @@ export async function forecastRoutes(
   fastify.get(
     '/workspaces/:workspaceId/forecasts/:forecastId/items',
     {
-      preValidation: [validateParams(forecastIdParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],
@@ -213,11 +198,10 @@ export async function forecastRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/forecast-items/:itemId',
     {
-      preValidation: [validateParams(forecastItemParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Planning - Forecast Items'],

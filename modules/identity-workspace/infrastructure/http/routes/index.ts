@@ -56,22 +56,19 @@ export async function registerIdentityWorkspaceRoutes(
       // Workspace-scoped routes
       await registerWorkspaceScopedRoutes(
         instance,
-        controllers.workspaceController,
-        prisma
+        controllers.workspaceController
       );
 
       // Workspace member routes
       await registerMemberRoutes(
         instance,
-        controllers.memberController,
-        prisma
+        controllers.memberController
       );
 
       // Workspace invitation routes
       await registerWorkspaceInvitationRoutes(
         instance,
-        controllers.invitationController,
-        prisma
+        controllers.invitationController
       );
     },
     { prefix: '/api/v1' }

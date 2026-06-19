@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { SpendingLimitController } from '../controllers/spending-limit.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -10,15 +9,12 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createSpendingLimitSchema,
   updateSpendingLimitSchema,
   listSpendingLimitsSchema,
-  spendingLimitWorkspaceParamsSchema,
-  spendingLimitParamsSchema,
   spendingLimitWorkspaceParamsJsonSchema,
   spendingLimitParamsJsonSchema,
   createSpendingLimitBodyJsonSchema,
@@ -27,7 +23,7 @@ import {
   spendingLimitEnvelopeJsonSchema,
   paginatedSpendingLimitsEnvelopeJsonSchema,
 } from '../validation/spending-limit.schema';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -36,11 +32,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function spendingLimitRoutes(
   fastify: FastifyInstance,
-  controller: SpendingLimitController,
-  prisma: PrismaClient
+  controller: SpendingLimitController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -54,12 +49,11 @@ export async function spendingLimitRoutes(
   fastify.post(
     '/workspaces/:workspaceId/spending-limits',
     {
-      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createSpendingLimitSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Spending Limit'],
@@ -80,12 +74,10 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits',
     {
-      preValidation: [validateParams(spendingLimitWorkspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(listSpendingLimitsSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Spending Limit'],
@@ -106,11 +98,9 @@ export async function spendingLimitRoutes(
   fastify.get(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      preValidation: [validateParams(spendingLimitParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Spending Limit'],
@@ -130,12 +120,11 @@ export async function spendingLimitRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      preValidation: [validateParams(spendingLimitParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateSpendingLimitSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Spending Limit'],
@@ -156,11 +145,10 @@ export async function spendingLimitRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      preValidation: [validateParams(spendingLimitParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Spending Limit'],

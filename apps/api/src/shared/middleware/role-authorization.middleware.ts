@@ -12,14 +12,15 @@ export function requireRole(allowedRoles: string[]) {
       });
     }
 
-    const userRole = request.workspaceMembership.role;
+    const userRole = request.workspaceMembership.role.toLowerCase();
+    const normalizedAllowedRoles = allowedRoles.map(role => role.toLowerCase());
 
     // Check if user's role is in the allowed roles
-    if (!allowedRoles.includes(userRole)) {
+    if (!normalizedAllowedRoles.includes(userRole)) {
       return reply.status(403).send({
         success: false,
         statusCode: 403,
-        message: `Access denied: This action requires one of the following roles: ${allowedRoles.join(', ')}. Your role: ${userRole}`,
+        message: `Access denied: This action requires one of the following roles: ${allowedRoles.join(', ')}. Your role: ${request.workspaceMembership.role}`,
       });
     }
 
@@ -51,7 +52,7 @@ export function hasRole(
   request: FastifyRequest,
   allowedRoles: string[]
 ): boolean {
-  const userRole = request.workspaceMembership?.role;
+  const userRole = request.workspaceMembership?.role?.toLowerCase();
   if (!userRole) return false;
-  return allowedRoles.includes(userRole);
+  return allowedRoles.map(role => role.toLowerCase()).includes(userRole);
 }

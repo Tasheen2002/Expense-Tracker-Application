@@ -1,18 +1,17 @@
 import { SupplierService } from '../services/supplier.service';
 import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface UpdateSupplierCommand extends ICommand {
-  supplierId: string;
-  workspaceId: string;
-  name?: string;
-  contactEmail?: string | null;
-  contactPhone?: string | null;
-  address?: string | null;
+  readonly supplierId: string;
+  readonly workspaceId: string;
+  readonly name?: string;
+  readonly contactEmail?: string | null;
+  readonly contactPhone?: string | null;
+  readonly address?: string | null;
 }
 
 export class UpdateSupplierHandler

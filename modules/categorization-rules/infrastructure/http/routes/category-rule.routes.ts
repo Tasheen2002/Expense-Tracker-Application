@@ -1,19 +1,15 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { CategoryRuleController } from '../controllers/category-rule.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createRuleSchema,
   updateRuleSchema,
   ruleQuerySchema,
-  workspaceParamsSchema,
-  ruleParamsSchema,
   executionQuerySchema,
   workspaceParamsJsonSchema,
   ruleParamsJsonSchema,
@@ -30,7 +26,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -39,11 +35,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function categoryRuleRoutes(
   fastify: FastifyInstance,
-  controller: CategoryRuleController,
-  prisma: PrismaClient
+  controller: CategoryRuleController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -56,12 +51,11 @@ export async function categoryRuleRoutes(
   fastify.post(
     '/workspaces/:workspaceId/rules',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createRuleSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -82,12 +76,10 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(ruleQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -108,11 +100,9 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Category Rule'],
@@ -132,12 +122,11 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateRuleSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -158,11 +147,10 @@ export async function categoryRuleRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -185,11 +173,10 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/activate',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -209,11 +196,10 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/deactivate',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -233,12 +219,10 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules/:ruleId/executions',
     {
-      preValidation: [validateParams(ruleParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(executionQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Category Rule'],

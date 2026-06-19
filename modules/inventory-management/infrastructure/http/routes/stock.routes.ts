@@ -1,7 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { StockController } from '../controllers/stock.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -9,50 +10,20 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   adjustStockSchema,
-  workspaceParamsSchema,
   listStockQuerySchema,
   listTransactionsQuerySchema,
+  workspaceParamsJsonSchema,
+  adjustStockBodyJsonSchema,
+  listStockQueryJsonSchema,
+  listTransactionsQueryJsonSchema,
+  adjustStockEnvelopeJsonSchema,
+  paginatedStockEnvelopeJsonSchema,
+  paginatedTransactionsEnvelopeJsonSchema,
 } from '../validation/inventory.schema';
-
-const stockSchema = {
-  type: 'object',
-  properties: {
-    stockId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string' },
-    variantId: { type: 'string' },
-    locationId: { type: 'string' },
-    quantity: { type: 'number' },
-    reservedQuantity: { type: 'number' },
-    availableQuantity: { type: 'number' },
-    reorderLevel: { type: 'number' },
-    reorderQuantity: { type: 'number' },
-    isLowStock: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const transactionSchema = {
-  type: 'object',
-  properties: {
-    transactionId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string' },
-    variantId: { type: 'string' },
-    locationId: { type: 'string' },
-    type: { type: 'string', enum: ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT'] },
-    quantity: { type: 'number' },
-    referenceId: { type: 'string', nullable: true },
-    referenceType: { type: 'string', nullable: true },
-    notes: { type: 'string', nullable: true },
-    createdBy: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-  },
-};
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -62,7 +33,15 @@ const writeRateLimiter = createRateLimiter({
 export async function stockRoutes(
   fastify: FastifyInstance,
   controller: StockController
-) {
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -74,45 +53,20 @@ export async function stockRoutes(
   fastify.post(
     '/workspaces/:workspaceId/stock/adjust',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(adjustStockSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
+        RolePermissions.MANAGER_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Stock'],
         description: 'Adjust stock levels (IN, OUT, TRANSFER, ADJUSTMENT)',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['variantId', 'locationId', 'quantity', 'type'],
-          properties: {
-            variantId: { type: 'string', minLength: 1 },
-            locationId: { type: 'string', format: 'uuid' },
-            quantity: { type: 'number', minimum: 1 },
-            type: { type: 'string', enum: ['IN', 'OUT', 'TRANSFER', 'ADJUSTMENT'] },
-            notes: { type: 'string', nullable: true },
-            referenceId: { type: 'string', format: 'uuid', nullable: true },
-            referenceType: { type: 'string', nullable: true },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: adjustStockBodyJsonSchema,
         response: {
-          200: {
-            description: 'Stock adjusted successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  stock: stockSchema,
-                  transaction: transactionSchema,
-                },
-              },
-            },
-          },
+          200: adjustStockEnvelopeJsonSchema,
         },
       },
     },
@@ -124,40 +78,19 @@ export async function stockRoutes(
   fastify.get(
     '/workspaces/:workspaceId/stock',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(listStockQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Stock'],
         description: 'Get stock levels',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listStockQueryJsonSchema,
         response: {
-          200: {
-            description: 'Stock retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: stockSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedStockEnvelopeJsonSchema,
         },
       },
     },
@@ -169,40 +102,19 @@ export async function stockRoutes(
   fastify.get(
     '/workspaces/:workspaceId/stock/transactions',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(listTransactionsQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Stock'],
         description: 'List inventory transactions',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listTransactionsQueryJsonSchema,
         response: {
-          200: {
-            description: 'Transactions retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: transactionSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedTransactionsEnvelopeJsonSchema,
         },
       },
     },

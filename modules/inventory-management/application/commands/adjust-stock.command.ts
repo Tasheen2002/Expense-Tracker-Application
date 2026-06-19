@@ -3,26 +3,25 @@ import { StockDTO } from '../../domain/entities/stock.entity';
 import { InventoryTransactionDTO } from '../../domain/entities/inventory-transaction.entity';
 import { TransactionType } from '../../domain/enums/transaction-type';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface AdjustStockCommand extends ICommand {
-  workspaceId: string;
-  variantId: string;
-  locationId: string;
-  quantity: number;
-  type: TransactionType;
-  notes?: string;
-  referenceId?: string;
-  referenceType?: string;
-  createdBy: string;
+  readonly workspaceId: string;
+  readonly variantId: string;
+  readonly locationId: string;
+  readonly quantity: number;
+  readonly type: TransactionType;
+  readonly notes?: string;
+  readonly referenceId?: string;
+  readonly referenceType?: string;
+  readonly createdBy: string;
 }
 
 export interface AdjustStockResult {
-  stock: StockDTO;
-  transaction: InventoryTransactionDTO;
+  readonly stock: StockDTO;
+  readonly transaction: InventoryTransactionDTO;
 }
 
 export class AdjustStockHandler

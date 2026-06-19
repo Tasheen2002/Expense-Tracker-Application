@@ -7,6 +7,11 @@ import { GetLocationHandler } from '../../../application/queries/get-location.qu
 import { ListLocationsHandler } from '../../../application/queries/list-locations.query';
 import { LocationType } from '../../../domain/enums/location-type';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateLocationInput,
+  UpdateLocationInput,
+  ListQuery,
+} from '../validation/inventory.schema';
 
 export class LocationController {
   constructor(
@@ -20,7 +25,7 @@ export class LocationController {
   async createLocation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: { name: string; type?: string; address?: string };
+      Body: CreateLocationInput;
     }>,
     reply: FastifyReply
   ) {
@@ -47,7 +52,7 @@ export class LocationController {
   async updateLocation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; locationId: string };
-      Body: { name?: string; type?: string; address?: string | null };
+      Body: UpdateLocationInput;
     }>,
     reply: FastifyReply
   ) {
@@ -60,7 +65,12 @@ export class LocationController {
         type: request.body.type as LocationType | undefined,
         address: request.body.address,
       });
-      return ResponseHelper.fromCommand(reply, result, 'Location updated successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Location updated successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -78,10 +88,13 @@ export class LocationController {
         locationId,
         workspaceId,
       });
-      if (!result.success) {
-        return ResponseHelper.fromCommand(reply, result, 'Location deletion failed');
-      }
-      return reply.status(204).send();
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Location deleted successfully',
+        undefined,
+        204
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -108,7 +121,7 @@ export class LocationController {
   async listLocations(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: ListQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -117,8 +130,8 @@ export class LocationController {
       const { limit, offset } = request.query;
       const result = await this.listLocationsHandler.handle({
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Locations retrieved successfully', {
         items: result.items,

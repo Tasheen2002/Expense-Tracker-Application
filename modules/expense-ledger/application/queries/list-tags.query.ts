@@ -1,7 +1,7 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { TagService } from '../services/tag.service';
 import { TagDTO } from '../../domain/entities/tag.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListTagsQuery extends IQuery {
   readonly workspaceId: string;

@@ -2,7 +2,7 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { IExpenseRepository } from '../../domain/repositories/expense.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';

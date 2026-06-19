@@ -63,7 +63,7 @@ export async function registerAuthRoutes(
   fastify.get(
     '/auth/me',
     {
-      preHandler: [fastify.authenticate],
+      onRequest: [fastify.authenticate],
       schema: {
         description: 'Get current authenticated user',
         tags: ['Authentication'],

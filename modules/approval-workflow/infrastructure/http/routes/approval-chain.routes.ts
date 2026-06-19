@@ -1,19 +1,16 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
   validateQuery,
-  validateParams,
 } from '../validation/validator';
 import {
   createChainSchema,
   updateChainSchema,
   listChainsSchema,
-  chainParamsSchema,
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
   chainParamsJsonSchema,
   createChainBodyJsonSchema,
@@ -36,11 +33,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
-  controller: ApprovalChainController,
-  prisma: PrismaClient
+  controller: ApprovalChainController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -54,8 +50,12 @@ export async function approvalChainRoutes(
   fastify.post(
     '/workspaces/:workspaceId/approval-chains',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(createChainSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(createChainSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Create a new approval chain',
@@ -75,8 +75,8 @@ export async function approvalChainRoutes(
   fastify.get(
     '/workspaces/:workspaceId/approval-chains',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateQuery(listChainsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(listChainsSchema), workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all approval chains in workspace',
@@ -96,8 +96,8 @@ export async function approvalChainRoutes(
   fastify.get(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
-      preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get approval chain by ID',
@@ -116,8 +116,12 @@ export async function approvalChainRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
-      preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth, validateBody(updateChainSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateChainSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Update approval chain',
@@ -137,8 +141,8 @@ export async function approvalChainRoutes(
   fastify.post(
     '/workspaces/:workspaceId/approval-chains/:chainId/activate',
     {
-      preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Activate approval chain',
@@ -157,8 +161,8 @@ export async function approvalChainRoutes(
   fastify.post(
     '/workspaces/:workspaceId/approval-chains/:chainId/deactivate',
     {
-      preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Deactivate approval chain',
@@ -177,8 +181,8 @@ export async function approvalChainRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
-      preValidation: [validateParams(chainParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delete approval chain',

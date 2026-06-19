@@ -15,7 +15,7 @@ import {
   WorkspaceNotFoundError,
   WorkspaceAlreadyExistsError,
 } from '../../domain/errors/identity.errors';
-import { PaginationOptions, PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginationOptions, PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface WorkspaceManagementServiceOptions {
   page?: number;

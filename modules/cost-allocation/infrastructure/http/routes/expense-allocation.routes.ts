@@ -1,12 +1,24 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import {
+  validateBody,
+} from '../validation/validator';
+import {
+  allocateExpenseSchema,
+  expenseParamsJsonSchema,
+  workspaceParamsJsonSchema,
+  allocateExpenseBodyJsonSchema,
+  expenseAllocationListEnvelopeJsonSchema,
+  allocationSummaryEnvelopeJsonSchema,
+} from '../validation/cost-allocation.schema';
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -17,94 +29,35 @@ export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
   controller: ExpenseAllocationController
 ) {
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('preHandler', async (request, reply) => {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
+  };
+
+  // Apply write rate limiting to all mutation routes via hooks
+  fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
   });
 
-  const expenseAllocationSchema = {
-    type: 'object',
-    properties: {
-      id: { type: 'string', format: 'uuid' },
-      workspaceId: { type: 'string', format: 'uuid' },
-      expenseId: { type: 'string', format: 'uuid' },
-      amount: { type: 'string' },
-      percentage: { type: 'string', nullable: true },
-      departmentId: { type: 'string', nullable: true },
-      costCenterId: { type: 'string', nullable: true },
-      projectId: { type: 'string', nullable: true },
-      notes: { type: 'string', nullable: true },
-      createdBy: { type: 'string' },
-      createdAt: { type: 'string', format: 'date-time' },
-    },
-  };
-
-  const commandResponseSchema = {
-    type: 'object',
-    properties: {
-      success: { type: 'boolean' },
-      statusCode: { type: 'number' },
-      message: { type: 'string' },
-      data: { type: 'null' },
-    },
-  };
-
   // Allocate expense to departments/cost centers/projects
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(allocateExpenseSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
-        description:
-          'Allocate expense to departments, cost centers, or projects',
+        description: 'Allocate expense to departments, cost centers, or projects',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
-        body: {
-          type: 'object',
-          required: ['allocations'],
-          properties: {
-            allocations: {
-              type: 'array',
-              minItems: 1,
-              items: {
-                type: 'object',
-                required: ['amount'],
-                properties: {
-                  amount: { type: 'number', minimum: 0.01 },
-                  percentage: { type: 'number', minimum: 0, maximum: 100 },
-                  departmentId: { type: 'string', format: 'uuid' },
-                  costCenterId: { type: 'string', format: 'uuid' },
-                  projectId: { type: 'string', format: 'uuid' },
-                  notes: { type: 'string', maxLength: 500 },
-                },
-              },
-            },
-          },
-        },
+        params: expenseParamsJsonSchema,
+        body: allocateExpenseBodyJsonSchema,
         response: {
-          201: {
-            description: 'Expense allocated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'array',
-                items: expenseAllocationSchema,
-              },
-            },
-          },
+          201: expenseAllocationListEnvelopeJsonSchema,
         },
       },
     },
@@ -116,33 +69,17 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get all allocations for an expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: expenseParamsJsonSchema,
         response: {
-          200: {
-            description: 'Allocations retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'array',
-                items: expenseAllocationSchema,
-              },
-            },
-          },
+          200: expenseAllocationListEnvelopeJsonSchema,
         },
       },
     },
@@ -154,19 +91,16 @@ export async function expenseAllocationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      preHandler: [requireRole(['owner', 'admin'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Delete all allocations for an expense',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId', 'expenseId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            expenseId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: expenseParamsJsonSchema,
         response: {
           204: {
             type: 'null',
@@ -183,70 +117,17 @@ export async function expenseAllocationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/allocations/summary',
     {
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get allocation summary statistics for workspace',
         security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          required: ['workspaceId'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-        },
+        params: workspaceParamsJsonSchema,
         response: {
-          200: {
-            description: 'Allocation summary retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  totalAllocations: { type: 'number' },
-                  byDepartment: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        departmentId: { type: 'string' },
-                        departmentName: { type: 'string' },
-                        total: { type: 'number' },
-                        count: { type: 'number' },
-                      },
-                    },
-                  },
-                  byCostCenter: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        costCenterId: { type: 'string' },
-                        costCenterName: { type: 'string' },
-                        total: { type: 'number' },
-                        count: { type: 'number' },
-                      },
-                    },
-                  },
-                  byProject: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        projectId: { type: 'string' },
-                        projectName: { type: 'string' },
-                        total: { type: 'number' },
-                        count: { type: 'number' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: allocationSummaryEnvelopeJsonSchema,
         },
       },
     },

@@ -3,9 +3,9 @@ import { OutboxEvent, OutboxEventDTO, OutboxDomainEvent } from '../../domain/ent
 import { OutboxEventId } from '../../domain/value-objects/outbox-event-id.vo';
 import { OutboxEventNotFoundError, OutboxEventProcessingError } from '../../domain/errors/outbox-event.errors';
 import { OutboxEventStatus } from '../../domain/enums/outbox-event-status.enum';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 import { MAX_RETRY_COUNT, BATCH_SIZE } from '../../domain/constants/outbox.constants';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 type StoreEventData = {
   aggregateType: string;

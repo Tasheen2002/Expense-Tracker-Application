@@ -1,6 +1,6 @@
 import { WorkspaceInvitationService } from '../services/workspace-invitation.service';
 import { WorkspaceMembershipDTO } from '../../domain/entities/workspace-membership.entity';
-import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
+import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface AcceptInvitationCommand extends ICommand {
   readonly token: string;

@@ -3,7 +3,7 @@ import {
   InvalidCredentialsError,
   UserInactiveError,
 } from '../../domain/errors/identity.errors';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface LoginUserQuery extends IQuery {
   readonly email: string;

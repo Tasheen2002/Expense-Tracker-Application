@@ -1,6 +1,6 @@
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetWorkspaceByIdQuery extends IQuery {
   readonly workspaceId: string;

@@ -1,7 +1,18 @@
 import { CostCenterId } from '../value-objects/cost-center-id';
 import { WorkspaceId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface CostCenterDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events
@@ -241,15 +252,4 @@ export class CostCenter extends AggregateRoot {
       updatedAt: costCenter.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface CostCenterDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  code: string;
-  description: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

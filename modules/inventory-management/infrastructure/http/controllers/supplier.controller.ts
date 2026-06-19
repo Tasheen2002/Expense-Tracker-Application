@@ -6,6 +6,11 @@ import { DeleteSupplierHandler } from '../../../application/commands/delete-supp
 import { GetSupplierHandler } from '../../../application/queries/get-supplier.query';
 import { ListSuppliersHandler } from '../../../application/queries/list-suppliers.query';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreateSupplierInput,
+  UpdateSupplierInput,
+  ListQuery,
+} from '../validation/inventory.schema';
 
 export class SupplierController {
   constructor(
@@ -19,12 +24,7 @@ export class SupplierController {
   async createSupplier(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        name: string;
-        contactEmail?: string;
-        contactPhone?: string;
-        address?: string;
-      };
+      Body: CreateSupplierInput;
     }>,
     reply: FastifyReply
   ) {
@@ -49,12 +49,7 @@ export class SupplierController {
   async updateSupplier(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; supplierId: string };
-      Body: {
-        name?: string;
-        contactEmail?: string | null;
-        contactPhone?: string | null;
-        address?: string | null;
-      };
+      Body: UpdateSupplierInput;
     }>,
     reply: FastifyReply
   ) {
@@ -65,7 +60,12 @@ export class SupplierController {
         workspaceId,
         ...request.body,
       });
-      return ResponseHelper.fromCommand(reply, result, 'Supplier updated successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Supplier updated successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -83,10 +83,13 @@ export class SupplierController {
         supplierId,
         workspaceId,
       });
-      if (!result.success) {
-        return ResponseHelper.fromCommand(reply, result, 'Supplier deletion failed');
-      }
-      return reply.status(204).send();
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Supplier deleted successfully',
+        undefined,
+        204
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -113,7 +116,7 @@ export class SupplierController {
   async listSuppliers(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { limit?: string; offset?: string };
+      Querystring: ListQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -122,8 +125,8 @@ export class SupplierController {
       const { limit, offset } = request.query;
       const result = await this.listSuppliersHandler.handle({
         workspaceId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Suppliers retrieved successfully', {
         items: result.items,

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { BudgetController } from '../controllers/budget.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -10,7 +9,6 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
@@ -19,9 +17,6 @@ import {
   listBudgetsSchema,
   addAllocationSchema,
   updateAllocationSchema,
-  workspaceParamsSchema,
-  budgetParamsSchema,
-  allocationParamsSchema,
   workspaceParamsJsonSchema,
   budgetParamsJsonSchema,
   allocationParamsJsonSchema,
@@ -36,7 +31,7 @@ import {
   paginatedAllocationsEnvelopeJsonSchema,
   paginatedAlertsEnvelopeJsonSchema,
 } from '../validation/budget.schema';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -45,11 +40,10 @@ const writeRateLimiter = createRateLimiter({
 
 export async function budgetRoutes(
   fastify: FastifyInstance,
-  controller: BudgetController,
-  prisma: PrismaClient
+  controller: BudgetController
 ) {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
   // Apply write rate limiting to all mutation routes
@@ -63,12 +57,11 @@ export async function budgetRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budgets',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(createBudgetSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget'],
@@ -89,12 +82,10 @@ export async function budgetRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budgets',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateQuery(listBudgetsSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Budget'],
@@ -115,11 +106,9 @@ export async function budgetRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budgets/:budgetId',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget'],
@@ -139,12 +128,11 @@ export async function budgetRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/budgets/:budgetId',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateBudgetSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget'],
@@ -165,11 +153,10 @@ export async function budgetRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budgets/:budgetId/activate',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget'],
@@ -189,11 +176,10 @@ export async function budgetRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budgets/:budgetId/archive',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget'],
@@ -213,11 +199,10 @@ export async function budgetRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/budgets/:budgetId',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget'],
@@ -240,12 +225,11 @@ export async function budgetRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(addAllocationSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -266,11 +250,9 @@ export async function budgetRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations',
     {
-      preValidation: [validateParams(budgetParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -290,12 +272,11 @@ export async function budgetRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
-      preValidation: [validateParams(allocationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(updateAllocationSchema),
-        requireRole(['owner', 'admin']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -316,11 +297,10 @@ export async function budgetRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/budgets/:budgetId/allocations/:allocationId',
     {
-      preValidation: [validateParams(allocationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Budget Allocation'],
@@ -343,11 +323,9 @@ export async function budgetRoutes(
   fastify.get(
     '/workspaces/:workspaceId/budgets/alerts/unread',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Budget Alert'],

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { MemberController } from '../controllers/member.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -7,16 +6,13 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  memberParamsSchema,
   updateMemberRoleSchema,
   paginationQuerySchema,
   workspaceParamsJsonSchema,
@@ -34,11 +30,14 @@ const writeRateLimiter = createRateLimiter({
 
 export async function registerMemberRoutes(
   fastify: FastifyInstance,
-  controller: MemberController,
-  prisma: PrismaClient
-) {
+  controller: MemberController
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   fastify.addHook('onRequest', async (request, reply) => {
@@ -51,14 +50,10 @@ export async function registerMemberRoutes(
   fastify.get(
     '/workspaces/:workspaceId/members',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
+        validateQuery(paginationQuerySchema),
         workspaceAuth,
-        requireRole(['owner', 'admin', 'member']),
       ],
       schema: {
         tags: ['Member'],
@@ -79,11 +74,10 @@ export async function registerMemberRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/members/:userId',
     {
-      preValidation: [validateParams(memberParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
         workspaceAuth,
-        requireRole(['owner', 'admin']),
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Member'],
@@ -106,12 +100,11 @@ export async function registerMemberRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/members/:userId/role',
     {
-      preValidation: [validateParams(memberParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
-        requireRole(['owner', 'admin']),
         validateBody(updateMemberRoleSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Member'],

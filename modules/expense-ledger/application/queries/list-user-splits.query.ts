@@ -1,7 +1,7 @@
-import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
 import { ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListUserSplitsQuery extends IQuery {
   readonly userId: string;

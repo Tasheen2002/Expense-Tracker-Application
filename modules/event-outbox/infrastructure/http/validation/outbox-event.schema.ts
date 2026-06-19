@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { toJsonSchema } from './validator';
 
-// ── Request Schemas (Zod) ─────────────────────────────────────────────────────
+// ==================== PARAM SCHEMAS ====================
 
 export const workspaceParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
@@ -11,6 +12,8 @@ export const eventParamsSchema = z.object({
   eventId: z.string().uuid('Invalid event ID format'),
 });
 
+// ==================== REQUEST SCHEMAS ====================
+
 export const storeOutboxEventSchema = z.object({
   aggregateType: z.string().min(1, 'Aggregate type is required'),
   aggregateId: z.string().uuid('Invalid aggregate ID format'),
@@ -19,21 +22,55 @@ export const storeOutboxEventSchema = z.object({
 });
 
 export const pendingEventsQuerySchema = z.object({
-  limit: z.string().regex(/^\d+$/).optional(),
-  offset: z.string().regex(/^\d+$/).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export const failedEventsQuerySchema = z.object({
-  maxRetries: z.string().regex(/^\d+$/).optional(),
-  limit: z.string().regex(/^\d+$/).optional(),
-  offset: z.string().regex(/^\d+$/).optional(),
+  maxRetries: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 export const cleanupEventsQuerySchema = z.object({
-  retentionDays: z.string().regex(/^\d+$/).optional(),
+  retentionDays: z.coerce.number().int().min(1).optional(),
 });
 
-// ── Inferred Types ────────────────────────────────────────────────────────────
+// ==================== RESPONSE SCHEMAS ====================
+
+export const outboxEventResponseSchema = z.object({
+  id: z.string().uuid(),
+  aggregateType: z.string(),
+  aggregateId: z.string().uuid(),
+  eventType: z.string(),
+  payload: z.record(z.unknown()),
+  status: z.string(),
+  createdAt: z.string(),
+  processedAt: z.string().nullable(),
+  retryCount: z.number(),
+  error: z.string().nullable(),
+});
+
+export const paginatedOutboxEventResponseSchema = z.object({
+  items: z.array(outboxEventResponseSchema),
+  pagination: z.object({
+    total: z.number(),
+    limit: z.number(),
+    offset: z.number(),
+    hasMore: z.boolean(),
+  }),
+});
+
+export const retryAllResponseSchema = z.object({
+  retried: z.number(),
+  deadLettered: z.number(),
+});
+
+export const deadLetterCountResponseSchema = z.object({
+  count: z.number(),
+});
+
+// ==================== INFERRED INPUT TYPES ====================
 
 export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
 export type EventParams = z.infer<typeof eventParamsSchema>;
@@ -42,101 +79,57 @@ export type PendingEventsQuerystring = z.infer<typeof pendingEventsQuerySchema>;
 export type FailedEventsQuerystring = z.infer<typeof failedEventsQuerySchema>;
 export type CleanupEventsQuerystring = z.infer<typeof cleanupEventsQuerySchema>;
 
-// ── Response JSON Schemas (for Swagger) ──────────────────────────────────────
+// ==================== PRE-COMPUTED JSON SCHEMAS ====================
 
-export const outboxEventResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    aggregateType: { type: 'string' },
-    aggregateId: { type: 'string', format: 'uuid' },
-    eventType: { type: 'string' },
-    payload: { type: 'object' },
-    status: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-    processedAt: { type: 'string', format: 'date-time', nullable: true },
-    retryCount: { type: 'integer' },
-    error: { type: 'string', nullable: true },
-  },
-} as const;
+export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const eventParamsJsonSchema = toJsonSchema(eventParamsSchema);
+export const storeOutboxEventBodyJsonSchema = toJsonSchema(storeOutboxEventSchema);
+export const pendingEventsQueryJsonSchema = toJsonSchema(pendingEventsQuerySchema);
+export const failedEventsQueryJsonSchema = toJsonSchema(failedEventsQuerySchema);
+export const cleanupEventsQueryJsonSchema = toJsonSchema(cleanupEventsQuerySchema);
 
-export const paginatedOutboxEventResponseSchema = {
-  type: 'object',
-  properties: {
-    items: { type: 'array', items: outboxEventResponseSchema },
-    total: { type: 'integer' },
-    limit: { type: 'integer' },
-    offset: { type: 'integer' },
-    hasMore: { type: 'boolean' },
-  },
-} as const;
+// ==================== ENVELOPE JSON SCHEMAS ====================
 
-export const retryAllResponseSchema = {
-  type: 'object',
-  properties: {
-    retried: { type: 'integer' },
-    deadLettered: { type: 'integer' },
-  },
-} as const;
+export const outboxEventEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: outboxEventResponseSchema,
+  })
+);
 
-export const deadLetterCountResponseSchema = {
-  type: 'object',
-  properties: {
-    count: { type: 'integer' },
-  },
-} as const;
+export const paginatedOutboxEventEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: paginatedOutboxEventResponseSchema,
+  })
+);
 
-// ── Request JSON Schemas (for Fastify validation / Swagger body) ──────────────
+export const retryAllEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: retryAllResponseSchema,
+  })
+);
 
-export const storeOutboxEventBodyJson = {
-  type: 'object',
-  required: ['aggregateType', 'aggregateId', 'eventType', 'payload'],
-  properties: {
-    aggregateType: { type: 'string', minLength: 1 },
-    aggregateId: { type: 'string', format: 'uuid' },
-    eventType: { type: 'string', minLength: 1 },
-    payload: { type: 'object' },
-  },
-} as const;
+export const deadLetterCountEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: deadLetterCountResponseSchema,
+  })
+);
 
-export const workspaceParamsJson = {
-  type: 'object',
-  required: ['workspaceId'],
-  properties: {
-    workspaceId: { type: 'string', format: 'uuid' },
-  },
-} as const;
-
-export const eventParamsJson = {
-  type: 'object',
-  required: ['workspaceId', 'eventId'],
-  properties: {
-    workspaceId: { type: 'string', format: 'uuid' },
-    eventId: { type: 'string', format: 'uuid' },
-  },
-} as const;
-
-export const pendingEventsQueryJson = {
-  type: 'object',
-  properties: {
-    limit: { type: 'string', pattern: '^[0-9]+$' },
-    offset: { type: 'string', pattern: '^[0-9]+$' },
-  },
-} as const;
-
-export const failedEventsQueryJson = {
-  type: 'object',
-  properties: {
-    maxRetries: { type: 'string', pattern: '^[0-9]+$' },
-    limit: { type: 'string', pattern: '^[0-9]+$' },
-    offset: { type: 'string', pattern: '^[0-9]+$' },
-  },
-} as const;
-
-export const cleanupEventsQueryJson = {
-  type: 'object',
-  properties: {
-    retentionDays: { type: 'string', pattern: '^[0-9]+$' },
-  },
-} as const;
-
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);

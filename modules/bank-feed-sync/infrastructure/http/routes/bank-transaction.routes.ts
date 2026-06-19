@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { BankTransactionController } from '../controllers/bank-transaction.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -6,17 +6,11 @@ import {
   RateLimitPresets,
   endpointKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
-  validateBody,
-  validateParams,
-  validateQuery,
-} from '../validation/validator';
-import {
-  transactionParamsSchema,
-  workspaceParamsSchema,
   pendingTransactionsQuerySchema,
   processTransactionBodySchema,
-  connectionParamsSchema,
   paginationQuerySchema,
   workspaceParamsJsonSchema,
   connectionParamsJsonSchema,
@@ -38,6 +32,10 @@ export async function bankTransactionRoutes(
   fastify: FastifyInstance,
   controller: BankTransactionController
 ) {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
+  };
+
   fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
@@ -48,10 +46,8 @@ export async function bankTransactionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/transactions/pending',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-        validateQuery(pendingTransactionsQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(pendingTransactionsQuerySchema), workspaceAuth],
       schema: {
         tags: ['Bank Transaction'],
         description: 'Get pending bank transactions in a workspace',
@@ -71,7 +67,8 @@ export async function bankTransactionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/transactions/:transactionId',
     {
-      preValidation: [validateParams(transactionParamsSchema)],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Bank Transaction'],
         description: 'Get a specific bank transaction',
@@ -90,10 +87,8 @@ export async function bankTransactionRoutes(
   fastify.put(
     '/workspaces/:workspaceId/bank-feed-sync/transactions/:transactionId/process',
     {
-      preValidation: [
-        validateParams(transactionParamsSchema),
-        validateBody(processTransactionBodySchema),
-      ],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateBody(processTransactionBodySchema), workspaceAuth],
       schema: {
         tags: ['Bank Transaction'],
         description: 'Process a bank transaction (import, match, or ignore)',
@@ -113,10 +108,8 @@ export async function bankTransactionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/bank-feed-sync/transactions/connection/:connectionId',
     {
-      preValidation: [
-        validateParams(connectionParamsSchema),
-        validateQuery(paginationQuerySchema),
-      ],
+      onRequest: [fastify.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema), workspaceAuth],
       schema: {
         tags: ['Bank Transaction'],
         description: 'Get all transactions for a specific bank connection',
@@ -132,4 +125,3 @@ export async function bankTransactionRoutes(
       controller.getTransactionsByConnection(request as AuthenticatedRequest, reply)
   );
 }
-

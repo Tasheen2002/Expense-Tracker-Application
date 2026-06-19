@@ -2,8 +2,21 @@ import { MembershipId } from "../value-objects/membership-id.vo";
 import { UserId } from "../value-objects/user-id.vo";
 import { WorkspaceId } from "../value-objects/workspace-id.vo";
 import { CannotChangeOwnerRoleError } from "../errors/identity.errors";
-import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+
+// ============================================================================
+// DTOs
+// ============================================================================
+
+export interface WorkspaceMembershipDTO {
+  membershipId: string;
+  userId: string;
+  workspaceId: string;
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events

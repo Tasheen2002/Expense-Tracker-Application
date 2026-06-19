@@ -2,13 +2,12 @@ import { LocationService } from '../services/location.service';
 import { LocationDTO } from '../../domain/entities/location.entity';
 import { LocationNotFoundError } from '../../domain/errors/inventory.errors';
 import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  IQuery, IQueryHandler } from '@core/application/cqrs';
+
 
 export interface GetLocationQuery extends IQuery {
-  locationId: string;
-  workspaceId: string;
+  readonly locationId: string;
+  readonly workspaceId: string;
 }
 
 export class GetLocationHandler

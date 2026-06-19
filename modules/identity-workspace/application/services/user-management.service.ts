@@ -7,7 +7,7 @@ import {
   UserNotFoundError,
   UserAlreadyExistsError,
 } from '../../domain/errors/identity.errors'
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface'
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface'
 
 export interface UserManagementServiceOptions {
   page?: number

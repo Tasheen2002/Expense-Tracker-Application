@@ -46,3 +46,64 @@ export const recurringExpenseParamsJsonSchema = toJsonSchema(recurringExpensePar
 export const createRecurringExpenseBodyJsonSchema = toJsonSchema(createRecurringExpenseSchema);
 export const recurringTriggerBodyJsonSchema = toJsonSchema(recurringTriggerSchema);
 
+// ==================== RESPONSE SCHEMAS ====================
+
+export const recurringExpenseTemplateResponseSchema = z.object({
+  title: z.string(),
+  description: z.string().nullable().optional(),
+  amount: z.number(),
+  currency: z.string(),
+  categoryId: z.string().uuid().nullable().optional(),
+  merchant: z.string().nullable().optional(),
+  paymentMethod: z.string().nullable().optional(),
+  isReimbursable: z.boolean().nullable().optional(),
+  tagIds: z.array(z.string().uuid()).nullable().optional(),
+});
+
+export const recurringExpenseResponseSchema = z.object({
+  id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
+  userId: z.string().uuid(),
+  frequency: z.enum(['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY']),
+  interval: z.number(),
+  startDate: z.string(),
+  endDate: z.string().nullable().optional(),
+  nextRunDate: z.string(),
+  status: z.enum(['ACTIVE', 'PAUSED', 'COMPLETED']),
+  template: recurringExpenseTemplateResponseSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type RecurringExpenseResponse = z.infer<typeof recurringExpenseResponseSchema>;
+
+// ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const recurringExpenseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: recurringExpenseResponseSchema,
+  })
+);
+
+export const recurringTriggerEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      count: z.number(),
+    }),
+  })
+);
+
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
+

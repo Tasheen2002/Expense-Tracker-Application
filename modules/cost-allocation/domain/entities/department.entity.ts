@@ -1,7 +1,20 @@
 import { DepartmentId } from '../value-objects/department-id';
 import { WorkspaceId, UserId } from '../../../identity-workspace';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
+
+export interface DepartmentDTO {
+  id: string;
+  workspaceId: string;
+  name: string;
+  code: string;
+  description: string | null;
+  managerId: string | null;
+  parentDepartmentId: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // ============================================================================
 // Domain Events
@@ -267,17 +280,4 @@ export class Department extends AggregateRoot {
       updatedAt: department.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface DepartmentDTO {
-  id: string;
-  workspaceId: string;
-  name: string;
-  code: string;
-  description: string | null;
-  managerId: string | null;
-  parentDepartmentId: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

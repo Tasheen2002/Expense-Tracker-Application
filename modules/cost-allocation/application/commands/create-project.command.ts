@@ -4,18 +4,18 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateProjectCommand extends ICommand {
-  workspaceId: string;
-  actorId: string;
-  name: string;
-  code: string;
-  startDate: string | Date;
-  description?: string;
-  endDate?: string | Date;
-  managerId?: string;
-  budget?: number;
+  readonly workspaceId: string;
+  readonly actorId: string;
+  readonly name: string;
+  readonly code: string;
+  readonly startDate: string | Date;
+  readonly description?: string;
+  readonly endDate?: string | Date;
+  readonly managerId?: string;
+  readonly budget?: number;
 }
 
 export class CreateProjectHandler implements ICommandHandler<

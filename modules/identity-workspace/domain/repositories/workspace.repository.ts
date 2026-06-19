@@ -4,7 +4,7 @@ import { UserId } from "../value-objects/user-id.vo";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IWorkspaceRepository {
   save(workspace: Workspace): Promise<void>;

@@ -1,13 +1,12 @@
 import { SupplierService } from '../services/supplier.service';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface DeleteSupplierCommand extends ICommand {
-  supplierId: string;
-  workspaceId: string;
+  readonly supplierId: string;
+  readonly workspaceId: string;
 }
 
 export class DeleteSupplierHandler

@@ -14,8 +14,8 @@ import {
   CannotRemoveOwnerError,
 } from '../../domain/errors/identity.errors';
 
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { ICacheService } from '../../../../packages/core/src/domain/interfaces/cache.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
+import { ICacheService } from '@core/domain/interfaces/cache.interface';
 
 export class WorkspaceMembershipService {
   constructor(

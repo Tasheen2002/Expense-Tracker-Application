@@ -1,10 +1,10 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 import { OutboxEventManagementService } from '../services/outbox-event.service';
 import { OutboxEventDTO } from '../../domain/entities/outbox-event.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface GetPendingEventsQuery extends IQuery {
   readonly limit?: number;

@@ -3,12 +3,12 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface DeleteAllocationsCommand extends ICommand {
-  expenseId: string;
-  workspaceId: string;
-  userId: string;
+  readonly expenseId: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteAllocationsHandler implements ICommandHandler<

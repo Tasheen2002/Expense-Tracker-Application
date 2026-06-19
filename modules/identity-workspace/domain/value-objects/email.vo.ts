@@ -1,7 +1,7 @@
 import {
   EmptyFieldError,
   InvalidFormatError,
-} from '../../../../packages/core/src/domain/domain-error';
+} from '@core/domain/domain-error';
 
 export class Email {
   private constructor(private readonly value: string) {

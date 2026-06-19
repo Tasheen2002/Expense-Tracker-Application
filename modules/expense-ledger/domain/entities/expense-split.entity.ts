@@ -3,14 +3,38 @@ import { ExpenseId } from '../value-objects/expense-id';
 import { Money } from '../value-objects/money';
 import { SplitType } from '../enums/split-type';
 import { SplitParticipant } from './split-participant.entity';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import {
   InvalidSplitAmountError,
   InvalidSplitPercentageError,
   InsufficientParticipantsError,
 } from '../errors/split-expense.errors';
 import { Decimal } from '@prisma/client/runtime/library'; // Decimal used only for arithmetic
+
+export interface ExpenseSplitParticipantDTO {
+  id: string;
+  userId: string;
+  shareAmount: string;
+  sharePercentage?: number;
+  isPaid: boolean;
+  paidAt?: string;
+}
+
+export interface ExpenseSplitDTO {
+  id: string;
+  expenseId: string;
+  workspaceId: string;
+  paidBy: string;
+  totalAmount: string;
+  currency: string;
+  splitType: string;
+  participants: ExpenseSplitParticipantDTO[];
+  isFullySettled: boolean;
+  outstandingAmount: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export class ExpenseSplitCreatedEvent extends DomainEvent {
   constructor(
@@ -52,30 +76,6 @@ export interface ExpenseSplitProps {
   participants: SplitParticipant[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface ExpenseSplitParticipantDTO {
-  id: string;
-  userId: string;
-  shareAmount: string;
-  sharePercentage?: number;
-  isPaid: boolean;
-  paidAt?: string;
-}
-
-export interface ExpenseSplitDTO {
-  id: string;
-  expenseId: string;
-  workspaceId: string;
-  paidBy: string;
-  totalAmount: string;
-  currency: string;
-  splitType: string;
-  participants: ExpenseSplitParticipantDTO[];
-  isFullySettled: boolean;
-  outstandingAmount: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export class ExpenseSplit extends AggregateRoot {

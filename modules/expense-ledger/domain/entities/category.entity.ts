@@ -1,6 +1,6 @@
 import { CategoryId } from '../value-objects/category-id';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import {
   CategoryNameRequiredError,
   CategoryNameTooLongError,
@@ -8,6 +8,18 @@ import {
   InvalidHexColorError,
   IconNameTooLongError,
 } from '../errors/expense.errors';
+
+export interface CategoryDTO {
+  categoryId: string;
+  workspaceId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export class CategoryCreatedEvent extends DomainEvent {
   constructor(
@@ -57,18 +69,6 @@ export interface CategoryProps {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface CategoryDTO {
-  categoryId: string;
-  workspaceId: string;
-  name: string;
-  description?: string;
-  color?: string;
-  icon?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export class Category extends AggregateRoot {

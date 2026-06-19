@@ -1,13 +1,12 @@
 import { LocationService } from '../services/location.service';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface DeleteLocationCommand extends ICommand {
-  locationId: string;
-  workspaceId: string;
+  readonly locationId: string;
+  readonly workspaceId: string;
 }
 
 export class DeleteLocationHandler

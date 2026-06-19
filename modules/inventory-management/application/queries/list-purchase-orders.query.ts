@@ -1,18 +1,17 @@
+
 import { PurchaseOrderService } from '../services/purchase-order.service';
 import { PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
 import { PurchaseOrderStatus } from '../../domain/enums/purchase-order-status';
 import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+  IQuery, IQueryHandler } from '@core/application/cqrs';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface ListPurchaseOrdersQuery extends IQuery {
-  workspaceId: string;
-  status?: PurchaseOrderStatus;
-  supplierId?: string;
-  limit?: number;
-  offset?: number;
+  readonly workspaceId: string;
+  readonly status?: PurchaseOrderStatus;
+  readonly supplierId?: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListPurchaseOrdersHandler

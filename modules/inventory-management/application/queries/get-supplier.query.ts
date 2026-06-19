@@ -2,13 +2,12 @@ import { SupplierService } from '../services/supplier.service';
 import { SupplierDTO } from '../../domain/entities/supplier.entity';
 import { SupplierNotFoundError } from '../../domain/errors/inventory.errors';
 import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+  IQuery, IQueryHandler } from '@core/application/cqrs';
+
 
 export interface GetSupplierQuery extends IQuery {
-  supplierId: string;
-  workspaceId: string;
+  readonly supplierId: string;
+  readonly workspaceId: string;
 }
 
 export class GetSupplierHandler
