@@ -14,7 +14,7 @@ import {
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class PurchaseOrderService {
   constructor(
@@ -133,7 +133,10 @@ export class PurchaseOrderService {
       variantId: params.variantId,
       variantName: params.variantName,
       quantity: params.quantity,
-      unitPrice: params.unitPrice,
+      unitPrice:
+        typeof params.unitPrice === 'string'
+          ? parseFloat(params.unitPrice)
+          : params.unitPrice,
     });
 
     await this.poRepository.saveItem(item);
