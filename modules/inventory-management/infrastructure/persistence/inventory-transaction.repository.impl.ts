@@ -6,7 +6,7 @@ import { IInventoryTransactionRepository } from '../../domain/repositories/inven
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 export class InventoryTransactionRepositoryImpl
