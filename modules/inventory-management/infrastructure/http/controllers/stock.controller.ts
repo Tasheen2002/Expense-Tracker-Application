@@ -5,6 +5,11 @@ import { GetStockHandler } from '../../../application/queries/get-stock.query';
 import { ListTransactionsHandler } from '../../../application/queries/list-transactions.query';
 import { TransactionType } from '../../../domain/enums/transaction-type';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  AdjustStockInput,
+  ListStockQuery,
+  ListTransactionsQuery,
+} from '../validation/inventory.schema';
 
 export class StockController {
   constructor(
@@ -16,15 +21,7 @@ export class StockController {
   async adjustStock(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        variantId: string;
-        locationId: string;
-        quantity: number;
-        type: string;
-        notes?: string;
-        referenceId?: string;
-        referenceType?: string;
-      };
+      Body: AdjustStockInput;
     }>,
     reply: FastifyReply
   ) {
@@ -56,7 +53,7 @@ export class StockController {
   async getStock(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { locationId?: string; limit?: string; offset?: string };
+      Querystring: ListStockQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -66,8 +63,8 @@ export class StockController {
       const result = await this.getStockHandler.handle({
         workspaceId,
         locationId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Stock retrieved successfully', {
         items: result.items,
@@ -86,12 +83,7 @@ export class StockController {
   async listTransactions(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: {
-        variantId?: string;
-        locationId?: string;
-        limit?: string;
-        offset?: string;
-      };
+      Querystring: ListTransactionsQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -102,8 +94,8 @@ export class StockController {
         workspaceId,
         variantId,
         locationId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Transactions retrieved successfully', {
         items: result.items,

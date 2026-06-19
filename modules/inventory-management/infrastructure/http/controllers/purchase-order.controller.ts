@@ -13,6 +13,12 @@ import { GetPurchaseOrderHandler } from '../../../application/queries/get-purcha
 import { ListPurchaseOrdersHandler } from '../../../application/queries/list-purchase-orders.query';
 import { PurchaseOrderStatus } from '../../../domain/enums/purchase-order-status';
 import { ResponseHelper } from '@shared/response.helper';
+import {
+  CreatePurchaseOrderInput,
+  UpdatePurchaseOrderInput,
+  AddPurchaseOrderItemInput,
+  ListPurchaseOrdersQuery,
+} from '../validation/inventory.schema';
 
 export class PurchaseOrderController {
   constructor(
@@ -32,13 +38,7 @@ export class PurchaseOrderController {
   async createPurchaseOrder(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        supplierId: string;
-        orderDate: string;
-        expectedDate?: string;
-        notes?: string;
-        currency?: string;
-      };
+      Body: CreatePurchaseOrderInput;
     }>,
     reply: FastifyReply
   ) {
@@ -71,7 +71,7 @@ export class PurchaseOrderController {
   async updatePurchaseOrder(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; purchaseOrderId: string };
-      Body: { notes?: string | null; expectedDate?: string | null };
+      Body: UpdatePurchaseOrderInput;
     }>,
     reply: FastifyReply
   ) {
@@ -90,7 +90,8 @@ export class PurchaseOrderController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Purchase order updated successfully'
+        'Purchase order updated successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -109,14 +110,13 @@ export class PurchaseOrderController {
         purchaseOrderId,
         workspaceId,
       });
-      if (!result.success) {
-        return ResponseHelper.fromCommand(
-          reply,
-          result,
-          'Purchase order deletion failed'
-        );
-      }
-      return reply.status(204).send();
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Purchase order deleted successfully',
+        undefined,
+        204
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -137,7 +137,8 @@ export class PurchaseOrderController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Purchase order submitted successfully'
+        'Purchase order submitted successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -159,7 +160,8 @@ export class PurchaseOrderController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Purchase order approved successfully'
+        'Purchase order approved successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -181,7 +183,8 @@ export class PurchaseOrderController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Purchase order received successfully'
+        'Purchase order received successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -203,7 +206,8 @@ export class PurchaseOrderController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Purchase order cancelled successfully'
+        'Purchase order cancelled successfully',
+        result.data
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -213,12 +217,7 @@ export class PurchaseOrderController {
   async addItem(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; purchaseOrderId: string };
-      Body: {
-        variantId: string;
-        variantName: string;
-        quantity: number;
-        unitPrice: number;
-      };
+      Body: AddPurchaseOrderItemInput;
     }>,
     reply: FastifyReply
   ) {
@@ -253,10 +252,13 @@ export class PurchaseOrderController {
         itemId,
         workspaceId,
       });
-      if (!result.success) {
-        return ResponseHelper.fromCommand(reply, result, 'Item removal failed');
-      }
-      return reply.status(204).send();
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Item removed successfully',
+        undefined,
+        204
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -283,12 +285,7 @@ export class PurchaseOrderController {
   async listPurchaseOrders(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: {
-        status?: string;
-        supplierId?: string;
-        limit?: string;
-        offset?: string;
-      };
+      Querystring: ListPurchaseOrdersQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -299,8 +296,8 @@ export class PurchaseOrderController {
         workspaceId,
         status: status as PurchaseOrderStatus | undefined,
         supplierId,
-        limit: limit ? parseInt(limit, 10) : undefined,
-        offset: offset ? parseInt(offset, 10) : undefined,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Purchase orders retrieved successfully', {
         items: result.items,
