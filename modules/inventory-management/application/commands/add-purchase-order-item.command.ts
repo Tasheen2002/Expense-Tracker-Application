@@ -1,18 +1,15 @@
 import { PurchaseOrderService } from '../services/purchase-order.service';
 import { PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
 export interface AddPurchaseOrderItemCommand extends ICommand {
-  purchaseOrderId: string;
-  workspaceId: string;
-  variantId: string;
-  variantName: string;
-  quantity: number;
-  unitPrice: number | string;
+  readonly purchaseOrderId: string;
+  readonly workspaceId: string;
+  readonly variantId: string;
+  readonly variantName: string;
+  readonly quantity: number;
+  readonly unitPrice: number | string;
 }
 
 export class AddPurchaseOrderItemHandler

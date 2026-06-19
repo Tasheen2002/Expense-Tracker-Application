@@ -1,16 +1,15 @@
 import { PurchaseOrderService } from '../services/purchase-order.service';
 import { PurchaseOrderDTO } from '../../domain/entities/purchase-order.entity';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface UpdatePurchaseOrderCommand extends ICommand {
-  purchaseOrderId: string;
-  workspaceId: string;
-  notes?: string | null;
-  expectedDate?: Date | null;
+  readonly purchaseOrderId: string;
+  readonly workspaceId: string;
+  readonly notes?: string | null;
+  readonly expectedDate?: Date | null;
 }
 
 export class UpdatePurchaseOrderHandler

@@ -1,13 +1,12 @@
 import { PurchaseOrderService } from '../services/purchase-order.service';
 import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+  ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+
+
 
 export interface DeletePurchaseOrderCommand extends ICommand {
-  purchaseOrderId: string;
-  workspaceId: string;
+  readonly purchaseOrderId: string;
+  readonly workspaceId: string;
 }
 
 export class DeletePurchaseOrderHandler
