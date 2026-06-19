@@ -1,7 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { LocationController } from '../controllers/location.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -9,30 +10,21 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createLocationSchema,
   updateLocationSchema,
-  workspaceParamsSchema,
-  locationParamsSchema,
   listQuerySchema,
+  workspaceParamsJsonSchema,
+  locationParamsJsonSchema,
+  createLocationBodyJsonSchema,
+  updateLocationBodyJsonSchema,
+  listQueryJsonSchema,
+  locationEnvelopeJsonSchema,
+  paginatedLocationsEnvelopeJsonSchema,
 } from '../validation/inventory.schema';
-
-const locationSchema = {
-  type: 'object',
-  properties: {
-    locationId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string' },
-    name: { type: 'string' },
-    type: { type: 'string', enum: ['WAREHOUSE', 'STORE', 'OTHER'] },
-    address: { type: 'string', nullable: true },
-    isActive: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -42,7 +34,15 @@ const writeRateLimiter = createRateLimiter({
 export async function locationRoutes(
   fastify: FastifyInstance,
   controller: LocationController
-) {
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -54,35 +54,20 @@ export async function locationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/locations',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(createLocationSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Location'],
         description: 'Create a new location',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['name'],
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 255 },
-            type: { type: 'string', enum: ['WAREHOUSE', 'STORE', 'OTHER'] },
-            address: { type: 'string', nullable: true },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createLocationBodyJsonSchema,
         response: {
-          201: {
-            description: 'Location created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: locationSchema,
-            },
-          },
+          201: locationEnvelopeJsonSchema,
         },
       },
     },
@@ -94,40 +79,19 @@ export async function locationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/locations',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(listQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Location'],
         description: 'List all locations in workspace',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listQueryJsonSchema,
         response: {
-          200: {
-            description: 'Locations retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: locationSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedLocationsEnvelopeJsonSchema,
         },
       },
     },
@@ -139,23 +103,15 @@ export async function locationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/locations/:locationId',
     {
-      preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Location'],
         description: 'Get location by ID',
         security: [{ bearerAuth: [] }],
+        params: locationParamsJsonSchema,
         response: {
-          200: {
-            description: 'Location retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: locationSchema,
-            },
-          },
+          200: locationEnvelopeJsonSchema,
         },
       },
     },
@@ -167,34 +123,20 @@ export async function locationRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/locations/:locationId',
     {
-      preValidation: [validateParams(locationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(updateLocationSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Location'],
         description: 'Update location',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', minLength: 1, maxLength: 255 },
-            type: { type: 'string', enum: ['WAREHOUSE', 'STORE', 'OTHER'] },
-            address: { type: 'string', nullable: true },
-          },
-        },
+        params: locationParamsJsonSchema,
+        body: updateLocationBodyJsonSchema,
         response: {
-          200: {
-            description: 'Location updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: locationSchema,
-            },
-          },
+          200: locationEnvelopeJsonSchema,
         },
       },
     },
@@ -206,17 +148,18 @@ export async function locationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/locations/:locationId',
     {
-      preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Inventory - Location'],
         description: 'Delete location',
         security: [{ bearerAuth: [] }],
+        params: locationParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },

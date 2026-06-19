@@ -1,7 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PurchaseOrderController } from '../controllers/purchase-order.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { requireRole } from '@shared/middleware/role-authorization.middleware';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -9,64 +10,26 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   createPurchaseOrderSchema,
   updatePurchaseOrderSchema,
   addPurchaseOrderItemSchema,
-  workspaceParamsSchema,
-  purchaseOrderParamsSchema,
-  purchaseOrderItemParamsSchema,
   listPurchaseOrdersQuerySchema,
+  workspaceParamsJsonSchema,
+  purchaseOrderParamsJsonSchema,
+  purchaseOrderItemParamsJsonSchema,
+  createPurchaseOrderBodyJsonSchema,
+  updatePurchaseOrderBodyJsonSchema,
+  addPurchaseOrderItemBodyJsonSchema,
+  listPurchaseOrdersQueryJsonSchema,
+  purchaseOrderEnvelopeJsonSchema,
+  purchaseOrderWithItemsEnvelopeJsonSchema,
+  paginatedPurchaseOrdersEnvelopeJsonSchema,
+  purchaseOrderItemEnvelopeJsonSchema,
 } from '../validation/inventory.schema';
-
-const purchaseOrderSchema = {
-  type: 'object',
-  properties: {
-    purchaseOrderId: { type: 'string', format: 'uuid' },
-    workspaceId: { type: 'string' },
-    supplierId: { type: 'string' },
-    status: {
-      type: 'string',
-      enum: ['DRAFT', 'SUBMITTED', 'APPROVED', 'RECEIVED', 'CANCELLED'],
-    },
-    orderDate: { type: 'string', format: 'date-time' },
-    expectedDate: { type: 'string', format: 'date-time', nullable: true },
-    receivedDate: { type: 'string', format: 'date-time', nullable: true },
-    notes: { type: 'string', nullable: true },
-    totalAmount: { type: 'string' },
-    currency: { type: 'string' },
-    createdBy: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const purchaseOrderItemSchema = {
-  type: 'object',
-  properties: {
-    itemId: { type: 'string', format: 'uuid' },
-    purchaseOrderId: { type: 'string' },
-    variantId: { type: 'string' },
-    variantName: { type: 'string' },
-    quantity: { type: 'number' },
-    unitPrice: { type: 'string' },
-    receivedQuantity: { type: 'number' },
-    lineTotal: { type: 'string' },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-  },
-};
-
-const purchaseOrderWithItemsSchema = {
-  type: 'object',
-  properties: {
-    ...purchaseOrderSchema.properties,
-    items: { type: 'array', items: purchaseOrderItemSchema },
-  },
-};
+import { noContentResponse } from '@shared/http/response-schemas';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -76,7 +39,15 @@ const writeRateLimiter = createRateLimiter({
 export async function purchaseOrderRoutes(
   fastify: FastifyInstance,
   controller: PurchaseOrderController
-) {
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
+
   // Apply write rate limiting to all mutation routes
   fastify.addHook('onRequest', async (request, reply) => {
     if (request.method !== 'GET') {
@@ -88,37 +59,19 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(createPurchaseOrderSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Create a new purchase order',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['supplierId', 'orderDate'],
-          properties: {
-            supplierId: { type: 'string', format: 'uuid' },
-            orderDate: { type: 'string', format: 'date-time' },
-            expectedDate: { type: 'string', format: 'date-time', nullable: true },
-            notes: { type: 'string', nullable: true },
-            currency: { type: 'string', minLength: 3, maxLength: 3 },
-          },
-        },
+        params: workspaceParamsJsonSchema,
+        body: createPurchaseOrderBodyJsonSchema,
         response: {
-          201: {
-            description: 'Purchase order created successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          201: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -130,40 +83,19 @@ export async function purchaseOrderRoutes(
   fastify.get(
     '/workspaces/:workspaceId/purchase-orders',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(listPurchaseOrdersQuerySchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'List purchase orders',
         security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listPurchaseOrdersQueryJsonSchema,
         response: {
-          200: {
-            description: 'Purchase orders retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  items: { type: 'array', items: purchaseOrderSchema },
-                  pagination: {
-                    type: 'object',
-                    properties: {
-                      total: { type: 'integer' },
-                      limit: { type: 'integer' },
-                      offset: { type: 'integer' },
-                      hasMore: { type: 'boolean' },
-                    },
-                  },
-                },
-              },
-            },
-          },
+          200: paginatedPurchaseOrdersEnvelopeJsonSchema,
         },
       },
     },
@@ -175,23 +107,15 @@ export async function purchaseOrderRoutes(
   fastify.get(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Get purchase order by ID with items',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order retrieved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderWithItemsSchema,
-            },
-          },
+          200: purchaseOrderWithItemsEnvelopeJsonSchema,
         },
       },
     },
@@ -203,33 +127,19 @@ export async function purchaseOrderRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(updatePurchaseOrderSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Update purchase order (draft only)',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          properties: {
-            notes: { type: 'string', nullable: true },
-            expectedDate: { type: 'string', format: 'date-time', nullable: true },
-          },
-        },
+        params: purchaseOrderParamsJsonSchema,
+        body: updatePurchaseOrderBodyJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order updated successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          200: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -241,17 +151,18 @@ export async function purchaseOrderRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Delete purchase order',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -263,23 +174,15 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/submit',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Submit purchase order for approval',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order submitted successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          200: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -291,23 +194,18 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/approve',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Approve purchase order',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order approved successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          200: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -319,23 +217,15 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/receive',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Mark purchase order as received',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order received successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          200: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -347,23 +237,15 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/cancel',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Cancel purchase order',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderParamsJsonSchema,
         response: {
-          200: {
-            description: 'Purchase order cancelled successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderSchema,
-            },
-          },
+          200: purchaseOrderEnvelopeJsonSchema,
         },
       },
     },
@@ -375,36 +257,19 @@ export async function purchaseOrderRoutes(
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/items',
     {
-      preValidation: [validateParams(purchaseOrderParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(addPurchaseOrderItemSchema),
-        requireRole(['owner', 'admin', 'member']),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Add item to purchase order',
         security: [{ bearerAuth: [] }],
-        body: {
-          type: 'object',
-          required: ['variantId', 'variantName', 'quantity', 'unitPrice'],
-          properties: {
-            variantId: { type: 'string', minLength: 1 },
-            variantName: { type: 'string', minLength: 1 },
-            quantity: { type: 'number', minimum: 1 },
-            unitPrice: { type: 'number', minimum: 0 },
-          },
-        },
+        params: purchaseOrderParamsJsonSchema,
+        body: addPurchaseOrderItemBodyJsonSchema,
         response: {
-          201: {
-            description: 'Item added successfully',
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: purchaseOrderItemSchema,
-            },
-          },
+          201: purchaseOrderItemEnvelopeJsonSchema,
         },
       },
     },
@@ -416,17 +281,15 @@ export async function purchaseOrderRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/items/:itemId',
     {
-      preValidation: [validateParams(purchaseOrderItemParamsSchema)],
-      preHandler: [requireRole(['owner', 'admin', 'member'])],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Remove item from purchase order',
         security: [{ bearerAuth: [] }],
+        params: purchaseOrderItemParamsJsonSchema,
         response: {
-          204: {
-            description: 'No Content',
-            type: 'null',
-          },
+          204: noContentResponse,
         },
       },
     },
