@@ -55,3 +55,10 @@ export const baseResponseSchema = z.object({
   message: z.string(),
 });
 export const baseResponseJsonSchema = toJsonSchema(baseResponseSchema);
+
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+export type ReceiptParams = z.infer<typeof receiptParamsSchema>;
+export type TagParams = z.infer<typeof tagParamsSchema>;
+export type ReceiptTagParams = z.infer<typeof receiptTagParamsSchema>;
+export type ExpenseParams = z.infer<typeof expenseParamsSchema>;
+export type MetadataParams = z.infer<typeof metadataParamsSchema>;

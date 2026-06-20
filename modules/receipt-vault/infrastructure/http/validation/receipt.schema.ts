@@ -93,29 +93,32 @@ export const listReceiptsQuerySchema = z.object({
   fromDate: z
     .string()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: "Invalid date format",
+    .transform((val) => {
+      if (!val) return undefined;
+      const parsed = Date.parse(val);
+      return isNaN(parsed) ? undefined : new Date(parsed);
     }),
   toDate: z
     .string()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: "Invalid date format",
+    .transform((val) => {
+      if (!val) return undefined;
+      const parsed = Date.parse(val);
+      return isNaN(parsed) ? undefined : new Date(parsed);
     }),
-  limit: z
-    .string()
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 50))
-    .refine((val) => val > 0 && val <= 100, {
-      message: "Limit must be between 1 and 100",
-    }),
-  offset: z
-    .string()
+    .default(50),
+  offset: z.coerce
+    .number()
+    .int()
+    .min(0)
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 0))
-    .refine((val) => val >= 0, {
-      message: "Offset must be greater than or equal to 0",
-    }),
+    .default(0),
 });
 
 export type ListReceiptsQuery = z.infer<typeof listReceiptsQuerySchema>;
