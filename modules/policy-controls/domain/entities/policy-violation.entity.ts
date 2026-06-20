@@ -1,11 +1,11 @@
 import { ViolationId } from '../value-objects/violation-id';
 import { PolicyId } from '../value-objects/policy-id';
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '@modules/identity-workspace';
 import { ViolationSeverity } from '../enums/violation-severity.enum';
 import { ViolationStatus } from '../enums/violation-status.enum';
 import { ViolationAlreadyResolvedError } from '../errors/policy-controls.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events

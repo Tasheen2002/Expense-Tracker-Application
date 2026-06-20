@@ -1,5 +1,5 @@
 import { PolicyId } from '../value-objects/policy-id';
-import { WorkspaceId } from '../../../identity-workspace';
+import { WorkspaceId } from '@modules/identity-workspace';
 import { PolicyType } from '../enums/policy-type.enum';
 import { ViolationSeverity } from '../enums/violation-severity.enum';
 import {
@@ -9,8 +9,8 @@ import {
   InvalidThresholdError,
   InvalidPolicyConfigurationError,
 } from '../errors/policy-controls.errors';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 
 // ============================================================================
 // Domain Events
