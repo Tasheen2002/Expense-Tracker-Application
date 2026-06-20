@@ -9,7 +9,7 @@ import { ViolationNotFoundError } from "../../domain/errors/policy-controls.erro
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class ViolationService {
   constructor(private readonly violationRepository: IViolationRepository) {}
