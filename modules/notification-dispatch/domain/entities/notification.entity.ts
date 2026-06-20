@@ -5,8 +5,8 @@ import { NotificationStatus } from '../enums/notification-status.enum';
 import { NotificationId } from '../value-objects/notification-id';
 import { WorkspaceId } from '../value-objects';
 import { UserId } from '../value-objects';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 
 /**
  * Emitted when a notification is created.

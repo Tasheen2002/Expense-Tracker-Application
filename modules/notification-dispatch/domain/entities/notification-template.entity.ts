@@ -2,7 +2,7 @@ import { NotificationType } from '../enums/notification-type.enum';
 import { NotificationChannel } from '../enums/notification-channel.enum';
 import { TemplateId } from '../value-objects/template-id';
 import { WorkspaceId } from '../value-objects';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 export interface NotificationTemplateProps {
   id: TemplateId;
