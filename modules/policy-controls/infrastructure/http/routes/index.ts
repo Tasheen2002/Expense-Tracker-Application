@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { policyRoutes } from './policy.routes';
 import { violationRoutes } from './violation.routes';
 import { exemptionRoutes } from './exemption.routes';
@@ -13,19 +12,18 @@ export async function registerPolicyControlsRoutes(
     policyController: PolicyController;
     violationController: ViolationController;
     exemptionController: ExemptionController;
-  },
-  prisma: PrismaClient
-) {
+  }
+): Promise<void> {
   await fastify.register(
     async (instance) => {
       // Register policy routes
-      await policyRoutes(instance, controllers.policyController, prisma);
+      await policyRoutes(instance, controllers.policyController);
 
       // Register violation routes
-      await violationRoutes(instance, controllers.violationController, prisma);
+      await violationRoutes(instance, controllers.violationController);
 
       // Register exemption routes
-      await exemptionRoutes(instance, controllers.exemptionController, prisma);
+      await exemptionRoutes(instance, controllers.exemptionController);
     },
     { prefix: '/api/v1' }
   );
