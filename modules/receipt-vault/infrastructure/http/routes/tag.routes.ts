@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { TagController } from '../controllers/tag.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -8,14 +7,12 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  tagParamsSchema,
   workspaceParamsJsonSchema,
   tagParamsJsonSchema,
   baseResponseJsonSchema,
@@ -38,11 +35,14 @@ const writeRateLimiter = createRateLimiter({
 
 export async function tagRoutes(
   fastify: FastifyInstance,
-  controller: TagController,
-  prisma: PrismaClient
+  controller: TagController
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   // Apply write rate limiting to all mutation routes
@@ -56,11 +56,11 @@ export async function tagRoutes(
   fastify.get(
     '/:workspaceId/receipt-tags',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(paginationQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'List all receipt tags for a workspace',
@@ -80,11 +80,12 @@ export async function tagRoutes(
   fastify.post(
     '/:workspaceId/receipt-tags',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(createTagSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Create a new receipt tag',
@@ -104,11 +105,12 @@ export async function tagRoutes(
   fastify.patch(
     '/:workspaceId/receipt-tags/:tagId',
     {
-      preValidation: [
-        validateParams(tagParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(updateTagSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Update a receipt tag',
@@ -128,8 +130,11 @@ export async function tagRoutes(
   fastify.delete(
     '/:workspaceId/receipt-tags/:tagId',
     {
-      preValidation: [validateParams(tagParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
       schema: {
         tags: ['Receipt Tag'],
         description: 'Delete a receipt tag',

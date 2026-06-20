@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { receiptRoutes } from './receipt.routes';
 import { tagRoutes } from './tag.routes';
 import { ReceiptController } from '../controllers/receipt.controller';
@@ -10,16 +9,15 @@ export async function registerReceiptVaultRoutes(
   controllers: {
     receiptController: ReceiptController;
     tagController: TagController;
-  },
-  prisma: PrismaClient
-) {
+  }
+): Promise<void> {
   await fastify.register(
     async (instance) => {
       // Register receipt routes
-      await receiptRoutes(instance, controllers.receiptController, prisma);
+      await receiptRoutes(instance, controllers.receiptController);
 
       // Register receipt tag routes
-      await tagRoutes(instance, controllers.tagController, prisma);
+      await tagRoutes(instance, controllers.tagController);
     },
     { prefix: '/api/v1' }
   );
