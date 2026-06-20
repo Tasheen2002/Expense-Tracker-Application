@@ -1,4 +1,4 @@
-import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { DomainEvent } from "@core/domain/events/domain-event";
 import { NotificationType } from "../enums/notification-type.enum";
 import { NotificationChannel } from "../enums/notification-channel.enum";
 import { NotificationPriority } from "../enums/notification-priority.enum";
@@ -22,7 +22,7 @@ export class NotificationCreatedEvent extends DomainEvent {
     return "notification.created";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -52,7 +52,7 @@ export class NotificationSentEvent extends DomainEvent {
     return "notification.sent";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -82,7 +82,7 @@ export class NotificationFailedEvent extends DomainEvent {
     return "notification.failed";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
@@ -111,7 +111,7 @@ export class NotificationReadEvent extends DomainEvent {
     return "notification.read";
   }
 
-  protected getPayload(): Record<string, unknown> {
+  getPayload(): Record<string, unknown> {
     return {
       notificationId: this.notificationId,
       workspaceId: this.workspaceId,
