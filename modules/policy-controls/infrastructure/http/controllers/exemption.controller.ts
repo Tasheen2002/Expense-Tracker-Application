@@ -9,7 +9,13 @@ import {
   ApproveExemptionHandler,
   RejectExemptionHandler,
 } from '../../../application';
-import { ExemptionStatus } from '../../../domain/enums/exemption-status.enum';
+import {
+  RequestExemptionInput,
+  ApproveExemptionInput,
+  RejectExemptionInput,
+  ListExemptionsQuery,
+  CheckActiveExemptionQuery,
+} from '../validation/exemption.schema';
 
 export class ExemptionController {
   constructor(
@@ -41,13 +47,7 @@ export class ExemptionController {
   async listExemptions(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: {
-        status?: ExemptionStatus;
-        userId?: string;
-        policyId?: string;
-        limit?: string;
-        offset?: string;
-      };
+      Querystring: ListExemptionsQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -61,8 +61,8 @@ export class ExemptionController {
         userId,
         policyId,
         pagination: {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
+          limit,
+          offset,
         },
       });
 
@@ -81,7 +81,7 @@ export class ExemptionController {
   async checkActiveExemption(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { userId: string; policyId: string };
+      Querystring: CheckActiveExemptionQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -108,13 +108,7 @@ export class ExemptionController {
   async requestExemption(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: {
-        policyId: string;
-        userId: string;
-        reason: string;
-        startDate: string;
-        endDate: string;
-      };
+      Body: RequestExemptionInput;
     }>,
     reply: FastifyReply
   ) {
@@ -145,7 +139,7 @@ export class ExemptionController {
   async approveExemption(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; exemptionId: string };
-      Body: { approvalNote?: string };
+      Body: ApproveExemptionInput;
     }>,
     reply: FastifyReply
   ) {
@@ -173,7 +167,7 @@ export class ExemptionController {
   async rejectExemption(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; exemptionId: string };
-      Body: { rejectionReason: string };
+      Body: RejectExemptionInput;
     }>,
     reply: FastifyReply
   ) {
