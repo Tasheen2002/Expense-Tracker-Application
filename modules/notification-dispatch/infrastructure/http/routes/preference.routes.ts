@@ -1,28 +1,46 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PreferenceController } from '../controllers/preference.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { validateBody, validateQuery } from '../validation/validator';
+import {
+  updateGlobalPreferencesSchema,
+  updateTypePreferenceSchema,
+  checkChannelEnabledSchema,
+  workspaceParamsJsonSchema,
+  preferenceTypeParamsJsonSchema,
+  updateGlobalPreferencesBodyJsonSchema,
+  updateTypePreferenceBodyJsonSchema,
+  checkChannelEnabledQueryJsonSchema,
+  notificationPreferenceEnvelopeJsonSchema,
+  checkChannelEnabledEnvelopeJsonSchema,
+} from '../validation/template.schema';
 
-export function registerPreferenceRoutes(
+export async function registerPreferenceRoutes(
   fastify: FastifyInstance,
   controller: PreferenceController
-) {
-  const opts = { preHandler: [fastify.authenticate] };
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
 
   // Get user preferences for a workspace
   fastify.get(
     '/workspaces/:workspaceId/notification-preferences',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification Preferences'],
-        description:
-          'Get notification preferences for the current user in a workspace',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
+        description: 'Get notification preferences for the current user in a workspace',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        response: {
+          200: notificationPreferenceEnvelopeJsonSchema,
         },
       },
     },
@@ -34,24 +52,19 @@ export function registerPreferenceRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notification-preferences',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateGlobalPreferencesSchema),
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Notification Preferences'],
         description: 'Update global notification preferences',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
-        },
-        body: {
-          type: 'object',
-          properties: {
-            email: { type: 'boolean' },
-            inApp: { type: 'boolean' },
-            push: { type: 'boolean' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: updateGlobalPreferencesBodyJsonSchema,
+        response: {
+          200: notificationPreferenceEnvelopeJsonSchema,
         },
       },
     },
@@ -63,36 +76,19 @@ export function registerPreferenceRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notification-preferences/:type',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateTypePreferenceSchema),
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Notification Preferences'],
-        description:
-          'Update notification preferences for a specific notification type',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            type: {
-              type: 'string',
-              enum: [
-                'EXPENSE_APPROVED',
-                'EXPENSE_REJECTED',
-                'APPROVAL_REQUIRED',
-                'BUDGET_ALERT',
-                'INVITATION',
-                'SYSTEM_ALERT',
-              ],
-            },
-          },
-          required: ['workspaceId', 'type'],
-        },
-        body: {
-          type: 'object',
-          properties: {
-            email: { type: 'boolean' },
-            inApp: { type: 'boolean' },
-            push: { type: 'boolean' },
-          },
+        description: 'Update notification preferences for a specific notification type',
+        security: [{ bearerAuth: [] }],
+        params: preferenceTypeParamsJsonSchema,
+        body: updateTypePreferenceBodyJsonSchema,
+        response: {
+          200: notificationPreferenceEnvelopeJsonSchema,
         },
       },
     },
@@ -104,38 +100,19 @@ export function registerPreferenceRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notification-preferences/check',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateQuery(checkChannelEnabledSchema),
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Notification Preferences'],
-        description:
-          'Check if a specific channel is enabled for a notification type',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
-        },
-        querystring: {
-          type: 'object',
-          required: ['type', 'channel'],
-          properties: {
-            type: {
-              type: 'string',
-              enum: [
-                'EXPENSE_APPROVED',
-                'EXPENSE_REJECTED',
-                'APPROVAL_REQUIRED',
-                'BUDGET_ALERT',
-                'INVITATION',
-                'SYSTEM_ALERT',
-              ],
-            },
-            channel: {
-              type: 'string',
-              enum: ['email', 'inApp', 'push'],
-            },
-          },
+        description: 'Check if a specific channel is enabled for a notification type',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: checkChannelEnabledQueryJsonSchema,
+        response: {
+          200: checkChannelEnabledEnvelopeJsonSchema,
         },
       },
     },
@@ -143,3 +120,4 @@ export function registerPreferenceRoutes(
       controller.checkChannelEnabled(request as AuthenticatedRequest, reply)
   );
 }
+
