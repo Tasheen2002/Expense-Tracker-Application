@@ -1,15 +1,16 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import {
-  TypeSettingValue,
-} from '../../../domain/entities/notification-preference.entity';
 import { NotificationType } from '../../../domain/enums/notification-type.enum';
-import type { GlobalPreferenceSettings } from '../../../application/services/preference.service';
 import { ResponseHelper } from '@shared/response.helper';
 import { GetPreferencesHandler } from '../../../application/queries/get-preferences.query';
 import { UpdatePreferencesHandler } from '../../../application/commands/update-preferences.command';
 import { UpdateTypePreferenceHandler } from '../../../application/commands/update-type-preference.command';
 import { CheckChannelEnabledHandler } from '../../../application/queries/check-channel-enabled.query';
+import {
+  UpdateGlobalPreferencesInput,
+  UpdateTypePreferenceInput,
+  CheckChannelEnabledQuery,
+} from '../validation/template.schema';
 
 export class PreferenceController {
   constructor(
@@ -42,7 +43,7 @@ export class PreferenceController {
         'Preferences retrieved successfully',
         data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -50,7 +51,7 @@ export class PreferenceController {
   async updateGlobalPreferences(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Body: GlobalPreferenceSettings;
+      Body: UpdateGlobalPreferencesInput;
     }>,
     reply: FastifyReply
   ) {
@@ -67,9 +68,10 @@ export class PreferenceController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Preferences updated successfully'
+        'Preferences updated successfully',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -77,7 +79,7 @@ export class PreferenceController {
   async updateTypePreference(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; type: string };
-      Body: TypeSettingValue;
+      Body: UpdateTypePreferenceInput;
     }>,
     reply: FastifyReply
   ) {
@@ -95,9 +97,10 @@ export class PreferenceController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Type preference updated successfully'
+        'Type preference updated successfully',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -105,7 +108,7 @@ export class PreferenceController {
   async checkChannelEnabled(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { type: string; channel: 'email' | 'inApp' | 'push' };
+      Querystring: CheckChannelEnabledQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -113,6 +116,8 @@ export class PreferenceController {
       const { workspaceId } = request.params;
       const { type, channel } = request.query;
       const userId = request.user.userId;
+
+      console.log('DEBUG CHECK:', { workspaceId, userId, query: request.query });
 
       const isEnabled = await this.checkChannelEnabledHandler.handle({
         userId,
@@ -125,8 +130,10 @@ export class PreferenceController {
         'Channel status retrieved successfully',
         { type, channel, isEnabled }
       );
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error('DEBUG checkChannelEnabled error:', error);
       return ResponseHelper.error(reply, error);
     }
   }
 }
+

@@ -6,6 +6,7 @@ import { GetUnreadCountHandler } from '../../../application/queries/get-unread-c
 import { MarkAsReadHandler } from '../../../application/commands/mark-as-read.command';
 import { MarkAllAsReadHandler } from '../../../application/commands/mark-all-as-read.command';
 import { GetUnreadNotificationsHandler } from '../../../application/queries/get-unread-notifications.query';
+import { ListNotificationsQuery } from '../validation/notification.schema';
 
 export class NotificationController {
   constructor(
@@ -16,20 +17,23 @@ export class NotificationController {
     private readonly markAllAsReadHandler: MarkAllAsReadHandler
   ) {}
 
-  async getNotifications(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getNotifications(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Querystring: ListNotificationsQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
-      const { limit, offset } = request.query as {
-        limit?: number;
-        offset?: number;
-      };
+      const { workspaceId } = request.params;
+      const { limit, offset } = request.query;
       const userId = request.user.userId;
 
       const paginatedData = await this.listNotificationsHandler.handle({
         recipientId: userId,
         workspaceId,
-        limit: limit ?? 50,
-        offset: offset ?? 0,
+        limit,
+        offset,
       });
       const unreadCount = await this.getUnreadCountHandler.handle({
         recipientId: userId,
@@ -50,17 +54,19 @@ export class NotificationController {
           },
         }
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getUnreadNotifications(
-    request: AuthenticatedRequest,
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+    }>,
     reply: FastifyReply
   ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
+      const { workspaceId } = request.params;
       const userId = request.user.userId;
 
       const paginatedData = await this.getUnreadNotificationsHandler.handle({
@@ -80,14 +86,19 @@ export class NotificationController {
           },
         }
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async markAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
+  async markAsRead(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; notificationId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { notificationId } = request.params as { notificationId: string };
+      const { notificationId } = request.params;
       const userId = request.user.userId;
 
       const result = await this.markAsReadHandler.handle({
@@ -97,16 +108,22 @@ export class NotificationController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Notification marked as read'
+        'Notification marked as read',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async markAllAsRead(request: AuthenticatedRequest, reply: FastifyReply) {
+  async markAllAsRead(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId } = request.params as { workspaceId: string };
+      const { workspaceId } = request.params;
       const userId = request.user.userId;
 
       const result = await this.markAllAsReadHandler.handle({
@@ -116,10 +133,13 @@ export class NotificationController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'All notifications marked as read'
+        'All notifications marked as read',
+        undefined,
+        200
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 }
+
