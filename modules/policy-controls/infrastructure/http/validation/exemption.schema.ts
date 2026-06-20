@@ -36,8 +36,8 @@ export const exemptionQuerySchema = z.object({
   status: z.nativeEnum(ExemptionStatus).optional(),
   userId: z.string().uuid().optional(),
   policyId: z.string().uuid().optional(),
-  limit: z.string().regex(/^\d+$/).optional(),
-  offset: z.string().regex(/^\d+$/).optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 /**
@@ -191,3 +191,5 @@ export const activeExemptionEnvelopeJsonSchema = toJsonSchema(
     data: exemptionResponseSchema.nullable(),
   })
 );
+export type ListExemptionsQuery = z.infer<typeof exemptionQuerySchema>;
+export type CheckActiveExemptionQuery = z.infer<typeof checkActiveExemptionQuerySchema>;

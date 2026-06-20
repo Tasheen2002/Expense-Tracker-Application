@@ -23,8 +23,8 @@ export const violationQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   expenseId: z.string().uuid().optional(),
   policyId: z.string().uuid().optional(),
-  limit: z.string().regex(/^\d+$/).optional(),
-  offset: z.string().regex(/^\d+$/).optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 /**
@@ -48,7 +48,7 @@ export const acknowledgeViolationSchema = z.object({
     .optional(),
 });
 
-export type AcknowledgeViolationInput = z.infer<
+export type AcknowledgeViolationBody = z.infer<
   typeof acknowledgeViolationSchema
 >;
 
@@ -65,7 +65,7 @@ export const resolveViolationSchema = z.object({
     .optional(),
 });
 
-export type ResolveViolationInput = z.infer<typeof resolveViolationSchema>;
+export type ResolveViolationBody = z.infer<typeof resolveViolationSchema>;
 
 /**
  * Override Violation Schema
@@ -83,7 +83,7 @@ export const overrideViolationSchema = z.object({
     ),
 });
 
-export type OverrideViolationInput = z.infer<typeof overrideViolationSchema>;
+export type OverrideViolationBody = z.infer<typeof overrideViolationSchema>;
 
 /**
  * Exempt Violation Schema
@@ -92,7 +92,7 @@ export const exemptViolationSchema = z.object({
   exemptionId: z.string().uuid("Invalid exemption ID format"),
 });
 
-export type ExemptViolationInput = z.infer<typeof exemptViolationSchema>;
+export type ExemptViolationBody = z.infer<typeof exemptViolationSchema>;
 
 // Pre-computed JSON schemas
 export const violationParamsJsonSchema = toJsonSchema(violationParamsSchema);
@@ -162,3 +162,6 @@ export const violationStatsEnvelopeJsonSchema = toJsonSchema(
     }),
   })
 );
+
+export type ListViolationsQuery = z.infer<typeof violationQuerySchema>;
+export type GetViolationStatsQuery = z.infer<typeof violationStatsQuerySchema>;
