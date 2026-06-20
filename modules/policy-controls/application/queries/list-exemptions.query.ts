@@ -4,7 +4,7 @@ import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListExemptionsInput extends IQuery {

@@ -4,7 +4,7 @@ import { PolicyType } from '../../domain/enums/policy-type.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListPoliciesInput extends IQuery {
