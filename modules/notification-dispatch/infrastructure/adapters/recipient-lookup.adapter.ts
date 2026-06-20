@@ -6,7 +6,7 @@ export class PrismaRecipientLookupAdapter implements IRecipientLookup {
   constructor(private readonly prisma: PrismaClient) {}
 
   async findEmail(userId: UserId): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.userAccount.findUnique({
       where: { id: userId.getValue() },
       select: { email: true },
     });
