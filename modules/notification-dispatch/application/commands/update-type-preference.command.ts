@@ -5,13 +5,13 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateTypePreferenceCommand extends ICommand {
-  userId: string;
-  workspaceId: string;
-  type: NotificationType;
-  settings: TypeSettingValue;
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly type: NotificationType;
+  readonly settings: TypeSettingValue;
 }
 
 export class UpdateTypePreferenceHandler implements ICommandHandler<
