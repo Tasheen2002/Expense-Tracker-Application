@@ -3,7 +3,7 @@ import { NotificationPreferenceDTO } from '../../domain/entities/notification-pr
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export class GetOrCreatePreferencesQuery implements IQuery {
   readonly queryId?: string;

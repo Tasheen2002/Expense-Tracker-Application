@@ -4,12 +4,12 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdateTemplateCommand extends ICommand {
-  templateId: string;
-  subjectTemplate?: string;
-  bodyTemplate?: string;
+  readonly templateId: string;
+  readonly subjectTemplate?: string;
+  readonly bodyTemplate?: string;
 }
 
 export class UpdateTemplateHandler implements ICommandHandler<

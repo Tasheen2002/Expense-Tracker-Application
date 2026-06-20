@@ -3,11 +3,11 @@ import { NotificationPreferenceDTO } from '../../domain/entities/notification-pr
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetPreferencesQuery extends IQuery {
-  userId: string;
-  workspaceId: string;
+  readonly userId: string;
+  readonly workspaceId: string;
 }
 
 export class GetPreferencesHandler implements IQueryHandler<

@@ -2,11 +2,11 @@ import { NotificationService } from '../services/notification.service';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetUnreadCountQuery extends IQuery {
-  recipientId: string;
-  workspaceId: string;
+  readonly recipientId: string;
+  readonly workspaceId: string;
 }
 
 export class GetUnreadCountHandler implements IQueryHandler<

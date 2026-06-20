@@ -3,10 +3,10 @@ import { NotificationTemplateDTO } from '../../domain/entities/notification-temp
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetTemplateByIdQuery extends IQuery {
-  templateId: string;
+  readonly templateId: string;
 }
 
 export class GetTemplateByIdHandler implements IQueryHandler<

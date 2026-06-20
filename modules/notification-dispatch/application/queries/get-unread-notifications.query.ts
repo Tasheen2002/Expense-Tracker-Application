@@ -1,14 +1,14 @@
 import { NotificationService } from '../services/notification.service';
 import { NotificationDTO } from '../../domain/entities/notification.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetUnreadNotificationsQuery extends IQuery {
-  recipientId: string;
-  workspaceId: string;
+  readonly recipientId: string;
+  readonly workspaceId: string;
 }
 
 export class GetUnreadNotificationsHandler implements IQueryHandler<
