@@ -4,7 +4,7 @@ import { UserId, WorkspaceId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export interface INotificationRepository {
   save(notification: Notification): Promise<void>;
