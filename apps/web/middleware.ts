@@ -6,11 +6,7 @@ import type { NextRequest } from 'next/server';
 // ============================================================================
 
 // Routes that require authentication
-const protectedRoutes = [
-  '/workspaces',
-  '/account',
-  '/settings',
-];
+const protectedRoutes = ['/workspaces', '/account', '/settings'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

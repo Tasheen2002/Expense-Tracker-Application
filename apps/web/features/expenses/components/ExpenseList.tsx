@@ -21,7 +21,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { useExpenses, useDeleteExpense, useSubmitExpense } from '../hooks/useExpenses';
+import {
+  useExpenses,
+  useDeleteExpense,
+  useSubmitExpense,
+} from '../hooks/useExpenses';
 import type { Expense } from '@/types';
 import { ExpenseForm } from './ExpenseForm';
 
@@ -33,7 +37,10 @@ interface ExpenseListProps {
   status?: string;
 }
 
-const statusVariants: Record<string, 'default' | 'secondary' | 'success' | 'warning' | 'destructive'> = {
+const statusVariants: Record<
+  string,
+  'default' | 'secondary' | 'success' | 'warning' | 'destructive'
+> = {
   DRAFT: 'secondary',
   SUBMITTED: 'default',
   APPROVED: 'success',
@@ -50,10 +57,16 @@ export function ExpenseList({
   status,
 }: ExpenseListProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(
+    null
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const { data: response, isLoading, error } = useExpenses({
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useExpenses({
     workspaceId,
     page,
     limit,
@@ -124,9 +137,7 @@ export function ExpenseList({
     <>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            Expenses ({total})
-          </h2>
+          <h2 className="text-lg font-semibold">Expenses ({total})</h2>
         </div>
 
         <div className="overflow-hidden rounded-lg border">
@@ -145,20 +156,27 @@ export function ExpenseList({
               {expenses.map((expense) => (
                 <tr
                   key={expense.id}
-                  className="border-b last:border-0 transition-colors hover:bg-muted/50"
+                  className="border-b transition-colors last:border-0 hover:bg-muted/50"
                 >
-                  <td className="px-4 py-3 font-medium">{expense.merchant || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground max-w-xs truncate">
+                  <td className="px-4 py-3 font-medium">
+                    {expense.merchant || '—'}
+                  </td>
+                  <td className="max-w-xs truncate px-4 py-3 text-sm text-muted-foreground">
                     {expense.description || '—'}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {formatDate(expense.expenseDate)}
                   </td>
                   <td className="px-4 py-3 font-medium">
-                    {formatCurrency(parseFloat(expense.amount), expense.currency)}
+                    {formatCurrency(
+                      parseFloat(expense.amount),
+                      expense.currency
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={statusVariants[expense.status] || 'default'}>
+                    <Badge
+                      variant={statusVariants[expense.status] || 'default'}
+                    >
                       {expense.status.replace(/_/g, ' ')}
                     </Badge>
                   </td>
@@ -175,7 +193,9 @@ export function ExpenseList({
                           Edit
                         </DropdownMenuItem>
                         {expense.status === 'DRAFT' && (
-                          <DropdownMenuItem onClick={() => handleSubmit(expense.id)}>
+                          <DropdownMenuItem
+                            onClick={() => handleSubmit(expense.id)}
+                          >
                             <Send className="mr-2 h-4 w-4" />
                             Submit for approval
                           </DropdownMenuItem>
@@ -217,7 +237,8 @@ export function ExpenseList({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete expense?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the expense.
+              This action cannot be undone. This will permanently delete the
+              expense.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -22,7 +22,8 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: authKeys.me(),
     queryFn: authApi.me,
-    enabled: typeof window !== 'undefined' && !!localStorage.getItem('auth-token'),
+    enabled:
+      typeof window !== 'undefined' && !!localStorage.getItem('auth-token'),
     retry: false,
   });
 }

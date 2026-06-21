@@ -12,7 +12,7 @@ export default function WorkspaceDashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome back! Here's your expense overview.
+          Welcome back! Here&apos;s your expense overview.
         </p>
       </div>
 

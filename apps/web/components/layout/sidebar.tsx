@@ -30,25 +30,44 @@ export function Sidebar() {
 
   // Extract workspace ID from current pathname
   const workspaceId = useMemo(() => {
-    const match = pathname.match(/\/workspaces\/([^\/]+)/);
+    const match = pathname.match(/\/workspaces\/([^/]+)/);
     return match ? match[1] : 'demo-workspace';
   }, [pathname]);
 
-  const navigation = useMemo(() => [
-    { name: 'Home', href: `/workspaces/${workspaceId}`, icon: Home },
-    { name: 'Expenses', href: `/workspaces/${workspaceId}/expenses`, icon: Receipt },
-    { name: 'Trips', href: `/workspaces/${workspaceId}/trips`, icon: Plane },
-    { name: 'Approvals', href: `/workspaces/${workspaceId}/approvals`, icon: CheckSquare },
-    { name: 'Settings', href: `/workspaces/${workspaceId}/settings`, icon: Settings },
-    { name: 'Support', href: `/workspaces/${workspaceId}/support`, icon: Phone },
-  ], [workspaceId]);
+  const navigation = useMemo(
+    () => [
+      { name: 'Home', href: `/workspaces/${workspaceId}`, icon: Home },
+      {
+        name: 'Expenses',
+        href: `/workspaces/${workspaceId}/expenses`,
+        icon: Receipt,
+      },
+      { name: 'Trips', href: `/workspaces/${workspaceId}/trips`, icon: Plane },
+      {
+        name: 'Approvals',
+        href: `/workspaces/${workspaceId}/approvals`,
+        icon: CheckSquare,
+      },
+      {
+        name: 'Settings',
+        href: `/workspaces/${workspaceId}/settings`,
+        icon: Settings,
+      },
+      {
+        name: 'Support',
+        href: `/workspaces/${workspaceId}/support`,
+        icon: Phone,
+      },
+    ],
+    [workspaceId]
+  );
 
   const handleLogout = () => {
     logout.mutate();
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-sidebar">
+    <div className="bg-sidebar flex h-screen w-64 flex-col">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
@@ -66,7 +85,7 @@ export function Sidebar() {
             />
           </svg>
         </div>
-        <span className="text-lg font-bold text-sidebar-foreground">
+        <span className="text-sidebar-foreground text-lg font-bold">
           Expensio
         </span>
       </div>
@@ -97,7 +116,7 @@ export function Sidebar() {
       <div className="border-t border-border p-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-3 rounded-lg p-2 hover:bg-sidebar-foreground/5 transition-colors">
+            <button className="hover:bg-sidebar-foreground/5 flex w-full items-center gap-3 rounded-lg p-2 transition-colors">
               <Avatar>
                 <AvatarImage src="/avatar-placeholder.jpg" alt="User" />
                 <AvatarFallback className="bg-primary text-primary-foreground">
@@ -105,7 +124,7 @@ export function Sidebar() {
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 overflow-hidden text-left">
-                <p className="truncate text-sm font-medium text-sidebar-foreground">
+                <p className="text-sidebar-foreground truncate text-sm font-medium">
                   Janice Chandler
                 </p>
                 <p className="truncate text-xs text-muted-foreground">

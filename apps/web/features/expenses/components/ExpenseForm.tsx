@@ -21,7 +21,11 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { useCreateExpense, useUpdateExpense, useCategories } from '../hooks/useExpenses';
+import {
+  useCreateExpense,
+  useUpdateExpense,
+  useCategories,
+} from '../hooks/useExpenses';
 import type { Expense, CreateExpenseDTO } from '@/types';
 import { PaymentMethod } from '@/types';
 
@@ -38,7 +42,7 @@ export function ExpenseForm({
   onOpenChange,
   workspaceId,
   expense,
-  mode = 'create'
+  mode = 'create',
 }: ExpenseFormProps) {
   const [formData, setFormData] = useState<Partial<CreateExpenseDTO>>({
     title: '',
@@ -115,7 +119,8 @@ export function ExpenseForm({
       merchant: formData.merchant || '',
       isReimbursable: formData.isReimbursable ?? true,
       categoryId: formData.categoryId || '',
-      expenseDate: formData.expenseDate || new Date().toISOString().split('T')[0],
+      expenseDate:
+        formData.expenseDate || new Date().toISOString().split('T')[0],
       paymentMethod: formData.paymentMethod || PaymentMethod.CREDIT_CARD,
     };
 
@@ -150,9 +155,11 @@ export function ExpenseForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'New expense' : 'Edit expense'}</DialogTitle>
+          <DialogTitle>
+            {mode === 'create' ? 'New expense' : 'Edit expense'}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
@@ -187,7 +194,9 @@ export function ExpenseForm({
                     id="expenseDate"
                     type="date"
                     value={formData.expenseDate}
-                    onChange={(e) => handleChange('expenseDate', e.target.value)}
+                    onChange={(e) =>
+                      handleChange('expenseDate', e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -242,18 +251,28 @@ export function ExpenseForm({
                 <Label htmlFor="paymentMethod">Payment Method*</Label>
                 <Select
                   value={formData.paymentMethod}
-                  onValueChange={(value) => handleChange('paymentMethod', value as PaymentMethod)}
+                  onValueChange={(value) =>
+                    handleChange('paymentMethod', value as PaymentMethod)
+                  }
                 >
                   <SelectTrigger id="paymentMethod">
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
-                    <SelectItem value={PaymentMethod.CREDIT_CARD}>Credit Card</SelectItem>
-                    <SelectItem value={PaymentMethod.DEBIT_CARD}>Debit Card</SelectItem>
-                    <SelectItem value={PaymentMethod.BANK_TRANSFER}>Bank Transfer</SelectItem>
+                    <SelectItem value={PaymentMethod.CREDIT_CARD}>
+                      Credit Card
+                    </SelectItem>
+                    <SelectItem value={PaymentMethod.DEBIT_CARD}>
+                      Debit Card
+                    </SelectItem>
+                    <SelectItem value={PaymentMethod.BANK_TRANSFER}>
+                      Bank Transfer
+                    </SelectItem>
                     <SelectItem value={PaymentMethod.CHECK}>Check</SelectItem>
-                    <SelectItem value={PaymentMethod.DIGITAL_WALLET}>Digital Wallet</SelectItem>
+                    <SelectItem value={PaymentMethod.DIGITAL_WALLET}>
+                      Digital Wallet
+                    </SelectItem>
                     <SelectItem value={PaymentMethod.OTHER}>Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -270,7 +289,10 @@ export function ExpenseForm({
                   </SelectTrigger>
                   <SelectContent position="popper">
                     {categories.map((category) => (
-                      <SelectItem key={category.categoryId} value={category.categoryId}>
+                      <SelectItem
+                        key={category.categoryId}
+                        value={category.categoryId}
+                      >
                         {category.name}
                       </SelectItem>
                     ))}
@@ -359,7 +381,7 @@ export function ExpenseForm({
             </div>
           </div>
 
-          <DialogFooter className="gap-2 mt-6">
+          <DialogFooter className="mt-6 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -374,8 +396,8 @@ export function ExpenseForm({
               {createExpense.isPending || updateExpense.isPending
                 ? 'Saving...'
                 : mode === 'create'
-                ? 'Create expense'
-                : 'Update expense'}
+                  ? 'Create expense'
+                  : 'Update expense'}
             </Button>
           </DialogFooter>
         </form>

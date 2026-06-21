@@ -109,11 +109,7 @@ export function LoginForm() {
         )}
 
         {/* Submit Button */}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={login.isPending}
-        >
+        <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending ? 'Signing in...' : 'Sign in'}
         </Button>
       </form>
@@ -124,9 +120,7 @@ export function LoginForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">
-            Or
-          </span>
+          <span className="bg-background px-2 text-muted-foreground">Or</span>
         </div>
       </div>
 

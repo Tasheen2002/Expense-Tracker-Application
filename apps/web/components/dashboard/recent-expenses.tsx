@@ -98,7 +98,7 @@ export function RecentExpenses() {
             {mockExpenses.map((expense) => (
               <tr
                 key={expense.id}
-                className="border-b last:border-0 transition-colors hover:bg-muted/50"
+                className="border-b transition-colors last:border-0 hover:bg-muted/50"
               >
                 <td className="px-4 py-3 font-medium">{expense.subject}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">

@@ -12,12 +12,15 @@ import { useToast } from '@/hooks/use-toast';
 export const expenseKeys = {
   all: ['expenses'] as const,
   lists: () => [...expenseKeys.all, 'list'] as const,
-  list: (filters: ListExpensesParams) => [...expenseKeys.lists(), filters] as const,
+  list: (filters: ListExpensesParams) =>
+    [...expenseKeys.lists(), filters] as const,
   details: () => [...expenseKeys.all, 'detail'] as const,
   detail: (workspaceId: string, expenseId: string) =>
     [...expenseKeys.details(), workspaceId, expenseId] as const,
-  categories: (workspaceId: string) => [...expenseKeys.all, 'categories', workspaceId] as const,
-  tags: (workspaceId: string) => [...expenseKeys.all, 'tags', workspaceId] as const,
+  categories: (workspaceId: string) =>
+    [...expenseKeys.all, 'categories', workspaceId] as const,
+  tags: (workspaceId: string) =>
+    [...expenseKeys.all, 'tags', workspaceId] as const,
 };
 
 // ============================================================================
@@ -53,7 +56,8 @@ export function useCreateExpense(workspaceId: string) {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (data: CreateExpenseDTO) => expensesApi.create(workspaceId, data),
+    mutationFn: (data: CreateExpenseDTO) =>
+      expensesApi.create(workspaceId, data),
     onSuccess: () => {
       // Invalidate expenses list
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
@@ -115,7 +119,8 @@ export function useDeleteExpense(workspaceId: string) {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (expenseId: string) => expensesApi.delete(workspaceId, expenseId),
+    mutationFn: (expenseId: string) =>
+      expensesApi.delete(workspaceId, expenseId),
     onSuccess: () => {
       // Invalidate expenses list
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
@@ -144,7 +149,8 @@ export function useSubmitExpense(workspaceId: string) {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: (expenseId: string) => expensesApi.submit(workspaceId, expenseId),
+    mutationFn: (expenseId: string) =>
+      expensesApi.submit(workspaceId, expenseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: expenseKeys.lists() });
 

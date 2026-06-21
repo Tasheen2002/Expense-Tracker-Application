@@ -58,7 +58,9 @@ export function ApprovalModal({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Amount</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Amount
+              </p>
               <p className="text-2xl font-bold">
                 {formatCurrency(approval.amount, 'EUR')}
               </p>
