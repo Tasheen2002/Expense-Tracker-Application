@@ -26,7 +26,7 @@ import {
   useUpdateExpense,
   useCategories,
 } from '../hooks/useExpenses';
-import type { Expense, CreateExpenseDTO } from '@/types';
+import type { Expense, CreateExpenseDTO, Category } from '@/types';
 import { PaymentMethod } from '@/types';
 
 interface ExpenseFormProps {
@@ -62,9 +62,11 @@ export function ExpenseForm({
   const { data: categoriesResponse } = useCategories(workspaceId);
 
   // Handle both array and object with items array
-  const categories = Array.isArray(categoriesResponse?.data)
-    ? categoriesResponse.data
-    : categoriesResponse?.data?.items || [];
+  const categories: Category[] = categoriesResponse?.data
+    ? (Array.isArray(categoriesResponse.data)
+      ? (categoriesResponse.data as any)
+      : (categoriesResponse.data as any).items || [])
+    : [];
 
   // Populate form if editing or reset if creating
   useEffect(() => {
@@ -290,8 +292,8 @@ export function ExpenseForm({
                   <SelectContent position="popper">
                     {categories.map((category) => (
                       <SelectItem
-                        key={category.categoryId}
-                        value={category.categoryId}
+                        key={category.id}
+                        value={category.id}
                       >
                         {category.name}
                       </SelectItem>

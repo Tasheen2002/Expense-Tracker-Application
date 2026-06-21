@@ -106,22 +106,51 @@ export const expensesApi = {
     return api.get<ApiResponse<ListExpensesResponse>>(url);
   },
 
-  /**
-   * Get all categories for a workspace
-   */
   getCategories: async (
     workspaceId: string
-  ): Promise<ApiResponse<Category[]>> => {
-    return api.get<ApiResponse<Category[]>>(
-      `workspaces/${workspaceId}/categories`
-    );
+  ): Promise<
+    ApiResponse<{
+      items: Category[];
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    }>
+  > => {
+    return api.get<
+      ApiResponse<{
+        items: Category[];
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
+      }>
+    >(`workspaces/${workspaceId}/categories`);
   },
 
   /**
    * Get all tags for a workspace
    */
-  getTags: async (workspaceId: string): Promise<ApiResponse<Tag[]>> => {
-    return api.get<ApiResponse<Tag[]>>(`workspaces/${workspaceId}/tags`);
+  getTags: async (
+    workspaceId: string
+  ): Promise<
+    ApiResponse<{
+      items: Tag[];
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    }>
+  > => {
+    return api.get<
+      ApiResponse<{
+        items: Tag[];
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
+      }>
+    >(`workspaces/${workspaceId}/tags`);
   },
 
   /**
