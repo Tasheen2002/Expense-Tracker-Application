@@ -18,12 +18,13 @@ export default function WorkspacesRedirectPage() {
           return;
         }
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         console.log('Fetching workspaces from:', `${apiUrl}/workspaces`);
 
         const response = await fetch(`${apiUrl}/workspaces`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -43,7 +44,7 @@ export default function WorkspacesRedirectPage() {
             const createResponse = await fetch(`${apiUrl}/workspaces`, {
               method: 'POST',
               headers: {
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
@@ -51,7 +52,10 @@ export default function WorkspacesRedirectPage() {
               }),
             });
 
-            console.log('Create workspace response status:', createResponse.status);
+            console.log(
+              'Create workspace response status:',
+              createResponse.status
+            );
 
             if (createResponse.ok) {
               const newWorkspace = await createResponse.json();
@@ -74,7 +78,11 @@ export default function WorkspacesRedirectPage() {
           }
         } else {
           const errorText = await response.text();
-          console.error('Failed to fetch workspaces:', response.status, errorText);
+          console.error(
+            'Failed to fetch workspaces:',
+            response.status,
+            errorText
+          );
           router.push('/login');
         }
       } catch (error) {

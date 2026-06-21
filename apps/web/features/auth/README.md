@@ -31,19 +31,21 @@ features/auth/
 ### ✅ 1. Authentication API (`api/auth.api.ts`)
 
 **Methods:**
+
 - `authApi.register(data)` - Register new user
 - `authApi.login(data)` - Login with email/password
 - `authApi.me()` - Get current authenticated user
 - `authApi.logout()` - Clear token from localStorage
 
 **Example:**
+
 ```typescript
 import { authApi } from '@/features/auth';
 
 // Login
 const response = await authApi.login({
   email: 'user@example.com',
-  password: 'password123'
+  password: 'password123',
 });
 ```
 
@@ -52,6 +54,7 @@ const response = await authApi.login({
 ### ✅ 2. Auth Hooks (`hooks/useAuth.ts`)
 
 **Hooks Provided:**
+
 - `useLogin()` - Login mutation with auto token storage
 - `useRegister()` - Registration mutation with redirect to login
 - `useCurrentUser()` - Fetch current user (auto-disabled without token)
@@ -59,6 +62,7 @@ const response = await authApi.login({
 - `useAuth()` - Combined hook with all auth state
 
 **Example:**
+
 ```typescript
 import { useAuth } from '@/features/auth';
 
@@ -78,6 +82,7 @@ function MyComponent() {
 ### ✅ 3. Login Form (`components/LoginForm.tsx`)
 
 **Features:**
+
 - ✅ Email and password validation
 - ✅ Error handling with user-friendly messages
 - ✅ Loading states during submission
@@ -87,6 +92,7 @@ function MyComponent() {
 - ✅ Auto-redirects to /workspaces on success
 
 **Usage:**
+
 ```typescript
 import { LoginForm } from '@/features/auth';
 
@@ -100,6 +106,7 @@ export default function LoginPage() {
 ### ✅ 4. Register Form (`components/RegisterForm.tsx`)
 
 **Features:**
+
 - ✅ Full name, email, password fields
 - ✅ Password confirmation with matching validation
 - ✅ Minimum password length (8 characters)
@@ -109,6 +116,7 @@ export default function LoginPage() {
 - ✅ Auto-redirects to login after successful registration
 
 **Usage:**
+
 ```typescript
 import { RegisterForm } from '@/features/auth';
 
@@ -124,12 +132,14 @@ export default function RegisterPage() {
 **Purpose:** Redirects unauthenticated users to login
 
 **Features:**
+
 - ✅ Checks for authenticated user
 - ✅ Shows loading spinner while checking
 - ✅ Redirects to /login if not authenticated
 - ✅ Passes through children if authenticated
 
 **Usage:**
+
 ```typescript
 import { ProtectedRoute } from '@/features/auth';
 
@@ -149,12 +159,14 @@ export default function DashboardLayout({ children }) {
 **Purpose:** Redirects authenticated users away from auth pages
 
 **Features:**
+
 - ✅ Checks for authenticated user
 - ✅ Shows loading spinner while checking
 - ✅ Redirects to /workspaces if already authenticated
 - ✅ Shows login/register if not authenticated
 
 **Usage:**
+
 ```typescript
 import { PublicRoute } from '@/features/auth';
 
@@ -174,6 +186,7 @@ export default function LoginPage() {
 **Purpose:** Share auth state across the entire app
 
 **Features:**
+
 - ✅ Wraps useAuth hook
 - ✅ Provides auth state to all children
 - ✅ Type-safe context with TypeScript
@@ -185,17 +198,20 @@ export default function LoginPage() {
 ### ✅ 8. Middleware Protection (`middleware.ts`)
 
 **Features:**
+
 - ✅ Protects `/workspaces`, `/account`, `/settings` routes
 - ✅ Redirects unauthenticated users to `/login`
 - ✅ Redirects authenticated users away from `/login` and `/register`
 - ✅ Sets callbackUrl for post-login redirect
 
 **Protected Routes:**
+
 - `/workspaces/*`
 - `/account/*`
 - `/settings/*`
 
 **Public Routes:**
+
 - `/` (landing page)
 - `/login`
 - `/register`
@@ -325,11 +341,11 @@ export default function ProtectedPage() {
 
 ## 📝 API Endpoints Used
 
-| Method | Endpoint | Body | Response |
-|--------|----------|------|----------|
-| POST | `/auth/register` | `{ email, password, fullName? }` | `{ userId, email }` |
-| POST | `/auth/login` | `{ email, password }` | `{ user, token }` |
-| GET | `/auth/me` | - | `{ userId, email, workspaceId }` |
+| Method | Endpoint         | Body                             | Response                         |
+| ------ | ---------------- | -------------------------------- | -------------------------------- |
+| POST   | `/auth/register` | `{ email, password, fullName? }` | `{ userId, email }`              |
+| POST   | `/auth/login`    | `{ email, password }`            | `{ user, token }`                |
+| GET    | `/auth/me`       | -                                | `{ userId, email, workspaceId }` |
 
 ---
 
@@ -338,10 +354,12 @@ export default function ProtectedPage() {
 **Storage:** localStorage (key: `'auth-token'`)
 
 **Auto-Injection:**
+
 - ✅ API client auto-injects token via `beforeRequest` hook
 - ✅ All API calls automatically include `Authorization: Bearer <token>`
 
 **Expiration:**
+
 - Backend JWT has expiration time
 - Middleware checks token validity
 - Invalid token → Redirect to login

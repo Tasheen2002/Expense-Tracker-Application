@@ -15,7 +15,11 @@ interface AuthContextType {
   error: Error | null;
   login: (data: { email: string; password: string }) => void;
   logout: () => void;
-  register: (data: { email: string; password: string; fullName?: string }) => void;
+  register: (data: {
+    email: string;
+    password: string;
+    fullName?: string;
+  }) => void;
   loginState: {
     isPending: boolean;
     error: Error | null;
@@ -35,11 +39,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
-  return (
-    <AuthContext.Provider value={auth}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
 // ============================================================================

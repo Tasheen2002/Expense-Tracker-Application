@@ -8,7 +8,12 @@ interface ToastOptions {
 }
 
 export function useToast() {
-  const toast = ({ title, description, variant = 'default', duration = 3000 }: ToastOptions) => {
+  const toast = ({
+    title,
+    description,
+    variant = 'default',
+    duration = 3000,
+  }: ToastOptions) => {
     const message = title || description || '';
     const desc = title && description ? description : undefined;
 
