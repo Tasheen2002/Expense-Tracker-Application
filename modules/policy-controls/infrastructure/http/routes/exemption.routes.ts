@@ -1,18 +1,16 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ExemptionController } from '../controllers/exemption.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
   requestExemptionSchema,
   approveExemptionSchema,
   rejectExemptionSchema,
-  exemptionParamsSchema,
   exemptionQuerySchema,
   checkActiveExemptionQuerySchema,
   exemptionParamsJsonSchema,
@@ -27,28 +25,29 @@ import {
   activeExemptionEnvelopeJsonSchema,
 } from '../validation/exemption.schema';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
 } from '../validation/policy.schema';
 
 export async function exemptionRoutes(
   fastify: FastifyInstance,
-  controller: ExemptionController,
-  prisma: PrismaClient
-) {
+  controller: ExemptionController
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   // Request exemption
   fastify.post(
     '/workspaces/:workspaceId/exemptions',
     {
-      preValidation: [validateParams(workspaceParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(requestExemptionSchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -69,11 +68,11 @@ export async function exemptionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/exemptions',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(exemptionQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'List policy exemptions for a workspace',
@@ -93,11 +92,11 @@ export async function exemptionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/exemptions/active',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(checkActiveExemptionQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Check if user has active exemption for a policy',
@@ -117,8 +116,8 @@ export async function exemptionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/exemptions/:exemptionId',
     {
-      preValidation: [validateParams(exemptionParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get policy exemption by ID',
@@ -137,11 +136,11 @@ export async function exemptionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/exemptions/:exemptionId/approve',
     {
-      preValidation: [validateParams(exemptionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(approveExemptionSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -162,11 +161,11 @@ export async function exemptionRoutes(
   fastify.post(
     '/workspaces/:workspaceId/exemptions/:exemptionId/reject',
     {
-      preValidation: [validateParams(exemptionParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(rejectExemptionSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],

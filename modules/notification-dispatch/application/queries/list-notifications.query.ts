@@ -1,16 +1,16 @@
 import { NotificationService } from '../services/notification.service';
 import { NotificationDTO } from '../../domain/entities/notification.entity';
-import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface ListNotificationsQuery extends IQuery {
-  recipientId: string;
-  workspaceId: string;
-  limit?: number;
-  offset?: number;
+  readonly recipientId: string;
+  readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class ListNotificationsHandler implements IQueryHandler<

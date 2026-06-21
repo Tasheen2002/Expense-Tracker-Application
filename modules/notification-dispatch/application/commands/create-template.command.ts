@@ -6,15 +6,15 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CreateTemplateCommand extends ICommand {
-  workspaceId: string | undefined;
-  name: string;
-  type: NotificationType;
-  channel: NotificationChannel;
-  subjectTemplate: string;
-  bodyTemplate: string;
+  readonly workspaceId: string | undefined;
+  readonly name: string;
+  readonly type: NotificationType;
+  readonly channel: NotificationChannel;
+  readonly subjectTemplate: string;
+  readonly bodyTemplate: string;
 }
 
 export class CreateTemplateHandler implements ICommandHandler<

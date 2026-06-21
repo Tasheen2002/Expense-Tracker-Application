@@ -1,7 +1,7 @@
 import { NotificationType } from '../enums/notification-type.enum';
 import { PreferenceId } from '../value-objects/preference-id';
 import { UserId, WorkspaceId } from '../value-objects';
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { AggregateRoot } from '@core/domain/aggregate-root';
 
 export interface TypeSettingValue {
   email?: boolean;

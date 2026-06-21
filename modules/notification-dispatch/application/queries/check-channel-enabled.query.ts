@@ -3,13 +3,13 @@ import { NotificationType } from '../../domain/enums/notification-type.enum';
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface CheckChannelEnabledQuery extends IQuery {
-  userId: string;
-  workspaceId: string;
-  type: NotificationType;
-  channel: 'email' | 'inApp' | 'push';
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly type: NotificationType;
+  readonly channel: 'email' | 'inApp' | 'push';
 }
 
 export class CheckChannelEnabledHandler implements IQueryHandler<

@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ReceiptController } from '../controllers/receipt.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import {
@@ -8,16 +7,12 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
-  workspaceParamsSchema,
-  receiptParamsSchema,
-  receiptTagParamsSchema,
-  expenseParamsSchema,
   workspaceParamsJsonSchema,
   receiptParamsJsonSchema,
   receiptTagParamsJsonSchema,
@@ -60,11 +55,14 @@ const writeRateLimiter = createRateLimiter({
 
 export async function receiptRoutes(
   fastify: FastifyInstance,
-  controller: ReceiptController,
-  prisma: PrismaClient
+  controller: ReceiptController
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   // Apply write rate limiting to all mutation routes
@@ -78,11 +76,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/upload',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(uploadReceiptSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Upload a new receipt',
@@ -102,10 +100,8 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/:receiptId',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get receipt by ID',
@@ -124,11 +120,11 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(listReceiptsQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'List all receipts in workspace',
@@ -148,10 +144,8 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/expenses/:expenseId/receipts',
     {
-      preValidation: [
-        validateParams(expenseParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get all receipts linked to an expense',
@@ -170,11 +164,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/link-expense',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(linkToExpenseSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Link receipt to an expense',
@@ -194,10 +188,8 @@ export async function receiptRoutes(
   fastify.delete(
     '/:workspaceId/receipts/:receiptId/unlink-expense',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Unlink receipt from expense',
@@ -216,11 +208,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/process',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(processReceiptSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Process receipt to extract metadata',
@@ -240,10 +232,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/verify',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Mark receipt as verified',
@@ -262,11 +255,12 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/reject',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(rejectReceiptSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Mark receipt as rejected',
@@ -286,11 +280,11 @@ export async function receiptRoutes(
   fastify.delete(
     '/:workspaceId/receipts/:receiptId',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(deleteReceiptQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Delete a receipt',
@@ -310,11 +304,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(addMetadataSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Add metadata to receipt',
@@ -334,11 +328,11 @@ export async function receiptRoutes(
   fastify.patch(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(updateMetadataSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Update receipt metadata',
@@ -358,10 +352,8 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/:receiptId/metadata',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt Metadata'],
         description: 'Get receipt metadata',
@@ -380,11 +372,11 @@ export async function receiptRoutes(
   fastify.post(
     '/:workspaceId/receipts/:receiptId/tags',
     {
-      preValidation: [
-        validateParams(receiptParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateBody(addTagToReceiptSchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Add tag to receipt',
@@ -404,10 +396,8 @@ export async function receiptRoutes(
   fastify.delete(
     '/:workspaceId/receipts/:receiptId/tags/:tagId',
     {
-      preValidation: [
-        validateParams(receiptTagParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Remove tag from receipt',
@@ -426,10 +416,8 @@ export async function receiptRoutes(
   fastify.get(
     '/:workspaceId/receipts/stats',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
-      ],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get receipt statistics for workspace',

@@ -1,59 +1,48 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
 import { NotificationController } from '../controllers/notification.controller';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { validateQuery } from '../validation/validator';
+import {
+  listNotificationsSchema,
+  workspaceParamsJsonSchema,
+  listNotificationsQueryJsonSchema,
+  notificationListEnvelopeJsonSchema,
+  unreadNotificationListEnvelopeJsonSchema,
+  markAsReadParamsJsonSchema,
+  baseResponseEnvelopeJsonSchema,
+} from '../validation/notification.schema';
 
-export function registerNotificationRoutes(
+export async function registerNotificationRoutes(
   fastify: FastifyInstance,
   controller: NotificationController
-) {
-  const opts = { preHandler: [fastify.authenticate] };
+): Promise<void> {
+  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
+  };
 
   // Get all notifications for current user
   fastify.get(
     '/workspaces/:workspaceId/notifications',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateQuery(listNotificationsSchema),
+        workspaceAuth,
+      ],
       schema: {
         tags: ['Notification'],
         summary: 'Get notifications',
-        description:
-          'Retrieve all notifications for the authenticated user in a workspace',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
-        },
-        querystring: {
-          type: 'object',
-          properties: {
-            limit: {
-              type: 'string',
-              description: 'Number of notifications to return (max 100)',
-            },
-            offset: {
-              type: 'string',
-              description: 'Number of notifications to skip',
-            },
-          },
-        },
+        description: 'Retrieve all notifications for the authenticated user in a workspace',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        querystring: listNotificationsQueryJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  notifications: { type: 'array' },
-                  unreadCount: { type: 'number' },
-                },
-              },
-            },
-          },
+          200: notificationListEnvelopeJsonSchema,
         },
       },
     },
@@ -65,29 +54,16 @@ export function registerNotificationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notifications/unread',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
         summary: 'Get unread notifications',
-        description:
-          'Retrieve all unread notifications for the authenticated user in a workspace',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
-        },
+        description: 'Retrieve all unread notifications for the authenticated user in a workspace',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: { type: 'object' },
-            },
-          },
+          200: unreadNotificationListEnvelopeJsonSchema,
         },
       },
     },
@@ -99,29 +75,16 @@ export function registerNotificationRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notifications/:notificationId/read',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
         summary: 'Mark notification as read',
         description: 'Mark a specific notification as read',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            notificationId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId', 'notificationId'],
-        },
+        security: [{ bearerAuth: [] }],
+        params: markAsReadParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-              data: { type: 'object' },
-            },
-          },
+          200: baseResponseEnvelopeJsonSchema,
         },
       },
     },
@@ -133,33 +96,21 @@ export function registerNotificationRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notifications/read-all',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
         summary: 'Mark all notifications as read',
-        description:
-          'Mark all notifications as read for the authenticated user in a workspace',
-        params: {
-          type: 'object',
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-          },
-          required: ['workspaceId'],
-        },
+        description: 'Mark all notifications as read for the authenticated user in a workspace',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              statusCode: { type: 'number' },
-              message: { type: 'string' },
-            },
-          },
+          200: baseResponseEnvelopeJsonSchema,
         },
       },
     },
     (request, reply) =>
       controller.markAllAsRead(request as AuthenticatedRequest, reply)
   );
-  // Preference endpoints live at /notification-preferences (preference.routes.ts)
 }
+

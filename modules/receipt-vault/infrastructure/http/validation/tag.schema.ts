@@ -100,3 +100,5 @@ export const paginationQuerySchema = z.object({
 
 export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);
 
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
+

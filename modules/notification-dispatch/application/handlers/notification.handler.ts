@@ -1,4 +1,4 @@
-import { DomainEvent, DomainEventHandler } from '../../../../packages/core/src/domain/events/domain-event';
+import { DomainEvent, DomainEventHandler } from '@core/domain/events/domain-event';
 import { NotificationService } from '../services/notification.service';
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationPriority } from '../../domain/enums/notification-priority.enum';

@@ -5,8 +5,9 @@ import {
   UpdateTagHandler,
   DeleteTagHandler,
   ListTagsHandler,
-} from '../../../application';
-import type { CreateTagInput, UpdateTagInput } from '../validation/tag.schema';
+} from '@modules/receipt-vault/application';
+import type { WorkspaceParams, TagParams } from '../validation/common.schema';
+import type { CreateTagInput, UpdateTagInput, PaginationQuery } from '../validation/tag.schema';
 import { ResponseHelper } from '@shared/response.helper';
 
 export class TagController {
@@ -19,8 +20,8 @@ export class TagController {
 
   async listTags(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-      Querystring: { limit?: number; offset?: number };
+      Params: WorkspaceParams;
+      Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -31,8 +32,8 @@ export class TagController {
       const result = await this.listTagsHandler.handle({
         workspaceId,
         options: {
-          limit: limit ? Number(limit) : undefined,
-          offset: offset ? Number(offset) : undefined,
+          limit,
+          offset,
         },
       });
       return ResponseHelper.ok(reply, 'Tags retrieved successfully', {
@@ -49,7 +50,7 @@ export class TagController {
 
   async createTag(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
+      Params: WorkspaceParams;
       Body: CreateTagInput;
     }>,
     reply: FastifyReply
@@ -75,7 +76,7 @@ export class TagController {
 
   async updateTag(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; tagId: string };
+      Params: TagParams;
       Body: UpdateTagInput;
     }>,
     reply: FastifyReply
@@ -101,7 +102,7 @@ export class TagController {
 
   async deleteTag(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; tagId: string };
+      Params: TagParams;
     }>,
     reply: FastifyReply
   ) {

@@ -6,8 +6,6 @@ import { registerPreferenceRoutes } from "./preference.routes";
 import { NotificationController } from "../controllers/notification.controller";
 import { TemplateController } from "../controllers/template.controller";
 import { PreferenceController } from "../controllers/preference.controller";
-import { workspaceAuthorizationMiddleware } from "@shared/middleware";
-import { AuthenticatedRequest } from "@shared/interfaces/authenticated-request.interface";
 
 export async function registerNotificationDispatchRoutes(
   fastify: FastifyInstance,
@@ -17,31 +15,17 @@ export async function registerNotificationDispatchRoutes(
     preferenceController: PreferenceController;
   },
   prisma: PrismaClient,
-) {
+): Promise<void> {
   await fastify.register(
     async (instance) => {
-      // Add authentication hook first
-      instance.addHook("onRequest", async (request, reply) => {
-        await fastify.authenticate(request);
-      });
-
-      // Add workspace authorization middleware to all routes
-      instance.addHook("preHandler", async (request, reply) => {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          prisma,
-        );
-      });
-
       // User-facing notification routes
-      registerNotificationRoutes(instance, controllers.notificationController);
+      await registerNotificationRoutes(instance, controllers.notificationController);
 
       // User preference routes
-      registerPreferenceRoutes(instance, controllers.preferenceController);
+      await registerPreferenceRoutes(instance, controllers.preferenceController);
 
       // Admin template routes
-      registerTemplateRoutes(instance, controllers.templateController);
+      await registerTemplateRoutes(instance, controllers.templateController);
     },
     { prefix: "/api/v1" },
   );
@@ -51,3 +35,4 @@ export async function registerNotificationDispatchRoutes(
 export { registerNotificationRoutes } from "./notification.routes";
 export { registerTemplateRoutes } from "./template.routes";
 export { registerPreferenceRoutes } from "./preference.routes";
+

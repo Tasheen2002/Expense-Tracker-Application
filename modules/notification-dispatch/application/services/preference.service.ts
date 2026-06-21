@@ -107,7 +107,9 @@ export class PreferenceService {
     type: NotificationType,
     channel: "email" | "inApp" | "push",
   ): Promise<boolean> {
-    const preferences = await this.getPreferences(userId, workspaceId);
+    const userIdVO = UserId.fromString(userId);
+    const wsId = WorkspaceId.fromString(workspaceId);
+    const preferences = await this.preferenceRepository.findByUserAndWorkspace(userIdVO, wsId);
 
     if (!preferences) {
       // Default: email and inApp enabled, push disabled

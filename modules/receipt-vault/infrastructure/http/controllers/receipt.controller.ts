@@ -17,7 +17,13 @@ import {
   GetReceiptsByExpenseHandler,
   GetReceiptMetadataHandler,
   GetReceiptStatsHandler,
-} from '../../../application';
+} from '@modules/receipt-vault/application';
+import type {
+  WorkspaceParams,
+  ReceiptParams,
+  ReceiptTagParams,
+  ExpenseParams,
+} from '../validation/common.schema';
 import type {
   UploadReceiptInput,
   LinkToExpenseInput,
@@ -53,11 +59,11 @@ export class ReceiptController {
     private readonly getStatsHandler: GetReceiptStatsHandler
   ) {}
 
-  async getReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
-    const { workspaceId, receiptId } = request.params as {
-      workspaceId: string;
-      receiptId: string;
-    };
+  async getReceipt(
+    request: AuthenticatedRequest<{ Params: ReceiptParams }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId, receiptId } = request.params;
 
     try {
       const result = await this.getReceiptHandler.handle({
@@ -70,9 +76,15 @@ export class ReceiptController {
     }
   }
 
-  async listReceipts(request: AuthenticatedRequest, reply: FastifyReply) {
-    const { workspaceId } = request.params as { workspaceId: string };
-    const query = request.query as ListReceiptsQuery;
+  async listReceipts(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Querystring: ListReceiptsQuery;
+    }>,
+    reply: FastifyReply
+  ) {
+    const { workspaceId } = request.params;
+    const query = request.query;
 
     try {
       const result = await this.listReceiptsHandler.handle({
@@ -83,8 +95,8 @@ export class ReceiptController {
         receiptType: query.receiptType,
         isLinked: query.isLinked,
         isDeleted: query.isDeleted,
-        fromDate: query.fromDate ? new Date(query.fromDate as any) : undefined,
-        toDate: query.toDate ? new Date(query.toDate as any) : undefined,
+        fromDate: query.fromDate,
+        toDate: query.toDate,
         limit: query.limit,
         offset: query.offset,
       });
@@ -101,13 +113,10 @@ export class ReceiptController {
   }
 
   async getReceiptsByExpense(
-    request: AuthenticatedRequest,
+    request: AuthenticatedRequest<{ Params: ExpenseParams }>,
     reply: FastifyReply
   ) {
-    const { workspaceId, expenseId } = request.params as {
-      workspaceId: string;
-      expenseId: string;
-    };
+    const { workspaceId, expenseId } = request.params;
 
     try {
       const result = await this.getReceiptsByExpenseHandler.handle({
@@ -127,9 +136,7 @@ export class ReceiptController {
   }
 
   async getMetadata(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReceiptParams }>,
     reply: FastifyReply
   ) {
     const { workspaceId, receiptId } = request.params;
@@ -146,9 +153,7 @@ export class ReceiptController {
   }
 
   async getStats(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: WorkspaceParams }>,
     reply: FastifyReply
   ) {
     const { workspaceId } = request.params;
@@ -161,15 +166,21 @@ export class ReceiptController {
     }
   }
 
-  async uploadReceipt(request: AuthenticatedRequest, reply: FastifyReply) {
+  async uploadReceipt(
+    request: AuthenticatedRequest<{
+      Params: WorkspaceParams;
+      Body: UploadReceiptInput;
+    }>,
+    reply: FastifyReply
+  ) {
     const userId = request.user.userId;
-    const { workspaceId } = request.params as { workspaceId: string };
+    const { workspaceId } = request.params;
 
     try {
       const result = await this.uploadReceiptHandler.handle({
         workspaceId,
         userId,
-        ...(request.body as Omit<UploadReceiptInput, 'workspaceId' | 'userId'>),
+        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -185,7 +196,7 @@ export class ReceiptController {
 
   async linkToExpense(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: LinkToExpenseInput;
     }>,
     reply: FastifyReply
@@ -213,9 +224,7 @@ export class ReceiptController {
   }
 
   async unlinkFromExpense(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReceiptParams }>,
     reply: FastifyReply
   ) {
     const userId = request.user.userId;
@@ -239,7 +248,7 @@ export class ReceiptController {
 
   async processReceipt(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: ProcessReceiptInput;
     }>,
     reply: FastifyReply
@@ -267,9 +276,7 @@ export class ReceiptController {
   }
 
   async verifyReceipt(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReceiptParams }>,
     reply: FastifyReply
   ) {
     const userId = request.user.userId;
@@ -294,7 +301,7 @@ export class ReceiptController {
 
   async rejectReceipt(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: RejectReceiptInput;
     }>,
     reply: FastifyReply
@@ -322,7 +329,7 @@ export class ReceiptController {
 
   async deleteReceipt(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Querystring: DeleteReceiptQuery;
     }>,
     reply: FastifyReply
@@ -352,7 +359,7 @@ export class ReceiptController {
 
   async addMetadata(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: AddMetadataInput;
     }>,
     reply: FastifyReply
@@ -360,13 +367,11 @@ export class ReceiptController {
     const userId = request.user.userId;
     const { workspaceId, receiptId } = request.params;
     try {
-      const { transactionDate, ...restBody } = request.body;
       const result = await this.addMetadataHandler.handle({
         receiptId,
         workspaceId,
         userId,
-        ...restBody,
-        transactionDate: transactionDate ? new Date(transactionDate) : undefined,
+        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -382,7 +387,7 @@ export class ReceiptController {
 
   async updateMetadata(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: UpdateMetadataInput;
     }>,
     reply: FastifyReply
@@ -390,13 +395,11 @@ export class ReceiptController {
     const userId = request.user.userId;
     const { workspaceId, receiptId } = request.params;
     try {
-      const { transactionDate, ...restBody } = request.body;
       const result = await this.updateMetadataHandler.handle({
         receiptId,
         workspaceId,
         userId,
-        ...restBody,
-        transactionDate: transactionDate ? new Date(transactionDate) : undefined,
+        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -411,7 +414,7 @@ export class ReceiptController {
 
   async addTag(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string };
+      Params: ReceiptParams;
       Body: AddTagToReceiptInput;
     }>,
     reply: FastifyReply
@@ -438,9 +441,7 @@ export class ReceiptController {
   }
 
   async removeTag(
-    request: AuthenticatedRequest<{
-      Params: { workspaceId: string; receiptId: string; tagId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReceiptTagParams }>,
     reply: FastifyReply
   ) {
     const userId = request.user.userId;

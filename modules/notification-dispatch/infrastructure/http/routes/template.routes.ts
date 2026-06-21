@@ -1,51 +1,72 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TemplateController } from '../controllers/template.controller';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { validateBody, validateQuery } from '../validation/validator';
+import {
+  createTemplateSchema,
+  updateTemplateSchema,
+  getActiveTemplateSchema,
+  templateParamsJsonSchema,
+  createTemplateBodyJsonSchema,
+  updateTemplateBodyJsonSchema,
+  getActiveTemplateQueryJsonSchema,
+  notificationTemplateEnvelopeJsonSchema,
+} from '../validation/template.schema';
 
-export function registerTemplateRoutes(
+export async function registerTemplateRoutes(
   fastify: FastifyInstance,
   controller: TemplateController
-) {
-  const opts = { preHandler: [fastify.authenticate] };
+): Promise<void> {
+  const templateWorkspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as any;
+    const query = request.query as any;
+    const body = request.body as any;
+    const workspaceId = params?.workspaceId || query?.workspaceId || body?.workspaceId;
+
+    if (workspaceId) {
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!UUID_REGEX.test(workspaceId)) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          message: 'Invalid workspace ID format',
+        });
+      }
+
+      const originalParams = request.params as any;
+      request.params = { ...originalParams, workspaceId };
+      try {
+        await workspaceAuthorizationMiddleware(
+          request as AuthenticatedRequest,
+          reply,
+          request.server.prisma
+        );
+        if (reply.sent) return;
+        await RolePermissions.ADMIN_LEVEL(request, reply);
+      } finally {
+        request.params = originalParams;
+      }
+    }
+  };
 
   // Create notification template
   fastify.post(
     '/admin/notification-templates',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(createTemplateSchema),
+        templateWorkspaceAuth,
+      ],
       schema: {
         tags: ['Notification Templates'],
         description: 'Create a new notification template',
-        body: {
-          type: 'object',
-          required: [
-            'name',
-            'type',
-            'channel',
-            'subjectTemplate',
-            'bodyTemplate',
-          ],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            name: { type: 'string', minLength: 1, maxLength: 100 },
-            type: {
-              type: 'string',
-              enum: [
-                'EXPENSE_APPROVED',
-                'EXPENSE_REJECTED',
-                'APPROVAL_REQUIRED',
-                'BUDGET_ALERT',
-                'INVITATION',
-                'SYSTEM_ALERT',
-              ],
-            },
-            channel: {
-              type: 'string',
-              enum: ['EMAIL', 'IN_APP', 'PUSH'],
-            },
-            subjectTemplate: { type: 'string', minLength: 1, maxLength: 255 },
-            bodyTemplate: { type: 'string', minLength: 1 },
-          },
+        security: [{ bearerAuth: [] }],
+        body: createTemplateBodyJsonSchema,
+        response: {
+          201: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -57,16 +78,15 @@ export function registerTemplateRoutes(
   fastify.get(
     '/admin/notification-templates/:templateId',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Get a notification template by ID',
-        params: {
-          type: 'object',
-          properties: {
-            templateId: { type: 'string', format: 'uuid' },
-          },
-          required: ['templateId'],
+        security: [{ bearerAuth: [] }],
+        params: templateParamsJsonSchema,
+        response: {
+          200: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -78,31 +98,18 @@ export function registerTemplateRoutes(
   fastify.get(
     '/admin/notification-templates/active',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateQuery(getActiveTemplateSchema),
+        templateWorkspaceAuth,
+      ],
       schema: {
         tags: ['Notification Templates'],
         description: 'Get the active template for a specific type and channel',
-        querystring: {
-          type: 'object',
-          required: ['type', 'channel'],
-          properties: {
-            workspaceId: { type: 'string', format: 'uuid' },
-            type: {
-              type: 'string',
-              enum: [
-                'EXPENSE_APPROVED',
-                'EXPENSE_REJECTED',
-                'APPROVAL_REQUIRED',
-                'BUDGET_ALERT',
-                'INVITATION',
-                'SYSTEM_ALERT',
-              ],
-            },
-            channel: {
-              type: 'string',
-              enum: ['EMAIL', 'IN_APP', 'PUSH'],
-            },
-          },
+        security: [{ bearerAuth: [] }],
+        querystring: getActiveTemplateQueryJsonSchema,
+        response: {
+          200: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -114,23 +121,19 @@ export function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateTemplateSchema),
+        templateWorkspaceAuth,
+      ],
       schema: {
         tags: ['Notification Templates'],
         description: 'Update a notification template',
-        params: {
-          type: 'object',
-          properties: {
-            templateId: { type: 'string', format: 'uuid' },
-          },
-          required: ['templateId'],
-        },
-        body: {
-          type: 'object',
-          properties: {
-            subjectTemplate: { type: 'string', maxLength: 255 },
-            bodyTemplate: { type: 'string' },
-          },
+        security: [{ bearerAuth: [] }],
+        params: templateParamsJsonSchema,
+        body: updateTemplateBodyJsonSchema,
+        response: {
+          200: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -142,16 +145,15 @@ export function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId/activate',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Activate a notification template',
-        params: {
-          type: 'object',
-          properties: {
-            templateId: { type: 'string', format: 'uuid' },
-          },
-          required: ['templateId'],
+        security: [{ bearerAuth: [] }],
+        params: templateParamsJsonSchema,
+        response: {
+          200: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -163,16 +165,15 @@ export function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId/deactivate',
     {
-      ...opts,
+      onRequest: [fastify.authenticate],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Deactivate a notification template',
-        params: {
-          type: 'object',
-          properties: {
-            templateId: { type: 'string', format: 'uuid' },
-          },
-          required: ['templateId'],
+        security: [{ bearerAuth: [] }],
+        params: templateParamsJsonSchema,
+        response: {
+          200: notificationTemplateEnvelopeJsonSchema,
         },
       },
     },
@@ -180,3 +181,4 @@ export function registerTemplateRoutes(
       controller.deactivateTemplate(request as AuthenticatedRequest, reply)
   );
 }
+

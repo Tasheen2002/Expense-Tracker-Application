@@ -3,11 +3,11 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface MarkAllAsReadCommand extends ICommand {
-  recipientId: string;
-  workspaceId: string;
+  readonly recipientId: string;
+  readonly workspaceId: string;
 }
 
 export class MarkAllAsReadHandler implements ICommandHandler<

@@ -6,14 +6,14 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface SendNotificationCommand extends ICommand {
-  workspaceId: string;
-  recipientId: string;
-  type: NotificationType;
-  data: Record<string, unknown>;
-  priority?: NotificationPriority;
+  readonly workspaceId: string;
+  readonly recipientId: string;
+  readonly type: NotificationType;
+  readonly data: Record<string, unknown>;
+  readonly priority?: NotificationPriority;
 }
 
 export class SendNotificationHandler implements ICommandHandler<

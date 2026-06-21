@@ -34,10 +34,10 @@ export const policyParamsSchema = z.object({
  * Policy Query Schema
  */
 export const policyQuerySchema = z.object({
-  activeOnly: z.string().optional(),
+  activeOnly: z.preprocess((val) => val === 'true', z.boolean()).optional(),
   policyType: z.nativeEnum(PolicyType).optional(),
-  limit: z.string().regex(/^\d+$/).optional(),
-  offset: z.string().regex(/^\d+$/).optional(),
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().nonnegative().optional(),
 });
 
 /**
@@ -207,3 +207,5 @@ export const policyActionSuccessResponseJsonSchema = toJsonSchema(
     message: z.string(),
   })
 );
+
+export type ListPoliciesQuery = z.infer<typeof policyQuerySchema>;

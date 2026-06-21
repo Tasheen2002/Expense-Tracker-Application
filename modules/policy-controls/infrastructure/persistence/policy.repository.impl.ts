@@ -7,14 +7,14 @@ import {
 import { PolicyId } from '../../domain/value-objects/policy-id';
 import { PolicyType } from '../../domain/enums/policy-type.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '@modules/identity-workspace/domain/value-objects/workspace-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 
 export class PrismaPolicyRepository
   extends PrismaRepository<ExpensePolicy>

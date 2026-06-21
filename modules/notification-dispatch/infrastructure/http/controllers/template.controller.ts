@@ -9,6 +9,11 @@ import { ActivateTemplateHandler } from '../../../application/commands/activate-
 import { DeactivateTemplateHandler } from '../../../application/commands/deactivate-template.command';
 import { GetTemplateByIdHandler } from '../../../application/queries/get-template-by-id.query';
 import { GetActiveTemplateHandler } from '../../../application/queries/get-active-template.query';
+import {
+  CreateTemplateInput,
+  UpdateTemplateInput,
+  GetActiveTemplateQuery,
+} from '../validation/template.schema';
 
 export class TemplateController {
   constructor(
@@ -20,7 +25,12 @@ export class TemplateController {
     private readonly deactivateTemplateHandler: DeactivateTemplateHandler
   ) {}
 
-  async createTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+  async createTemplate(
+    request: AuthenticatedRequest<{
+      Body: CreateTemplateInput;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
       const {
         workspaceId,
@@ -29,14 +39,7 @@ export class TemplateController {
         channel,
         subjectTemplate,
         bodyTemplate,
-      } = request.body as {
-        workspaceId?: string;
-        name: string;
-        type: string;
-        channel: string;
-        subjectTemplate: string;
-        bodyTemplate: string;
-      };
+      } = request.body;
 
       const result = await this.createTemplateHandler.handle({
         workspaceId,
@@ -53,14 +56,19 @@ export class TemplateController {
         result.data,
         201
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getTemplateById(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getTemplateById(
+    request: AuthenticatedRequest<{
+      Params: { templateId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { templateId } = request.params as { templateId: string };
+      const { templateId } = request.params;
 
       const template = await this.getTemplateByIdHandler.handle({ templateId });
       return ResponseHelper.ok(
@@ -68,18 +76,19 @@ export class TemplateController {
         'Template retrieved successfully',
         template
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getActiveTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getActiveTemplate(
+    request: AuthenticatedRequest<{
+      Querystring: GetActiveTemplateQuery;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { workspaceId, type, channel } = request.query as {
-        workspaceId?: string;
-        type: string;
-        channel: string;
-      };
+      const { workspaceId, type, channel } = request.query;
 
       const template = await this.getActiveTemplateHandler.handle({
         workspaceId,
@@ -99,18 +108,21 @@ export class TemplateController {
         'Active template retrieved successfully',
         template
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async updateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+  async updateTemplate(
+    request: AuthenticatedRequest<{
+      Params: { templateId: string };
+      Body: UpdateTemplateInput;
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { templateId } = request.params as { templateId: string };
-      const { subjectTemplate, bodyTemplate } = request.body as {
-        subjectTemplate?: string;
-        bodyTemplate?: string;
-      };
+      const { templateId } = request.params;
+      const { subjectTemplate, bodyTemplate } = request.body;
 
       const result = await this.updateTemplateHandler.handle({
         templateId,
@@ -120,31 +132,43 @@ export class TemplateController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Template updated successfully'
+        'Template updated successfully',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async activateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+  async activateTemplate(
+    request: AuthenticatedRequest<{
+      Params: { templateId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { templateId } = request.params as { templateId: string };
+      const { templateId } = request.params;
 
       const result = await this.activateTemplateHandler.handle({ templateId });
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Template activated successfully'
+        'Template activated successfully',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async deactivateTemplate(request: AuthenticatedRequest, reply: FastifyReply) {
+  async deactivateTemplate(
+    request: AuthenticatedRequest<{
+      Params: { templateId: string };
+    }>,
+    reply: FastifyReply
+  ) {
     try {
-      const { templateId } = request.params as { templateId: string };
+      const { templateId } = request.params;
 
       const result = await this.deactivateTemplateHandler.handle({
         templateId,
@@ -152,10 +176,12 @@ export class TemplateController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Template deactivated successfully'
+        'Template deactivated successfully',
+        result.data
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 }
+

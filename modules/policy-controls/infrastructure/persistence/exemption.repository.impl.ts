@@ -6,15 +6,15 @@ import {
 import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
 import { ExemptionId } from '../../domain/value-objects/exemption-id';
 import { PolicyId } from '../../domain/value-objects/policy-id';
-import { WorkspaceId } from '../../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { WorkspaceId } from '@modules/identity-workspace/domain/value-objects/workspace-id.vo';
 import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '../../../../packages/core/src/domain/events/domain-event';
+import { IEventBus } from '@core/domain/events/domain-event';
 
 export class PrismaExemptionRepository
   extends PrismaRepository<PolicyExemption>

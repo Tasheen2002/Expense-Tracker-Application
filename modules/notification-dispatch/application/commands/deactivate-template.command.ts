@@ -4,10 +4,10 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface DeactivateTemplateCommand extends ICommand {
-  templateId: string;
+  readonly templateId: string;
 }
 
 export class DeactivateTemplateHandler implements ICommandHandler<

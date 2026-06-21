@@ -5,12 +5,12 @@ import { NotificationTemplateDTO } from '../../domain/entities/notification-temp
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface GetActiveTemplateQuery extends IQuery {
-  workspaceId: string | undefined;
-  type: NotificationType;
-  channel: NotificationChannel;
+  readonly workspaceId: string | undefined;
+  readonly type: NotificationType;
+  readonly channel: NotificationChannel;
 }
 
 export class GetActiveTemplateHandler implements IQueryHandler<

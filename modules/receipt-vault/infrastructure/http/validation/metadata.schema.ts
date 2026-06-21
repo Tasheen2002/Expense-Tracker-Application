@@ -10,8 +10,10 @@ export const addMetadataSchema = z.object({
   transactionDate: z
     .string()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: 'Invalid transaction date format',
+    .transform((val) => {
+      if (!val) return undefined;
+      const parsed = Date.parse(val);
+      return isNaN(parsed) ? undefined : new Date(parsed);
     }),
   transactionTime: z.string().max(20).optional(),
   subtotal: z
@@ -60,8 +62,10 @@ export const updateMetadataSchema = z.object({
   transactionDate: z
     .string()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), {
-      message: 'Invalid transaction date format',
+    .transform((val) => {
+      if (!val) return undefined;
+      const parsed = Date.parse(val);
+      return isNaN(parsed) ? undefined : new Date(parsed);
     }),
   transactionTime: z.string().max(20).optional(),
   subtotal: z

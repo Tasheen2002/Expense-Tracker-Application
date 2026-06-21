@@ -3,9 +3,7 @@ import { NotificationService } from '../application/services/notification.servic
 import { NotificationType } from '../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../domain/enums/notification-channel.enum';
 import { NotificationStatus } from '../domain/enums/notification-status.enum';
-import { NotificationPreference } from '../domain/entities/notification-preference.entity';
-import { UserId } from '../../identity-workspace/domain/value-objects/user-id.vo';
-import { WorkspaceId } from '../../identity-workspace/domain/value-objects/workspace-id.vo';
+import { checkChannelEnabledEnvelopeJsonSchema } from '../infrastructure/http/validation/template.schema';
 
 // Mock dependencies
 const mockNotificationRepository = {
@@ -49,6 +47,10 @@ describe('Notification Service', () => {
   });
 
   describe('send', () => {
+    it('DEBUG print schema', () => {
+      console.log('DEBUG SCHEMA:', JSON.stringify(checkChannelEnabledEnvelopeJsonSchema, null, 2));
+    });
+
     const params = {
       workspaceId: '123e4567-e89b-12d3-a456-426614174000',
       recipientId: '123e4567-e89b-12d3-a456-426614174001',

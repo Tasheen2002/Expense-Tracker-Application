@@ -10,7 +10,14 @@ import {
   ExemptViolationHandler,
   OverrideViolationHandler,
 } from '../../../application';
-import { ViolationStatus } from '../../../domain/enums/violation-status.enum';
+import {
+  AcknowledgeViolationBody,
+  ResolveViolationBody,
+  OverrideViolationBody,
+  ExemptViolationBody,
+  ListViolationsQuery,
+  GetViolationStatsQuery,
+} from '../validation/violation.schema';
 
 export class ViolationController {
   constructor(
@@ -43,14 +50,7 @@ export class ViolationController {
   async listViolations(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: {
-        status?: ViolationStatus;
-        userId?: string;
-        expenseId?: string;
-        policyId?: string;
-        limit?: string;
-        offset?: string;
-      };
+      Querystring: ListViolationsQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -65,8 +65,8 @@ export class ViolationController {
         expenseId,
         policyId,
         pagination: {
-          limit: limit ? parseInt(limit, 10) : 50,
-          offset: offset ? parseInt(offset, 10) : 0,
+          limit,
+          offset,
         },
       });
 
@@ -85,7 +85,7 @@ export class ViolationController {
   async getViolationStats(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { startDate?: string; endDate?: string };
+      Querystring: GetViolationStatsQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -113,6 +113,7 @@ export class ViolationController {
   async acknowledgeViolation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
+      Body: AcknowledgeViolationBody;
     }>,
     reply: FastifyReply
   ) {
@@ -126,7 +127,12 @@ export class ViolationController {
         acknowledgedBy: userId,
       });
 
-      return ResponseHelper.fromCommand(reply, result, 'Violation acknowledged successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation acknowledged successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -135,7 +141,7 @@ export class ViolationController {
   async resolveViolation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
-      Body: { resolutionNote?: string };
+      Body: ResolveViolationBody;
     }>,
     reply: FastifyReply
   ) {
@@ -150,7 +156,12 @@ export class ViolationController {
         resolutionNote: request.body.resolutionNote,
       });
 
-      return ResponseHelper.fromCommand(reply, result, 'Violation resolved successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation resolved successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -159,7 +170,7 @@ export class ViolationController {
   async exemptViolation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
-      Body: { notes?: string };
+      Body: ExemptViolationBody;
     }>,
     reply: FastifyReply
   ) {
@@ -173,7 +184,12 @@ export class ViolationController {
         exemptedBy: userId,
       });
 
-      return ResponseHelper.fromCommand(reply, result, 'Violation exempted successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation exempted successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -182,7 +198,7 @@ export class ViolationController {
   async overrideViolation(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; violationId: string };
-      Body: { overrideReason: string };
+      Body: OverrideViolationBody;
     }>,
     reply: FastifyReply
   ) {
@@ -197,7 +213,12 @@ export class ViolationController {
         overrideReason: request.body.overrideReason,
       });
 
-      return ResponseHelper.fromCommand(reply, result, 'Violation overridden successfully');
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation overridden successfully',
+        result.data
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

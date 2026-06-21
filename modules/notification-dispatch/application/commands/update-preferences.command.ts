@@ -7,12 +7,12 @@ import {
   ICommand,
   ICommandHandler,
   CommandResult,
-} from '../../../../packages/core/src/application/cqrs';
+} from '@core/application/cqrs';
 
 export interface UpdatePreferencesCommand extends ICommand {
-  userId: string;
-  workspaceId: string;
-  settings: GlobalPreferenceSettings;
+  readonly userId: string;
+  readonly workspaceId: string;
+  readonly settings: GlobalPreferenceSettings;
 }
 
 export class UpdatePreferencesHandler implements ICommandHandler<

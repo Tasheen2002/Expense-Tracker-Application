@@ -1,9 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { ViolationController } from '../controllers/violation.controller';
 import {
   validateBody,
-  validateParams,
   validateQuery,
 } from '../validation/validator';
 import {
@@ -11,9 +9,6 @@ import {
   resolveViolationSchema,
   overrideViolationSchema,
   exemptViolationSchema,
-  violationParamsSchema,
-  violationQuerySchema,
-  violationStatsQuerySchema,
   violationParamsJsonSchema,
   violationQueryJsonSchema,
   violationStatsQueryJsonSchema,
@@ -24,32 +19,37 @@ import {
   violationEnvelopeJsonSchema,
   violationListEnvelopeJsonSchema,
   violationStatsEnvelopeJsonSchema,
+  violationQuerySchema,
+  violationStatsQuerySchema,
 } from '../validation/violation.schema';
 import {
-  workspaceParamsSchema,
   workspaceParamsJsonSchema,
 } from '../validation/policy.schema';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 export async function violationRoutes(
   fastify: FastifyInstance,
-  controller: ViolationController,
-  prisma: PrismaClient
-) {
+  controller: ViolationController
+): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, prisma);
+    await workspaceAuthorizationMiddleware(
+      request as AuthenticatedRequest,
+      reply,
+      request.server.prisma
+    );
   };
 
   // List violations
   fastify.get(
     '/workspaces/:workspaceId/violations',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(violationQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'List policy violations in workspace',
@@ -69,11 +69,11 @@ export async function violationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/violations/stats',
     {
-      preValidation: [
-        validateParams(workspaceParamsSchema),
+      onRequest: [fastify.authenticate],
+      preHandler: [
         validateQuery(violationStatsQuerySchema),
+        workspaceAuth,
       ],
-      preHandler: [fastify.authenticate, workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get violation statistics for workspace',
@@ -93,8 +93,8 @@ export async function violationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/violations/:violationId',
     {
-      preValidation: [validateParams(violationParamsSchema)],
-      preHandler: [fastify.authenticate, workspaceAuth],
+      onRequest: [fastify.authenticate],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get policy violation by ID',
@@ -113,11 +113,10 @@ export async function violationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/violations/:violationId/acknowledge',
     {
-      preValidation: [validateParams(violationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(acknowledgeViolationSchema),
+        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -138,11 +137,11 @@ export async function violationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/violations/:violationId/resolve',
     {
-      preValidation: [validateParams(violationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(resolveViolationSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -163,11 +162,11 @@ export async function violationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/violations/:violationId/exempt',
     {
-      preValidation: [validateParams(violationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(exemptViolationSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -188,11 +187,11 @@ export async function violationRoutes(
   fastify.post(
     '/workspaces/:workspaceId/violations/:violationId/override',
     {
-      preValidation: [validateParams(violationParamsSchema)],
+      onRequest: [fastify.authenticate],
       preHandler: [
-        fastify.authenticate,
-        workspaceAuth,
         validateBody(overrideViolationSchema),
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
