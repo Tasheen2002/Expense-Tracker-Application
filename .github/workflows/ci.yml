@@ -59,7 +59,7 @@ jobs:
         run: pnpm type-check
 
       - name: Run Tests
-        run: pnpm test run --exclude "**/node_modules/**"
+        run: pnpm test run
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker?schema=public
           JWT_SECRET: super-secret-key-change-me-for-ci-runs
