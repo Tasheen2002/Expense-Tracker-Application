@@ -1,0 +1,223 @@
+import { PrismaClient, Prisma } from '@prisma/client';
+import {
+  IExemptionRepository,
+  ExemptionFilters,
+} from '../../domain/repositories/exemption.repository';
+import { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { ExemptionId } from '../../domain/value-objects/exemption-id';
+import { PolicyId } from '../../domain/value-objects/policy-id';
+import {  WorkspaceId  } from '@core/domain/value-objects';
+import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '@core/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '@core/domain/events/domain-event';
+
+export class PrismaExemptionRepository
+  extends PrismaRepository<PolicyExemption>
+  implements IExemptionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  async save(exemption: PolicyExemption): Promise<void> {
+    await this.prisma.policyExemption.upsert({
+      where: { id: exemption.id.getValue() },
+      create: {
+        id: exemption.id.getValue(),
+        workspaceId: exemption.workspaceId.getValue(),
+        policyId: exemption.policyId.getValue(),
+        userId: exemption.userId,
+        status: exemption.status,
+        reason: exemption.reason,
+        requestedBy: exemption.requestedBy,
+        requestedAt: exemption.createdAt,
+        validFrom: exemption.startDate,
+        validUntil: exemption.endDate,
+        approvedBy: exemption.approvedBy,
+        approvedAt: exemption.approvedAt,
+        rejectedBy: exemption.rejectedBy,
+        rejectedAt: exemption.rejectedAt,
+        rejectionReason: exemption.rejectionReason,
+      },
+      update: {
+        status: exemption.status,
+        approvedBy: exemption.approvedBy,
+        approvedAt: exemption.approvedAt,
+        rejectedBy: exemption.rejectedBy,
+        rejectedAt: exemption.rejectedAt,
+        rejectionReason: exemption.rejectionReason,
+        validFrom: exemption.startDate,
+        validUntil: exemption.endDate,
+        reason: exemption.reason,
+      },
+    });
+    await this.dispatchEvents(exemption);
+  }
+
+  async findById(id: ExemptionId): Promise<PolicyExemption | null> {
+    const row = await this.prisma.policyExemption.findUnique({
+      where: { id: id.getValue() },
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByWorkspace(
+    workspaceId: string,
+    filters?: ExemptionFilters,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.userId) {
+      where.userId = filters.userId;
+    }
+    if (filters?.policyId) {
+      where.policyId = filters.policyId;
+    }
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.policyExemption,
+      {
+        where,
+        orderBy: { requestedAt: 'desc' },
+      },
+      (row) => this.toDomain(row),
+      options
+    );
+  }
+
+  async findByUser(
+    workspaceId: string,
+    userId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.policyExemption,
+      {
+        where: { workspaceId, userId },
+        orderBy: { requestedAt: 'desc' },
+      },
+      (row) => this.toDomain(row),
+      options
+    );
+  }
+
+  async findActiveForUser(
+    workspaceId: string,
+    userId: string,
+    policyId: string
+  ): Promise<PolicyExemption | null> {
+    const now = new Date();
+    const row = await this.prisma.policyExemption.findFirst({
+      where: {
+        workspaceId,
+        userId,
+        policyId,
+        status: ExemptionStatus.APPROVED,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+      orderBy: { validUntil: 'desc' },
+    });
+
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findActiveForUserPolicies(
+    workspaceId: string,
+    userId: string,
+    policyIds: string[]
+  ): Promise<Map<string, PolicyExemption>> {
+    if (policyIds.length === 0) return new Map();
+
+    const now = new Date();
+    const rows = await this.prisma.policyExemption.findMany({
+      where: {
+        workspaceId,
+        userId,
+        policyId: { in: policyIds },
+        status: ExemptionStatus.APPROVED,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
+    });
+
+    const result = new Map<string, PolicyExemption>();
+    for (const row of rows) {
+      result.set(row.policyId, this.toDomain(row));
+    }
+    return result;
+  }
+
+  async findPendingByWorkspace(
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<PolicyExemption>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.policyExemption,
+      {
+        where: {
+          workspaceId,
+          status: ExemptionStatus.PENDING,
+        },
+        orderBy: { requestedAt: 'desc' },
+      },
+      (row) => this.toDomain(row),
+      options
+    );
+  }
+
+  async countByWorkspace(
+    workspaceId: string,
+    filters?: ExemptionFilters
+  ): Promise<number> {
+    const where: Prisma.PolicyExemptionWhereInput = { workspaceId };
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+    if (filters?.userId) {
+      where.userId = filters.userId;
+    }
+
+    return this.prisma.policyExemption.count({ where });
+  }
+
+  async delete(id: ExemptionId): Promise<void> {
+    await this.prisma.policyExemption.delete({
+      where: { id: id.getValue() },
+    });
+  }
+
+  private toDomain(
+    row: Prisma.PolicyExemptionGetPayload<object>
+  ): PolicyExemption {
+    return PolicyExemption.fromPersistence({
+      exemptionId: ExemptionId.fromString(row.id),
+      workspaceId: WorkspaceId.fromString(row.workspaceId),
+      policyId: PolicyId.fromString(row.policyId),
+      userId: row.userId,
+      requestedBy: row.requestedBy,
+      reason: row.reason,
+      status: row.status as ExemptionStatus,
+      startDate: row.validFrom,
+      endDate: row.validUntil,
+      approvedBy: row.approvedBy ?? undefined,
+      approvedAt: row.approvedAt ?? undefined,
+      rejectedBy: row.rejectedBy ?? undefined,
+      rejectedAt: row.rejectedAt ?? undefined,
+      rejectionReason: row.rejectionReason ?? undefined,
+      createdAt: row.requestedAt,
+      updatedAt: row.requestedAt,
+    });
+  }
+}

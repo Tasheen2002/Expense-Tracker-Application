@@ -1,0 +1,287 @@
+import { IExpenseWorkflowRepository } from '../../domain/repositories/expense-workflow.repository';
+import { IApprovalChainRepository } from '../../domain/repositories/approval-chain.repository';
+import { ExpenseWorkflow, ExpenseWorkflowDTO } from '../../domain/entities/expense-workflow.entity';
+import {
+  WorkflowNotFoundError,
+  WorkflowAlreadyExistsError,
+  UnauthorizedApproverError,
+  NoMatchingApprovalChainError,
+  SelfApprovalNotAllowedError,
+  WorkflowAlreadyCompletedError,
+  CurrentStepNotFoundError,
+} from '../../domain/errors/approval-workflow.errors';
+import { AUTO_APPROVAL_THRESHOLD } from '../../domain/constants/approval-workflow.constants';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '@core/domain/interfaces/paginated-result.interface';
+
+export class WorkflowService {
+  constructor(
+    private readonly workflowRepository: IExpenseWorkflowRepository,
+    private readonly chainRepository: IApprovalChainRepository
+  ) {}
+
+  async initiateWorkflow(params: {
+    expenseId: string;
+    workspaceId: string;
+    userId: string;
+    amount: number;
+    categoryId?: string;
+    hasReceipt: boolean;
+  }): Promise<ExpenseWorkflowDTO> {
+    const existing = await this.workflowRepository.findByExpenseId(
+      params.expenseId
+    );
+    if (existing) {
+      throw new WorkflowAlreadyExistsError(params.expenseId);
+    }
+
+    const chain = await this.chainRepository.findApplicableChain({
+      workspaceId: params.workspaceId,
+      amount: params.amount,
+      categoryId: params.categoryId,
+      hasReceipt: params.hasReceipt,
+    });
+
+    if (!chain) {
+      throw new NoMatchingApprovalChainError(params.workspaceId, params.amount);
+    }
+
+    // CRITICAL: Prevent self-approval (fraud prevention)
+    const approverIds = chain.approverSequence.map((id) => id.getValue());
+    if (approverIds.includes(params.userId)) {
+      throw new SelfApprovalNotAllowedError(params.userId);
+    }
+
+    const workflow = ExpenseWorkflow.create({
+      expenseId: params.expenseId,
+      workspaceId: params.workspaceId,
+      userId: params.userId,
+      chainId: chain.id.getValue(),
+      approverSequence: approverIds,
+    });
+
+    workflow.start();
+
+    // Auto-approval: Expenses below threshold don't need manual approval
+    if (params.amount <= AUTO_APPROVAL_THRESHOLD) {
+      workflow.autoApproveAll();
+      await this.workflowRepository.save(workflow);
+
+      // TODO: Implement notification for auto-approved workflow
+      // Need to notify the requester that their expense was auto-approved
+      // Requires: NotificationService or EventBus integration
+
+      return ExpenseWorkflow.toDTO(workflow);
+    }
+
+    await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for workflow initiation
+    // Need to notify the first approver that they have a pending approval
+    // Requires: NotificationService or EventBus integration
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async getWorkflow(
+    expenseId: string,
+    workspaceId: string
+  ): Promise<ExpenseWorkflowDTO> {
+    const workflow = await this.workflowRepository.findByExpenseId(expenseId);
+
+    if (!workflow || workflow.workspaceId.getValue() !== workspaceId) {
+      throw new WorkflowNotFoundError(expenseId);
+    }
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async approveStep(params: {
+    expenseId: string;
+    workspaceId: string;
+    approverId: string;
+    comments?: string;
+  }): Promise<ExpenseWorkflowDTO> {
+    const workflow = await this.workflowRepository.findByExpenseId(
+      params.expenseId
+    );
+
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
+      throw new WorkflowNotFoundError(params.expenseId);
+    }
+
+    // Guard: Check if workflow is already completed
+    if (workflow.isCompleted()) {
+      throw new WorkflowAlreadyCompletedError(
+        params.expenseId,
+        workflow.status
+      );
+    }
+
+    const currentStep = workflow.getCurrentStep();
+    if (!currentStep) {
+      throw new CurrentStepNotFoundError(params.expenseId);
+    }
+
+    if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
+      throw new UnauthorizedApproverError(
+        params.approverId,
+        currentStep.id.getValue()
+      );
+    }
+
+    currentStep.approve(params.comments);
+    workflow.processStepApproval(currentStep.stepNumber);
+
+    await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step approval
+    // If workflow is fully approved, notify requester of final approval
+    // If more steps remain, notify next approver in the chain
+    // Requires: NotificationService or EventBus integration
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async rejectStep(params: {
+    expenseId: string;
+    workspaceId: string;
+    approverId: string;
+    comments: string;
+  }): Promise<ExpenseWorkflowDTO> {
+    const workflow = await this.workflowRepository.findByExpenseId(
+      params.expenseId
+    );
+
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
+      throw new WorkflowNotFoundError(params.expenseId);
+    }
+
+    // Guard: Check if workflow is already completed
+    if (workflow.isCompleted()) {
+      throw new WorkflowAlreadyCompletedError(
+        params.expenseId,
+        workflow.status
+      );
+    }
+
+    const currentStep = workflow.getCurrentStep();
+    if (!currentStep) {
+      throw new CurrentStepNotFoundError(params.expenseId);
+    }
+
+    if (currentStep.getCurrentApproverId().getValue() !== params.approverId) {
+      throw new UnauthorizedApproverError(
+        params.approverId,
+        currentStep.id.getValue()
+      );
+    }
+
+    currentStep.reject(params.comments);
+    workflow.processStepRejection();
+
+    await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step rejection
+    // Need to notify the requester that their expense was rejected
+    // Include rejection comments in the notification
+    // Requires: NotificationService or EventBus integration
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async delegateStep(params: {
+    expenseId: string;
+    workspaceId: string;
+    fromUserId: string;
+    toUserId: string;
+  }): Promise<ExpenseWorkflowDTO> {
+    const workflow = await this.workflowRepository.findByExpenseId(
+      params.expenseId
+    );
+
+    if (!workflow || workflow.workspaceId.getValue() !== params.workspaceId) {
+      throw new WorkflowNotFoundError(params.expenseId);
+    }
+
+    // Guard: Check if workflow is already completed
+    if (workflow.isCompleted()) {
+      throw new WorkflowAlreadyCompletedError(
+        params.expenseId,
+        workflow.status
+      );
+    }
+
+    const currentStep = workflow.getCurrentStep();
+    if (!currentStep) {
+      throw new CurrentStepNotFoundError(params.expenseId);
+    }
+
+    if (currentStep.getCurrentApproverId().getValue() !== params.fromUserId) {
+      throw new UnauthorizedApproverError(
+        params.fromUserId,
+        currentStep.id.getValue()
+      );
+    }
+
+    workflow.delegateStep(currentStep.stepNumber, params.toUserId);
+
+    await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for step delegation
+    // Need to notify the new approver that a task has been delegated to them
+    // Optionally notify the original approver of successful delegation
+    // Requires: NotificationService or EventBus integration
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async cancelWorkflow(
+    expenseId: string,
+    workspaceId: string
+  ): Promise<ExpenseWorkflowDTO> {
+    const workflow = await this.workflowRepository.findByExpenseId(expenseId);
+
+    if (!workflow || workflow.workspaceId.getValue() !== workspaceId) {
+      throw new WorkflowNotFoundError(expenseId);
+    }
+
+    workflow.cancel();
+    await this.workflowRepository.save(workflow);
+
+    // TODO: Implement notification for workflow cancellation
+    // Need to notify all pending approvers that the workflow was cancelled
+    // Optionally notify the requester of successful cancellation
+    // Requires: NotificationService or EventBus integration
+
+    return ExpenseWorkflow.toDTO(workflow);
+  }
+
+  async listPendingApprovals(
+    approverId: string,
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+    const result = await this.workflowRepository.findPendingByApprover(
+      approverId,
+      workspaceId,
+      options
+    );
+    return { ...result, items: result.items.map((w) => ExpenseWorkflow.toDTO(w)) };
+  }
+
+  async listUserWorkflows(
+    userId: string,
+    workspaceId: string,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<ExpenseWorkflowDTO>> {
+    const result = await this.workflowRepository.findByUser(
+      userId,
+      workspaceId,
+      options
+    );
+    return { ...result, items: result.items.map((w) => ExpenseWorkflow.toDTO(w)) };
+  }
+}

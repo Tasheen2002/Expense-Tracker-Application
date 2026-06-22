@@ -1,0 +1,108 @@
+generator client {
+  provider        = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["categorization_rules", "identity_workspace"]
+}
+
+model CategoryRule {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @map("workspace_id") @db.Uuid
+  name             String            @db.VarChar(100)
+  description      String?           @db.VarChar(500)
+  priority         Int               @default(0)
+  isActive         Boolean           @default(true) @map("is_active")
+  conditionType    RuleConditionType @map("condition_type")
+  conditionValue   String            @map("condition_value") @db.VarChar(255)
+  targetCategoryId String            @map("target_category_id") @db.Uuid
+  createdBy        String            @map("created_by") @db.Uuid
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("category_rules")
+  @@schema("categorization_rules")
+}
+
+model RuleExecution {
+  id                String   @id @default(uuid()) @db.Uuid
+  ruleId            String   @map("rule_id") @db.Uuid
+  expenseId         String   @map("expense_id") @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  appliedCategoryId String   @map("applied_category_id") @db.Uuid
+  executedAt        DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
+
+  @@map("rule_executions")
+  @@schema("categorization_rules")
+}
+
+model CategorySuggestion {
+  id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid
+  expenseId           String    @map("expense_id") @db.Uuid
+  suggestedCategoryId String    @map("suggested_category_id") @db.Uuid
+  confidence          Float
+  reason              String?   @db.VarChar(500)
+  isAccepted          Boolean?  @map("is_accepted")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondedAt         DateTime? @map("responded_at") @db.Timestamptz(6)
+
+  @@map("category_suggestions")
+  @@schema("categorization_rules")
+}
+
+model OutboxEvent {
+  id            String            @id @default(uuid())
+  aggregateType String            @map("aggregate_type")
+  aggregateId   String            @map("aggregate_id")
+  eventType     String            @map("event_type")
+  payload       Json
+  status        OutboxEventStatus
+  createdAt     DateTime          @default(now()) @map("created_at")
+  processedAt   DateTime?         @map("processed_at")
+  retryCount    Int               @default(0) @map("retry_count")
+  error         String?
+
+  @@index([status, createdAt])
+  @@index([aggregateId])
+  @@map("outbox_event")
+  @@schema("categorization_rules")
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+
+  @@schema("categorization_rules")
+}
+
+enum RuleConditionType {
+  MERCHANT_CONTAINS
+  MERCHANT_EQUALS
+  AMOUNT_GREATER_THAN
+  AMOUNT_LESS_THAN
+  AMOUNT_EQUALS
+  DESCRIPTION_CONTAINS
+  PAYMENT_METHOD_EQUALS
+
+  @@schema("categorization_rules")
+}
+
+model WorkspaceMembership {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  workspaceId String   @map("workspace_id")
+  role        String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, workspaceId])
+  @@map("workspace_membership")
+  @@schema("identity_workspace")
+}

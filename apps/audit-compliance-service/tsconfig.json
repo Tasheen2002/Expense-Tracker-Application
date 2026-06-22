@@ -1,0 +1,33 @@
+{
+  "extends": "@expense-tracker/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": [
+      "node"
+    ],
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@prisma/client": [
+        "./src/generated/prisma-client"
+      ],
+      "@core/*": [
+        "../../packages/core/src/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@modules/*": [
+        "./src/modules/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

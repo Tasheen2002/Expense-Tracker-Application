@@ -1,0 +1,45 @@
+{
+  "extends": "@expense-tracker/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": [
+      "node"
+    ],
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@prisma/client": [
+        "./src/generated/prisma-client"
+      ],
+      "@core/*": [
+        "../../packages/core/src/*"
+      ],
+      "@packages/*": [
+        "../../packages/*/src"
+      ],
+      "@modules/approval-workflow": [
+        "./src/modules/approval-workflow"
+      ],
+      "@modules/approval-workflow/*": [
+        "./src/modules/approval-workflow/*"
+      ],
+      "@modules/policy-controls": [
+        "./src/modules/policy-controls"
+      ],
+      "@modules/policy-controls/*": [
+        "./src/modules/policy-controls/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}
