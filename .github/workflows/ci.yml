@@ -48,7 +48,7 @@ jobs:
         run: pnpm prisma:generate
 
       - name: Push Database Schema
-        run: pnpm exec prisma db push --accept-data-loss
+        run: pnpm exec prisma db push --schema=prisma/schema.prisma --accept-data-loss
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker?schema=public
 
@@ -59,7 +59,7 @@ jobs:
         run: pnpm type-check
 
       - name: Run Tests
-        run: pnpm test run
+        run: pnpm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker?schema=public
           JWT_SECRET: super-secret-key-change-me-for-ci-runs
