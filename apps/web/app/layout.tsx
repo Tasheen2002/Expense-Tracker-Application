@@ -1,24 +1,31 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { Providers } from '@/providers';
+import '../styles/globals.css';
+import { QueryProvider } from '../providers/QueryProvider';
+import { ThemeProvider } from '../providers/ThemeProvider';
+import { AuthProvider } from '../providers/AuthProvider';
+import { ModalProvider } from '../providers/ModalProvider';
+import { ReactNode } from 'react';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'Expense Tracker - Manage Your Business Expenses',
-  description: 'Enterprise-grade expense tracking and management system',
+export const metadata = {
+  title: 'Expense Tracker',
+  description: 'Enterprise expense management and compliance platform',
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
-      <body className={inter.className}>
-        <Providers>{children}</Providers>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background font-sans antialiased">
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              <ModalProvider>{children}</ModalProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
