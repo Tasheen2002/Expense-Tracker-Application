@@ -1,6 +1,7 @@
 import { UserId } from '../value-objects/user-id.vo';
 import { Email } from '../value-objects/email.vo';
-import { InvalidPasswordHashError } from '../errors/identity.errors';
+import { InvalidPasswordHashError, InvalidFullNameError } from '../errors/identity.errors';
+import { USER_FULLNAME_MAX_LENGTH } from '../constants/identity.constants';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 
@@ -147,7 +148,7 @@ export class UserProfileUpdatedEvent extends DomainEvent {
 }
 
 // ============================================================================
-// Entity
+// Entity Props
 // ============================================================================
 
 export interface UserProps {
@@ -162,25 +163,17 @@ export interface UserProps {
 }
 
 // ============================================================================
-// DTO
+// Aggregate Root
 // ============================================================================
 
-export interface UserDTO {
-  userId: string;
-  email: string;
-  fullName: string | null;
-  isActive: boolean;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export class User extends AggregateRoot {
-  private constructor(private props: UserProps) {
+  private constructor(private readonly props: UserProps) {
     super();
   }
 
   static create(data: CreateUserData): User {
+    if (!data.passwordHash?.trim()) throw new InvalidPasswordHashError();
+    const fullName = User.validateFullName(data.fullName ?? null);
     const userId = UserId.create();
     const email = Email.create(data.email);
     const now = new Date();
@@ -189,7 +182,7 @@ export class User extends AggregateRoot {
       id: userId,
       email,
       passwordHash: data.passwordHash,
-      fullName: data.fullName || null,
+      fullName,
       isActive: true,
       emailVerified: false,
       createdAt: now,
@@ -200,24 +193,31 @@ export class User extends AggregateRoot {
       new UserCreatedEvent(
         userId.getValue(),
         email.getValue(),
-        data.fullName || null
+        fullName
       )
     );
 
     return user;
   }
 
-  static fromPersistence(data: {
-    id: UserId;
-    email: Email;
-    passwordHash: string;
-    fullName: string | null;
-    isActive: boolean;
-    emailVerified: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  }): User {
-    return new User({ ...data });
+  static fromPersistence(data: UserData): User {
+    return new User({
+      id: data.id instanceof UserId ? data.id : UserId.fromString(data.id),
+      email: data.email instanceof Email ? data.email : Email.create(data.email),
+      passwordHash: data.passwordHash,
+      fullName: data.fullName,
+      isActive: data.isActive,
+      emailVerified: data.emailVerified,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    });
+  }
+
+  private static validateFullName(name: string | null): string | null {
+    if (name !== null && name.trim().length > USER_FULLNAME_MAX_LENGTH) {
+      throw new InvalidFullNameError();
+    }
+    return name?.trim() || null;
   }
 
   // Getters
@@ -232,7 +232,7 @@ export class User extends AggregateRoot {
 
   // Business logic methods
   updateFullName(fullName: string | null): void {
-    this.props.fullName = fullName ? fullName.trim() : null;
+    this.props.fullName = User.validateFullName(fullName);
     this.props.updatedAt = new Date();
     this.addDomainEvent(new UserProfileUpdatedEvent(this.props.id.getValue(), this.props.fullName));
   }
@@ -245,7 +245,7 @@ export class User extends AggregateRoot {
   }
 
   updatePassword(passwordHash: string): void {
-    if (!passwordHash) {
+    if (!passwordHash?.trim()) {
       throw new InvalidPasswordHashError();
     }
     this.props.passwordHash = passwordHash;
@@ -277,6 +277,10 @@ export class User extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
+  toDTO(): UserDTO {
+    return User.toDTO(this);
+  }
+
   static toDTO(user: User): UserDTO {
     return {
       userId: user.props.id.getValue(),
@@ -290,9 +294,23 @@ export class User extends AggregateRoot {
   }
 }
 
-// Supporting types and interfaces
+// ============================================================================
+// Supporting Types & Interfaces
+// ============================================================================
+
 export interface CreateUserData {
   email: string;
   passwordHash: string;
   fullName?: string;
+}
+
+export interface UserData {
+  id: string | UserId;
+  email: string | Email;
+  passwordHash: string;
+  fullName: string | null;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }

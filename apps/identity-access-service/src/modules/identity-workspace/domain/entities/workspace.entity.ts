@@ -1,6 +1,10 @@
 import { WorkspaceId } from '../value-objects/workspace-id.vo';
 import { UserId } from '../value-objects/user-id.vo';
 import { InvalidWorkspaceNameError } from '../errors/identity.errors';
+import {
+  WORKSPACE_NAME_MAX_LENGTH,
+  WORKSPACE_SLUG_MAX_LENGTH,
+} from '../constants/identity.constants';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 
@@ -94,8 +98,44 @@ export class WorkspaceActivatedEvent extends DomainEvent {
   }
 }
 
+export class WorkspaceDeletedEvent extends DomainEvent {
+  constructor(public readonly workspaceId: string) {
+    super(workspaceId, 'Workspace');
+  }
+
+  get eventType(): string {
+    return 'WorkspaceDeleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { workspaceId: this.workspaceId };
+  }
+}
+
+export class WorkspaceOwnershipTransferredEvent extends DomainEvent {
+  constructor(
+    public readonly workspaceId: string,
+    public readonly previousOwnerId: string,
+    public readonly ownerId: string
+  ) {
+    super(workspaceId, 'Workspace');
+  }
+
+  get eventType(): string {
+    return 'WorkspaceOwnershipTransferred';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      workspaceId: this.workspaceId,
+      previousOwnerId: this.previousOwnerId,
+      ownerId: this.ownerId,
+    };
+  }
+}
+
 // ============================================================================
-// Entity
+// Entity Props
 // ============================================================================
 
 export interface WorkspaceProps {
@@ -109,33 +149,24 @@ export interface WorkspaceProps {
 }
 
 // ============================================================================
-// DTO
+// Aggregate Root
 // ============================================================================
 
-export interface WorkspaceDTO {
-  workspaceId: string;
-  name: string;
-  slug: string;
-  ownerId: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export class Workspace extends AggregateRoot {
-  private constructor(private props: WorkspaceProps) {
+  private constructor(private readonly props: WorkspaceProps) {
     super();
   }
 
   static create(data: CreateWorkspaceData): Workspace {
+    const name = Workspace.validateName(data.name);
     const workspaceId = WorkspaceId.create();
     const ownerId = UserId.fromString(data.ownerId);
-    const slug = Workspace.generateSlug(data.name);
+    const slug = Workspace.generateSlug(name);
     const now = new Date();
 
     const workspace = new Workspace({
       id: workspaceId,
-      name: data.name,
+      name,
       slug,
       ownerId,
       isActive: true,
@@ -144,7 +175,7 @@ export class Workspace extends AggregateRoot {
     });
 
     workspace.addDomainEvent(
-      new WorkspaceCreatedEvent(workspaceId.getValue(), data.name, data.ownerId)
+      new WorkspaceCreatedEvent(workspaceId.getValue(), name, data.ownerId)
     );
 
     return workspace;
@@ -152,10 +183,10 @@ export class Workspace extends AggregateRoot {
 
   static fromPersistence(data: WorkspaceData): Workspace {
     return new Workspace({
-      id: WorkspaceId.fromString(data.id),
+      id: data.id instanceof WorkspaceId ? data.id : WorkspaceId.fromString(data.id),
       name: data.name,
       slug: data.slug,
-      ownerId: UserId.fromString(data.ownerId),
+      ownerId: data.ownerId instanceof UserId ? data.ownerId : UserId.fromString(data.ownerId),
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -166,30 +197,34 @@ export class Workspace extends AggregateRoot {
   get id(): WorkspaceId {
     return this.props.id;
   }
+
   get name(): string {
     return this.props.name;
   }
+
   get slug(): string {
     return this.props.slug;
   }
+
   get ownerId(): UserId {
     return this.props.ownerId;
   }
+
   get isActive(): boolean {
     return this.props.isActive;
   }
+
   get createdAt(): Date {
     return this.props.createdAt;
   }
+
   get updatedAt(): Date {
     return this.props.updatedAt;
   }
 
   // Business logic methods
   updateName(newName: string): void {
-    if (!newName || newName.trim().length === 0) {
-      throw new InvalidWorkspaceNameError();
-    }
+    newName = Workspace.validateName(newName);
 
     const oldName = this.props.name;
     this.props.name = newName.trim();
@@ -223,18 +258,52 @@ export class Workspace extends AggregateRoot {
     return this.props.ownerId.equals(userId);
   }
 
+  private static validateName(name: string): string {
+    if (!name || !name.trim() || name.trim().length > WORKSPACE_NAME_MAX_LENGTH) {
+      throw new InvalidWorkspaceNameError();
+    }
+    return name.trim();
+  }
+
+  transferOwnership(newOwnerId: string): void {
+    const nextOwner = UserId.fromString(newOwnerId);
+    const previousOwnerId = this.ownerId.getValue();
+    this.props.ownerId = nextOwner;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new WorkspaceOwnershipTransferredEvent(
+        this.id.getValue(),
+        previousOwnerId,
+        newOwnerId
+      )
+    );
+  }
+
+  markAsDeleted(): void {
+    this.props.isActive = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new WorkspaceDeletedEvent(this.id.getValue()));
+  }
+
   // Slug generation
   public static generateSlug(name: string): string {
-    return name
+    const slug = Workspace.validateName(name)
       .toLowerCase()
       .trim()
       .replace(/[^\w\s-]/g, '') // Remove special characters
       .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+      .slice(0, WORKSPACE_SLUG_MAX_LENGTH)
+      .replace(/^-+|-+$/g, '');
+    if (!slug) throw new InvalidWorkspaceNameError();
+    return slug;
   }
 
   equals(other: Workspace): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toDTO(): WorkspaceDTO {
+    return Workspace.toDTO(this);
   }
 
   static toDTO(workspace: Workspace): WorkspaceDTO {
@@ -250,19 +319,21 @@ export class Workspace extends AggregateRoot {
   }
 }
 
-// Supporting types and interfaces
+// ============================================================================
+// Supporting Types & Interfaces
+// ============================================================================
+
 export interface CreateWorkspaceData {
   name: string;
   ownerId: string;
 }
 
 export interface WorkspaceData {
-  id: string;
+  id: string | WorkspaceId;
   name: string;
   slug: string;
-  ownerId: string;
+  ownerId: string | UserId;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
-

@@ -1,11 +1,19 @@
-import { InvitationId } from "../value-objects/invitation-id.vo";
-import { WorkspaceId } from "../value-objects/workspace-id.vo";
-import { WorkspaceRole } from "./workspace-membership.entity";
-import { randomBytes } from "crypto";
+import { randomBytes } from 'crypto';
+import { Email } from '../value-objects/email.vo';
+import { InvitationId } from '../value-objects/invitation-id.vo';
+import { WorkspaceId } from '../value-objects/workspace-id.vo';
+import { WorkspaceRole } from './workspace-membership.entity';
 import {
   InvitationAlreadyAcceptedError,
+  InvitationCancelledError,
   InvitationExpiredError,
-} from "../errors/identity.errors";
+  InvalidInvitationExpiryError,
+  InvalidRoleError,
+} from '../errors/identity.errors';
+import {
+  INVITATION_EXPIRY_HOURS,
+  INVITATION_TOKEN_LENGTH,
+} from '../constants/identity.constants';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 
@@ -23,6 +31,7 @@ export interface WorkspaceInvitationDTO {
   acceptedAt: string | null;
   isExpired: boolean;
   isAccepted: boolean;
+  isCancelled: boolean;
   createdAt: string;
 }
 
@@ -35,13 +44,13 @@ export class InvitationCreatedEvent extends DomainEvent {
     public readonly invitationId: string,
     public readonly workspaceId: string,
     public readonly email: string,
-    public readonly role: string,
+    public readonly role: string
   ) {
-    super(invitationId, "WorkspaceInvitation");
+    super(invitationId, 'WorkspaceInvitation');
   }
 
   get eventType(): string {
-    return "InvitationCreated";
+    return 'InvitationCreated';
   }
 
   getPayload(): Record<string, unknown> {
@@ -58,13 +67,13 @@ export class InvitationAcceptedEvent extends DomainEvent {
   constructor(
     public readonly invitationId: string,
     public readonly workspaceId: string,
-    public readonly email: string,
+    public readonly email: string
   ) {
-    super(invitationId, "WorkspaceInvitation");
+    super(invitationId, 'WorkspaceInvitation');
   }
 
   get eventType(): string {
-    return "InvitationAccepted";
+    return 'InvitationAccepted';
   }
 
   getPayload(): Record<string, unknown> {
@@ -80,13 +89,13 @@ export class InvitationCancelledEvent extends DomainEvent {
   constructor(
     public readonly invitationId: string,
     public readonly workspaceId: string,
-    public readonly email: string,
+    public readonly email: string
   ) {
-    super(invitationId, "WorkspaceInvitation");
+    super(invitationId, 'WorkspaceInvitation');
   }
 
   get eventType(): string {
-    return "InvitationCancelled";
+    return 'InvitationCancelled';
   }
 
   getPayload(): Record<string, unknown> {
@@ -99,7 +108,7 @@ export class InvitationCancelledEvent extends DomainEvent {
 }
 
 // ============================================================================
-// Entity
+// Entity Props
 // ============================================================================
 
 export interface WorkspaceInvitationProps {
@@ -110,48 +119,45 @@ export interface WorkspaceInvitationProps {
   token: string;
   expiresAt: Date;
   acceptedAt: Date | null;
+  cancelledAt: Date | null;
   createdAt: Date;
 }
 
 // ============================================================================
-// DTO
+// Aggregate Root
 // ============================================================================
 
-export interface WorkspaceInvitationDTO {
-  invitationId: string;
-  workspaceId: string;
-  email: string;
-  role: string;
-  token: string;
-  expiresAt: string;
-  acceptedAt: string | null;
-  isExpired: boolean;
-  isAccepted: boolean;
-  createdAt: string;
-}
-
 export class WorkspaceInvitation extends AggregateRoot {
-  private constructor(private props: WorkspaceInvitationProps) {
+  private constructor(private readonly props: WorkspaceInvitationProps) {
     super();
   }
 
   static create(data: CreateWorkspaceInvitationData): WorkspaceInvitation {
+    const email = Email.create(data.email).getValue();
+    if (![WorkspaceRole.ADMIN, WorkspaceRole.MEMBER].includes(data.role)) {
+      throw new InvalidRoleError();
+    }
+    const expiryHours = data.expiryHours ?? INVITATION_EXPIRY_HOURS;
+    if (!Number.isInteger(expiryHours) || expiryHours < 1 || expiryHours > 720) {
+      throw new InvalidInvitationExpiryError();
+    }
     const invitationId = InvitationId.create();
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
     const token = WorkspaceInvitation.generateToken();
     const now = new Date();
     const expiresAt = new Date(
-      now.getTime() + data.expiryHours * 60 * 60 * 1000,
+      now.getTime() + expiryHours * 60 * 60 * 1000
     );
 
     const invitation = new WorkspaceInvitation({
       id: invitationId,
       workspaceId,
-      email: data.email.toLowerCase(),
+      email,
       role: data.role,
       token,
       expiresAt,
       acceptedAt: null,
+      cancelledAt: null,
       createdAt: now,
     });
 
@@ -159,9 +165,9 @@ export class WorkspaceInvitation extends AggregateRoot {
       new InvitationCreatedEvent(
         invitationId.getValue(),
         data.workspaceId,
-        data.email.toLowerCase(),
-        data.role,
-      ),
+        email,
+        data.role
+      )
     );
 
     return invitation;
@@ -169,13 +175,17 @@ export class WorkspaceInvitation extends AggregateRoot {
 
   static fromPersistence(data: WorkspaceInvitationData): WorkspaceInvitation {
     return new WorkspaceInvitation({
-      id: InvitationId.fromString(data.id),
-      workspaceId: WorkspaceId.fromString(data.workspaceId),
+      id: data.id instanceof InvitationId ? data.id : InvitationId.fromString(data.id),
+      workspaceId:
+        data.workspaceId instanceof WorkspaceId
+          ? data.workspaceId
+          : WorkspaceId.fromString(data.workspaceId),
       email: data.email,
       role: data.role,
       token: data.token,
       expiresAt: data.expiresAt,
       acceptedAt: data.acceptedAt,
+      cancelledAt: data.cancelledAt ?? null,
       createdAt: data.createdAt,
     });
   }
@@ -188,11 +198,13 @@ export class WorkspaceInvitation extends AggregateRoot {
   get token(): string { return this.props.token; }
   get expiresAt(): Date { return this.props.expiresAt; }
   get acceptedAt(): Date | null { return this.props.acceptedAt; }
+  get cancelledAt(): Date | null { return this.props.cancelledAt; }
+  isCancelled(): boolean { return this.props.cancelledAt !== null; }
   get createdAt(): Date { return this.props.createdAt; }
 
   // Business logic methods
   isExpired(): boolean {
-    return new Date() > this.props.expiresAt;
+    return new Date() >= this.props.expiresAt;
   }
 
   isAccepted(): boolean {
@@ -200,10 +212,13 @@ export class WorkspaceInvitation extends AggregateRoot {
   }
 
   isPending(): boolean {
-    return !this.isAccepted() && !this.isExpired();
+    return !this.isAccepted() && !this.isExpired() && !this.isCancelled();
   }
 
   accept(): void {
+    if (this.isCancelled()) {
+      throw new InvitationCancelledError();
+    }
     if (this.isAccepted()) {
       throw new InvitationAlreadyAcceptedError();
     }
@@ -216,28 +231,39 @@ export class WorkspaceInvitation extends AggregateRoot {
       new InvitationAcceptedEvent(
         this.props.id.getValue(),
         this.props.workspaceId.getValue(),
-        this.props.email,
-      ),
+        this.props.email
+      )
     );
   }
 
   markAsCancelled(): void {
+    if (this.isAccepted()) {
+      throw new InvitationAlreadyAcceptedError();
+    }
+    if (this.isCancelled()) {
+      throw new InvitationCancelledError();
+    }
+    this.props.cancelledAt = new Date();
     this.addDomainEvent(
       new InvitationCancelledEvent(
         this.props.id.getValue(),
         this.props.workspaceId.getValue(),
-        this.props.email,
-      ),
+        this.props.email
+      )
     );
   }
 
   // Helper methods
   private static generateToken(): string {
-    return randomBytes(32).toString("hex");
+    return randomBytes(INVITATION_TOKEN_LENGTH).toString('hex');
   }
 
   equals(other: WorkspaceInvitation): boolean {
     return this.props.id.equals(other.props.id);
+  }
+
+  toDTO(): WorkspaceInvitationDTO {
+    return WorkspaceInvitation.toDTO(this);
   }
 
   static toDTO(invitation: WorkspaceInvitation): WorkspaceInvitationDTO {
@@ -251,26 +277,31 @@ export class WorkspaceInvitation extends AggregateRoot {
       acceptedAt: invitation.props.acceptedAt?.toISOString() ?? null,
       isExpired: invitation.isExpired(),
       isAccepted: invitation.isAccepted(),
+      isCancelled: invitation.isCancelled(),
       createdAt: invitation.props.createdAt.toISOString(),
     };
   }
 }
 
-// Supporting types and interfaces
+// ============================================================================
+// Supporting Types & Interfaces
+// ============================================================================
+
 export interface CreateWorkspaceInvitationData {
   workspaceId: string;
   email: string;
   role: WorkspaceRole;
-  expiryHours: number;
+  expiryHours?: number;
 }
 
 export interface WorkspaceInvitationData {
-  id: string;
-  workspaceId: string;
+  id: string | InvitationId;
+  workspaceId: string | WorkspaceId;
   email: string;
   role: WorkspaceRole;
   token: string;
   expiresAt: Date;
   acceptedAt: Date | null;
+  cancelledAt?: Date | null;
   createdAt: Date;
 }

@@ -1,7 +1,11 @@
-import { MembershipId } from "../value-objects/membership-id.vo";
-import { UserId } from "../value-objects/user-id.vo";
-import { WorkspaceId } from "../value-objects/workspace-id.vo";
-import { CannotChangeOwnerRoleError } from "../errors/identity.errors";
+import { MembershipId } from '../value-objects/membership-id.vo';
+import { UserId } from '../value-objects/user-id.vo';
+import { WorkspaceId } from '../value-objects/workspace-id.vo';
+import {
+  CannotChangeOwnerRoleError,
+  CannotRemoveOwnerError,
+  InvalidRoleError,
+} from '../errors/identity.errors';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 
@@ -27,13 +31,13 @@ export class MemberJoinedWorkspaceEvent extends DomainEvent {
     public readonly membershipId: string,
     public readonly userId: string,
     public readonly workspaceId: string,
-    public readonly role: string,
+    public readonly role: string
   ) {
-    super(membershipId, "WorkspaceMembership");
+    super(membershipId, 'WorkspaceMembership');
   }
 
   get eventType(): string {
-    return "MemberJoinedWorkspace";
+    return 'MemberJoinedWorkspace';
   }
 
   getPayload(): Record<string, unknown> {
@@ -52,13 +56,13 @@ export class MemberRoleChangedEvent extends DomainEvent {
     public readonly userId: string,
     public readonly workspaceId: string,
     public readonly oldRole: string,
-    public readonly newRole: string,
+    public readonly newRole: string
   ) {
-    super(membershipId, "WorkspaceMembership");
+    super(membershipId, 'WorkspaceMembership');
   }
 
   get eventType(): string {
-    return "MemberRoleChanged";
+    return 'MemberRoleChanged';
   }
 
   getPayload(): Record<string, unknown> {
@@ -76,13 +80,13 @@ export class MemberRemovedEvent extends DomainEvent {
   constructor(
     public readonly membershipId: string,
     public readonly userId: string,
-    public readonly workspaceId: string,
+    public readonly workspaceId: string
   ) {
-    super(membershipId, "WorkspaceMembership");
+    super(membershipId, 'WorkspaceMembership');
   }
 
   get eventType(): string {
-    return "MemberRemoved";
+    return 'MemberRemoved';
   }
 
   getPayload(): Record<string, unknown> {
@@ -94,14 +98,18 @@ export class MemberRemovedEvent extends DomainEvent {
   }
 }
 
+// ============================================================================
+// Enums & Types
+// ============================================================================
+
 export enum WorkspaceRole {
-  OWNER = "owner",
-  ADMIN = "admin",
-  MEMBER = "member",
+  OWNER = 'owner',
+  ADMIN = 'admin',
+  MEMBER = 'member',
 }
 
 // ============================================================================
-// Entity
+// Entity Props
 // ============================================================================
 
 export interface WorkspaceMembershipProps {
@@ -114,24 +122,18 @@ export interface WorkspaceMembershipProps {
 }
 
 // ============================================================================
-// DTO
+// Aggregate Root
 // ============================================================================
 
-export interface WorkspaceMembershipDTO {
-  membershipId: string;
-  userId: string;
-  workspaceId: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export class WorkspaceMembership extends AggregateRoot {
-  private constructor(private props: WorkspaceMembershipProps) {
+  private constructor(private readonly props: WorkspaceMembershipProps) {
     super();
   }
 
   static create(data: CreateWorkspaceMembershipData): WorkspaceMembership {
+    if (!Object.values(WorkspaceRole).includes(data.role)) {
+      throw new InvalidRoleError();
+    }
     const membershipId = MembershipId.create();
     const userId = UserId.fromString(data.userId);
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
@@ -151,8 +153,8 @@ export class WorkspaceMembership extends AggregateRoot {
         membershipId.getValue(),
         data.userId,
         data.workspaceId,
-        data.role,
-      ),
+        data.role
+      )
     );
 
     return membership;
@@ -160,9 +162,12 @@ export class WorkspaceMembership extends AggregateRoot {
 
   static fromPersistence(data: WorkspaceMembershipData): WorkspaceMembership {
     return new WorkspaceMembership({
-      id: MembershipId.fromString(data.id),
-      userId: UserId.fromString(data.userId),
-      workspaceId: WorkspaceId.fromString(data.workspaceId),
+      id: data.id instanceof MembershipId ? data.id : MembershipId.fromString(data.id),
+      userId: data.userId instanceof UserId ? data.userId : UserId.fromString(data.userId),
+      workspaceId:
+        data.workspaceId instanceof WorkspaceId
+          ? data.workspaceId
+          : WorkspaceId.fromString(data.workspaceId),
       role: data.role,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
@@ -179,8 +184,11 @@ export class WorkspaceMembership extends AggregateRoot {
 
   // Business logic methods
   changeRole(newRole: WorkspaceRole): void {
-    if (this.props.role === WorkspaceRole.OWNER && newRole !== WorkspaceRole.OWNER) {
+    if (this.props.role === WorkspaceRole.OWNER || newRole === WorkspaceRole.OWNER) {
       throw new CannotChangeOwnerRoleError();
+    }
+    if (!Object.values(WorkspaceRole).includes(newRole)) {
+      throw new InvalidRoleError();
     }
     const oldRole = this.props.role;
     this.props.role = newRole;
@@ -192,18 +200,38 @@ export class WorkspaceMembership extends AggregateRoot {
         this.props.userId.getValue(),
         this.props.workspaceId.getValue(),
         oldRole,
-        newRole,
-      ),
+        newRole
+      )
+    );
+  }
+
+  /** Only the atomic ownership-transfer use case may call this transition. */
+  transferOwnershipRole(role: WorkspaceRole.OWNER | WorkspaceRole.ADMIN): void {
+    const oldRole = this.props.role;
+    this.props.role = role;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new MemberRoleChangedEvent(
+        this.id.getValue(),
+        this.userId.getValue(),
+        this.workspaceId.getValue(),
+        oldRole,
+        role
+      )
     );
   }
 
   markAsRemoved(): void {
+    if (this.isOwner()) {
+      throw new CannotRemoveOwnerError();
+    }
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new MemberRemovedEvent(
         this.props.id.getValue(),
         this.props.userId.getValue(),
-        this.props.workspaceId.getValue(),
-      ),
+        this.props.workspaceId.getValue()
+      )
     );
   }
 
@@ -245,6 +273,10 @@ export class WorkspaceMembership extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
+  toDTO(): WorkspaceMembershipDTO {
+    return WorkspaceMembership.toDTO(this);
+  }
+
   static toDTO(membership: WorkspaceMembership): WorkspaceMembershipDTO {
     return {
       membershipId: membership.props.id.getValue(),
@@ -257,7 +289,10 @@ export class WorkspaceMembership extends AggregateRoot {
   }
 }
 
-// Supporting types and interfaces
+// ============================================================================
+// Supporting Types & Interfaces
+// ============================================================================
+
 export interface CreateWorkspaceMembershipData {
   userId: string;
   workspaceId: string;
@@ -265,9 +300,9 @@ export interface CreateWorkspaceMembershipData {
 }
 
 export interface WorkspaceMembershipData {
-  id: string;
-  userId: string;
-  workspaceId: string;
+  id: string | MembershipId;
+  userId: string | UserId;
+  workspaceId: string | WorkspaceId;
   role: WorkspaceRole;
   createdAt: Date;
   updatedAt: Date;
