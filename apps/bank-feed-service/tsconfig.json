@@ -7,12 +7,25 @@
     ],
     "declaration": false,
     "declarationMap": false,
+    "baseUrl": ".",
     "paths": {
       "@prisma/client": [
-        "./src/generated/prisma-client"
+        "./node_modules/.prisma/client-bank-feed"
       ],
       "@core/*": [
         "../../packages/core/src/*"
+      ],
+      "@expense-tracker/middleware": [
+        "../../packages/middleware/src"
+      ],
+      "@expense-tracker/middleware/*": [
+        "../../packages/middleware/src/*"
+      ],
+      "@shared/middleware": [
+        "../../packages/middleware/src"
+      ],
+      "@shared/middleware/*": [
+        "../../packages/middleware/src/*"
       ],
       "@packages/*": [
         "../../packages/*/src"
@@ -27,7 +40,6 @@
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts"
+    "dist"
   ]
 }
