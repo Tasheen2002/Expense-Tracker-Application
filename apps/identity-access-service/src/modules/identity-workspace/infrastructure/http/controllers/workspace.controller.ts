@@ -1,21 +1,21 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import {
   CreateWorkspaceHandler,
   UpdateWorkspaceHandler,
   DeleteWorkspaceHandler,
   GetWorkspaceByIdHandler,
   GetUserWorkspacesHandler,
+  TransferOwnershipHandler,
 } from '../../../application';
-import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
 import { ResponseHelper } from '@shared/response.helper';
 import {
+  WorkspaceParams,
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
-  workspaceParamsSchema,
-  paginationQuerySchema,
+  TransferOwnershipInput,
+  PaginationQuery,
 } from '../validation/workspace.schema';
-import { z } from 'zod';
+import { getAuthenticatedUser } from './controller.helper';
 
 export class WorkspaceController {
   constructor(
@@ -24,155 +24,93 @@ export class WorkspaceController {
     private readonly deleteWorkspaceHandler: DeleteWorkspaceHandler,
     private readonly getWorkspaceByIdHandler: GetWorkspaceByIdHandler,
     private readonly getUserWorkspacesHandler: GetUserWorkspacesHandler,
-    private readonly authHelper: WorkspaceAuthHelper
+    private readonly transferOwnershipHandler: TransferOwnershipHandler
   ) {}
 
   async getWorkspace(
-    request: AuthenticatedRequest<{ Params: z.infer<typeof workspaceParamsSchema> }>,
+    request: FastifyRequest<{ Params: WorkspaceParams }>,
     reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const user = request.user;
-
-    // Check if user is a member of the workspace
-    const isMember = await this.authHelper.verifyMembership(
-      user.userId,
-      workspaceId,
-      reply
-    );
-    if (!isMember) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.getWorkspaceByIdHandler.handle({
-        workspaceId,
-      });
-
-      return ResponseHelper.ok(reply, 'Workspace retrieved successfully', result);
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.getWorkspaceByIdHandler.handle({
+      workspaceId: request.params.workspaceId,
+      actorId: user.userId,
+    });
+    return ResponseHelper.ok(reply, 'Workspace retrieved successfully', result);
   }
 
   async getUserWorkspaces(
-    request: AuthenticatedRequest<{
-      Querystring: z.infer<typeof paginationQuerySchema>;
-    }>,
+    request: FastifyRequest<{ Querystring: PaginationQuery }>,
     reply: FastifyReply
-  ) {
-    const user = request.user;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
     const { page = 1, limit = 50 } = request.query;
-
-    try {
-      const result = await this.getUserWorkspacesHandler.handle({
-        userId: user.userId,
-        options: {
-          limit: Number(limit),
-          offset: (Number(page) - 1) * Number(limit),
-        },
-      });
-
-      return ResponseHelper.ok(reply, 'Workspaces retrieved successfully', result);
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
+    const result = await this.getUserWorkspacesHandler.handle({
+      userId: user.userId,
+      options: { limit, offset: (page - 1) * limit },
+    });
+    return ResponseHelper.ok(reply, 'Workspaces retrieved successfully', result);
   }
 
   async createWorkspace(
-    request: AuthenticatedRequest<{ Body: CreateWorkspaceInput }>,
+    request: FastifyRequest<{ Body: CreateWorkspaceInput }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { name } = request.body;
-      const user = request.user;
-
-      const result = await this.createWorkspaceHandler.handle({
-        name,
-        ownerId: user.userId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Workspace created successfully',
-        result.data,
-        201
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.createWorkspaceHandler.handle({
+      name: request.body.name,
+      ownerId: user.userId,
+    });
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Workspace created successfully',
+      undefined,
+      201
+    );
   }
 
   async updateWorkspace(
-    request: AuthenticatedRequest<{
-      Params: z.infer<typeof workspaceParamsSchema>;
-      Body: UpdateWorkspaceInput;
-    }>,
+    request: FastifyRequest<{ Params: WorkspaceParams; Body: UpdateWorkspaceInput }>,
     reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const { name } = request.body;
-    const user = request.user;
-
-    // Check if user can edit the workspace (owner or admin)
-    const canEdit = await this.authHelper.verifyCanEdit(
-      user.userId,
-      workspaceId,
-      reply
-    );
-    if (!canEdit) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.updateWorkspaceHandler.handle({
-        workspaceId,
-        name,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Workspace updated successfully',
-        result.data
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.updateWorkspaceHandler.handle({
+      workspaceId: request.params.workspaceId,
+      name: request.body.name,
+      actorId: user.userId,
+    });
+    return ResponseHelper.fromCommand(reply, result, 'Workspace updated successfully');
   }
 
   async deleteWorkspace(
-    request: AuthenticatedRequest<{ Params: z.infer<typeof workspaceParamsSchema> }>,
+    request: FastifyRequest<{ Params: WorkspaceParams }>,
     reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const user = request.user;
-
-    // Check if user can delete the workspace (owner only)
-    const canDelete = await this.authHelper.verifyCanDelete(
-      user.userId,
-      workspaceId,
-      reply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.deleteWorkspaceHandler.handle({
+      workspaceId: request.params.workspaceId,
+      actorId: user.userId,
+    });
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Workspace deleted successfully',
+      undefined,
+      204
     );
-    if (!canDelete) {
-      return; // Response already sent by helper
-    }
+  }
 
-    try {
-      const result = await this.deleteWorkspaceHandler.handle({
-        workspaceId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Workspace deleted successfully',
-        undefined,
-        204
-      );
-    } catch (error) {
-      return ResponseHelper.error(reply, error);
-    }
+  async transferOwnership(
+    request: FastifyRequest<{ Params: WorkspaceParams; Body: TransferOwnershipInput }>,
+    reply: FastifyReply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.transferOwnershipHandler.handle({
+      workspaceId: request.params.workspaceId,
+      newOwnerId: request.body.newOwnerId,
+      actorId: user.userId,
+    });
+    return ResponseHelper.fromCommand(reply, result, 'Workspace ownership transferred');
   }
 }

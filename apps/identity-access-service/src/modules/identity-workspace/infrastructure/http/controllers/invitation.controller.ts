@@ -1,24 +1,21 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import {
   CreateInvitationHandler,
   AcceptInvitationHandler,
   CancelInvitationHandler,
   GetInvitationByTokenHandler,
-  GetWorkspaceInvitationsHandler,
   GetPendingInvitationsHandler,
 } from '../../../application';
-import { WorkspaceAuthHelper } from '../middleware/workspace-auth.helper';
-import { WorkspaceRole } from '../../../domain/entities/workspace-membership.entity';
 import { ResponseHelper } from '@shared/response.helper';
 import {
-  workspaceParamsSchema,
-  invitationParamsSchema,
-  tokenParamsSchema,
-  inviteMemberSchema,
-  paginationQuerySchema,
+  WorkspaceParams,
+  InvitationParams,
+  TokenParams,
+  InviteMemberInput,
+  PaginationQuery,
 } from '../validation/workspace.schema';
-import { z } from 'zod';
+import { getAuthenticatedUser } from './controller.helper';
 
 export class InvitationController {
   constructor(
@@ -26,177 +23,86 @@ export class InvitationController {
     private readonly acceptInvitationHandler: AcceptInvitationHandler,
     private readonly cancelInvitationHandler: CancelInvitationHandler,
     private readonly getInvitationByTokenHandler: GetInvitationByTokenHandler,
-    _getWorkspaceInvitationsHandler: GetWorkspaceInvitationsHandler,
-    private readonly getPendingInvitationsHandler: GetPendingInvitationsHandler,
-    private readonly authHelper: WorkspaceAuthHelper
+    private readonly getPendingInvitationsHandler: GetPendingInvitationsHandler
   ) {}
 
   async getInvitationByToken(
-    request: AuthenticatedRequest<{ Params: z.infer<typeof tokenParamsSchema> }>,
+    request: FastifyRequest<{ Params: TokenParams }>,
     reply: FastifyReply
-  ) {
-    const { token } = request.params;
-
-    try {
-      const invitation = await this.getInvitationByTokenHandler.handle({ token });
-
-      if (!invitation) {
-        return ResponseHelper.notFound(reply, 'Invitation not found');
-      }
-
-      if (invitation.isExpired) {
-        return ResponseHelper.gone(reply, 'Invitation has expired');
-      }
-
-      if (invitation.isAccepted) {
-        return ResponseHelper.gone(
-          reply,
-          'Invitation has already been accepted'
-        );
-      }
-
-      return ResponseHelper.ok(reply, 'Invitation retrieved successfully', invitation);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
+  ): Promise<FastifyReply> {
+    const invitation = await this.getInvitationByTokenHandler.handle(request.params);
+    if (!invitation) {
+      return ResponseHelper.notFound(reply, 'Invitation not found');
     }
+    if (invitation.isCancelled || invitation.isExpired || invitation.isAccepted) {
+      return ResponseHelper.gone(reply, 'Invitation is no longer pending');
+    }
+    return ResponseHelper.ok(reply, 'Invitation retrieved successfully', invitation);
   }
 
   async listWorkspaceInvitations(
-    request: AuthenticatedRequest<{
-      Params: z.infer<typeof workspaceParamsSchema>;
-      Querystring: z.infer<typeof paginationQuerySchema>;
-    }>,
+    request: FastifyRequest<{ Params: WorkspaceParams; Querystring: PaginationQuery }>,
     reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
     const { page = 1, limit = 50 } = request.query;
-    const user = request.user;
-
-    // Check if user can manage members (owner or admin)
-    const canManage = await this.authHelper.verifyCanManageMembers(
-      user.userId,
-      workspaceId,
-      reply
-    );
-    if (!canManage) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.getPendingInvitationsHandler.handle({
-        workspaceId,
-        options: {
-          limit: Number(limit),
-          offset: (Number(page) - 1) * Number(limit),
-        },
-      });
-
-      return ResponseHelper.ok(reply, 'Invitations retrieved successfully', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    const result = await this.getPendingInvitationsHandler.handle({
+      workspaceId: request.params.workspaceId,
+      actorId: user.userId,
+      options: { limit, offset: (page - 1) * limit },
+    });
+    return ResponseHelper.ok(reply, 'Invitations retrieved successfully', result);
   }
 
   async createInvitation(
-    request: AuthenticatedRequest<{
-      Params: z.infer<typeof workspaceParamsSchema>;
-      Body: z.infer<typeof inviteMemberSchema>;
-    }>,
+    request: FastifyRequest<{ Params: WorkspaceParams; Body: InviteMemberInput }>,
     reply: FastifyReply
-  ) {
-    const { workspaceId } = request.params;
-    const { email, role, expiryHours } = request.body;
-    const user = request.user;
-
-    // Check if user can manage members (owner or admin)
-    const canManage = await this.authHelper.verifyCanManageMembers(
-      user.userId,
-      workspaceId,
-      reply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.createInvitationHandler.handle({
+      workspaceId: request.params.workspaceId,
+      email: request.body.email,
+      role: request.body.role as WorkspaceRole,
+      expiryHours: request.body.expiryHours,
+      invitedBy: user.userId,
+    });
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Invitation created successfully',
+      undefined,
+      201
     );
-    if (!canManage) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.createInvitationHandler.handle({
-        workspaceId,
-        email,
-        role: role as WorkspaceRole,
-        invitedBy: user.userId,
-        expiryHours,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Invitation created successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
   }
 
   async acceptInvitation(
-    request: AuthenticatedRequest<{ Params: z.infer<typeof tokenParamsSchema> }>,
+    request: FastifyRequest<{ Params: TokenParams }>,
     reply: FastifyReply
-  ) {
-    const { token } = request.params;
-    const user = request.user;
-
-    try {
-      const result = await this.acceptInvitationHandler.handle({
-        token,
-        userId: user.userId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Invitation accepted successfully',
-        result.data
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.acceptInvitationHandler.handle({
+      token: request.params.token,
+      userId: user.userId,
+    });
+    return ResponseHelper.fromCommand(reply, result, 'Invitation accepted successfully');
   }
 
   async cancelInvitation(
-    request: AuthenticatedRequest<{
-      Params: z.infer<typeof invitationParamsSchema>;
-    }>,
+    request: FastifyRequest<{ Params: InvitationParams }>,
     reply: FastifyReply
-  ) {
-    const { invitationId } = request.params;
-    const user = request.user;
-
-    // Wait, check if user can manage members (owner or admin)
-    const { workspaceId } = request.params;
-    const canManage = await this.authHelper.verifyCanManageMembers(
-      user.userId,
-      workspaceId,
-      reply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.cancelInvitationHandler.handle({
+      workspaceId: request.params.workspaceId,
+      invitationId: request.params.invitationId,
+      actorId: user.userId,
+    });
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Invitation cancelled successfully',
+      undefined,
+      204
     );
-    if (!canManage) {
-      return; // Response already sent by helper
-    }
-
-    try {
-      const result = await this.cancelInvitationHandler.handle({
-        invitationId,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Invitation cancelled successfully',
-        undefined,
-        204
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
   }
 }

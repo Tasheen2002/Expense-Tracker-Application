@@ -1,87 +1,102 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { RegisterUserHandler, LoginUserHandler, GetUserHandler } from '../../../application';
+import {
+  RegisterUserHandler,
+  LoginUserHandler,
+  GetUserHandler,
+  UpdateProfileHandler,
+} from '../../../application';
+import { SessionService } from '../../../application/services/session.service';
 import { ResponseHelper } from '@shared/response.helper';
-import { RegisterUserInput, LoginUserInput } from '../validation/user.schema';
+import {
+  RegisterUserInput,
+  LoginUserInput,
+  UpdateUserInput,
+  UserParams,
+} from '../validation/user.schema';
+import { getAuthenticatedUser } from './controller.helper';
 
 export class AuthController {
   constructor(
     private readonly registerUserHandler: RegisterUserHandler,
     private readonly loginUserHandler: LoginUserHandler,
-    private readonly getUserHandler: GetUserHandler
+    private readonly getUserHandler: GetUserHandler,
+    private readonly updateProfileHandler: UpdateProfileHandler,
+    private readonly sessionService: SessionService
   ) {}
 
   async login(
     request: FastifyRequest<{ Body: LoginUserInput }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { email, password } = request.body;
-
-      const userData = await this.loginUserHandler.handle({ email, password });
-
-      // Generate JWT token
-      const token = request.server.signToken({
-        userId: userData.userId,
-        email: userData.email,
-      });
-
-      return ResponseHelper.ok(reply, 'Login successful', {
-        user: userData,
-        token,
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async me(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const user = request.user;
-
-      const result = await this.getUserHandler.handle({ userId: user.userId });
-
-      return ResponseHelper.ok(reply, 'User profile retrieved', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+  ): Promise<FastifyReply> {
+    const user = await this.loginUserHandler.handle(request.body);
+    const session = await this.sessionService.createSession(user.userId);
+    const token = await request.server.signToken({
+      userId: user.userId,
+      email: user.email,
+      sessionId: session.sessionId,
+    });
+    return ResponseHelper.ok(reply, 'Login successful', { user, token });
   }
 
   async register(
     request: FastifyRequest<{ Body: RegisterUserInput }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { email, password, fullName } = request.body;
+  ): Promise<FastifyReply> {
+    const result = await this.registerUserHandler.handle(request.body);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'User registered successfully',
+      undefined,
+      201
+    );
+  }
 
-      const result = await this.registerUserHandler.handle({
-        email,
-        password,
-        fullName,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'User registered successfully',
-        result.data,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+  async me(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.getUserHandler.handle({
+      actorId: user.userId,
+      userId: user.userId,
+    });
+    return ResponseHelper.ok(reply, 'User profile retrieved', result);
   }
 
   async getUser(
-    request: FastifyRequest<{ Params: { userId: string } }>,
+    request: FastifyRequest<{ Params: UserParams }>,
     reply: FastifyReply
-  ) {
-    const { userId } = request.params;
-    try {
-      const result = await this.getUserHandler.handle({ userId });
-      return ResponseHelper.ok(reply, 'User retrieved', result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.getUserHandler.handle({
+      actorId: user.userId,
+      userId: request.params.userId,
+    });
+    return ResponseHelper.ok(reply, 'User retrieved', result);
+  }
+
+  async updateProfile(
+    request: FastifyRequest<{ Params: UserParams; Body: UpdateUserInput }>,
+    reply: FastifyReply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const result = await this.updateProfileHandler.handle({
+      ...request.body,
+      userId: request.params.userId,
+      actorId: user.userId,
+    });
+    return ResponseHelper.fromCommand(reply, result, 'Profile updated successfully');
+  }
+
+  async logout(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    if (user.sessionId) {
+      await this.sessionService.revokeSession(user.sessionId);
     }
+    return reply.status(204).send();
   }
 }
