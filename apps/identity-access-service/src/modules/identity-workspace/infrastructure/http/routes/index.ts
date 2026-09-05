@@ -1,20 +1,23 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-import { registerAuthRoutes } from './auth.routes.js';
+import { registerAuthRoutes } from './auth.routes';
 import {
   registerUserWorkspaceRoutes,
   registerWorkspaceScopedRoutes,
-} from './workspace.routes.js';
+  registerWorkspaceRoutes,
+} from './workspace.routes';
 import {
   registerPublicInvitationRoutes,
   registerTokenInvitationRoutes,
   registerWorkspaceInvitationRoutes,
-} from './invitation.routes.js';
-import { registerMemberRoutes } from './member.routes.js';
-import { AuthController } from '../controllers/auth.controller.js';
-import { WorkspaceController } from '../controllers/workspace.controller.js';
-import { InvitationController } from '../controllers/invitation.controller.js';
-import { MemberController } from '../controllers/member.controller.js';
+  registerInvitationRoutes,
+} from './invitation.routes';
+import { registerMemberRoutes } from './member.routes';
+import {
+  AuthController,
+  WorkspaceController,
+  InvitationController,
+  MemberController,
+} from '../controllers';
 
 export interface IdentityWorkspaceModuleControllers {
   authController: AuthController;
@@ -25,8 +28,7 @@ export interface IdentityWorkspaceModuleControllers {
 
 export async function registerIdentityWorkspaceRoutes(
   fastify: FastifyInstance,
-  controllers: IdentityWorkspaceModuleControllers,
-  _prisma: PrismaClient
+  controllers: IdentityWorkspaceModuleControllers
 ): Promise<void> {
   // Flat registration under prefix '/api/v1'.
   // Authentication is handled at the individual route configuration level.
@@ -74,3 +76,15 @@ export async function registerIdentityWorkspaceRoutes(
     { prefix: '/api/v1' }
   );
 }
+
+export {
+  registerAuthRoutes,
+  registerUserWorkspaceRoutes,
+  registerWorkspaceScopedRoutes,
+  registerWorkspaceRoutes,
+  registerPublicInvitationRoutes,
+  registerTokenInvitationRoutes,
+  registerWorkspaceInvitationRoutes,
+  registerInvitationRoutes,
+  registerMemberRoutes,
+};

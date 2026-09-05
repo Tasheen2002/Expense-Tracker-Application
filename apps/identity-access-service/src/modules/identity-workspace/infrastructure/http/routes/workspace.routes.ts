@@ -1,145 +1,92 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { WorkspaceController } from '../controllers/workspace.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  userKeyGenerator,
-} from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import {
-  validateBody,
-  validateQuery,
-} from '../validation/validator';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
   createWorkspaceSchema,
   updateWorkspaceSchema,
   paginationQuerySchema,
+  transferOwnershipSchema,
   workspaceParamsJsonSchema,
   paginationQueryJsonSchema,
   createWorkspaceBodyJsonSchema,
   updateWorkspaceBodyJsonSchema,
+  transferOwnershipBodyJsonSchema,
   workspaceEnvelopeJsonSchema,
   workspaceListEnvelopeJsonSchema,
+  CreateWorkspaceInput,
+  UpdateWorkspaceInput,
+  TransferOwnershipInput,
+  WorkspaceParams,
+  PaginationQuery,
 } from '../validation/workspace.schema';
 
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
+const writeRateLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
 
-/**
- * User-level workspace routes
- */
 export async function registerUserWorkspaceRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: WorkspaceController
-) {
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
-  // Create workspace
-  fastify.post(
+): Promise<void> {
+  // 1. Create Workspace
+  app.post<{ Body: CreateWorkspaceInput }>(
     '/workspaces',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
       preHandler: [validateBody(createWorkspaceSchema)],
       schema: {
-        tags: ['Workspace'],
-        description: 'Create a new workspace',
-        security: [{ bearerAuth: [] }],
         body: createWorkspaceBodyJsonSchema,
         response: {
           201: workspaceEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.createWorkspace(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.createWorkspace(request, reply)
   );
 
-  // List user's workspaces
-  fastify.get(
+  // 2. List Workspaces for User
+  app.get<{ Querystring: PaginationQuery }>(
     '/workspaces',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [app.authenticate],
       preHandler: [validateQuery(paginationQuerySchema)],
       schema: {
-        tags: ['Workspace'],
-        description: 'Get all workspaces for the authenticated user',
-        security: [{ bearerAuth: [] }],
         querystring: paginationQueryJsonSchema,
         response: {
           200: workspaceListEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.getUserWorkspaces(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.getUserWorkspaces(request, reply)
   );
 }
 
-/**
- * Workspace-scoped routes
- */
 export async function registerWorkspaceScopedRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: WorkspaceController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
-  // Get workspace by ID
-  fastify.get(
+  // 3. Get Workspace by ID
+  app.get<{ Params: WorkspaceParams }>(
     '/workspaces/:workspaceId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
+      onRequest: [app.authenticate],
       schema: {
-        tags: ['Workspace'],
-        description: 'Get workspace by ID',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         response: {
           200: workspaceEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.getWorkspace(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.getWorkspace(request, reply)
   );
 
-  // Update workspace
-  fastify.patch(
+  // 4. Update Workspace
+  app.patch<{ Params: WorkspaceParams; Body: UpdateWorkspaceInput }>(
     '/workspaces/:workspaceId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(updateWorkspaceSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
+      preHandler: [validateBody(updateWorkspaceSchema)],
       schema: {
-        tags: ['Workspace'],
-        description: 'Update workspace',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         body: updateWorkspaceBodyJsonSchema,
         response: {
@@ -147,33 +94,51 @@ export async function registerWorkspaceScopedRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.updateWorkspace(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.updateWorkspace(request, reply)
   );
 
-  // Delete workspace
-  fastify.delete(
+  // 5. Delete Workspace
+  app.delete<{ Params: WorkspaceParams }>(
     '/workspaces/:workspaceId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.OWNER_ONLY,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
       schema: {
-        tags: ['Workspace'],
-        description: 'Delete workspace',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         response: {
           204: {
-            description: 'Workspace deleted successfully',
             type: 'null',
+            description: 'Workspace deleted successfully',
           },
         },
       },
     },
-    (request, reply) =>
-      controller.deleteWorkspace(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.deleteWorkspace(request, reply)
   );
+
+  // 6. Transfer Workspace Ownership
+  app.post<{ Params: WorkspaceParams; Body: TransferOwnershipInput }>(
+    '/workspaces/:workspaceId/ownership/transfer',
+    {
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
+      preHandler: [validateBody(transferOwnershipSchema)],
+      schema: {
+        params: workspaceParamsJsonSchema,
+        body: transferOwnershipBodyJsonSchema,
+        response: {
+          200: workspaceEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) => controller.transferOwnership(request, reply)
+  );
+}
+
+export async function registerWorkspaceRoutes(
+  app: FastifyInstance,
+  controller: WorkspaceController
+): Promise<void> {
+  await registerUserWorkspaceRoutes(app, controller);
+  await registerWorkspaceScopedRoutes(app, controller);
 }

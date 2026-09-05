@@ -1,102 +1,123 @@
 import { FastifyInstance } from 'fastify';
 import { AuthController } from '../controllers/auth.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-} from '@shared/middleware/rate-limiter.middleware';
 import { validateBody } from '../validation/validator';
-import { registerUserSchema, loginUserSchema } from '../validation/user.schema';
 import {
+  registerUserSchema,
+  loginUserSchema,
+  profileUpdateSchema,
+  userParamsJsonSchema,
   registerUserBodyJsonSchema,
   loginUserBodyJsonSchema,
+  profileUpdateBodyJsonSchema,
   registerSuccessResponseJsonSchema,
   loginSuccessResponseJsonSchema,
-  meSuccessResponseJsonSchema,
+  userEnvelopeJsonSchema,
+  RegisterUserInput,
+  LoginUserInput,
+  UpdateUserInput,
+  UserParams,
 } from '../validation/user.schema';
 
-const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
-
 export async function registerAuthRoutes(
-  fastify: FastifyInstance,
-  authController: AuthController
-) {
-  // Register user
-  fastify.post(
+  app: FastifyInstance,
+  controller: AuthController
+): Promise<void> {
+  const authRateLimit = { rateLimit: { max: 10, timeWindow: '15 minutes' } };
+  const writeRateLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
+
+  // 1. Register User (Public)
+  app.post<{ Body: RegisterUserInput }>(
     '/auth/register',
     {
-      onRequest: [authRateLimiter],
+      config: authRateLimit,
       preHandler: [validateBody(registerUserSchema)],
       schema: {
-        description: 'Register a new user account',
-        tags: ['Authentication'],
-        summary: 'Register User',
         body: registerUserBodyJsonSchema,
         response: {
           201: registerSuccessResponseJsonSchema,
         },
       },
     },
-    async (request, reply) => authController.register(request as any, reply)
+    (request, reply) => controller.register(request, reply)
   );
 
-  // Login user
-  fastify.post(
+  // 2. Login User (Public)
+  app.post<{ Body: LoginUserInput }>(
     '/auth/login',
     {
-      onRequest: [authRateLimiter],
+      config: authRateLimit,
       preHandler: [validateBody(loginUserSchema)],
       schema: {
-        description: 'Login with email and password',
-        tags: ['Authentication'],
-        summary: 'Login User',
         body: loginUserBodyJsonSchema,
         response: {
           200: loginSuccessResponseJsonSchema,
         },
       },
     },
-    async (request, reply) => authController.login(request as any, reply)
+    (request, reply) => controller.login(request, reply)
   );
 
-  // Get current user (protected route)
-  fastify.get(
+  // 3. Get Current User Profile (Authenticated)
+  app.get(
     '/auth/me',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [app.authenticate],
       schema: {
-        description: 'Get current authenticated user',
-        tags: ['Authentication'],
-        summary: 'Get Current User',
-        security: [{ bearerAuth: [] }],
         response: {
-          200: meSuccessResponseJsonSchema,
+          200: userEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      authController.me(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.me(request, reply)
   );
 
-  // Get user by ID (inter-service lookup)
-  fastify.get(
-    '/users/:userId',
+  // 4. Logout User (Authenticated)
+  app.post(
+    '/auth/logout',
     {
+      onRequest: [app.authenticate],
       schema: {
-        description: 'Get user details by ID',
-        tags: ['Authentication'],
-        summary: 'Get User By ID',
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: 'object',
-          properties: {
-            userId: { type: 'string' },
+        response: {
+          204: {
+            type: 'null',
+            description: 'Session invalidated successfully',
           },
-          required: ['userId'],
         },
       },
     },
-    (request, reply) =>
-      authController.getUser(request as any, reply)
+    (request, reply) => controller.logout(request, reply)
+  );
+
+  // 5. Get User by ID (Authenticated)
+  app.get<{ Params: UserParams }>(
+    '/users/:userId',
+    {
+      onRequest: [app.authenticate],
+      schema: {
+        params: userParamsJsonSchema,
+        response: {
+          200: userEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) => controller.getUser(request, reply)
+  );
+
+  // 6. Update User Profile (Authenticated)
+  app.patch<{ Params: UserParams; Body: UpdateUserInput }>(
+    '/users/:userId',
+    {
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
+      preHandler: [validateBody(profileUpdateSchema)],
+      schema: {
+        params: userParamsJsonSchema,
+        body: profileUpdateBodyJsonSchema,
+        response: {
+          200: userEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) => controller.updateProfile(request, reply)
   );
 }

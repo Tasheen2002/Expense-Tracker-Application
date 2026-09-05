@@ -1,17 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { InvitationController } from '../controllers/invitation.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  userKeyGenerator,
-} from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import {
-  validateBody,
-  validateQuery,
-} from '../validation/validator';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
   inviteMemberSchema,
   paginationQuerySchema,
@@ -23,100 +12,67 @@ import {
   invitationEnvelopeJsonSchema,
   membershipEnvelopeJsonSchema,
   invitationListEnvelopeJsonSchema,
+  TokenParams,
+  WorkspaceParams,
+  InvitationParams,
+  InviteMemberInput,
+  PaginationQuery,
 } from '../validation/workspace.schema';
 
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
+const writeRateLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
 
-/**
- * Public invitation routes
- */
 export async function registerPublicInvitationRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: InvitationController
-) {
-  // Get invitation by token
-  fastify.get(
+): Promise<void> {
+  // 1. Get Invitation by Token (Public)
+  app.get<{ Params: TokenParams }>(
     '/invitations/:token',
     {
       schema: {
-        tags: ['Invitation'],
-        description: 'Get invitation details by token',
         params: tokenParamsJsonSchema,
         response: {
           200: invitationEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.getInvitationByToken(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.getInvitationByToken(request, reply)
   );
 }
 
-/**
- * Token-based invitation routes
- */
 export async function registerTokenInvitationRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: InvitationController
-) {
-  // Accept invitation
-  fastify.post(
+): Promise<void> {
+  // 2. Accept Invitation by Token (Authenticated)
+  app.post<{ Params: TokenParams }>(
     '/invitations/:token/accept',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
       schema: {
-        tags: ['Invitation'],
-        description: 'Accept workspace invitation',
-        security: [{ bearerAuth: [] }],
         params: tokenParamsJsonSchema,
         response: {
           200: membershipEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.acceptInvitation(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.acceptInvitation(request, reply)
   );
 }
 
-/**
- * Workspace-scoped invitation routes
- */
 export async function registerWorkspaceInvitationRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: InvitationController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
-  // Create invitation for a workspace
-  fastify.post(
+  // 3. Create Invitation for Workspace
+  app.post<{ Params: WorkspaceParams; Body: InviteMemberInput }>(
     '/workspaces/:workspaceId/invitations',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(inviteMemberSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
+      preHandler: [validateBody(inviteMemberSchema)],
       schema: {
-        tags: ['Invitation'],
-        description: 'Create invitation for workspace',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         body: inviteMemberBodyJsonSchema,
         response: {
@@ -124,24 +80,16 @@ export async function registerWorkspaceInvitationRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.createInvitation(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.createInvitation(request, reply)
   );
 
-  // List workspace pending invitations
-  fastify.get(
+  // 4. List Pending Invitations for Workspace
+  app.get<{ Params: WorkspaceParams; Querystring: PaginationQuery }>(
     '/workspaces/:workspaceId/invitations',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateQuery(paginationQuerySchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema)],
       schema: {
-        tags: ['Invitation'],
-        description: 'List workspace pending invitations',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         querystring: paginationQueryJsonSchema,
         response: {
@@ -149,36 +97,34 @@ export async function registerWorkspaceInvitationRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.listWorkspaceInvitations(
-        request as AuthenticatedRequest,
-        reply
-      )
+    (request, reply) => controller.listWorkspaceInvitations(request, reply)
   );
 
-  // Cancel invitation
-  fastify.delete(
+  // 5. Cancel Invitation
+  app.delete<{ Params: InvitationParams }>(
     '/workspaces/:workspaceId/invitations/:invitationId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
       schema: {
-        tags: ['Invitation'],
-        description: 'Cancel workspace invitation',
-        security: [{ bearerAuth: [] }],
         params: invitationParamsJsonSchema,
         response: {
           204: {
-            description: 'Invitation cancelled successfully',
             type: 'null',
+            description: 'Invitation cancelled successfully',
           },
         },
       },
     },
-    (request, reply) =>
-      controller.cancelInvitation(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.cancelInvitation(request, reply)
   );
+}
+
+export async function registerInvitationRoutes(
+  app: FastifyInstance,
+  controller: InvitationController
+): Promise<void> {
+  await registerPublicInvitationRoutes(app, controller);
+  await registerTokenInvitationRoutes(app, controller);
+  await registerWorkspaceInvitationRoutes(app, controller);
 }

@@ -1,17 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { MemberController } from '../controllers/member.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  userKeyGenerator,
-} from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import {
-  validateBody,
-  validateQuery,
-} from '../validation/validator';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
   updateMemberRoleSchema,
   paginationQuerySchema,
@@ -21,44 +10,25 @@ import {
   paginationQueryJsonSchema,
   membershipEnvelopeJsonSchema,
   membershipListEnvelopeJsonSchema,
+  WorkspaceParams,
+  MemberParams,
+  UpdateMemberRoleInput,
+  PaginationQuery,
 } from '../validation/workspace.schema';
 
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
+const writeRateLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
 
 export async function registerMemberRoutes(
-  fastify: FastifyInstance,
+  app: FastifyInstance,
   controller: MemberController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
-  // List workspace members
-  fastify.get(
+  // 1. List Workspace Members
+  app.get<{ Params: WorkspaceParams; Querystring: PaginationQuery }>(
     '/workspaces/:workspaceId/members',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateQuery(paginationQuerySchema),
-        workspaceAuth,
-      ],
+      onRequest: [app.authenticate],
+      preHandler: [validateQuery(paginationQuerySchema)],
       schema: {
-        tags: ['Member'],
-        description: 'List workspace members',
-        security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         querystring: paginationQueryJsonSchema,
         response: {
@@ -66,67 +36,51 @@ export async function registerMemberRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.listMembers(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.listMembers(request, reply)
   );
 
-  fastify.get(
+  // 2. Get Workspace Member by ID
+  app.get<{ Params: MemberParams }>(
     '/workspaces/:workspaceId/members/:userId',
     {
+      onRequest: [app.authenticate],
       schema: {
-        tags: ['Member'],
-        description: 'Get details of a workspace member',
-        security: [{ bearerAuth: [] }],
         params: memberParamsJsonSchema,
         response: {
           200: membershipEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.getMember(request as any, reply)
+    (request, reply) => controller.getMember(request, reply)
   );
 
-  // Remove member from workspace
-  fastify.delete(
+  // 3. Remove Member from Workspace
+  app.delete<{ Params: MemberParams }>(
     '/workspaces/:workspaceId/members/:userId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
       schema: {
-        tags: ['Member'],
-        description: 'Remove member from workspace',
-        security: [{ bearerAuth: [] }],
         params: memberParamsJsonSchema,
         response: {
           204: {
-            description: 'Member removed successfully',
             type: 'null',
+            description: 'Member removed successfully',
           },
         },
       },
     },
-    (request, reply) =>
-      controller.removeMember(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.removeMember(request, reply)
   );
 
-  // Change member role
-  fastify.patch(
+  // 4. Change Workspace Member Role
+  app.patch<{ Params: MemberParams; Body: UpdateMemberRoleInput }>(
     '/workspaces/:workspaceId/members/:userId/role',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(updateMemberRoleSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [app.authenticate],
+      config: writeRateLimit,
+      preHandler: [validateBody(updateMemberRoleSchema)],
       schema: {
-        tags: ['Member'],
-        description: 'Change member role',
-        security: [{ bearerAuth: [] }],
         params: memberParamsJsonSchema,
         body: updateMemberRoleBodyJsonSchema,
         response: {
@@ -134,7 +88,6 @@ export async function registerMemberRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.changeRole(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.changeRole(request, reply)
   );
 }
