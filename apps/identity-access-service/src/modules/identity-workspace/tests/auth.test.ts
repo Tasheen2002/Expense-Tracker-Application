@@ -28,11 +28,17 @@ describe('Identity-Workspace Module - Authentication', () => {
 
   beforeAll(async () => {
     server = await createServer();
+    try {
+      await server.prisma.$queryRaw`SELECT 1`;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`[Integration Test Setup Error] Database connection failed. Please ensure PostgreSQL is running and migrations are applied: ${errMsg}`);
+    }
   });
 
   afterAll(async () => {
     // Clean up test data
-    await (server as any).prisma.$executeRawUnsafe(
+    await server.prisma.$executeRawUnsafe(
       `DELETE FROM identity_workspace.user_account WHERE email = '${testEmail}'`
     );
     await server.close();
@@ -267,7 +273,7 @@ describe('Identity-Workspace Module - Authentication', () => {
   });
 
   describe('GET /health', () => {
-    it('should return health status', async () => {
+    it('should return health status with database connected when ping succeeds', async () => {
       const response = await server.inject({
         method: 'GET',
         url: '/health',
@@ -276,8 +282,33 @@ describe('Identity-Workspace Module - Authentication', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body).toHaveProperty('status', 'ok');
+      expect(body).toHaveProperty('database', 'connected');
       expect(body).toHaveProperty('uptime');
       expect(typeof body.uptime).toBe('number');
+    });
+
+    it('should return 503 with sanitized error in production without leaking diagnostics', async () => {
+      const origEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      const origQueryRaw = server.prisma.$queryRaw;
+      (server.prisma as { $queryRaw: unknown }).$queryRaw = vi.fn().mockRejectedValue(new Error('Connection refused to secret-db-host:5432'));
+
+      try {
+        const response = await server.inject({
+          method: 'GET',
+          url: '/health',
+        });
+
+        expect(response.statusCode).toBe(503);
+        const body = JSON.parse(response.body);
+        expect(body.status).toBe('degraded');
+        expect(body.database).toBe('disconnected');
+        expect(body.error).toBe('Database service unavailable');
+        expect(response.body).not.toContain('secret-db-host');
+      } finally {
+        process.env.NODE_ENV = origEnv;
+        (server.prisma as { $queryRaw: unknown }).$queryRaw = origQueryRaw;
+      }
     });
   });
 });

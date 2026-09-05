@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
-import { WorkspaceRole } from '../domain/entities/workspace-membership.entity';
 
 describe('Identity-Workspace Module - Member Controller', () => {
   let server: FastifyInstance;
   let ownerToken: string;
-  let memberToken: string;
   let ownerId: string;
   let memberId: string;
   let workspaceId: string;
@@ -16,6 +14,12 @@ describe('Identity-Workspace Module - Member Controller', () => {
 
   beforeAll(async () => {
     server = await createServer();
+    try {
+      await server.prisma.$queryRaw`SELECT 1`;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`[Integration Test Setup Error] Database connection failed. Please ensure PostgreSQL is running and migrations are applied: ${errMsg}`);
+    }
   });
 
   afterAll(async () => {
@@ -88,15 +92,14 @@ describe('Identity-Workspace Module - Member Controller', () => {
     memberId = JSON.parse(regResponse.body).data.userId;
 
     // Login Member
-    const loginResponse = await server.inject({
+    await server.inject({
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: { email: memberEmail, password: 'password123' },
     });
-    memberToken = JSON.parse(loginResponse.body).data.token;
 
     // Add Member to Workspace
-    const addResponse = await server.inject({
+    await server.inject({
       method: 'POST',
       url: `/api/v1/workspaces/${workspaceId}/invitations`, // Assuming invitation flow or direct add is needed,
     });

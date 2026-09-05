@@ -29,6 +29,12 @@ describe('Identity Workspace Module - Endpoint Tests', () => {
 
   beforeAll(async () => {
     app = await createServer();
+    try {
+      await (app as any).prisma.$queryRaw`SELECT 1`;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(`[Integration Test Setup Error] Database connection failed. Please ensure PostgreSQL is running and migrations are applied: ${errMsg}`);
+    }
   });
 
   afterAll(async () => {
