@@ -23,7 +23,9 @@
     "zod-to-json-schema": "^3.25.2",
     "@expense-tracker/core": "workspace:*",
     "@expense-tracker/contracts": "workspace:*",
-    "@expense-tracker/outbox-kit": "workspace:*"
+    "@expense-tracker/outbox-kit": "workspace:*",
+    "@expense-tracker/correlation": "workspace:*",
+    "@expense-tracker/middleware": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
