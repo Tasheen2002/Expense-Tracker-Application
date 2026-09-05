@@ -1,15 +1,23 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { JWTPayload } from '../types/fastify.d';
+import { ISessionService } from '../modules/identity-workspace/application/services/session.service';
 
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  workspaceId?: string;
+export interface AuthPluginOptions {
+  sessionService: ISessionService;
 }
 
-const authPlugin: FastifyPluginAsync = async (fastify) => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-me-for-ci-runs';
+const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, options) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('[Auth-Plugin] FATAL: JWT_SECRET environment variable is required but not set.');
+  }
+  const JWT_SECRET = process.env.JWT_SECRET;
+
+  if (!options.sessionService) {
+    throw new Error('[Auth-Plugin] FATAL: sessionService must be provided via plugin options.');
+  }
+  const sessionService = options.sessionService;
 
   fastify.decorate('signToken', (payload: JWTPayload): string => {
     const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
@@ -28,6 +36,8 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     }
   });
 
+  fastify.decorateRequest('user', null);
+
   fastify.decorate('authenticate', async (request: FastifyRequest) => {
     try {
       const authHeader = request.headers.authorization;
@@ -41,7 +51,25 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
       const token = authHeader.substring(7);
       const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
-      (request as any).user = payload;
+
+      if (!payload.sessionId) {
+        const err = new Error('Invalid token: missing session identifier') as Error & {
+          statusCode: number;
+        };
+        err.statusCode = 401;
+        throw err;
+      }
+
+      const isValid = await sessionService.isSessionValid(payload.sessionId);
+      if (!isValid) {
+        const err = new Error('Session has been revoked or expired') as Error & {
+          statusCode: number;
+        };
+        err.statusCode = 401;
+        throw err;
+      }
+
+      request.user = payload;
     } catch (error: unknown) {
       const err = new Error(
         error instanceof Error ? error.message : 'Authentication failed'

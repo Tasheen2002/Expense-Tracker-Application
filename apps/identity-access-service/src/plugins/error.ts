@@ -12,6 +12,18 @@ abstract class DomainError extends Error {
   abstract readonly statusCode: number;
 }
 
+function getHttpStatusErrorName(statusCode: number): string {
+  if (statusCode === 400) return 'Bad Request';
+  if (statusCode === 401) return 'Unauthorized';
+  if (statusCode === 403) return 'Forbidden';
+  if (statusCode === 404) return 'Not Found';
+  if (statusCode === 409) return 'Conflict';
+  if (statusCode === 410) return 'Gone';
+  if (statusCode === 422) return 'Unprocessable Entity';
+  if (statusCode === 429) return 'Too Many Requests';
+  return 'Internal Server Error';
+}
+
 const errorPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.setErrorHandler(
     (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
@@ -42,13 +54,15 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        error.statusCode < 500
       ) {
+        const errWithCode = error as Error & { code?: string; statusCode: number };
         return reply.status(error.statusCode).send({
           success: false,
           statusCode: error.statusCode,
+          error: getHttpStatusErrorName(error.statusCode),
+          code: errWithCode.code || error.name,
           message: error.message,
-          error: error.name,
         });
       }
 
@@ -105,16 +119,18 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       }
 
       if (error.statusCode && error.statusCode < 500) {
+        const errWithCode = error as Error & { code?: string; statusCode: number };
         return reply.status(error.statusCode).send({
           success: false,
           statusCode: error.statusCode,
-          error: error.name,
+          error: getHttpStatusErrorName(error.statusCode),
+          code: errWithCode.code || error.name,
           message: error.message,
         });
       }
 
       const statusCode = error.statusCode || 500;
-      const isDevelopment = process.env.NODE_ENV === 'development';
+      const isDevelopment = process.env.NODE_ENV !== 'production';
 
       return reply.status(statusCode).send({
         success: false,
