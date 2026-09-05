@@ -3,20 +3,37 @@ import {
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 
+export interface PrismaPaginationQueryArgs<TWhere = unknown, TOrderBy = unknown, TInclude = unknown> {
+  where?: TWhere;
+  orderBy?: TOrderBy;
+  include?: TInclude;
+  take?: number;
+  skip?: number;
+}
+
+export interface PrismaPaginationCountArgs<TWhere = unknown> {
+  where?: TWhere;
+}
+
 export class PrismaRepositoryHelper {
   private static readonly MAX_PAGE_SIZE = 100;
   private static readonly DEFAULT_PAGE_SIZE = 50;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma delegates use branded types incompatible with strict generics
-  static async paginate<TPrismaModel, TDomainEntity>(
+  static async paginate<
+    TPrismaModel,
+    TDomainEntity,
+    TWhere = unknown,
+    TOrderBy = unknown,
+    TInclude = unknown
+  >(
     model: {
-      findMany: (args: any) => Promise<TPrismaModel[]>;
-      count: (args: any) => Promise<number>;
+      findMany: (args: PrismaPaginationQueryArgs<TWhere, TOrderBy, TInclude>) => Promise<TPrismaModel[]>;
+      count: (args?: PrismaPaginationCountArgs<TWhere>) => Promise<number>;
     },
     args: {
-      where?: Record<string, unknown>;
-      orderBy?: unknown;
-      include?: unknown;
+      where?: TWhere;
+      orderBy?: TOrderBy;
+      include?: TInclude;
     },
     mapper: (record: TPrismaModel) => TDomainEntity,
     options?: PaginationOptions
