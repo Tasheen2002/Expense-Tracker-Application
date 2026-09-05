@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { CreateApprovalChainHandler } from '../../../application/commands/create-approval-chain.command';
 import { UpdateApprovalChainHandler } from '../../../application/commands/update-approval-chain.command';
 import { DeleteApprovalChainHandler } from '../../../application/commands/delete-approval-chain.command';

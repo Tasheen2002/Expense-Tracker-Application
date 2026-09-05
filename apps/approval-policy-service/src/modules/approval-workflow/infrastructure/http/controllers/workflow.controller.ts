@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { InitiateWorkflowHandler } from '../../../application/commands/initiate-workflow.command';
 import { ApproveStepHandler } from '../../../application/commands/approve-step.command';
 import { RejectStepHandler } from '../../../application/commands/reject-step.command';
