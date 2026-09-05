@@ -1,7 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["multiSchema"]
-  output          = "../src/generated/prisma-client"
+  output          = "../node_modules/.prisma/client-identity"
 }
 
 datasource db {
@@ -20,6 +20,8 @@ model UserAccount {
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   workspaceMemberships WorkspaceMembership[]
+  ownedWorkspaces      Workspace[]           @relation("WorkspaceOwner")
+  sessions             AuthSession[]
 
   @@map("user_account")
   @@schema("identity_workspace")
@@ -34,6 +36,8 @@ model Workspace {
   createdAt DateTime              @default(now()) @map("created_at")
   updatedAt DateTime              @updatedAt @map("updated_at")
   members   WorkspaceMembership[]
+  owner     UserAccount           @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  invitations WorkspaceInvitation[]
 
   @@map("workspace")
   @@schema("identity_workspace")
@@ -64,7 +68,9 @@ model WorkspaceInvitation {
   token       String    @unique
   expiresAt   DateTime  @map("expires_at")
   acceptedAt  DateTime? @map("accepted_at")
+  cancelledAt DateTime? @map("cancelled_at")
   createdAt   DateTime  @default(now()) @map("created_at")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([email])
@@ -78,6 +84,7 @@ model AuthSession {
   token     String   @unique
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
+  user      UserAccount @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("auth_session")
@@ -95,6 +102,10 @@ model OutboxEvent {
   processedAt   DateTime?         @map("processed_at")
   retryCount    Int               @default(0) @map("retry_count")
   error         String?
+  deliveredTo   String[]          @default([]) @map("delivered_to")
+  leaseToken    String?           @map("lease_token")
+  leaseExpiresAt DateTime?         @map("lease_expires_at")
+  nextAttemptAt DateTime          @default(now()) @map("next_attempt_at")
 
   @@index([status, createdAt])
   @@index([aggregateId])
@@ -107,6 +118,7 @@ enum OutboxEventStatus {
   PROCESSING
   PROCESSED
   FAILED
+  DEAD_LETTER
 
   @@schema("identity_workspace")
 }
