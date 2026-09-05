@@ -1,58 +1,73 @@
-import 'dotenv/config';
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import dbPlugin from './plugins/db';
-import authPlugin from './plugins/auth';
-import { container } from './container';
-import { registerIdentityWorkspaceRoutes } from './modules/identity-workspace/infrastructure/http/routes/index';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+
+// 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
+const localEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(localEnvPath)) {
+  const localEnvConfig = dotenv.parse(fs.readFileSync(localEnvPath));
+  for (const k in localEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = localEnvConfig[k];
+    }
+  }
+}
+
+// 2. Load root .env as fallback for shared config (JWT_SECRET, REDIS_URL, etc.)
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+if (fs.existsSync(rootEnvPath)) {
+  const rootEnvConfig = dotenv.parse(fs.readFileSync(rootEnvPath));
+  for (const k in rootEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = rootEnvConfig[k];
+    }
+  }
+}
+
+import { buildIdentityApp } from './app';
 import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
 import { PrismaOutboxEventRepository } from './outbox/prisma-outbox.repository';
 
-const fastify = Fastify({
-  logger: true,
-});
-
 const PORT = parseInt(process.env.PORT || '3002', 10);
-
-fastify.register(cors, {
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-});
 
 const start = async () => {
   try {
-    // 1. Register local database and authentication plugins
-    await fastify.register(dbPlugin);
-    await fastify.register(authPlugin);
+    const fastify = await buildIdentityApp();
 
-    // 2. Initialize DI container
-    container.register(fastify.prisma);
-
-    // 3. Register route handlers
-    const identityServices = container.getIdentityWorkspaceServices();
-    await registerIdentityWorkspaceRoutes(
-      fastify as any,
-      identityServices,
-      identityServices.prisma
-    );
-
-    // 4. Start Outbox Worker
+    // Start Outbox Worker
     const outboxRepo = new PrismaOutboxEventRepository(fastify.prisma);
+    const AUDIT_SERVICE_URL = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
+    const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3008';
+
     const webhookRoutes = {
       'UserCreated': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-        'http://localhost:3008/api/v1/event-outbox/events', // Notification
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
+        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
+      ],
+      'identity.user_created': [
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
+        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
       ],
       'WorkspaceCreated': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
+      ],
+      'identity.workspace_created': [
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
       ],
       'MemberJoinedWorkspace': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
+      ],
+      'identity.member_joined': [
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
       ],
       'MemberRoleChanged': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
+      ],
+      'identity.member_role_changed': [
+        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
       ],
     };
+
     const publisher = new HttpWebhookPublisher(webhookRoutes);
     const outboxWorker = new OutboxWorker(outboxRepo, publisher, {
       pollIntervalMs: 5000,
@@ -66,8 +81,18 @@ const start = async () => {
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`[Identity-Access-Service] Running on http://localhost:${PORT}`);
-  } catch (err) {
-    fastify.log.error(err);
+
+    const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+    for (const signal of signals) {
+      process.on(signal, async () => {
+        fastify.log.info(`[Identity-Access-Service] Received ${signal}, closing server gracefully...`);
+        await fastify.close();
+        process.exit(0);
+      });
+    }
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('[Identity-Access-Service] Fatal startup error:', errMsg);
     process.exit(1);
   }
 };

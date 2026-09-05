@@ -9,7 +9,7 @@ export class Email {
       throw new EmptyFieldError("Email");
     }
 
-    if (!this.isValidEmail(value)) {
+    if (!Email.isValid(value)) {
       throw new InvalidFormatError("email", "valid email address");
     }
   }
@@ -22,11 +22,19 @@ export class Email {
     return new Email(value.toLowerCase().trim());
   }
 
+  static isValid(email: string): boolean {
+    if (!email || typeof email !== 'string' || email.length > 254) return false;
+    const emailRegex =
+      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return emailRegex.test(email.trim());
+  }
+
   getValue(): string {
     return this.value;
   }
 
-  equals(other: Email): boolean {
+  equals(other: Email | null | undefined): boolean {
+    if (!other) return false;
     return this.value === other.value;
   }
 
@@ -34,10 +42,7 @@ export class Email {
     return this.value;
   }
 
-  private isValidEmail(email: string): boolean {
-    if (email.length > 254) return false;
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    return emailRegex.test(email);
+  toJSON(): string {
+    return this.value;
   }
 }

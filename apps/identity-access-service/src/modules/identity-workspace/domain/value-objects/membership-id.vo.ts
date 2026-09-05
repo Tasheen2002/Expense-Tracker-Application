@@ -10,7 +10,7 @@ export class MembershipId extends UuidId {
     return new MembershipId(randomUUID());
   }
 
-  static fromString(id: string): MembershipId {
-    return new MembershipId(id);
+  static fromString(value: string): MembershipId {
+    return new MembershipId(value);
   }
 }

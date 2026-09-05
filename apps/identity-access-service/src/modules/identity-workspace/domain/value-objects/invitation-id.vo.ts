@@ -10,7 +10,7 @@ export class InvitationId extends UuidId {
     return new InvitationId(randomUUID());
   }
 
-  static fromString(id: string): InvitationId {
-    return new InvitationId(id);
+  static fromString(value: string): InvitationId {
+    return new InvitationId(value);
   }
 }
