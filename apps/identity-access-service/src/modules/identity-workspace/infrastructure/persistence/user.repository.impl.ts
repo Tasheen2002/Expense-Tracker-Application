@@ -1,13 +1,12 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from '@prisma/client';
 import {
   IUserRepository,
   UserQueryOptions,
-} from "../../domain/repositories/user.repository";
-import { User } from "../../domain/entities/user.entity";
-import { UserId } from "../../domain/value-objects/user-id.vo";
-import { Email } from "../../domain/value-objects/email.vo";
+} from '../../domain/repositories/user.repository';
+import { User } from '../../domain/entities/user.entity';
+import { UserId } from '../../domain/value-objects/user-id.vo';
+import { Email } from '../../domain/value-objects/email.vo';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
 import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
@@ -15,13 +14,6 @@ export class UserRepositoryImpl
   extends PrismaRepository<User>
   implements IUserRepository
 {
-  constructor(
-    protected readonly prisma: PrismaClient,
-    protected readonly eventBus: IEventBus,
-  ) {
-    super(prisma, eventBus);
-  }
-
   private toDomain(row: Prisma.UserAccountGetPayload<object>): User {
     return User.fromPersistence({
       id: UserId.fromString(row.id),
@@ -36,26 +28,28 @@ export class UserRepositoryImpl
   }
 
   async save(user: User): Promise<void> {
-    const data = {
-      email: user.email.getValue(),
-      passwordHash: user.passwordHash,
-      fullName: user.fullName,
-      isActive: user.isActive,
-      emailVerified: user.emailVerified,
-      updatedAt: user.updatedAt,
-    };
+    await this.context.execute(async () => {
+      const data = {
+        email: user.email.getValue(),
+        passwordHash: user.passwordHash,
+        fullName: user.fullName,
+        isActive: user.isActive,
+        emailVerified: user.emailVerified,
+        updatedAt: user.updatedAt,
+      };
 
-    await this.prisma.userAccount.upsert({
-      where: { id: user.id.getValue() },
-      create: {
-        id: user.id.getValue(),
-        createdAt: user.createdAt,
-        ...data,
-      },
-      update: data,
+      await this.prisma.userAccount.upsert({
+        where: { id: user.id.getValue() },
+        create: {
+          id: user.id.getValue(),
+          createdAt: user.createdAt,
+          ...data,
+        },
+        update: data,
+      });
+
+      await this.persistEvents(user);
     });
-
-    await this.dispatchEvents(user);
   }
 
   async findById(id: UserId): Promise<User | null> {
@@ -86,8 +80,8 @@ export class UserRepositoryImpl
     const {
       isActive,
       emailVerified,
-      sortBy = "createdAt",
-      sortOrder = "desc",
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = options || {};
 
     const where: Prisma.UserAccountWhereInput = {};
@@ -98,14 +92,15 @@ export class UserRepositoryImpl
       where.emailVerified = emailVerified;
     }
 
-    const orderBy: Prisma.UserAccountOrderByWithRelationInput = {};
-    if (sortBy === "email") {
-      orderBy.email = sortOrder;
-    } else if (sortBy === "fullName") {
-      orderBy.fullName = sortOrder;
+    const orderBy: Prisma.UserAccountOrderByWithRelationInput[] = [];
+    if (sortBy === 'email') {
+      orderBy.push({ email: sortOrder });
+    } else if (sortBy === 'fullName') {
+      orderBy.push({ fullName: sortOrder });
     } else {
-      orderBy.createdAt = sortOrder;
+      orderBy.push({ createdAt: sortOrder });
     }
+    orderBy.push({ id: 'asc' });
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.userAccount,
@@ -137,5 +132,21 @@ export class UserRepositoryImpl
 
   async count(): Promise<number> {
     return await this.prisma.userAccount.count();
+  }
+
+  async sharesWorkspace(actorId: UserId, targetId: UserId): Promise<boolean> {
+    const membership = await this.prisma.workspaceMembership.findFirst({
+      where: {
+        userId: targetId.getValue(),
+        workspace: {
+          isActive: true,
+          members: {
+            some: { userId: actorId.getValue() },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return membership !== null;
   }
 }

@@ -1,27 +1,22 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { Prisma } from '@prisma/client';
 import {
   IWorkspaceRepository,
   WorkspaceQueryOptions,
-} from "../../domain/repositories/workspace.repository";
-import { Workspace } from "../../domain/entities/workspace.entity";
-import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
-import { UserId } from "../../domain/value-objects/user-id.vo";
+} from '../../domain/repositories/workspace.repository';
+import { Workspace } from '../../domain/entities/workspace.entity';
+import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
+import { UserId } from '../../domain/value-objects/user-id.vo';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
 
 export class WorkspaceRepositoryImpl
   extends PrismaRepository<Workspace>
   implements IWorkspaceRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
-
   private toDomain(row: Prisma.WorkspaceGetPayload<object>): Workspace {
     return Workspace.fromPersistence({
       id: row.id,
@@ -35,25 +30,27 @@ export class WorkspaceRepositoryImpl
   }
 
   async save(workspace: Workspace): Promise<void> {
-    const data = {
-      name: workspace.name,
-      slug: workspace.slug,
-      ownerId: workspace.ownerId.getValue(),
-      isActive: workspace.isActive,
-      updatedAt: workspace.updatedAt,
-    };
+    await this.context.execute(async () => {
+      const data = {
+        name: workspace.name,
+        slug: workspace.slug,
+        ownerId: workspace.ownerId.getValue(),
+        isActive: workspace.isActive,
+        updatedAt: workspace.updatedAt,
+      };
 
-    await this.prisma.workspace.upsert({
-      where: { id: workspace.id.getValue() },
-      create: {
-        id: workspace.id.getValue(),
-        createdAt: workspace.createdAt,
-        ...data,
-      },
-      update: data,
+      await this.prisma.workspace.upsert({
+        where: { id: workspace.id.getValue() },
+        create: {
+          id: workspace.id.getValue(),
+          createdAt: workspace.createdAt,
+          ...data,
+        },
+        update: data,
+      });
+
+      await this.persistEvents(workspace);
     });
-
-    await this.dispatchEvents(workspace);
   }
 
   async findById(id: WorkspaceId): Promise<Workspace | null> {
@@ -88,7 +85,7 @@ export class WorkspaceRepositoryImpl
       this.prisma.workspace,
       {
         where: { ownerId: ownerId.getValue() },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
       (row) => this.toDomain(row),
       options,
@@ -100,8 +97,8 @@ export class WorkspaceRepositoryImpl
   ): Promise<PaginatedResult<Workspace>> {
     const {
       isActive,
-      sortBy = "createdAt",
-      sortOrder = "desc",
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
     } = options || {};
 
     const where: Prisma.WorkspaceWhereInput = {};
@@ -109,12 +106,10 @@ export class WorkspaceRepositoryImpl
       where.isActive = isActive;
     }
 
-    const orderBy: Prisma.WorkspaceOrderByWithRelationInput = {};
-    if (sortBy === "name") {
-      orderBy.name = sortOrder;
-    } else {
-      orderBy.createdAt = sortOrder;
-    }
+    const orderBy: Prisma.WorkspaceOrderByWithRelationInput[] =
+      sortBy === 'name'
+        ? [{ name: sortOrder }, { id: 'asc' }]
+        : [{ createdAt: sortOrder }, { id: 'asc' }];
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.workspace,
@@ -146,5 +141,23 @@ export class WorkspaceRepositoryImpl
 
   async count(): Promise<number> {
     return await this.prisma.workspace.count();
+  }
+
+  async findByMemberId(
+    userId: UserId,
+    options?: PaginationOptions,
+  ): Promise<PaginatedResult<Workspace>> {
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.workspace,
+      {
+        where: {
+          members: { some: { userId: userId.getValue() } },
+          isActive: true,
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      },
+      (row) => this.toDomain(row),
+      options,
+    );
   }
 }

@@ -1,14 +1,13 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { IWorkspaceMembershipRepository } from "../../domain/repositories/workspace-membership.repository";
+import { Prisma } from '@prisma/client';
+import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   WorkspaceMembership,
   WorkspaceRole,
-} from "../../domain/entities/workspace-membership.entity";
-import { MembershipId } from "../../domain/value-objects/membership-id.vo";
-import { UserId } from "../../domain/value-objects/user-id.vo";
-import { WorkspaceId } from "../../domain/value-objects/workspace-id.vo";
+} from '../../domain/entities/workspace-membership.entity';
+import { MembershipId } from '../../domain/value-objects/membership-id.vo';
+import { UserId } from '../../domain/value-objects/user-id.vo';
+import { WorkspaceId } from '../../domain/value-objects/workspace-id.vo';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -19,11 +18,7 @@ export class WorkspaceMembershipRepositoryImpl
   extends PrismaRepository<WorkspaceMembership>
   implements IWorkspaceMembershipRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
-
-  private toDomain(row: Prisma.WorkspaceMembershipGetPayload<{}>): WorkspaceMembership {
+  private toDomain(row: Prisma.WorkspaceMembershipGetPayload<object>): WorkspaceMembership {
     return WorkspaceMembership.fromPersistence({
       id: row.id,
       userId: row.userId,
@@ -35,24 +30,26 @@ export class WorkspaceMembershipRepositoryImpl
   }
 
   async save(membership: WorkspaceMembership): Promise<void> {
-    await this.prisma.workspaceMembership.upsert({
-      where: { id: membership.id.getValue() },
-      create: {
-        id: membership.id.getValue(),
-        userId: membership.userId.getValue(),
-        workspaceId: membership.workspaceId.getValue(),
-        role: membership.role,
-        createdAt: membership.createdAt,
-        updatedAt: membership.updatedAt,
-      },
-      update: {
-        role: membership.role,
-        updatedAt: membership.updatedAt,
-      },
-    });
-    await this.dispatchEvents(membership);
-  }
+    await this.context.execute(async () => {
+      await this.prisma.workspaceMembership.upsert({
+        where: { id: membership.id.getValue() },
+        create: {
+          id: membership.id.getValue(),
+          userId: membership.userId.getValue(),
+          workspaceId: membership.workspaceId.getValue(),
+          role: membership.role,
+          createdAt: membership.createdAt,
+          updatedAt: membership.updatedAt,
+        },
+        update: {
+          role: membership.role,
+          updatedAt: membership.updatedAt,
+        },
+      });
 
+      await this.persistEvents(membership);
+    });
+  }
 
   async findById(id: MembershipId): Promise<WorkspaceMembership | null> {
     const row = await this.prisma.workspaceMembership.findUnique({
@@ -75,9 +72,7 @@ export class WorkspaceMembershipRepositoryImpl
       },
     });
 
-    return row
-      ? this.toDomain(row)
-      : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findByUserId(
@@ -88,7 +83,7 @@ export class WorkspaceMembershipRepositoryImpl
       this.prisma.workspaceMembership,
       {
         where: { userId: userId.getValue() },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
       (row) => this.toDomain(row),
       options,
@@ -103,7 +98,7 @@ export class WorkspaceMembershipRepositoryImpl
       this.prisma.workspaceMembership,
       {
         where: { workspaceId: workspaceId.getValue() },
-        orderBy: { createdAt: "asc" },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       },
       (row) => this.toDomain(row),
       options,
