@@ -9,7 +9,7 @@
     "declarationMap": false,
     "paths": {
       "@prisma/client": [
-        "./src/generated/prisma-client"
+        "./node_modules/.prisma/client-approval"
       ],
       "@core/*": [
         "../../packages/core/src/*"
@@ -28,6 +28,12 @@
       ],
       "@modules/policy-controls/*": [
         "./src/modules/policy-controls/*"
+      ],
+      "@shared/middleware": [
+        "../../packages/middleware/src"
+      ],
+      "@shared/middleware/*": [
+        "../../packages/middleware/src/*"
       ],
       "@shared/*": [
         "./src/shared/*"
