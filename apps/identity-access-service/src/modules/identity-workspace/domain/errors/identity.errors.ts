@@ -6,7 +6,7 @@ import { DomainError, DomainValidationError } from '@core/domain/domain-error';
 export class IdentityWorkspaceError extends DomainError {
   constructor(
     message: string,
-    public readonly code: string,
+    code: string,
     statusCode: number = 400
   ) {
     super(message, code, statusCode);
@@ -16,6 +16,22 @@ export class IdentityWorkspaceError extends DomainError {
 // ============================================================================
 // 1. Validation Errors (400)
 // ============================================================================
+
+export class InvalidPasswordError extends DomainValidationError {
+  constructor() {
+    super('Password must contain at least 8 characters and at most 72 UTF-8 bytes', 'INVALID_PASSWORD', 'password');
+  }
+}
+
+export class InvalidRoleError extends DomainValidationError {
+  constructor(role?: string) {
+    super(
+      role ? `Invalid workspace role: ${role}` : 'Invalid workspace role',
+      'INVALID_ROLE',
+      'role'
+    );
+  }
+}
 
 export class InvalidPasswordHashError extends DomainValidationError {
   constructor() {
@@ -32,6 +48,24 @@ export class InvalidWorkspaceNameError extends DomainValidationError {
 export class UserLookupCriteriaRequiredError extends DomainValidationError {
   constructor() {
     super('Either userId or email is required', 'USER_LOOKUP_CRITERIA_REQUIRED');
+  }
+}
+
+export class InvalidFullNameError extends DomainValidationError {
+  constructor() {
+    super('Full name cannot exceed 255 characters', 'INVALID_FULL_NAME', 'fullName');
+  }
+}
+
+export class InvalidInvitationExpiryError extends DomainValidationError {
+  constructor() {
+    super('Invitation expiry must be between 1 and 720 hours', 'INVALID_INVITATION_EXPIRY', 'expiryHours');
+  }
+}
+
+export class WorkspaceInvitationLimitReachedError extends IdentityWorkspaceError {
+  constructor(limit: number = 50) {
+    super(`Workspace invitation limit of ${limit} reached`, 'INVITATION_LIMIT_REACHED', 400);
   }
 }
 
@@ -61,8 +95,11 @@ export class MembershipNotFoundError extends IdentityWorkspaceError {
 }
 
 export class InvitationNotFoundError extends IdentityWorkspaceError {
-  constructor(token: string) {
-    super(`Invitation with token ${token} not found`, 'INVITATION_NOT_FOUND', 404);
+  constructor(identifier?: string) {
+    const message = identifier
+      ? `Invitation '${identifier}' not found`
+      : 'Invitation not found';
+    super(message, 'INVITATION_NOT_FOUND', 404);
   }
 }
 
@@ -143,7 +180,7 @@ export class WorkspaceInactiveError extends IdentityWorkspaceError {
 }
 
 export class InsufficientPermissionsError extends IdentityWorkspaceError {
-  constructor(operation: string) {
+  constructor(operation: string = 'perform this operation') {
     super(`Insufficient permissions to ${operation}`, 'INSUFFICIENT_PERMISSIONS', 403);
   }
 }
@@ -187,5 +224,11 @@ export class InvitationAlreadyAcceptedError extends IdentityWorkspaceError {
 export class InvitationEmailMismatchError extends IdentityWorkspaceError {
   constructor() {
     super('Invitation email does not match user email', 'INVITATION_EMAIL_MISMATCH', 422);
+  }
+}
+
+export class InvitationCancelledError extends IdentityWorkspaceError {
+  constructor() {
+    super('Invitation has been cancelled', 'INVITATION_CANCELLED', 410);
   }
 }
