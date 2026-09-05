@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ViolationController } from '../controllers/violation.controller';
 import {
   validateBody,
@@ -26,7 +26,7 @@ import {
   workspaceParamsJsonSchema,
 } from '../validation/policy.schema';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 export async function violationRoutes(

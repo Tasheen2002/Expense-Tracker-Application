@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExemptionController } from '../controllers/exemption.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
