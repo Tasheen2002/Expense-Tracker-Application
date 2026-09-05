@@ -1,3 +1,4 @@
+import { OperationService } from '../services/operation.service';
 import { UserManagementService } from '../services/user-management.service';
 import { UserDTO } from '../../domain/entities/user.entity';
 import {
@@ -7,6 +8,7 @@ import {
 import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetUserQuery extends IQuery {
+  readonly actorId: string;
   readonly userId?: string;
   readonly email?: string;
 }
@@ -15,9 +17,14 @@ export class GetUserHandler implements IQueryHandler<
   GetUserQuery,
   UserDTO
 > {
-  constructor(private readonly userManagementService: UserManagementService) {}
+  constructor(
+    private readonly userManagementService: UserManagementService,
+    private readonly operations: OperationService
+  ) {}
 
   async handle(query: GetUserQuery): Promise<UserDTO> {
+    await this.operations.authorize({ actorId: query.actorId });
+
     if (!query.userId && !query.email) {
       throw new UserLookupCriteriaRequiredError();
     }
@@ -33,6 +40,7 @@ export class GetUserHandler implements IQueryHandler<
       throw new UserNotFoundError(query.userId ?? query.email!);
     }
 
+    await this.operations.authorizeUserLookup(query.actorId, userDTO.userId);
     return userDTO;
   }
 }

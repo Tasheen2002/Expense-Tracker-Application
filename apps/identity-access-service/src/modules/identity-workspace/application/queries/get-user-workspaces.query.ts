@@ -1,3 +1,4 @@
+import { OperationService } from '../services/operation.service';
 import { WorkspaceManagementService } from '../services/workspace-management.service';
 import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 import { IQuery, IQueryHandler } from '@core/application/cqrs';
@@ -16,12 +17,14 @@ export class GetUserWorkspacesHandler implements IQueryHandler<
   PaginatedResult<WorkspaceDTO>
 > {
   constructor(
-    private readonly workspaceManagementService: WorkspaceManagementService
+    private readonly workspaceManagementService: WorkspaceManagementService,
+    private readonly operations: OperationService
   ) {}
 
   async handle(
     query: GetUserWorkspacesQuery
   ): Promise<PaginatedResult<WorkspaceDTO>> {
+    await this.operations.authorize({ actorId: query.userId });
     const result = await this.workspaceManagementService.getWorkspacesDTOByMembership(
       query.userId,
       query.options
