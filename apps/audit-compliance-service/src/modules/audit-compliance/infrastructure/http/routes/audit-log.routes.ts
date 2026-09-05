@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AuditLogController } from '../controllers/audit-log.controller';
 import {
   createRateLimiter,
@@ -30,7 +30,7 @@ import {
   entityAuditHistoryEnvelopeJsonSchema,
   auditSummaryEnvelopeJsonSchema,
 } from '../validation/audit-log.schema';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
