@@ -1,19 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { AggregateRoot } from '@core/domain/aggregate-root';
-import { IEventBus } from '@core/domain/events/domain-event';
+import { IdentityPersistenceContext } from './identity-persistence.context';
 
 export abstract class PrismaRepository<T extends AggregateRoot> {
-  constructor(
-    protected readonly prisma: PrismaClient,
-    protected readonly eventBus: IEventBus
-  ) {}
-
-  protected async dispatchEvents(aggregate: T): Promise<void> {
-    const events = aggregate.domainEvents;
-
-    if (events.length > 0) {
-      await this.eventBus.publishAll(events);
-      aggregate.clearDomainEvents();
-    }
-  }
+  constructor(protected readonly context: IdentityPersistenceContext) {}
+  protected get prisma() { return this.context.client; }
+  protected persistEvents(aggregate: T): Promise<void> { return this.context.recordEvents(aggregate); }
 }
