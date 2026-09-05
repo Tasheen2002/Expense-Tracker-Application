@@ -2,6 +2,7 @@ import { WorkspaceInvitation } from "../entities/workspace-invitation.entity";
 import { WorkspaceMembership } from "../entities/workspace-membership.entity";
 import { InvitationId } from "../value-objects/invitation-id.vo";
 import { WorkspaceId } from "../value-objects/workspace-id.vo";
+import { Email } from "../value-objects/email.vo";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -16,7 +17,7 @@ export interface IWorkspaceInvitationRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<WorkspaceInvitation>>;
   findByEmail(
-    email: string,
+    email: string | Email,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<WorkspaceInvitation>>;
   findPendingByWorkspaceId(
@@ -25,7 +26,7 @@ export interface IWorkspaceInvitationRepository {
   ): Promise<PaginatedResult<WorkspaceInvitation>>;
   findPendingByWorkspaceAndEmail(
     workspaceId: WorkspaceId,
-    email: string,
+    email: string | Email,
   ): Promise<WorkspaceInvitation | null>;
   delete(id: InvitationId): Promise<void>;
   deleteExpired(): Promise<number>;

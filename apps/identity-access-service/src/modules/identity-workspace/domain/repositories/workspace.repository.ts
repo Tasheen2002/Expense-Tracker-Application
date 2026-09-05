@@ -7,6 +7,7 @@ import {
 } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IWorkspaceRepository {
+  findByMemberId(userId: UserId, options?: PaginationOptions): Promise<PaginatedResult<Workspace>>;
   save(workspace: Workspace): Promise<void>;
   findById(id: WorkspaceId): Promise<Workspace | null>;
   findBySlug(slug: string): Promise<Workspace | null>;

@@ -7,6 +7,7 @@ import {
 } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface IUserRepository {
+  sharesWorkspace(actorId: UserId, targetId: UserId): Promise<boolean>;
   save(user: User): Promise<void>;
   findById(id: UserId): Promise<User | null>;
   findByEmail(email: Email): Promise<User | null>;
