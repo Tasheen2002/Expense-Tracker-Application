@@ -52,8 +52,6 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
 
   const testTimestamp = Date.now();
   const testEmail = `bank-sync-test-${testTimestamp}@example.com`;
-  const testPassword = 'SecurePassword123!';
-  const testWorkspaceName = `Bank Sync Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
     app = await createServer();
@@ -73,18 +71,27 @@ describe('Bank Feed Sync Module - Endpoint Tests', () => {
 
     await app.ready();
 
-    // Clear test database to prevent conflicts
-    await prisma.bankTransaction.deleteMany({});
-    await prisma.syncSession.deleteMany({});
-    await prisma.bankConnection.deleteMany({});
+    // Clear test database to prevent conflicts if database is reachable
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      await prisma.bankTransaction.deleteMany({});
+      await prisma.syncSession.deleteMany({});
+      await prisma.bankConnection.deleteMany({});
+    } catch (err: any) {
+      console.warn('[bank-feed-sync.endpoints.test] PostgreSQL server unreachable, skipping DB cleanup:', err.message);
+    }
   });
 
   afterAll(async () => {
     // Cleanup test data
-    if (prisma && testConnectionId) {
-      await prisma.bankConnection.deleteMany({
-        where: { id: testConnectionId },
-      });
+    try {
+      if (prisma && testConnectionId) {
+        await prisma.bankConnection.deleteMany({
+          where: { id: testConnectionId },
+        });
+      }
+    } catch {
+      // Ignore cleanup error if DB is unreachable
     }
 
     if (prisma) {
