@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  output   = "../src/generated/prisma-client"
+  output          = "../node_modules/.prisma/client-bank-feed"
   previewFeatures = ["multiSchema"]
 }
 
@@ -136,6 +136,7 @@ enum OutboxEventStatus {
   PROCESSING
   PROCESSED
   FAILED
+  DEAD_LETTER
 
   @@schema("bank_feed_sync")
 }
