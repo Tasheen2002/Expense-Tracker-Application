@@ -14,13 +14,11 @@ import {
   CannotRemoveOwnerError,
 } from '../../domain/errors/identity.errors';
 
-import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
-import { ICacheService } from '@core/domain/interfaces/cache.interface';
+import { PaginatedResult, PaginationOptions } from '@core/domain/interfaces/paginated-result.interface';
 
 export class WorkspaceMembershipService {
   constructor(
-    private readonly membershipRepository: IWorkspaceMembershipRepository,
-    private readonly cacheService: ICacheService
+    private readonly membershipRepository: IWorkspaceMembershipRepository
   ) {}
 
   async addMember(
@@ -29,10 +27,6 @@ export class WorkspaceMembershipService {
     const userId = UserId.fromString(data.userId);
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
 
-    // Invalidate cache
-    await this.cacheService.delete(
-      `membership:${data.userId}:${data.workspaceId}`
-    );
 
     // Check if membership already exists
     const existing = await this.membershipRepository.findByUserAndWorkspace(
@@ -75,10 +69,11 @@ export class WorkspaceMembershipService {
   }
 
   async getWorkspaceMembers(
-    workspaceId: string
+    workspaceId: string,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<WorkspaceMembershipDTO>> {
     const workspaceIdVO = WorkspaceId.fromString(workspaceId);
-    const result = await this.membershipRepository.findByWorkspaceId(workspaceIdVO);
+    const result = await this.membershipRepository.findByWorkspaceId(workspaceIdVO, options);
     return { ...result, items: result.items.map((m) => WorkspaceMembership.toDTO(m)) };
   }
 
@@ -93,10 +88,6 @@ export class WorkspaceMembershipService {
       throw new MembershipNotFoundError(membershipId);
     }
 
-    // Invalidate cache
-    await this.cacheService.delete(
-      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
-    );
 
     membership.changeRole(newRole);
     await this.membershipRepository.save(membership);
@@ -115,10 +106,6 @@ export class WorkspaceMembershipService {
       throw new CannotRemoveOwnerError();
     }
 
-    // Invalidate cache
-    await this.cacheService.delete(
-      `membership:${membership.userId.getValue()}:${membership.workspaceId.getValue()}`
-    );
 
     membership.markAsRemoved();
     await this.membershipRepository.save(membership);
@@ -126,17 +113,7 @@ export class WorkspaceMembershipService {
   }
 
   async isMember(userId: string, workspaceId: string): Promise<boolean> {
-    const cacheKey = `membership:${userId}:${workspaceId}`;
-
-    return await this.cacheService.getOrSet(
-      cacheKey,
-      async () => {
-        const userIdVO = UserId.fromString(userId);
-        const workspaceIdVO = WorkspaceId.fromString(workspaceId);
-        return await this.membershipRepository.exists(userIdVO, workspaceIdVO);
-      },
-      600 // 10 minutes TTL
-    );
+    return this.membershipRepository.exists(UserId.fromString(userId), WorkspaceId.fromString(workspaceId));
   }
 
   async hasRole(

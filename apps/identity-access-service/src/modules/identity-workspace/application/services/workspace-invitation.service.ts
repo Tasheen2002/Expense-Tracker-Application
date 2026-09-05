@@ -1,3 +1,12 @@
+import { IWorkspaceRepository } from '../../domain/repositories/workspace.repository';
+import {
+  WorkspaceNotFoundError,
+  WorkspaceInactiveError,
+  UserInactiveError,
+  InvitationCancelledError,
+  WorkspaceInvitationLimitReachedError,
+} from '../../domain/errors/identity.errors';
+import { MAX_INVITATIONS_PER_WORKSPACE } from '../../domain/constants/identity.constants';
 import { IWorkspaceInvitationRepository } from '../../domain/repositories/workspace-invitation.repository';
 import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import { IUserRepository } from '../../domain/repositories/user.repository';
@@ -33,7 +42,8 @@ export class WorkspaceInvitationService {
   constructor(
     private readonly invitationRepository: IWorkspaceInvitationRepository,
     private readonly membershipRepository: IWorkspaceMembershipRepository,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly workspaceRepository: IWorkspaceRepository
   ) {}
 
   async createInvitation(
@@ -41,6 +51,13 @@ export class WorkspaceInvitationService {
   ): Promise<WorkspaceInvitation> {
     const workspaceId = WorkspaceId.fromString(data.workspaceId);
     const email = Email.fromString(data.email);
+    const workspace = await this.workspaceRepository.findById(workspaceId);
+    if (!workspace) throw new WorkspaceNotFoundError(data.workspaceId);
+    if (!workspace.isActive) throw new WorkspaceInactiveError(data.workspaceId);
+    const pending = await this.invitationRepository.findPendingByWorkspaceId(workspaceId, { limit: 1 });
+    if (pending.total >= MAX_INVITATIONS_PER_WORKSPACE) {
+      throw new WorkspaceInvitationLimitReachedError(MAX_INVITATIONS_PER_WORKSPACE);
+    }
 
     // Check if user is already a member
     const existingUser = await this.userRepository.findByEmail(email);
@@ -61,18 +78,13 @@ export class WorkspaceInvitationService {
     const pendingInvitation =
       await this.invitationRepository.findPendingByWorkspaceAndEmail(
         workspaceId,
-        data.email
+        email.getValue()
       );
     if (pendingInvitation) {
       throw new DuplicateInvitationError(data.email, data.workspaceId);
     }
 
-    // Create invitation with default 7-day expiry
-    const invitation = WorkspaceInvitation.create({
-      ...data,
-      expiryHours: data.expiryHours || 168, // 7 days
-    });
-
+    const invitation = WorkspaceInvitation.create({ ...data, email: email.getValue() });
     await this.invitationRepository.save(invitation);
     return invitation;
   }
@@ -123,6 +135,10 @@ export class WorkspaceInvitationService {
       throw new InvitationNotFoundError(token);
     }
 
+    if (invitation.isCancelled()) throw new InvitationCancelledError();
+    const workspace = await this.workspaceRepository.findById(invitation.workspaceId);
+    if (!workspace) throw new WorkspaceNotFoundError(invitation.workspaceId.getValue());
+    if (!workspace.isActive) throw new WorkspaceInactiveError(invitation.workspaceId.getValue());
     if (invitation.isExpired()) {
       throw new InvitationExpiredError();
     }
@@ -137,6 +153,7 @@ export class WorkspaceInvitationService {
       throw new UserNotFoundError(userId);
     }
 
+    if (!user.isActive) throw new UserInactiveError();
     if (
       user.email.getValue().toLowerCase() !==
       invitation.email.toLowerCase()
@@ -176,12 +193,12 @@ export class WorkspaceInvitationService {
     return membership;
   }
 
-  async cancelInvitation(invitationId: string): Promise<void> {
+  async cancelInvitation(invitationId: string, workspaceId: string): Promise<void> {
     const id = InvitationId.fromString(invitationId);
     const invitation = await this.invitationRepository.findById(id);
 
-    if (!invitation) {
-      throw new InvitationNotFoundError(invitationId);
+    if (!invitation || invitation.workspaceId.getValue() !== workspaceId) {
+      throw new InvitationNotFoundError('requested resource');
     }
 
     if (invitation.isAccepted()) {
@@ -190,7 +207,7 @@ export class WorkspaceInvitationService {
 
     invitation.markAsCancelled();
     await this.invitationRepository.save(invitation);
-    await this.invitationRepository.delete(id);
+
   }
 
   async cleanupExpiredInvitations(): Promise<number> {

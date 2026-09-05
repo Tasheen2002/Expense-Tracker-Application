@@ -15,6 +15,7 @@ import {
   WorkspaceNotFoundError,
   WorkspaceAlreadyExistsError,
 } from '../../domain/errors/identity.errors';
+import { MembershipNotFoundError, InsufficientPermissionsError } from '../../domain/errors/identity.errors';
 import { PaginationOptions, PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface WorkspaceManagementServiceOptions {
@@ -36,17 +37,28 @@ export class WorkspaceManagementService {
     return Workspace.toDTO(workspace);
   }
 
-  async getWorkspaceDTOById(id: string): Promise<WorkspaceDTO | null> {
+  async getWorkspaceDTOById(id: string): Promise<WorkspaceDTO> {
     const workspace = await this.getWorkspaceById(id);
-    return workspace ? Workspace.toDTO(workspace) : null;
+    if (!workspace) throw new WorkspaceNotFoundError(id);
+    return Workspace.toDTO(workspace);
   }
 
   async updateWorkspaceDTO(
     id: string,
     updateData: Partial<CreateWorkspaceData>
-  ): Promise<WorkspaceDTO | null> {
+  ): Promise<WorkspaceDTO> {
     const workspace = await this.updateWorkspace(id, updateData);
-    return workspace ? Workspace.toDTO(workspace) : null;
+    return Workspace.toDTO(workspace);
+  }
+
+  async deactivateWorkspaceDTO(id: string): Promise<WorkspaceDTO> {
+    const workspace = await this.deactivateWorkspace(id);
+    return Workspace.toDTO(workspace);
+  }
+
+  async activateWorkspaceDTO(id: string): Promise<WorkspaceDTO> {
+    const workspace = await this.activateWorkspace(id);
+    return Workspace.toDTO(workspace);
   }
 
   async getWorkspacesDTOByMembership(
@@ -105,32 +117,7 @@ export class WorkspaceManagementService {
   ): Promise<PaginatedResult<Workspace>> {
     const userIdVO = UserId.fromString(userId);
 
-    // Get paginated memberships for the user
-    const membershipsResult = await this.membershipRepository.findByUserId(
-      userIdVO,
-      options
-    );
-    const memberships = membershipsResult.items;
-
-    // Get workspaces for each membership
-    const workspacePromises = memberships.map((membership) =>
-      this.workspaceRepository.findById(membership.workspaceId)
-    );
-
-    const workspacesRaw = await Promise.all(workspacePromises);
-
-    // Filter out null values (in case workspace was deleted)
-    const workspaces = workspacesRaw.filter(
-      (workspace): workspace is Workspace => workspace !== null
-    );
-
-    return {
-      items: workspaces,
-      total: membershipsResult.total,
-      limit: membershipsResult.limit,
-      offset: membershipsResult.offset,
-      hasMore: membershipsResult.hasMore,
-    };
+    return this.workspaceRepository.findByMemberId(userIdVO, options);
   }
 
   async getWorkspaces(
@@ -159,7 +146,7 @@ export class WorkspaceManagementService {
   async updateWorkspace(
     id: string,
     updateData: Partial<CreateWorkspaceData>
-  ): Promise<Workspace | null> {
+  ): Promise<Workspace> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
 
@@ -182,7 +169,7 @@ export class WorkspaceManagementService {
     return workspace;
   }
 
-  async deactivateWorkspace(id: string): Promise<Workspace | null> {
+  async deactivateWorkspace(id: string): Promise<Workspace> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
 
@@ -195,7 +182,7 @@ export class WorkspaceManagementService {
     return workspace;
   }
 
-  async activateWorkspace(id: string): Promise<Workspace | null> {
+  async activateWorkspace(id: string): Promise<Workspace> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
 
@@ -208,16 +195,35 @@ export class WorkspaceManagementService {
     return workspace;
   }
 
-  async deleteWorkspace(id: string): Promise<boolean> {
+  async deleteWorkspace(id: string): Promise<void> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
 
     if (!workspace) {
-      return false;
+      throw new WorkspaceNotFoundError(id);
     }
 
+    workspace.markAsDeleted();
+    await this.workspaceRepository.save(workspace);
     await this.workspaceRepository.delete(workspaceId);
-    return true;
+  }
+
+  async transferOwnership(workspaceId: string, newOwnerId: string): Promise<WorkspaceDTO> {
+    const id = WorkspaceId.fromString(workspaceId);
+    const workspace = await this.workspaceRepository.findById(id);
+    if (!workspace) throw new WorkspaceNotFoundError(workspaceId);
+    if (workspace.ownerId.getValue() === newOwnerId) throw new InsufficientPermissionsError('transfer ownership to yourself');
+    const previous = await this.membershipRepository.findByUserAndWorkspace(workspace.ownerId, id);
+    const nextOwner = await this.membershipRepository.findByUserAndWorkspace(UserId.fromString(newOwnerId), id);
+    if (!previous || !nextOwner) throw new MembershipNotFoundError(newOwnerId, workspaceId);
+    previous.transferOwnershipRole(WorkspaceRole.ADMIN);
+    nextOwner.transferOwnershipRole(WorkspaceRole.OWNER);
+    workspace.transferOwnership(newOwnerId);
+    // Release the old owner before acquiring the unique owner role.
+    await this.membershipRepository.save(previous);
+    await this.membershipRepository.save(nextOwner);
+    await this.workspaceRepository.save(workspace);
+    return Workspace.toDTO(workspace);
   }
 
   async getWorkspaceCount(): Promise<number> {
