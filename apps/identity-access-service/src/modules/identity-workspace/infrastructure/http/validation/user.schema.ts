@@ -63,11 +63,21 @@ export const userResponseSchema = z.object({
 
 export type UserResponse = z.infer<typeof userResponseSchema>;
 
+export const userParamsSchema = z.object({
+  userId: z.string().uuid('Invalid user ID'),
+});
+
+export type UserParams = z.infer<typeof userParamsSchema>;
+
+export const profileUpdateSchema = updateUserSchema;
+
 // Pre-computed JSON schemas for routes
+export const userParamsJsonSchema = toJsonSchema(userParamsSchema);
 export const registerUserBodyJsonSchema = toJsonSchema(registerUserSchema);
 export const loginUserBodyJsonSchema = toJsonSchema(loginUserSchema);
+export const profileUpdateBodyJsonSchema = toJsonSchema(profileUpdateSchema);
 
-export const registerSuccessResponseJsonSchema = toJsonSchema(
+export const userEnvelopeJsonSchema = toJsonSchema(
   z.object({
     success: z.boolean(),
     statusCode: z.number(),
@@ -75,6 +85,8 @@ export const registerSuccessResponseJsonSchema = toJsonSchema(
     data: userResponseSchema,
   })
 );
+
+export const registerSuccessResponseJsonSchema = userEnvelopeJsonSchema;
 
 export const loginSuccessResponseJsonSchema = toJsonSchema(
   z.object({
@@ -88,15 +100,5 @@ export const loginSuccessResponseJsonSchema = toJsonSchema(
   })
 );
 
-export const meSuccessResponseJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-    data: z.object({
-      userId: z.string().uuid(),
-      email: z.string().email(),
-      workspaceId: z.string().uuid().nullable().optional(),
-    }),
-  })
-);
+export const meSuccessResponseJsonSchema = userEnvelopeJsonSchema;
+

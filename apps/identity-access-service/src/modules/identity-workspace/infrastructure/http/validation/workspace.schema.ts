@@ -11,20 +11,24 @@ import { toJsonSchema } from './validator';
 export const workspaceParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID'),
 });
+export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
 
 export const memberParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID'),
   userId: z.string().uuid('Invalid user ID'),
 });
+export type MemberParams = z.infer<typeof memberParamsSchema>;
 
 export const invitationParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID'),
   invitationId: z.string().uuid('Invalid invitation ID'),
 });
+export type InvitationParams = z.infer<typeof invitationParamsSchema>;
 
 export const tokenParamsSchema = z.object({
   token: z.string().min(1, 'Token is required'),
 });
+export type TokenParams = z.infer<typeof tokenParamsSchema>;
 
 /**
  * Query Schemas
@@ -33,6 +37,7 @@ export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
 });
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 /**
  * Create Workspace Schema
@@ -125,6 +130,7 @@ export const workspaceInvitationResponseSchema = z.object({
   acceptedAt: z.string().nullable(),
   isExpired: z.boolean(),
   isAccepted: z.boolean(),
+  isCancelled: z.boolean(),
   createdAt: z.string(),
 });
 
@@ -135,11 +141,18 @@ export const invitationParamsJsonSchema = toJsonSchema(invitationParamsSchema);
 export const tokenParamsJsonSchema = toJsonSchema(tokenParamsSchema);
 export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);
 
+export const transferOwnershipSchema = z.object({
+  newOwnerId: z.string().uuid('Invalid user ID'),
+});
+
+export type TransferOwnershipInput = z.infer<typeof transferOwnershipSchema>;
+
 export const createWorkspaceBodyJsonSchema = toJsonSchema(createWorkspaceSchema);
 export const updateWorkspaceBodyJsonSchema = toJsonSchema(updateWorkspaceSchema);
 export const addMemberBodyJsonSchema = toJsonSchema(addMemberSchema);
 export const updateMemberRoleBodyJsonSchema = toJsonSchema(updateMemberRoleSchema);
 export const inviteMemberBodyJsonSchema = toJsonSchema(inviteMemberSchema);
+export const transferOwnershipBodyJsonSchema = toJsonSchema(transferOwnershipSchema);
 
 // Response envelopes
 export const workspaceEnvelopeJsonSchema = toJsonSchema(
