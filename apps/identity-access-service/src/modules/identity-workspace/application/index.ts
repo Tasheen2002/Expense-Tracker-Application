@@ -1,4 +1,6 @@
 // Commands
+export * from './commands/update-profile.command';
+export * from './commands/transfer-ownership.command';
 export * from './commands/accept-invitation.command';
 export * from './commands/cancel-invitation.command';
 export * from './commands/change-member-role.command';
@@ -10,6 +12,7 @@ export * from './commands/remove-member.command';
 export * from './commands/update-workspace.command';
 
 // Queries
+export * from './queries/get-member.query';
 export * from './queries/get-invitation-by-token.query';
 export * from './queries/get-pending-invitations.query';
 export * from './queries/get-user-invitations.query';
