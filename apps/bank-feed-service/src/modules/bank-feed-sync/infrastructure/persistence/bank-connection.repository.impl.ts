@@ -1,0 +1,157 @@
+import { PrismaClient, Prisma } from '@prisma/client';
+import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
+import { BankConnection } from '../../domain/entities/bank-connection.entity';
+import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
+import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
+import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '@core/domain/interfaces/paginated-result.interface';
+import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '@core/domain/events/domain-event';
+
+export class PrismaBankConnectionRepository
+  extends PrismaRepository<BankConnection>
+  implements IBankConnectionRepository
+{
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  async save(connection: BankConnection): Promise<void> {
+    const data = this.toPersistence(connection);
+
+    await this.prisma.bankConnection.upsert({
+      where: { id: connection.id.getValue() },
+      create: data,
+      update: data,
+    });
+    await this.dispatchEvents(connection);
+  }
+
+  async findById(
+    id: BankConnectionId,
+    workspaceId: WorkspaceId
+  ): Promise<BankConnection | null> {
+    const record = await this.prisma.bankConnection.findFirst({
+      where: {
+        id: id.getValue(),
+        workspaceId: workspaceId.getValue(),
+      },
+    });
+
+    return record ? this.toDomain(record) : null;
+  }
+
+  async findByInstitutionAndAccount(
+    workspaceId: WorkspaceId,
+    institutionId: string,
+    accountId: string
+  ): Promise<BankConnection | null> {
+    const record = await this.prisma.bankConnection.findFirst({
+      where: {
+        workspaceId: workspaceId.getValue(),
+        institutionId,
+        accountId,
+        status: {
+          not: ConnectionStatus.DISCONNECTED,
+        },
+      },
+    });
+
+    return record ? this.toDomain(record) : null;
+  }
+
+  async findByWorkspace(
+    workspaceId: WorkspaceId,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<BankConnection>> {
+    const where: Prisma.BankConnectionWhereInput = {
+      workspaceId: workspaceId.getValue(),
+    };
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankConnection,
+      { where, orderBy: { createdAt: 'desc' } },
+      (record) => this.toDomain(record),
+      options
+    );
+  }
+
+  async findByUser(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    options?: PaginationOptions
+  ): Promise<PaginatedResult<BankConnection>> {
+    const where: Prisma.BankConnectionWhereInput = {
+      workspaceId: workspaceId.getValue(),
+      userId: userId.getValue(),
+    };
+
+    return PrismaRepositoryHelper.paginate(
+      this.prisma.bankConnection,
+      { where, orderBy: { createdAt: 'desc' } },
+      (record) => this.toDomain(record),
+      options
+    );
+  }
+
+  async delete(id: BankConnectionId, workspaceId: WorkspaceId): Promise<void> {
+    await this.prisma.bankConnection.delete({
+      where: {
+        id: id.getValue(),
+        workspaceId: workspaceId.getValue(),
+      },
+    });
+  }
+
+  private toPersistence(
+    connection: BankConnection
+  ): Prisma.BankConnectionUncheckedCreateInput {
+    return {
+      id: connection.id.getValue(),
+      workspaceId: connection.workspaceId.getValue(),
+      userId: connection.userId.getValue(),
+      institutionId: connection.institutionId,
+      institutionName: connection.institutionName,
+      accountId: connection.accountId,
+      accountName: connection.accountName,
+      accountType: connection.accountType,
+      accountMask: connection.accountMask,
+      currency: connection.currency,
+      accessToken: connection.accessTokenForSync,
+      status: connection.status,
+      lastSyncAt: connection.lastSyncAt,
+      tokenExpiresAt: connection.tokenExpiresAt,
+      errorMessage: connection.errorMessage,
+      createdAt: connection.createdAt,
+      updatedAt: connection.updatedAt,
+    };
+  }
+
+  private toDomain(
+    record: Prisma.BankConnectionGetPayload<object>
+  ): BankConnection {
+    return BankConnection.fromPersistence({
+      id: BankConnectionId.fromString(record.id),
+      workspaceId: WorkspaceId.fromString(record.workspaceId),
+      userId: UserId.fromString(record.userId),
+      institutionId: record.institutionId,
+      institutionName: record.institutionName,
+      accountId: record.accountId,
+      accountName: record.accountName,
+      accountType: record.accountType,
+      accountMask: record.accountMask ?? undefined,
+      currency: record.currency,
+      accessToken: record.accessToken,
+      status: record.status as ConnectionStatus,
+      lastSyncAt: record.lastSyncAt ?? undefined,
+      tokenExpiresAt: record.tokenExpiresAt ?? undefined,
+      errorMessage: record.errorMessage ?? undefined,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    });
+  }
+}

@@ -1,0 +1,29 @@
+import { RuleExecutionService } from '../services/rule-execution.service';
+import {  ExpenseId  } from '@core/domain/value-objects';
+import {  WorkspaceId  } from '@core/domain/value-objects';
+import { RuleExecutionDTO } from '../../domain/entities/rule-execution.entity';
+import {
+  IQuery,
+  IQueryHandler,
+} from '@core/application/cqrs';
+
+export interface GetExecutionsByExpenseQuery extends IQuery {
+  readonly expenseId: string;
+  readonly workspaceId: string;
+}
+
+export class GetExecutionsByExpenseHandler implements IQueryHandler<
+  GetExecutionsByExpenseQuery,
+  RuleExecutionDTO[]
+> {
+  constructor(private readonly executionService: RuleExecutionService) {}
+
+  async handle(query: GetExecutionsByExpenseQuery): Promise<RuleExecutionDTO[]> {
+    const result = await this.executionService.getExecutionsByExpenseId(
+      ExpenseId.fromString(query.expenseId),
+      WorkspaceId.fromString(query.workspaceId)
+    );
+
+    return result.items;
+  }
+}

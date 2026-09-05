@@ -1,0 +1,42 @@
+import { FastifyInstance } from "fastify";
+import { PrismaClient } from "@prisma/client";
+import { expenseRoutes } from "./expense.routes";
+import { categoryRoutes } from "./category.routes";
+import { tagRoutes } from "./tag.routes";
+import { attachmentRoutes } from "./attachment.routes";
+import { recurringExpenseRoutes } from "./recurring-expense.routes";
+import { expenseSplitRoutes } from "./expense-split.routes";
+import { ExpenseController } from "../controllers/expense.controller";
+import { CategoryController } from "../controllers/category.controller";
+import { TagController } from "../controllers/tag.controller";
+import { AttachmentController } from "../controllers/attachment.controller";
+import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
+import { ExpenseSplitController } from "../controllers/expense-split.controller";
+
+export async function registerExpenseLedgerRoutes(
+  fastify: FastifyInstance,
+  controllers: {
+    expenseController: ExpenseController;
+    categoryController: CategoryController;
+    tagController: TagController;
+    attachmentController: AttachmentController;
+    recurringExpenseController: RecurringExpenseController;
+    expenseSplitController: ExpenseSplitController;
+  },
+  _prisma: PrismaClient,
+) {
+  await fastify.register(
+    async (instance) => {
+      await expenseRoutes(instance, controllers.expenseController);
+      await categoryRoutes(instance, controllers.categoryController);
+      await tagRoutes(instance, controllers.tagController);
+      await attachmentRoutes(instance, controllers.attachmentController);
+      await recurringExpenseRoutes(
+        instance,
+        controllers.recurringExpenseController,
+      );
+      await expenseSplitRoutes(instance, controllers.expenseSplitController);
+    },
+    { prefix: "/api/v1" },
+  );
+}

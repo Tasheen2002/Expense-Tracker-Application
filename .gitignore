@@ -31,3 +31,13 @@ Thumbs.db
 # Temporary
 tmp
 temp
+
+# Generated Prisma clients (regenerate via `prisma generate`)
+src/generated/
+**/src/generated/
+
+# Uploaded files (runtime artifacts)
+uploads/
+
+# npm lock file (project uses pnpm)
+package-lock.json

@@ -1,0 +1,26 @@
+import { User } from "../entities/user.entity";
+import { UserId } from "../value-objects/user-id.vo";
+import { Email } from "../value-objects/email.vo";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '@core/domain/interfaces/paginated-result.interface';
+
+export interface IUserRepository {
+  sharesWorkspace(actorId: UserId, targetId: UserId): Promise<boolean>;
+  save(user: User): Promise<void>;
+  findById(id: UserId): Promise<User | null>;
+  findByEmail(email: Email): Promise<User | null>;
+  findAll(options?: UserQueryOptions): Promise<PaginatedResult<User>>;
+  delete(id: UserId): Promise<void>;
+  exists(id: UserId): Promise<boolean>;
+  existsByEmail(email: Email): Promise<boolean>;
+  count(): Promise<number>;
+}
+
+export interface UserQueryOptions extends PaginationOptions {
+  isActive?: boolean;
+  emailVerified?: boolean;
+  sortBy?: "email" | "fullName" | "createdAt";
+  sortOrder?: "asc" | "desc";
+}

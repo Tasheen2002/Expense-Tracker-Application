@@ -1,0 +1,23 @@
+import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
+import { auditLogRoutes } from './audit-log.routes';
+import { registerAuditOutboxEventRoutes } from './outbox-event.routes';
+import { AuditLogController } from '../controllers/audit-log.controller';
+
+export async function registerAuditComplianceRoutes(
+  fastify: FastifyInstance,
+  controllers: { auditLogController: AuditLogController },
+  prisma: PrismaClient
+) {
+  await fastify.register(
+    async (instance) => {
+      // Register audit log routes
+      await auditLogRoutes(instance, controllers.auditLogController);
+      // Register outbox webhook event consumer
+      await registerAuditOutboxEventRoutes(instance, prisma);
+    },
+    { prefix: '/api/v1' }
+  );
+}
+
+export { auditLogRoutes };

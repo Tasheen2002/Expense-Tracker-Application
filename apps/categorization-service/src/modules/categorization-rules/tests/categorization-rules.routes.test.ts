@@ -1,0 +1,1655 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('@shared/middleware', () => ({
+  workspaceAuthorizationMiddleware: async () => {},
+  authenticate: async () => {},
+}));
+
+vi.mock('@shared/middleware/rate-limiter.middleware', () => ({
+  createRateLimiter: () => async () => {},
+  RateLimitPresets: {
+    writeOperations: { windowMs: 60000, maxRequests: 100 },
+    auth: { windowMs: 60000, maxRequests: 100 },
+    readOperations: { windowMs: 60000, maxRequests: 100 },
+    api: { windowMs: 60000, maxRequests: 100 },
+    exports: { windowMs: 60000, maxRequests: 100 },
+  },
+  userKeyGenerator: () => 'test-user',
+  endpointKeyGenerator: () => 'test-endpoint',
+  userOrIpKeyGenerator: () => 'test-user',
+}));
+
+vi.mock('@shared/middleware/role-authorization.middleware', () => ({
+  requireRole: () => async () => {},
+  RolePermissions: {
+    OWNER_ONLY: async () => {},
+    ADMIN_LEVEL: async () => {},
+    MANAGER_LEVEL: async () => {},
+    MEMBER_LEVEL: async () => {},
+  },
+  hasRole: () => true,
+}));
+
+import Fastify, { FastifyInstance } from 'fastify';
+import errorPlugin from '../../../plugins/error';
+import { CategoryRuleController } from '../infrastructure/http/controllers/category-rule.controller';
+import { CategorySuggestionController } from '../infrastructure/http/controllers/category-suggestion.controller';
+import { RuleExecutionController } from '../infrastructure/http/controllers/rule-execution.controller';
+import { categoryRuleRoutes } from '../infrastructure/http/routes/category-rule.routes';
+import { categorySuggestionRoutes } from '../infrastructure/http/routes/category-suggestion.routes';
+import { ruleExecutionRoutes } from '../infrastructure/http/routes/rule-execution.routes';
+import {
+  CommandResult,
+} from '@core/application/cqrs';
+
+// Create domain errors with statusCode for testing
+class CategoryRuleNotFoundError extends Error {
+  statusCode = 404;
+  constructor(ruleId: string) {
+    super(`Category rule with ID ${ruleId} not found`);
+    this.name = 'CategoryRuleNotFoundError';
+  }
+}
+
+class DuplicateRuleNameError extends Error {
+  statusCode = 409;
+  constructor(name: string) {
+    super(`A rule with name "${name}" already exists in this workspace`);
+    this.name = 'DuplicateRuleNameError';
+  }
+}
+
+class CategorySuggestionNotFoundError extends Error {
+  statusCode = 404;
+  constructor(suggestionId: string) {
+    super(`Category suggestion with ID ${suggestionId} not found`);
+    this.name = 'CategorySuggestionNotFoundError';
+  }
+}
+
+class SuggestionAlreadyRespondedError extends Error {
+  statusCode = 409;
+  constructor(suggestionId: string) {
+    super(`Suggestion ${suggestionId} has already been accepted or rejected`);
+    this.name = 'SuggestionAlreadyRespondedError';
+  }
+}
+
+class UnauthorizedRuleAccessError extends Error {
+  statusCode = 403;
+  constructor(action: string) {
+    super(`You are not authorized to ${action} this rule`);
+    this.name = 'UnauthorizedRuleAccessError';
+  }
+}
+
+// Mock data
+const mockWorkspaceId = '123e4567-e89b-12d3-a456-426614174000';
+const mockUserId = '123e4567-e89b-12d3-a456-426614174001';
+const mockRuleId = '123e4567-e89b-12d3-a456-426614174010';
+const mockSuggestionId = '123e4567-e89b-12d3-a456-426614174020';
+const mockExpenseId = '123e4567-e89b-12d3-a456-426614174030';
+const mockCategoryId = '123e4567-e89b-12d3-a456-426614174040';
+const mockExecutionId = '123e4567-e89b-12d3-a456-426614174050';
+
+// Helper to create mock CategoryRule response
+function createMockRule(
+  id: string = mockRuleId,
+  name: string = 'Test Rule',
+  isActive: boolean = true
+) {
+  const rule = {
+    id,
+    workspaceId: mockWorkspaceId,
+    name,
+    description: 'Test description',
+    priority: 10,
+    isActive,
+    condition: {
+      type: 'MERCHANT_CONTAINS',
+      value: 'Amazon',
+    },
+    targetCategoryId: mockCategoryId,
+    createdBy: mockUserId,
+    createdAt: new Date('2024-01-15T10:30:00Z').toISOString(),
+    updatedAt: new Date('2024-01-15T10:30:00Z').toISOString(),
+  };
+  return { ...rule, toJSON: () => rule };
+}
+
+// Helper to create mock CategorySuggestion response
+function createMockSuggestion(
+  id: string = mockSuggestionId,
+  isAccepted: boolean | null = null
+) {
+  const suggestion = {
+    id,
+    workspaceId: mockWorkspaceId,
+    expenseId: mockExpenseId,
+    suggestedCategoryId: mockCategoryId,
+    confidence: 0.85,
+    reason: 'Merchant match',
+    isAccepted,
+    createdAt: new Date('2024-01-15T10:30:00Z'),
+    respondedAt: isAccepted !== null ? new Date('2024-01-15T11:00:00Z') : null,
+  };
+  return { ...suggestion, toJSON: () => suggestion };
+}
+
+// Helper to create mock RuleExecution response
+function createMockExecution(id: string = mockExecutionId) {
+  const execution = {
+    id,
+    workspaceId: mockWorkspaceId,
+    ruleId: mockRuleId,
+    expenseId: mockExpenseId,
+    matched: true,
+    appliedCategoryId: mockCategoryId,
+    executedAt: new Date('2024-01-15T10:30:00Z'),
+  };
+  return { ...execution, toJSON: () => execution };
+}
+
+// Create mock handlers
+function createMockRuleHandlers() {
+  return {
+    createRuleHandler: { handle: vi.fn() },
+    updateRuleHandler: { handle: vi.fn() },
+    deleteRuleHandler: { handle: vi.fn() },
+    activateRuleHandler: { handle: vi.fn() },
+    deactivateRuleHandler: { handle: vi.fn() },
+    getRuleByIdHandler: { handle: vi.fn() },
+    getRulesByWorkspaceHandler: { handle: vi.fn() },
+    getActiveRulesByWorkspaceHandler: { handle: vi.fn() },
+    getExecutionsByRuleHandler: { handle: vi.fn() },
+  };
+}
+
+function createMockSuggestionHandlers() {
+  return {
+    createSuggestionHandler: { handle: vi.fn() },
+    acceptSuggestionHandler: { handle: vi.fn() },
+    rejectSuggestionHandler: { handle: vi.fn() },
+    deleteSuggestionHandler: { handle: vi.fn() },
+    getSuggestionByIdHandler: { handle: vi.fn() },
+    getSuggestionsByExpenseHandler: { handle: vi.fn() },
+    getPendingSuggestionsByWorkspaceHandler: { handle: vi.fn() },
+    getSuggestionsByWorkspaceHandler: { handle: vi.fn() },
+  };
+}
+
+function createMockExecutionHandlers() {
+  return {
+    evaluateRulesHandler: { handle: vi.fn() },
+    getExecutionsByExpenseHandler: { handle: vi.fn() },
+    getExecutionsByWorkspaceHandler: { handle: vi.fn() },
+  };
+}
+
+// Setup test app with authentication
+async function setupTestApp(
+  ruleHandlers: ReturnType<typeof createMockRuleHandlers>,
+  suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>,
+  executionHandlers: ReturnType<typeof createMockExecutionHandlers>
+): Promise<FastifyInstance> {
+  const app = Fastify();
+
+  await app.register(errorPlugin);
+
+  // Mock authentication
+  app.decorateRequest('user', null);
+  app.decorate('authenticate', async (request: any, reply: any) => {
+    request.user = {
+      userId: mockUserId,
+      workspaceId: mockWorkspaceId,
+      email: 'test@example.com',
+      role: 'ADMIN',
+    };
+  });
+  app.addHook('preHandler', async (request) => {
+    (request as any).user = {
+      userId: mockUserId,
+      workspaceId: mockWorkspaceId,
+      email: 'test@example.com',
+      role: 'ADMIN',
+    };
+  });
+
+  const ruleController = new CategoryRuleController(
+    ruleHandlers.createRuleHandler as any,
+    ruleHandlers.updateRuleHandler as any,
+    ruleHandlers.deleteRuleHandler as any,
+    ruleHandlers.activateRuleHandler as any,
+    ruleHandlers.deactivateRuleHandler as any,
+    ruleHandlers.getRuleByIdHandler as any,
+    ruleHandlers.getRulesByWorkspaceHandler as any,
+    ruleHandlers.getActiveRulesByWorkspaceHandler as any,
+    ruleHandlers.getExecutionsByRuleHandler as any
+  );
+
+  const suggestionController = new CategorySuggestionController(
+    suggestionHandlers.createSuggestionHandler as any,
+    suggestionHandlers.acceptSuggestionHandler as any,
+    suggestionHandlers.rejectSuggestionHandler as any,
+    suggestionHandlers.deleteSuggestionHandler as any,
+    suggestionHandlers.getSuggestionByIdHandler as any,
+    suggestionHandlers.getSuggestionsByExpenseHandler as any,
+    suggestionHandlers.getPendingSuggestionsByWorkspaceHandler as any,
+    suggestionHandlers.getSuggestionsByWorkspaceHandler as any
+  );
+
+  const executionController = new RuleExecutionController(
+    executionHandlers.evaluateRulesHandler as any,
+    executionHandlers.getExecutionsByExpenseHandler as any,
+    executionHandlers.getExecutionsByWorkspaceHandler as any
+  );
+
+  await app.register(
+    async (instance) => {
+      await categoryRuleRoutes(instance, ruleController, {} as any);
+      await categorySuggestionRoutes(instance, suggestionController, {} as any);
+      await ruleExecutionRoutes(instance, executionController, {} as any);
+    },
+    { prefix: '/' }
+  );
+
+  return app;
+}
+
+// ============================================================================
+// CATEGORY RULE ROUTES TESTS
+// ============================================================================
+
+describe('Category Rule Routes', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+
+  beforeEach(async () => {
+    ruleHandlers = createMockRuleHandlers();
+    suggestionHandlers = createMockSuggestionHandlers();
+    executionHandlers = createMockExecutionHandlers();
+    app = await setupTestApp(
+      ruleHandlers,
+      suggestionHandlers,
+      executionHandlers
+    );
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.clearAllMocks();
+  });
+
+  // ==========================================================================
+  // POST /:workspaceId/rules - Create Category Rule
+  // ==========================================================================
+  describe('POST /:workspaceId/rules', () => {
+    const validPayload = {
+      name: 'Amazon Shopping Rule',
+      description: 'Categorize Amazon purchases',
+      priority: 10,
+      conditionType: 'MERCHANT_CONTAINS',
+      conditionValue: 'Amazon',
+      targetCategoryId: mockCategoryId,
+    };
+
+    it('should create category rule successfully', async () => {
+      const mockRule = createMockRule();
+      ruleHandlers.createRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.message).toBe('Category rule created successfully');
+      expect(body.data).toBeDefined();
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { name: 'Test' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid conditionType', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { ...validPayload, conditionType: 'INVALID_TYPE' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid workspaceId format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/invalid-uuid/rules`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid targetCategoryId format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { ...validPayload, targetCategoryId: 'not-a-uuid' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for empty name', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { ...validPayload, name: '' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for name exceeding max length', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { ...validPayload, name: 'A'.repeat(101) },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for negative priority', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: { ...validPayload, priority: -1 },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 409 for duplicate rule name', async () => {
+      ruleHandlers.createRuleHandler.handle.mockRejectedValue(
+        new DuplicateRuleNameError('Amazon Shopping Rule')
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(409);
+    });
+
+    it('should handle service errors gracefully', async () => {
+      ruleHandlers.createRuleHandler.handle.mockRejectedValue(
+        new Error('DB Error')
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(500);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/rules - List Category Rules
+  // ==========================================================================
+  describe('GET /:workspaceId/rules', () => {
+    it('should list all category rules', async () => {
+      const mockRules = [
+        createMockRule(mockRuleId, 'Rule 1'),
+        createMockRule('123e4567-e89b-12d3-a456-426614174011', 'Rule 2'),
+      ];
+      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockRules,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.items).toHaveLength(2);
+      expect(body.data.pagination).toBeDefined();
+    });
+
+    it('should filter by active rules only', async () => {
+      const mockRules = [createMockRule(mockRuleId, 'Active Rule', true)];
+      ruleHandlers.getActiveRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockRules,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules?activeOnly=true`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.data.items).toHaveLength(1);
+      expect(body.data.pagination).toBeDefined();
+    });
+
+    it('should return empty array when no rules exist', async () => {
+      ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.data.items).toHaveLength(0);
+      expect(body.data.pagination).toBeDefined();
+    });
+
+    it('should return 400 for invalid workspaceId', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/invalid-uuid/rules`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/rules/:ruleId - Get Category Rule
+  // ==========================================================================
+  describe('GET /:workspaceId/rules/:ruleId', () => {
+    it('should get category rule by ID', async () => {
+      const mockRule = createMockRule();
+      ruleHandlers.getRuleByIdHandler.handle.mockResolvedValue(mockRule);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toBeDefined();
+    });
+
+    it('should return 404 for non-existent rule', async () => {
+      ruleHandlers.getRuleByIdHandler.handle.mockRejectedValue(
+        new CategoryRuleNotFoundError(mockRuleId)
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 400 for invalid ruleId format', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules/invalid-uuid`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // PATCH /:workspaceId/rules/:ruleId - Update Category Rule
+  // ==========================================================================
+  describe('PATCH /:workspaceId/rules/:ruleId', () => {
+    it('should update category rule name', async () => {
+      const mockRule = createMockRule();
+      ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: { name: 'Updated Rule Name' },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should update category rule priority', async () => {
+      const mockRule = createMockRule();
+      ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: { priority: 20 },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should update category rule condition', async () => {
+      const mockRule = createMockRule();
+      ruleHandlers.updateRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: {
+          conditionType: 'AMOUNT_GREATER_THAN',
+          conditionValue: '100',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 404 for non-existent rule', async () => {
+      ruleHandlers.updateRuleHandler.handle.mockRejectedValue(
+        new CategoryRuleNotFoundError(mockRuleId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: { name: 'Updated' },
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 400 for empty name', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: { name: '' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 403 for unauthorized access', async () => {
+      ruleHandlers.updateRuleHandler.handle.mockRejectedValue(
+        new UnauthorizedRuleAccessError('update')
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+        payload: { name: 'Updated' },
+      });
+
+      expect(response.statusCode).toBe(403);
+    });
+  });
+
+  // ==========================================================================
+  // DELETE /:workspaceId/rules/:ruleId - Delete Category Rule
+  // ==========================================================================
+  describe('DELETE /:workspaceId/rules/:ruleId', () => {
+    it('should delete category rule', async () => {
+      ruleHandlers.deleteRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(undefined)
+      );
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+      });
+
+      expect(response.statusCode).toBe(204);
+    });
+
+    it('should return 404 for non-existent rule', async () => {
+      ruleHandlers.deleteRuleHandler.handle.mockRejectedValue(
+        new CategoryRuleNotFoundError(mockRuleId)
+      );
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 400 for invalid ruleId format', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/workspaces/${mockWorkspaceId}/rules/not-a-uuid`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // PATCH /:workspaceId/rules/:ruleId/activate - Activate Rule
+  // ==========================================================================
+  describe('PATCH /:workspaceId/rules/:ruleId/activate', () => {
+    it('should activate category rule', async () => {
+      const mockRule = createMockRule(mockRuleId, 'Test', true);
+      ruleHandlers.activateRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent rule', async () => {
+      ruleHandlers.activateRuleHandler.handle.mockRejectedValue(
+        new CategoryRuleNotFoundError(mockRuleId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/activate`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 400 for invalid ruleId', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/invalid-uuid/activate`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // PATCH /:workspaceId/rules/:ruleId/deactivate - Deactivate Rule
+  // ==========================================================================
+  describe('PATCH /:workspaceId/rules/:ruleId/deactivate', () => {
+    it('should deactivate category rule', async () => {
+      const mockRule = createMockRule(mockRuleId, 'Test', false);
+      ruleHandlers.deactivateRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent rule', async () => {
+      ruleHandlers.deactivateRuleHandler.handle.mockRejectedValue(
+        new CategoryRuleNotFoundError(mockRuleId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/deactivate`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/rules/:ruleId/executions - Get Rule Executions
+  // ==========================================================================
+  describe('GET /:workspaceId/rules/:ruleId/executions', () => {
+    it('should get rule executions', async () => {
+      const mockExecutions = [createMockExecution()];
+      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.items).toBeDefined();
+    });
+
+    it('should return empty array when no executions', async () => {
+      ruleHandlers.getExecutionsByRuleHandler.handle.mockResolvedValue({
+        items: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}/executions`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.data.items).toHaveLength(0);
+    });
+  });
+});
+
+// ============================================================================
+// CATEGORY SUGGESTION ROUTES TESTS
+// ============================================================================
+
+describe('Category Suggestion Routes', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+
+  beforeEach(async () => {
+    ruleHandlers = createMockRuleHandlers();
+    suggestionHandlers = createMockSuggestionHandlers();
+    executionHandlers = createMockExecutionHandlers();
+    app = await setupTestApp(
+      ruleHandlers,
+      suggestionHandlers,
+      executionHandlers
+    );
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.clearAllMocks();
+  });
+
+  // ==========================================================================
+  // POST /:workspaceId/suggestions - Create Suggestion
+  // ==========================================================================
+  describe('POST /:workspaceId/suggestions', () => {
+    const validPayload = {
+      expenseId: mockExpenseId,
+      suggestedCategoryId: mockCategoryId,
+      confidence: 0.85,
+      reason: 'Merchant pattern match',
+    };
+
+    it('should create suggestion successfully', async () => {
+      const mockSuggestion = createMockSuggestion();
+      suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
+        CommandResult.success(mockSuggestion)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(201);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 400 for missing required fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+        payload: { expenseId: mockExpenseId },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid confidence (> 1)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+        payload: { ...validPayload, confidence: 1.5 },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid confidence (< 0)', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+        payload: { ...validPayload, confidence: -0.1 },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid expenseId format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+        payload: { ...validPayload, expenseId: 'not-a-uuid' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/suggestions - List Suggestions
+  // ==========================================================================
+  describe('GET /:workspaceId/suggestions', () => {
+    it('should list all suggestions', async () => {
+      const mockSuggestions = [createMockSuggestion(), createMockSuggestion()];
+      suggestionHandlers.getSuggestionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockSuggestions,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.items).toHaveLength(2);
+    });
+
+    it('should filter pending suggestions only', async () => {
+      const mockSuggestions = [createMockSuggestion(mockSuggestionId, null)];
+      suggestionHandlers.getPendingSuggestionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockSuggestions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions?pendingOnly=true`,
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 400 for invalid workspaceId', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/invalid-uuid/suggestions`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/suggestions/:suggestionId - Get Suggestion
+  // ==========================================================================
+  describe('GET /:workspaceId/suggestions/:suggestionId', () => {
+    it('should get suggestion by ID', async () => {
+      const mockSuggestion = createMockSuggestion();
+      suggestionHandlers.getSuggestionByIdHandler.handle.mockResolvedValue(mockSuggestion);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent suggestion', async () => {
+      suggestionHandlers.getSuggestionByIdHandler.handle.mockRejectedValue(
+        new CategorySuggestionNotFoundError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/suggestions/expense/:expenseId - Get Suggestions by Expense
+  // ==========================================================================
+  describe('GET /:workspaceId/suggestions/expense/:expenseId', () => {
+    it('should get suggestions for expense', async () => {
+      const mockSuggestions = [createMockSuggestion()];
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue(mockSuggestions);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return empty array when no suggestions for expense', async () => {
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue([]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/${mockExpenseId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toEqual([]);
+    });
+
+    it('should return 400 for invalid expenseId format', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/expense/not-a-uuid`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // PATCH /:workspaceId/suggestions/:suggestionId/accept - Accept Suggestion
+  // ==========================================================================
+  describe('PATCH /:workspaceId/suggestions/:suggestionId/accept', () => {
+    it('should accept suggestion successfully', async () => {
+      const mockSuggestion = createMockSuggestion(mockSuggestionId, true);
+      suggestionHandlers.acceptSuggestionHandler.handle.mockResolvedValue(
+        CommandResult.success(undefined)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent suggestion', async () => {
+      suggestionHandlers.acceptSuggestionHandler.handle.mockRejectedValue(
+        new CategorySuggestionNotFoundError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 409 for already responded suggestion', async () => {
+      suggestionHandlers.acceptSuggestionHandler.handle.mockRejectedValue(
+        new SuggestionAlreadyRespondedError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/accept`,
+      });
+
+      expect(response.statusCode).toBe(409);
+    });
+  });
+
+  // ==========================================================================
+  // PATCH /:workspaceId/suggestions/:suggestionId/reject - Reject Suggestion
+  // ==========================================================================
+  describe('PATCH /:workspaceId/suggestions/:suggestionId/reject', () => {
+    it('should reject suggestion successfully', async () => {
+      const mockSuggestion = createMockSuggestion(mockSuggestionId, false);
+      suggestionHandlers.rejectSuggestionHandler.handle.mockResolvedValue(
+        CommandResult.success(undefined)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 404 for non-existent suggestion', async () => {
+      suggestionHandlers.rejectSuggestionHandler.handle.mockRejectedValue(
+        new CategorySuggestionNotFoundError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('should return 409 for already responded suggestion', async () => {
+      suggestionHandlers.rejectSuggestionHandler.handle.mockRejectedValue(
+        new SuggestionAlreadyRespondedError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}/reject`,
+      });
+
+      expect(response.statusCode).toBe(409);
+    });
+  });
+
+  // ==========================================================================
+  // DELETE /:workspaceId/suggestions/:suggestionId - Delete Suggestion
+  // ==========================================================================
+  describe('DELETE /:workspaceId/suggestions/:suggestionId', () => {
+    it('should delete suggestion successfully', async () => {
+      suggestionHandlers.deleteSuggestionHandler.handle.mockResolvedValue(
+        CommandResult.success(undefined)
+      );
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+      });
+
+      expect(response.statusCode).toBe(204);
+    });
+
+    it('should return 404 for non-existent suggestion', async () => {
+      suggestionHandlers.deleteSuggestionHandler.handle.mockRejectedValue(
+        new CategorySuggestionNotFoundError(mockSuggestionId)
+      );
+
+      const response = await app.inject({
+        method: 'DELETE',
+        url: `/workspaces/${mockWorkspaceId}/suggestions/${mockSuggestionId}`,
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+});
+
+// ============================================================================
+// RULE EXECUTION ROUTES TESTS
+// ============================================================================
+
+describe('Rule Execution Routes', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+
+  beforeEach(async () => {
+    ruleHandlers = createMockRuleHandlers();
+    suggestionHandlers = createMockSuggestionHandlers();
+    executionHandlers = createMockExecutionHandlers();
+    app = await setupTestApp(
+      ruleHandlers,
+      suggestionHandlers,
+      executionHandlers
+    );
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.clearAllMocks();
+  });
+
+  // ==========================================================================
+  // POST /:workspaceId/evaluate - Evaluate Rules
+  // ==========================================================================
+  describe('POST /:workspaceId/evaluate', () => {
+    const validPayload = {
+      expenseId: mockExpenseId,
+      expenseData: {
+        merchant: 'Amazon',
+        description: 'Office supplies',
+        amount: 150.0,
+        paymentMethod: 'CREDIT_CARD',
+      },
+    };
+
+    it('should evaluate rules successfully', async () => {
+      const mockRule = createMockRule();
+      const mockExecution = createMockExecution();
+      const mockResult = {
+        appliedRule: {
+          id: mockRule.id,
+          name: mockRule.name,
+          priority: mockRule.priority,
+        },
+        suggestedCategoryId: mockCategoryId,
+        execution: {
+          id: mockExecution.id,
+          ruleId: mockExecution.ruleId,
+          expenseId: mockExecution.expenseId,
+          appliedCategoryId: mockExecution.appliedCategoryId,
+          executedAt: mockExecution.executedAt,
+        },
+        suggestion: createMockSuggestion(),
+      };
+      executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
+        CommandResult.success(mockResult)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 400 for missing expenseId', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: { expenseData: validPayload.expenseData },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for missing expenseData', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: { expenseId: mockExpenseId },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for missing amount in expenseData', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: {
+          expenseId: mockExpenseId,
+          expenseData: { merchant: 'Amazon' },
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for negative amount', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: {
+          ...validPayload,
+          expenseData: { ...validPayload.expenseData, amount: -100 },
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 for invalid expenseId format', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: { ...validPayload, expenseId: 'not-a-uuid' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should handle no matching rules gracefully', async () => {
+      const mockResult = {
+        appliedRule: null,
+        suggestedCategoryId: null,
+        execution: null,
+      };
+      executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
+        CommandResult.success(mockResult)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/evaluate`,
+        payload: validPayload,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.data.appliedRule).toBeNull();
+      expect(body.data.suggestedCategoryId).toBeNull();
+      expect(body.data.execution).toBeNull();
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/executions/expense/:expenseId - Get Executions by Expense
+  // ==========================================================================
+  describe('GET /:workspaceId/executions/expense/:expenseId', () => {
+    it('should get executions for expense', async () => {
+      const mockExecutions = [createMockExecution()];
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue(mockExecutions);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data).toBeDefined();
+    });
+
+    it('should return empty array when no executions for expense', async () => {
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue([]);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/${mockExpenseId}`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.data).toHaveLength(0);
+    });
+
+    it('should return 400 for invalid expenseId format', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/executions/expense/not-a-uuid`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+
+  // ==========================================================================
+  // GET /:workspaceId/executions - Get Executions by Workspace
+  // ==========================================================================
+  describe('GET /:workspaceId/executions', () => {
+    it('should get executions for workspace', async () => {
+      const mockExecutions = [createMockExecution(), createMockExecution()];
+      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 2,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/executions`,
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should support limit query parameter', async () => {
+      const mockExecutions = [createMockExecution()];
+      executionHandlers.getExecutionsByWorkspaceHandler.handle.mockResolvedValue({
+        items: mockExecutions,
+        total: 1,
+        limit: 10,
+        offset: 0,
+        hasMore: false,
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/executions?limit=10`,
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 400 for invalid workspaceId', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/invalid-uuid/executions`,
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+  });
+});
+
+// ============================================================================
+// SECURITY TESTS
+// ============================================================================
+
+describe('Categorization Rules Security', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+
+  beforeEach(async () => {
+    ruleHandlers = createMockRuleHandlers();
+    suggestionHandlers = createMockSuggestionHandlers();
+    executionHandlers = createMockExecutionHandlers();
+    app = await setupTestApp(
+      ruleHandlers,
+      suggestionHandlers,
+      executionHandlers
+    );
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.clearAllMocks();
+  });
+
+  it('should use authenticated user for rule creation', async () => {
+    const mockRule = createMockRule();
+    ruleHandlers.createRuleHandler.handle.mockResolvedValue(
+      CommandResult.success({ ruleId: mockRule.id })
+    );
+
+    await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/rules`,
+      payload: {
+        name: 'Test Rule',
+        conditionType: 'MERCHANT_CONTAINS',
+        conditionValue: 'Amazon',
+        targetCategoryId: mockCategoryId,
+      },
+    });
+
+    expect(ruleHandlers.createRuleHandler.handle).toHaveBeenCalledWith(
+      expect.objectContaining({
+        createdBy: mockUserId,
+      })
+    );
+  });
+
+  it('should reject unauthorized rule updates', async () => {
+    ruleHandlers.updateRuleHandler.handle.mockRejectedValue(
+      new UnauthorizedRuleAccessError('update')
+    );
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+      payload: { name: 'Updated' },
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it('should reject unauthorized rule deletion', async () => {
+    ruleHandlers.deleteRuleHandler.handle.mockRejectedValue(
+      new UnauthorizedRuleAccessError('delete')
+    );
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`,
+    });
+
+    expect(response.statusCode).toBe(403);
+  });
+});
+
+// ============================================================================
+// EDGE CASES & INTEGRATION TESTS
+// ============================================================================
+
+describe('Categorization Rules Edge Cases', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+
+  beforeEach(async () => {
+    ruleHandlers = createMockRuleHandlers();
+    suggestionHandlers = createMockSuggestionHandlers();
+    executionHandlers = createMockExecutionHandlers();
+    app = await setupTestApp(
+      ruleHandlers,
+      suggestionHandlers,
+      executionHandlers
+    );
+  });
+
+  afterEach(async () => {
+    await app.close();
+    vi.clearAllMocks();
+  });
+
+  it('should handle unicode characters in rule name', async () => {
+    const mockRule = createMockRule();
+    ruleHandlers.createRuleHandler.handle.mockResolvedValue(
+      CommandResult.success(mockRule)
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/rules`,
+      payload: {
+        name: '规则 ルール Rule',
+        conditionType: 'MERCHANT_CONTAINS',
+        conditionValue: 'Amazon',
+        targetCategoryId: mockCategoryId,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('should handle special characters in condition value', async () => {
+    const mockRule = createMockRule();
+    ruleHandlers.createRuleHandler.handle.mockResolvedValue(
+      CommandResult.success(mockRule)
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/rules`,
+      payload: {
+        name: 'Test Rule',
+        conditionType: 'MERCHANT_CONTAINS',
+        conditionValue: 'Amazon & Co. <test>',
+        targetCategoryId: mockCategoryId,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('should handle boundary confidence values (0)', async () => {
+    const mockSuggestion = createMockSuggestion();
+    suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
+      CommandResult.success(mockSuggestion)
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/suggestions`,
+      payload: {
+        expenseId: mockExpenseId,
+        suggestedCategoryId: mockCategoryId,
+        confidence: 0,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('should handle boundary confidence values (1)', async () => {
+    const mockSuggestion = createMockSuggestion();
+    suggestionHandlers.createSuggestionHandler.handle.mockResolvedValue(
+      CommandResult.success(mockSuggestion)
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/suggestions`,
+      payload: {
+        expenseId: mockExpenseId,
+        suggestedCategoryId: mockCategoryId,
+        confidence: 1,
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+  });
+
+  it('should handle very large amount values in evaluation', async () => {
+    const mockResult = {
+      appliedRule: null,
+      suggestedCategoryId: null,
+      execution: null,
+      suggestion: null,
+    };
+    executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
+      CommandResult.success(mockResult)
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/workspaces/${mockWorkspaceId}/evaluate`,
+      payload: {
+        expenseId: mockExpenseId,
+        expenseData: {
+          amount: 999999999.99,
+          merchant: 'Test',
+        },
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('should handle concurrent requests gracefully', async () => {
+    const mockRules = [createMockRule()];
+    ruleHandlers.getRulesByWorkspaceHandler.handle.mockResolvedValue({
+      items: mockRules,
+      total: 1,
+      limit: 10,
+      offset: 0,
+      hasMore: false,
+    });
+
+    const requests = Array(5)
+      .fill(null)
+      .map(() =>
+        app.inject({
+          method: 'GET',
+          url: `/workspaces/${mockWorkspaceId}/rules`,
+        })
+      );
+
+    const responses = await Promise.all(requests);
+    responses.forEach((response) => {
+      expect(response.statusCode).toBe(200);
+    });
+  });
+
+  it('should handle all condition types', async () => {
+    const conditionTypes = [
+      'MERCHANT_CONTAINS',
+      'MERCHANT_EQUALS',
+      'AMOUNT_GREATER_THAN',
+      'AMOUNT_LESS_THAN',
+      'AMOUNT_EQUALS',
+      'DESCRIPTION_CONTAINS',
+      'PAYMENT_METHOD_EQUALS',
+    ];
+
+    for (const conditionType of conditionTypes) {
+      const mockRule = createMockRule();
+      ruleHandlers.createRuleHandler.handle.mockResolvedValue(
+        CommandResult.success(mockRule)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/rules`,
+        payload: {
+          name: `Rule for ${conditionType}`,
+          conditionType,
+          conditionValue: 'test',
+          targetCategoryId: mockCategoryId,
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+    }
+  });
+});
