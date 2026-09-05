@@ -3,10 +3,10 @@
  */
 
 // User validation constants
-export const USER_EMAIL_MAX_LENGTH = 255;
+export const USER_EMAIL_MAX_LENGTH = 254;
 export const USER_FULLNAME_MAX_LENGTH = 255;
 export const USER_PASSWORD_MIN_LENGTH = 8;
-export const USER_PASSWORD_MAX_LENGTH = 128;
+export const USER_PASSWORD_MAX_LENGTH = 72;
 
 // Workspace validation constants
 export const WORKSPACE_NAME_MIN_LENGTH = 1;
@@ -17,7 +17,7 @@ export const WORKSPACE_SLUG_REGEX = /^[a-z0-9-]+$/;
 
 // Invitation validation
 export const INVITATION_TOKEN_LENGTH = 32;
-export const INVITATION_EXPIRY_HOURS = 72; // 3 days
+export const INVITATION_EXPIRY_HOURS = 168; // 7 days
 export const MAX_INVITATIONS_PER_WORKSPACE = 100;
 
 // Session validation
