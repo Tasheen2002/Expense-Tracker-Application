@@ -1,40 +1,30 @@
-import { WorkspaceManagementService } from '../services/workspace-management.service';
-import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
-import { WorkspaceNotFoundError } from '../../domain/errors/identity.errors';
 import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+import { WorkspaceManagementService } from '../services/workspace-management.service';
+import { OperationService } from '../services/operation.service';
+import { WorkspaceRole } from '../../domain/entities/workspace-membership.entity';
+import { WorkspaceDTO } from '../../domain/entities/workspace.entity';
 
 export interface UpdateWorkspaceCommand extends ICommand {
+  readonly actorId: string;
   readonly workspaceId: string;
   readonly name?: string;
 }
 
-export class UpdateWorkspaceHandler implements ICommandHandler<
-  UpdateWorkspaceCommand,
-  CommandResult<WorkspaceDTO>
-> {
+export class UpdateWorkspaceHandler implements ICommandHandler<UpdateWorkspaceCommand, CommandResult<WorkspaceDTO>> {
   constructor(
-    private readonly workspaceManagementService: WorkspaceManagementService
+    private readonly service: WorkspaceManagementService,
+    private readonly operations: OperationService
   ) {}
 
   async handle(command: UpdateWorkspaceCommand): Promise<CommandResult<WorkspaceDTO>> {
-    try {
-      const updateData: { name?: string } = {};
-      if (command.name !== undefined) {
-        updateData.name = command.name;
+    const data = await this.operations.execute(
+      { actorId: command.actorId, workspaceId: command.workspaceId, role: WorkspaceRole.ADMIN },
+      async () => {
+        return this.service.updateWorkspaceDTO(command.workspaceId, {
+          ...(command.name !== undefined ? { name: command.name } : {}),
+        });
       }
-
-      const workspaceDTO = await this.workspaceManagementService.updateWorkspaceDTO(
-        command.workspaceId,
-        updateData
-      );
-
-      if (!workspaceDTO) {
-        throw new WorkspaceNotFoundError(command.workspaceId);
-      }
-
-      return CommandResult.success(workspaceDTO);
-    } catch (error) {
-      return CommandResult.fromError(error);
-    }
+    );
+    return CommandResult.success(data);
   }
 }
