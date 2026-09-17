@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -19,8 +20,27 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    fileParallelism: false,
     include: ['src/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
+    coverage: {
+      provider: 'v8',
+      all: true,
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/index.ts',
+        'src/types/**',
+      ],
+      reporter: ['text', 'json', 'html', 'json-summary'],
+      thresholds: {
+        lines: 75,
+        statements: 75,
+        branches: 75,
+        functions: 68,
+      },
+    },
     testTimeout: 30000,
   },
 });
