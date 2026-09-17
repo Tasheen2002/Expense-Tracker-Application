@@ -1,16 +1,16 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 
 export class PolicyId extends UuidId {
   private constructor(value: string) {
-    super(value, "PolicyId");
+    super(value, 'PolicyId');
   }
 
   static create(): PolicyId {
     return new PolicyId(randomUUID());
   }
 
-  static fromString(id: string): PolicyId {
-    return new PolicyId(id);
+  static fromString(value: string): PolicyId {
+    return new PolicyId(value);
   }
 }

@@ -1,3 +1,3 @@
-export { PolicyId } from "./policy-id";
-export { ViolationId } from "./violation-id";
-export { ExemptionId } from "./exemption-id";
+export * from './policy-id.vo';
+export * from './violation-id.vo';
+export * from './exemption-id.vo';
