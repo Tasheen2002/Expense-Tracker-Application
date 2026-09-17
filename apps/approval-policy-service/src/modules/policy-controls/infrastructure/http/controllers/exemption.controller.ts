@@ -1,6 +1,7 @@
-﻿import { FastifyReply } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
+import { getAuthenticatedActorId, extractAuthToken } from './controller.helper';
 import {
   GetExemptionHandler,
   ListExemptionsHandler,
@@ -8,6 +9,7 @@ import {
   RequestExemptionHandler,
   ApproveExemptionHandler,
   RejectExemptionHandler,
+  ExpireExemptionsHandler,
 } from '../../../application';
 import {
   RequestExemptionInput,
@@ -24,7 +26,8 @@ export class ExemptionController {
     private readonly checkActiveExemptionHandler: CheckActiveExemptionHandler,
     private readonly requestExemptionHandler: RequestExemptionHandler,
     private readonly approveExemptionHandler: ApproveExemptionHandler,
-    private readonly rejectExemptionHandler: RejectExemptionHandler
+    private readonly rejectExemptionHandler: RejectExemptionHandler,
+    private readonly expireExemptionsHandler?: ExpireExemptionsHandler
   ) {}
 
   async getExemption(
@@ -35,8 +38,15 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
-      const exemption = await this.getExemptionHandler.handle({ exemptionId, workspaceId });
+      const exemption = await this.getExemptionHandler.handle({
+        actorId,
+        exemptionId,
+        workspaceId,
+        authToken,
+      });
 
       return ResponseHelper.ok(reply, 'Exemption retrieved successfully', exemption);
     } catch (error: unknown) {
@@ -54,8 +64,11 @@ export class ExemptionController {
     try {
       const { workspaceId } = request.params;
       const { status, userId, policyId, limit, offset } = request.query;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.listExemptionsHandler.handle({
+        actorId,
         workspaceId,
         status,
         userId,
@@ -64,6 +77,7 @@ export class ExemptionController {
           limit,
           offset,
         },
+        authToken,
       });
 
       return ResponseHelper.ok(reply, 'Exemptions retrieved successfully', {
@@ -88,11 +102,15 @@ export class ExemptionController {
     try {
       const { workspaceId } = request.params;
       const { userId, policyId } = request.query;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const exemption = await this.checkActiveExemptionHandler.handle({
+        actorId,
         workspaceId,
         userId,
         policyId,
+        authToken,
       });
 
       return ResponseHelper.ok(
@@ -114,11 +132,14 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId } = request.params;
-      const requestedBy = request.user!.userId;
+      const requestedBy = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.requestExemptionHandler.handle({
         workspaceId,
+        actorId: requestedBy,
         requestedBy,
+        authToken,
         ...request.body,
         startDate: new Date(request.body.startDate),
         endDate: new Date(request.body.endDate),
@@ -145,12 +166,16 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
-      const approvedBy = request.user!.userId;
+      const approvedBy = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.approveExemptionHandler.handle({
         exemptionId,
         workspaceId,
+        actorId: approvedBy,
         approvedBy,
+        approvalNote: request.body.approvalNote,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -173,13 +198,16 @@ export class ExemptionController {
   ) {
     try {
       const { workspaceId, exemptionId } = request.params;
-      const rejectedBy = request.user!.userId;
+      const rejectedBy = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.rejectExemptionHandler.handle({
         exemptionId,
         workspaceId,
+        actorId: rejectedBy,
         rejectedBy,
         rejectionReason: request.body.rejectionReason,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -187,6 +215,40 @@ export class ExemptionController {
         result,
         'Exemption rejected successfully',
         result.data
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async expireExemptions(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      if (!this.expireExemptionsHandler) {
+        throw new Error('ExpireExemptionsHandler is not configured');
+      }
+
+      const { workspaceId } = request.params;
+      const actorId = (request as any).user ? getAuthenticatedActorId(request) : undefined;
+      const authToken = extractAuthToken(request);
+      const servicePrincipal = request.servicePrincipal;
+
+      const result = await this.expireExemptionsHandler.handle({
+        workspaceId,
+        actorId,
+        servicePrincipal,
+        authToken,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Expired exemptions processed successfully',
+        undefined
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
