@@ -34,7 +34,11 @@ export const policyParamsSchema = z.object({
  * Policy Query Schema
  */
 export const policyQuerySchema = z.object({
-  activeOnly: z.preprocess((val) => val === 'true', z.boolean()).optional(),
+  activeOnly: z
+    .preprocess(
+      (val) => (val === undefined ? undefined : val === 'true' || val === true),
+      z.boolean().optional()
+    ),
   policyType: z.nativeEnum(PolicyType).optional(),
   limit: z.coerce.number().int().positive().optional(),
   offset: z.coerce.number().int().nonnegative().optional(),
@@ -205,6 +209,99 @@ export const policyActionSuccessResponseJsonSchema = toJsonSchema(
     success: z.boolean(),
     statusCode: z.number(),
     message: z.string(),
+  })
+);
+
+export const evaluateExpenseSchema = z.object({
+  expenseId: z.string().uuid("Invalid expense ID format"),
+  userId: z.string().uuid("Invalid user ID format"),
+  amount: z.number().nonnegative("Amount must be non-negative"),
+  currency: z.string().length(3, "Currency code must be 3 characters"),
+  categoryId: z.string().uuid("Invalid category ID format").optional(),
+  merchant: z.string().optional(),
+  description: z.string().optional(),
+  hasReceipt: z.boolean().default(false),
+  expenseDate: z.coerce.date().optional(),
+  userRole: z.string().optional(),
+  timezone: z
+    .string()
+    .refine(
+      (tz) => {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid IANA timezone identifier" }
+    )
+    .optional(),
+});
+
+export type EvaluateExpenseBody = z.infer<typeof evaluateExpenseSchema>;
+export const evaluateExpenseBodyJsonSchema = toJsonSchema(evaluateExpenseSchema);
+
+export const evaluateExpenseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      passed: z.boolean(),
+      requiresApproval: z.boolean(),
+      approvalRequiredPolicyIds: z.array(z.string()),
+      violationIds: z.array(z.string()),
+      blockedByPolicyId: z.string().optional(),
+    }),
+  })
+);
+
+export const checkExpenseSchema = z.object({
+  amount: z.number().nonnegative("Amount must be non-negative"),
+  currency: z.string().length(3, "Currency code must be 3 characters"),
+  categoryId: z.string().uuid("Invalid category ID format").optional(),
+  merchant: z.string().optional(),
+  description: z.string().optional(),
+  hasReceipt: z.boolean().default(false),
+  expenseDate: z.coerce.date().optional(),
+  timezone: z
+    .string()
+    .refine(
+      (tz) => {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid IANA timezone identifier" }
+    )
+    .optional(),
+});
+
+export type CheckExpenseBody = z.infer<typeof checkExpenseSchema>;
+export const checkExpenseBodyJsonSchema = toJsonSchema(checkExpenseSchema);
+
+export const checkExpenseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: z.object({
+      wouldPass: z.boolean(),
+      requiresApproval: z.boolean(),
+      approvalRequiredPolicyIds: z.array(z.string()),
+      potentialViolations: z.array(
+        z.object({
+          policyName: z.string(),
+          policyType: z.string(),
+          severity: z.string(),
+          details: z.string(),
+        })
+      ),
+    }),
   })
 );
 

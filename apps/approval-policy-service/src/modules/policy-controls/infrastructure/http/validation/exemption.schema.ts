@@ -140,11 +140,13 @@ export const exemptionResponseSchema = z.object({
   requestedBy: z.string(),
   approvedBy: z.string().nullable().optional(),
   approvedAt: z.string().nullable().optional(),
+  approvalNote: z.string().nullable().optional(),
   rejectedBy: z.string().nullable().optional(),
   rejectedAt: z.string().nullable().optional(),
   rejectionReason: z.string().nullable().optional(),
   startDate: z.string(),
   endDate: z.string(),
+  scope: exemptionScopeSchema.nullable().optional(),
   isActive: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -191,5 +193,14 @@ export const activeExemptionEnvelopeJsonSchema = toJsonSchema(
     data: exemptionResponseSchema.nullable(),
   })
 );
+
+export const expireExemptionsEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+  })
+);
+
 export type ListExemptionsQuery = z.infer<typeof exemptionQuerySchema>;
 export type CheckActiveExemptionQuery = z.infer<typeof checkActiveExemptionQuerySchema>;

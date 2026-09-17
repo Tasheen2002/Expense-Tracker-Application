@@ -27,13 +27,40 @@ export const violationQuerySchema = z.object({
   offset: z.coerce.number().int().nonnegative().optional(),
 });
 
+const isoDateTimeRegex =
+  /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/;
+
+const isoDateTimeSchema = z.string().refine(
+  (val) => {
+    if (!isoDateTimeRegex.test(val)) return false;
+    return !isNaN(Date.parse(val));
+  },
+  {
+    message:
+      'Must be a valid ISO date or datetime string (e.g. YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)',
+  }
+);
+
 /**
  * Violation Stats Query Schema
  */
-export const violationStatsQuerySchema = z.object({
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
+export const violationStatsQuerySchema = z
+  .object({
+    startDate: isoDateTimeSchema.optional(),
+    endDate: isoDateTimeSchema.optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
+      }
+      return true;
+    },
+    {
+      message: 'endDate must not be earlier than startDate',
+      path: ['endDate'],
+    }
+  );
 
 /**
  * Acknowledge Violation Schema
@@ -75,15 +102,31 @@ export const overrideViolationSchema = z.object({
     .string()
     .min(
       OVERRIDE_REASON_MIN_LENGTH,
-      `Override reason must be at least ${OVERRIDE_REASON_MIN_LENGTH} characters`,
+      `Reason must be at least ${OVERRIDE_REASON_MIN_LENGTH} characters`,
     )
     .max(
       OVERRIDE_REASON_MAX_LENGTH,
-      `Override reason cannot exceed ${OVERRIDE_REASON_MAX_LENGTH} characters`,
+      `Reason cannot exceed ${OVERRIDE_REASON_MAX_LENGTH} characters`,
     ),
 });
 
 export type OverrideViolationBody = z.infer<typeof overrideViolationSchema>;
+
+/**
+ * Record Violation Schema
+ */
+export const recordViolationSchema = z.object({
+  policyId: z.string().uuid("Invalid policy ID format"),
+  expenseId: z.string().uuid("Invalid expense ID format"),
+  userId: z.string().uuid("Invalid user ID format"),
+  severity: z.nativeEnum(ViolationSeverity),
+  violationDetails: z.string().min(1, "Violation details are required"),
+  expenseAmount: z.number().nonnegative("Expense amount must be a non-negative number"),
+  currency: z.string().length(3).optional(),
+});
+
+export type RecordViolationBody = z.infer<typeof recordViolationSchema>;
+export const recordViolationBodyJsonSchema = toJsonSchema(recordViolationSchema);
 
 /**
  * Exempt Violation Schema
@@ -121,6 +164,7 @@ export const violationResponseSchema = z.object({
   resolvedAt: z.string().nullable().optional(),
   resolvedBy: z.string().nullable().optional(),
   resolutionNotes: z.string().nullable().optional(),
+  exemptionId: z.string().uuid().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
