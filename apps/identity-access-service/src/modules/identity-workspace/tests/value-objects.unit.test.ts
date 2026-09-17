@@ -29,6 +29,10 @@ describe('Identity & Workspace Value Objects (Unit Tests)', () => {
       expect(() => Email.create('not-an-email')).toThrow(InvalidFormatError);
       expect(() => Email.create('user@')).toThrow(InvalidFormatError);
       expect(() => Email.create('@domain.com')).toThrow(InvalidFormatError);
+      expect(() => Email.create('.user@example.com')).toThrow(InvalidFormatError);
+      expect(() => Email.create('user.@example.com')).toThrow(InvalidFormatError);
+      expect(() => Email.create('user..name@example.com')).toThrow(InvalidFormatError);
+      expect(() => Email.create(`${'a'.repeat(65)}@example.com`)).toThrow(InvalidFormatError);
     });
 
     it('should throw InvalidFormatError when email exceeds 254 characters', () => {
@@ -41,6 +45,10 @@ describe('Identity & Workspace Value Objects (Unit Tests)', () => {
       expect(Email.isValid('invalid-email')).toBe(false);
       expect(Email.isValid('')).toBe(false);
       expect(Email.isValid('a'.repeat(250) + '@example.com')).toBe(false);
+      expect(Email.isValid('.user@example.com')).toBe(false);
+      expect(Email.isValid('user.@example.com')).toBe(false);
+      expect(Email.isValid('user..name@example.com')).toBe(false);
+      expect(Email.isValid(`${'a'.repeat(65)}@example.com`)).toBe(false);
     });
 
     it('should compare emails correctly with equals()', () => {
@@ -62,25 +70,31 @@ describe('Identity & Workspace Value Objects (Unit Tests)', () => {
       expect(userId.getTypeName()).toBe('UserId');
     });
 
-    it('should construct from valid string with fromString()', () => {
+    it('should construct from valid string with fromString() and canonicalize to lowercase', () => {
       const userId = UserId.fromString(VALID_UUID);
-      expect(userId.getValue()).toBe(VALID_UUID);
-      expect(userId.toString()).toBe(VALID_UUID);
-      expect(userId.toJSON()).toBe(VALID_UUID);
+      expect(userId.getValue()).toBe(VALID_UUID.toLowerCase());
+      expect(userId.toString()).toBe(VALID_UUID.toLowerCase());
+      expect(userId.toJSON()).toBe(VALID_UUID.toLowerCase());
+
+      const upperUserId = UserId.fromString(VALID_UUID.toUpperCase());
+      expect(upperUserId.getValue()).toBe(VALID_UUID.toLowerCase());
+      expect(upperUserId.equals(userId)).toBe(true);
     });
 
     it('should throw error on invalid UUID format', () => {
       expect(() => UserId.fromString('not-a-uuid')).toThrow();
     });
 
-    it('should compare correctly with equals()', () => {
+    it('should compare correctly with equals() and reject cross-type equality', () => {
       const id1 = UserId.fromString(VALID_UUID);
       const id2 = UserId.fromString(VALID_UUID);
       const id3 = UserId.fromString(ANOTHER_UUID);
+      const wsId = WorkspaceId.fromString(VALID_UUID);
 
       expect(id1.equals(id2)).toBe(true);
       expect(id1.equals(id3)).toBe(false);
       expect(id1.equals(null)).toBe(false);
+      expect(id1.equals(wsId)).toBe(false);
     });
   });
 

@@ -41,8 +41,9 @@ describe('Route Registrations (Unit)', () => {
 
   const setupTestApp = async () => {
     const app = Fastify({ logger: false });
-    // Mock authenticate decorator
+    // Mock authenticate decorators
     app.decorate('authenticate', async () => {});
+    app.decorate('authenticateServiceOrUser', async () => {});
     return app;
   };
 

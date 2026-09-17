@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../shared/infrastructure/persistence/prisma.client';
 import { PrismaOutboxEventRepository } from '../../../outbox/prisma-outbox.repository';
 
 describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency (Integration)', () => {

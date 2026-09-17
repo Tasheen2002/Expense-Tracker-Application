@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createCompositionRoot, CompositionRoot } from '../../../composition-root';
 import { buildIdentityApp } from '../../../app';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../shared/infrastructure/persistence/prisma.client';
 
 describe('Composition Root — Typed Factory Pattern (Unit)', () => {
   const createMockPrisma = () =>

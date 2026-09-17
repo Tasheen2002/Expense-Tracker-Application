@@ -127,6 +127,54 @@ describe('Outbox Per-Subscriber Delivery & Retry Tracking (Unit)', () => {
       expect(deliveredUrls).toContain('http://audit-service/webhook');
       expect(deliveredUrls).not.toContain('http://notification-service/webhook');
     });
+
+    it('should throw on unmapped event type so OutboxWorker can retry/dead-letter rather than silently acknowledge', async () => {
+      const routes = {
+        KnownEvent: ['http://audit-service/webhook'],
+      };
+      const publisher = new HttpWebhookPublisher(routes);
+
+      const unmappedEvent: OutboxEventDTO = {
+        id: 'evt-unmapped',
+        aggregateType: 'User',
+        aggregateId: 'usr-1',
+        eventType: 'UnmappedEvent',
+        payload: {},
+        status: 'PROCESSING',
+        createdAt: new Date().toISOString(),
+        processedAt: null,
+        retryCount: 0,
+        error: null,
+        deliveredTo: [],
+      };
+
+      await expect(publisher.publish(unmappedEvent)).rejects.toThrow(
+        /Unmapped event type "UnmappedEvent"/
+      );
+    });
+
+    it('should silently acknowledge if event is explicitly mapped to empty subscriber list', async () => {
+      const routes = {
+        IgnoredByPolicyEvent: [],
+      };
+      const publisher = new HttpWebhookPublisher(routes);
+
+      const event: OutboxEventDTO = {
+        id: 'evt-ignored',
+        aggregateType: 'User',
+        aggregateId: 'usr-1',
+        eventType: 'IgnoredByPolicyEvent',
+        payload: {},
+        status: 'PROCESSING',
+        createdAt: new Date().toISOString(),
+        processedAt: null,
+        retryCount: 0,
+        error: null,
+        deliveredTo: [],
+      };
+
+      await expect(publisher.publish(event)).resolves.not.toThrow();
+    });
   });
 
   describe('OutboxWorker integration with markDelivered', () => {

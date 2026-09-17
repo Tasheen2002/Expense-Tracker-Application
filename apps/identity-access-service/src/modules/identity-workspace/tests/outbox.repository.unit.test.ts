@@ -12,6 +12,7 @@ describe('PrismaOutboxEventRepository (Unit)', () => {
       outboxEvent: {
         findMany: vi.fn(),
         findUnique: vi.fn(),
+        findFirst: vi.fn(),
         update: vi.fn(),
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
@@ -148,6 +149,48 @@ describe('PrismaOutboxEventRepository (Unit)', () => {
     });
   });
 
+  describe('updateStatus', () => {
+    it('should update status unconditionally when no leaseToken is provided', async () => {
+      mockPrisma.outboxEvent.update.mockResolvedValue({});
+
+      const result = await repository.updateStatus('event-1', 'PROCESSED');
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.update).toHaveBeenCalledWith({
+        where: { id: 'event-1' },
+        data: expect.objectContaining({ status: 'PROCESSED' }),
+      });
+    });
+
+    it('should conditionally update status when leaseToken is provided and matches', async () => {
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.updateStatus('event-1', 'PROCESSED', undefined, 'valid-token');
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'event-1',
+          status: 'PROCESSING',
+          leaseToken: 'valid-token',
+        },
+        data: expect.objectContaining({
+          status: 'PROCESSED',
+          leaseToken: null,
+          leaseExpiresAt: null,
+        }),
+      });
+    });
+
+    it('should return false when leaseToken does not match (lost ownership)', async () => {
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repository.updateStatus('event-1', 'PROCESSED', undefined, 'stale-token');
+
+      expect(result).toBe(false);
+    });
+  });
+
   describe('releaseExpiredLeases', () => {
     it('should reset expired processing leases back to PENDING', async () => {
       mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 3 });
@@ -170,12 +213,13 @@ describe('PrismaOutboxEventRepository (Unit)', () => {
   });
 
   describe('incrementRetry', () => {
-    it('should increment retryCount and schedule exponential backoff', async () => {
+    it('should increment retryCount and schedule exponential backoff without leaseToken', async () => {
       mockPrisma.outboxEvent.findUnique.mockResolvedValue({ retryCount: 1 });
       mockPrisma.outboxEvent.update.mockResolvedValue({});
 
-      await repository.incrementRetry('event-1', 'Network timeout');
+      const result = await repository.incrementRetry('event-1', 'Network timeout');
 
+      expect(result).toBe(true);
       expect(mockPrisma.outboxEvent.update).toHaveBeenCalledWith({
         where: { id: 'event-1' },
         data: expect.objectContaining({
@@ -188,20 +232,142 @@ describe('PrismaOutboxEventRepository (Unit)', () => {
         }),
       });
     });
+
+    it('should conditionally increment retry with leaseToken and return true on match', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue({ retryCount: 1 });
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.incrementRetry('event-1', 'Network timeout', 'valid-token');
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'event-1',
+          status: 'PROCESSING',
+          leaseToken: 'valid-token',
+        },
+        data: expect.objectContaining({
+          retryCount: { increment: 1 },
+          error: 'Network timeout',
+          status: 'FAILED',
+          leaseToken: null,
+          leaseExpiresAt: null,
+        }),
+      });
+    });
+
+    it('should return false on incrementRetry when leaseToken does not match (reclaimed)', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue(null);
+
+      const result = await repository.incrementRetry('event-1', 'Network timeout', 'stale-token');
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('markDelivered', () => {
-    it('should push subscriber URL to deliveredTo array', async () => {
-      mockPrisma.outboxEvent.update.mockResolvedValue({});
+    it('should fetch event and conditionally update deliveredTo array without leaseToken', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue({ id: 'event-1', deliveredTo: [] });
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
 
-      await repository.markDelivered('event-1', 'http://webhook.com');
+      const result = await repository.markDelivered('event-1', 'http://webhook.com');
 
-      expect(mockPrisma.outboxEvent.update).toHaveBeenCalledWith({
-        where: { id: 'event-1' },
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.findFirst).toHaveBeenCalledWith({
+        where: { id: 'event-1', status: 'PROCESSING' },
+        select: { id: true, deliveredTo: true },
+      });
+      expect(mockPrisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+        where: { id: 'event-1', status: 'PROCESSING' },
         data: {
-          deliveredTo: { push: 'http://webhook.com' },
+          deliveredTo: ['http://webhook.com'],
         },
       });
+    });
+
+    it('should atomically verify lease ownership and update deliveredTo when leaseToken provided', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue({ id: 'event-1', deliveredTo: [] });
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.markDelivered('event-1', 'http://webhook.com', 'valid-token');
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: 'event-1',
+          leaseToken: 'valid-token',
+          status: 'PROCESSING',
+        },
+        select: {
+          id: true,
+          deliveredTo: true,
+        },
+      });
+      expect(mockPrisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'event-1',
+          status: 'PROCESSING',
+          leaseToken: 'valid-token',
+        },
+        data: {
+          deliveredTo: ['http://webhook.com'],
+        },
+      });
+    });
+
+    it('should return true without update when subscriberUrl already in deliveredTo', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue({ id: 'event-1', deliveredTo: ['http://webhook.com'] });
+
+      const result = await repository.markDelivered('event-1', 'http://webhook.com', 'valid-token');
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('should return false when leaseToken is expired or claimed by another worker', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue(null);
+
+      const result = await repository.markDelivered('event-1', 'http://webhook.com', 'stale-token');
+
+      expect(result).toBe(false);
+      expect(mockPrisma.outboxEvent.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('should return false when updateMany count is 0 due to lease reclaimed before update', async () => {
+      mockPrisma.outboxEvent.findFirst.mockResolvedValue({ id: 'event-1', deliveredTo: [] });
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repository.markDelivered('event-1', 'http://webhook.com', 'stale-token');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('renewLease', () => {
+    it('should update leaseExpiresAt and return true when lease ownership matches', async () => {
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 1 });
+
+      const result = await repository.renewLease('event-1', 'active-token', 60_000);
+
+      expect(result).toBe(true);
+      expect(mockPrisma.outboxEvent.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 'event-1',
+          leaseToken: 'active-token',
+          status: 'PROCESSING',
+        },
+        data: {
+          leaseExpiresAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('should return false when lease ownership was lost', async () => {
+      mockPrisma.outboxEvent.updateMany.mockResolvedValue({ count: 0 });
+
+      const result = await repository.renewLease('event-1', 'lost-token', 60_000);
+
+      expect(result).toBe(false);
     });
   });
 });

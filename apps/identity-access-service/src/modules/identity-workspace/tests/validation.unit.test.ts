@@ -68,12 +68,35 @@ describe('Validation Schemas (Unit)', () => {
         const result = registerUserSchema.safeParse(invalid);
         expect(result.success).toBe(false);
       });
+      it('should trim email on registration', () => {
+        const parsed = registerUserSchema.safeParse({
+          email: '  test@example.com  ',
+          password: 'Password123!',
+          fullName: '  Jane Doe  ',
+        });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.email).toBe('test@example.com');
+          expect(parsed.data.fullName).toBe('Jane Doe');
+        }
+      });
     });
 
     describe('loginUserSchema', () => {
       it('should validate valid credentials', () => {
         const valid = { email: 'user@example.com', password: 'secretpassword' };
         expect(loginUserSchema.safeParse(valid).success).toBe(true);
+      });
+
+      it('should trim email on login', () => {
+        const parsed = loginUserSchema.safeParse({
+          email: '  user@example.com  ',
+          password: 'secretpassword',
+        });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.email).toBe('user@example.com');
+        }
       });
 
       it('should reject missing or empty password', () => {
@@ -87,7 +110,22 @@ describe('Validation Schemas (Unit)', () => {
         expect(updateUserSchema.safeParse({ fullName: 'Updated Name' }).success).toBe(true);
         expect(updateUserSchema.safeParse({ fullName: null }).success).toBe(true);
         expect(updateUserSchema.safeParse({ isActive: false }).success).toBe(true);
-        expect(updateUserSchema.safeParse({}).success).toBe(true);
+      });
+
+      it('should reject empty update payload', () => {
+        const result = updateUserSchema.safeParse({});
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.errors[0].message).toContain('At least one field must be provided');
+        }
+      });
+
+      it('should trim fullName on update', () => {
+        const parsed = updateUserSchema.safeParse({ fullName: '  Trimmed Name  ' });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.fullName).toBe('Trimmed Name');
+        }
       });
     });
 
@@ -127,13 +165,40 @@ describe('Validation Schemas (Unit)', () => {
         expect(createWorkspaceSchema.safeParse({ name: '' }).success).toBe(false);
         expect(createWorkspaceSchema.safeParse({ name: 'a'.repeat(101) }).success).toBe(false);
       });
+
+      it('should reject whitespace-only workspace name', () => {
+        expect(createWorkspaceSchema.safeParse({ name: '   ' }).success).toBe(false);
+      });
+
+      it('should trim valid workspace name', () => {
+        const parsed = createWorkspaceSchema.safeParse({ name: '  Acme Corp  ' });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.name).toBe('Acme Corp');
+        }
+      });
     });
 
     describe('updateWorkspaceSchema', () => {
       it('should validate valid update fields', () => {
         expect(updateWorkspaceSchema.safeParse({ name: 'Renamed' }).success).toBe(true);
         expect(updateWorkspaceSchema.safeParse({ isActive: false }).success).toBe(true);
-        expect(updateWorkspaceSchema.safeParse({}).success).toBe(true);
+      });
+
+      it('should reject empty update payload', () => {
+        const result = updateWorkspaceSchema.safeParse({});
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.errors[0].message).toContain('At least one field must be provided');
+        }
+      });
+
+      it('should trim name in update', () => {
+        const parsed = updateWorkspaceSchema.safeParse({ name: '  Renamed Workspace  ' });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.name).toBe('Renamed Workspace');
+        }
       });
     });
 
@@ -197,6 +262,17 @@ describe('Validation Schemas (Unit)', () => {
       it('should validate valid invitation input', () => {
         const valid = { email: 'invitee@example.com', role: 'member', expiryHours: 48 };
         expect(inviteMemberSchema.safeParse(valid).success).toBe(true);
+      });
+
+      it('should trim email in invitation', () => {
+        const parsed = inviteMemberSchema.safeParse({
+          email: '  invitee@example.com  ',
+          role: 'member',
+        });
+        expect(parsed.success).toBe(true);
+        if (parsed.success) {
+          expect(parsed.data.email).toBe('invitee@example.com');
+        }
       });
 
       it('should disallow inviting as owner', () => {
