@@ -1,7 +1,8 @@
-import { PolicyViolation } from "../entities/policy-violation.entity";
-import { ViolationId } from "../value-objects/violation-id";
-import { ViolationStatus } from "../enums/violation-status.enum";
-import { ViolationSeverity } from "../enums/violation-severity.enum";
+import { PolicyViolation } from '../entities/policy-violation.entity';
+import { ViolationId, PolicyId } from '../value-objects';
+import { WorkspaceId, ExpenseId, UserId } from '@core/domain/value-objects';
+import { ViolationStatus } from '../enums/violation-status.enum';
+import { ViolationSeverity } from '../enums/violation-severity.enum';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -10,35 +11,57 @@ import {
 export interface ViolationFilters {
   status?: ViolationStatus;
   severity?: ViolationSeverity;
-  userId?: string;
-  expenseId?: string;
-  policyId?: string;
+  userId?: UserId | string;
+  expenseId?: ExpenseId | string;
+  policyId?: PolicyId | string;
   startDate?: Date;
   endDate?: Date;
 }
 
+export interface ViolationStats {
+  total: number;
+  byStatus: Record<ViolationStatus, number>;
+  bySeverity: Record<ViolationSeverity, number>;
+}
+
 export interface IViolationRepository {
   save(violation: PolicyViolation): Promise<void>;
+  saveAll(violations: PolicyViolation[]): Promise<void>;
+  saveForExpense(
+    workspaceId: WorkspaceId,
+    expenseId: ExpenseId,
+    violations: PolicyViolation[]
+  ): Promise<void>;
   findById(id: ViolationId): Promise<PolicyViolation | null>;
   findByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     filters?: ViolationFilters,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>>;
-  findByExpense(expenseId: string): Promise<PolicyViolation[]>;
+  findByExpense(
+    workspaceId: WorkspaceId,
+    expenseId: ExpenseId,
+  ): Promise<PolicyViolation[]>;
   findByUser(
-    workspaceId: string,
-    userId: string,
+    workspaceId: WorkspaceId,
+    userId: UserId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>>;
   findPendingByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyViolation>>;
   countByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     filters?: ViolationFilters,
   ): Promise<number>;
+  getStats(
+    workspaceId: WorkspaceId,
+    filters?: { startDate?: Date; endDate?: Date },
+  ): Promise<ViolationStats>;
   delete(id: ViolationId): Promise<void>;
-  deleteByExpense(expenseId: string): Promise<void>;
+  deleteByExpense(
+    workspaceId: WorkspaceId,
+    expenseId: ExpenseId,
+  ): Promise<void>;
 }
