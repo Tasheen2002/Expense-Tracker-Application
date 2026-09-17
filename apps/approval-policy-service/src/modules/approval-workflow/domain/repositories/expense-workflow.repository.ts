@@ -1,5 +1,6 @@
 import { ExpenseWorkflow } from '../entities/expense-workflow.entity';
-import { WorkflowId } from '../value-objects/workflow-id';
+import { WorkflowId } from '../value-objects';
+import { ExpenseId, WorkspaceId, UserId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -8,19 +9,21 @@ import {
 export interface IExpenseWorkflowRepository {
   save(workflow: ExpenseWorkflow): Promise<void>;
   findById(workflowId: WorkflowId): Promise<ExpenseWorkflow | null>;
-  findByExpenseId(expenseId: string): Promise<ExpenseWorkflow | null>;
-  findByWorkspace(
-    workspaceId: string,
+  findByExpenseId(expenseId: ExpenseId): Promise<ExpenseWorkflow | null>;
+  findByWorkspaceId(
+    workspaceId: WorkspaceId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>>;
-  findPendingByApprover(
-    approverId: string,
-    workspaceId: string,
+  findPendingByApproverId(
+    approverId: UserId,
+    workspaceId: WorkspaceId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>>;
-  findByUser(
-    userId: string,
-    workspaceId: string,
+  findByUserId(
+    userId: UserId,
+    workspaceId: WorkspaceId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ExpenseWorkflow>>;
+  exists(workflowId: WorkflowId): Promise<boolean>;
+  countByWorkspaceId(workspaceId: WorkspaceId): Promise<number>;
 }
