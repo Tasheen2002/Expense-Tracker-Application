@@ -4,13 +4,18 @@ import authPlugin from './plugins/auth';
 import securityPlugin from './plugins/security';
 import errorPlugin from './plugins/error';
 import { correlationPlugin, internalAuthPlugin } from '@expense-tracker/correlation';
-import { container } from './container';
+import { createCompositionRoot, CompositionRootOptions } from './composition-root';
 import { registerApprovalWorkflowRoutes } from './modules/approval-workflow/infrastructure/http/routes';
 import { registerPolicyControlsRoutes } from './modules/policy-controls/infrastructure/http/routes';
+import rateLimit from '@fastify/rate-limit';
+
+import { PrismaClient } from './shared/infrastructure/persistence/prisma.client';
 
 export interface ApprovalAppOptions {
   enableInternalAuth?: boolean;
   logger?: boolean;
+  prisma?: PrismaClient;
+  compositionRootOptions?: CompositionRootOptions;
 }
 
 /**
@@ -30,39 +35,51 @@ export async function buildApprovalApp(options?: ApprovalAppOptions): Promise<Fa
     await fastify.register(internalAuthPlugin);
   }
 
-  // 3. Security, database, auth, and error plugins
+  // 3. Security, rate-limit, database, auth, and error plugins
   await fastify.register(securityPlugin);
-  await fastify.register(dbPlugin);
+  await fastify.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+  });
+  await fastify.register(dbPlugin, { prisma: options?.prisma });
   await fastify.register(authPlugin);
   await fastify.register(errorPlugin);
 
-  // 4. Initialize DI container
-  container.register(fastify.prisma);
+  // 4. Pure typed Composition Root
+  const compositionRoot = createCompositionRoot(fastify.prisma, options?.compositionRootOptions);
+  fastify.decorate('compositionRoot', compositionRoot);
 
   // 5. Register module routes
-  const approvalWorkflowServices = container.getApprovalWorkflowServices();
-  await registerApprovalWorkflowRoutes(fastify as any, approvalWorkflowServices, approvalWorkflowServices.prisma);
+  await registerApprovalWorkflowRoutes(
+    fastify,
+    compositionRoot.approvalWorkflow
+  );
 
-  const policyControlsServices = container.getPolicyControlsServices();
-  await registerPolicyControlsRoutes(fastify as any, policyControlsServices);
+  await registerPolicyControlsRoutes(
+    fastify,
+    compositionRoot.policyControls
+  );
 
-  // 6. Deep Health Check (Postgres ping)
+  // 6. Deep Health Check (Postgres ping and service schema readiness)
   fastify.get('/health', async (_request, reply) => {
     try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
+      await fastify.prisma.$queryRaw`SELECT 1 FROM approval_workflow.approval_chains LIMIT 1`;
       return {
         status: 'ok',
         service: 'approval-policy-service',
         uptime: process.uptime(),
         database: 'connected',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      fastify.log.error(error, 'Health check database ping failed');
+      const isDev = process.env.NODE_ENV === 'development';
+      const errMsg = isDev && error instanceof Error ? error.message : 'Database service unavailable';
       return reply.code(503).send({
         status: 'degraded',
         service: 'approval-policy-service',
         uptime: process.uptime(),
         database: 'disconnected',
-        error: error.message,
+        error: errMsg,
       });
     }
   });
@@ -73,6 +90,6 @@ export async function buildApprovalApp(options?: ApprovalAppOptions): Promise<Fa
 /**
  * Backward-compatible helper for existing tests
  */
-export async function createServer(): Promise<FastifyInstance> {
-  return buildApprovalApp({ enableInternalAuth: false, logger: false });
+export async function createServer(options?: ApprovalAppOptions): Promise<FastifyInstance> {
+  return buildApprovalApp({ enableInternalAuth: false, logger: false, ...options });
 }
