@@ -38,6 +38,8 @@ import { approvalChainRoutes } from '../infrastructure/http/routes/approval-chai
 import { workflowRoutes } from '../infrastructure/http/routes/workflow.routes';
 import { ApprovalChainService } from '../application/services/approval-chain.service';
 import { WorkflowService } from '../application/services/workflow.service';
+import { OperationService } from '../application/services/operation.service';
+import { IWorkspaceAuthorizationService } from '../../../shared/ports/workspace-authorization.port';
 import { CreateApprovalChainHandler } from '../application/commands/create-approval-chain.command';
 import { UpdateApprovalChainHandler } from '../application/commands/update-approval-chain.command';
 import { DeleteApprovalChainHandler } from '../application/commands/delete-approval-chain.command';
@@ -59,6 +61,8 @@ import {
   WorkflowAlreadyExistsError,
   NoMatchingApprovalChainError,
   UnauthorizedApproverError,
+  UnauthorizedWorkflowCancellationError,
+  UnauthorizedWorkflowViewError,
 } from '../domain/errors/approval-workflow.errors';
 
 // Mock data
@@ -104,6 +108,7 @@ function createMockWorkflow(
     chainId: mockChainId,
     status,
     currentStepNumber: 1,
+    version: 0,
     steps: [],
     createdAt: '2024-01-15T10:30:00.000Z',
     updatedAt: '2024-01-15T10:30:00.000Z',
@@ -147,7 +152,7 @@ async function setupTestApp(
 
   // Mock authentication
   app.decorateRequest('user', null);
-  app.decorate('authenticate', async (request: any, reply: any) => {
+  app.decorate('authenticate', async (request: any) => {
     request.user = {
       userId: mockUserId,
       workspaceId: mockWorkspaceId,
@@ -164,33 +169,60 @@ async function setupTestApp(
     };
   });
 
+  const mockAuthService: IWorkspaceAuthorizationService = {
+    authorize: vi.fn().mockResolvedValue({
+      userId: mockUserId,
+      workspaceId: mockWorkspaceId,
+      role: 'ADMIN',
+    }),
+  };
+  const operationService = new OperationService(mockAuthService);
+
   // Command handlers - chain
-  const createChainHandler = new CreateApprovalChainHandler(chainService);
-  const updateChainHandler = new UpdateApprovalChainHandler(chainService);
-  const deleteChainHandler = new DeleteApprovalChainHandler(chainService);
-  const activateChainHandler = new ActivateApprovalChainHandler(chainService);
+  const createChainHandler = new CreateApprovalChainHandler(chainService, operationService);
+  const updateChainHandler = new UpdateApprovalChainHandler(chainService, operationService);
+  const deleteChainHandler = new DeleteApprovalChainHandler(chainService, operationService);
+  const activateChainHandler = new ActivateApprovalChainHandler(chainService, operationService);
   const deactivateChainHandler = new DeactivateApprovalChainHandler(
-    chainService
+    chainService,
+    operationService
   );
 
   // Query handlers - chain
-  const getChainHandler = new GetApprovalChainHandler(chainService);
-  const listChainsHandler = new ListApprovalChainsHandler(chainService);
+  const getChainHandler = new GetApprovalChainHandler(chainService, operationService);
+  const listChainsHandler = new ListApprovalChainsHandler(chainService, operationService);
 
   // Command handlers - workflow
-  const initiateWorkflowHandler = new InitiateWorkflowHandler(workflowService);
-  const approveStepHandler = new ApproveStepHandler(workflowService);
-  const rejectStepHandler = new RejectStepHandler(workflowService);
-  const delegateStepHandler = new DelegateStepHandler(workflowService);
-  const cancelWorkflowHandler = new CancelWorkflowHandler(workflowService);
+  const initiateWorkflowHandler = new InitiateWorkflowHandler(
+    workflowService,
+    operationService
+  );
+  const approveStepHandler = new ApproveStepHandler(
+    workflowService,
+    operationService
+  );
+  const rejectStepHandler = new RejectStepHandler(
+    workflowService,
+    operationService
+  );
+  const delegateStepHandler = new DelegateStepHandler(
+    workflowService,
+    operationService
+  );
+  const cancelWorkflowHandler = new CancelWorkflowHandler(
+    workflowService,
+    operationService
+  );
 
   // Query handlers - workflow
-  const getWorkflowHandler = new GetWorkflowHandler(workflowService);
+  const getWorkflowHandler = new GetWorkflowHandler(workflowService, operationService);
   const listPendingApprovalsHandler = new ListPendingApprovalsHandler(
-    workflowService
+    workflowService,
+    operationService
   );
   const listUserWorkflowsHandler = new ListUserWorkflowsHandler(
-    workflowService
+    workflowService,
+    operationService
   );
 
   const chainController = new ApprovalChainController(
@@ -278,6 +310,7 @@ describe('Approval Chain Routes', () => {
       expect(body.message).toBe('Approval chain created successfully');
       expect(body.data).toBeDefined();
       expect(mockChainService.createChain).toHaveBeenCalledWith({
+        actorId: mockUserId,
         workspaceId: mockWorkspaceId,
         ...validPayload,
       });
@@ -529,6 +562,7 @@ describe('Approval Chain Routes', () => {
 
       expect(response.statusCode).toBe(200);
       expect(mockChainService.updateChain).toHaveBeenCalledWith({
+        actorId: mockUserId,
         chainId: mockChainId,
         workspaceId: mockWorkspaceId,
         minAmount: 500,
@@ -718,9 +752,6 @@ describe('Workflow Routes', () => {
   describe('POST /:workspaceId/workflows', () => {
     const validPayload = {
       expenseId: mockExpenseId,
-      amount: 500,
-      categoryId: '123e4567-e89b-12d3-a456-426614174050',
-      hasReceipt: true,
     };
 
     it('should initiate workflow successfully', async () => {
@@ -740,7 +771,7 @@ describe('Workflow Routes', () => {
       expect(body.data).toBeDefined();
       expect(body.data.expenseId).toBe(mockExpenseId);
       expect(mockWorkflowService.initiateWorkflow).toHaveBeenCalledWith({
-        ...validPayload,
+        expenseId: mockExpenseId,
         userId: mockUserId,
         workspaceId: mockWorkspaceId,
       });
@@ -750,27 +781,7 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows`,
-        payload: { amount: 500, hasReceipt: true },
-      });
-
-      expect(response.statusCode).toBe(400);
-    });
-
-    it('should return 400 for missing amount', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/workspaces/${mockWorkspaceId}/workflows`,
-        payload: { expenseId: mockExpenseId, hasReceipt: true },
-      });
-
-      expect(response.statusCode).toBe(400);
-    });
-
-    it('should return 400 for zero amount', async () => {
-      const response = await app.inject({
-        method: 'POST',
-        url: `/workspaces/${mockWorkspaceId}/workflows`,
-        payload: { ...validPayload, amount: 0 },
+        payload: {},
       });
 
       expect(response.statusCode).toBe(400);
@@ -780,7 +791,7 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows`,
-        payload: { ...validPayload, expenseId: 'invalid-uuid' },
+        payload: { expenseId: 'invalid-uuid' },
       });
 
       expect(response.statusCode).toBe(400);
@@ -855,6 +866,23 @@ describe('Workflow Routes', () => {
 
       expect(response.statusCode).toBe(400);
     });
+
+    it('should return 403 when user is unauthorized to view the workflow', async () => {
+      mockWorkflowService.getWorkflow.mockRejectedValue(
+        new UnauthorizedWorkflowViewError(mockUserId, mockExpenseId)
+      );
+
+      const response = await app.inject({
+        method: 'GET',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(false);
+      expect(body.statusCode).toBe(403);
+      expect(body.code).toBe('UNAUTHORIZED_WORKFLOW_VIEW');
+    });
   });
 
   // ==========================================================================
@@ -868,7 +896,7 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
-        payload: { comments: 'Looks good' },
+        payload: { comments: 'Looks good', expectedStepNumber: 1 },
       });
 
       expect(response.statusCode).toBe(200);
@@ -881,6 +909,7 @@ describe('Workflow Routes', () => {
         workspaceId: mockWorkspaceId,
         approverId: mockUserId,
         comments: 'Looks good',
+        expectedStepNumber: 1,
       });
     });
 
@@ -891,10 +920,30 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
-        payload: {},
+        payload: { expectedStepNumber: 1 },
       });
 
       expect(response.statusCode).toBe(200);
+    });
+
+    it('should return 400 when expectedStepNumber is omitted', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        payload: { comments: 'Missing expectedStepNumber' },
+      });
+
+      expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 400 when expectedStepNumber is not a positive integer', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
+        payload: { expectedStepNumber: 0 },
+      });
+
+      expect(response.statusCode).toBe(400);
     });
 
     it('should return 403 for unauthorized approver', async () => {
@@ -905,7 +954,7 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
-        payload: {},
+        payload: { expectedStepNumber: 1 },
       });
 
       expect(response.statusCode).toBe(403);
@@ -919,7 +968,7 @@ describe('Workflow Routes', () => {
       const response = await app.inject({
         method: 'POST',
         url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
-        payload: {},
+        payload: { expectedStepNumber: 1 },
       });
 
       expect(response.statusCode).toBe(404);
@@ -1074,6 +1123,52 @@ describe('Workflow Routes', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+
+    it('should return 403 when user is unauthorized to cancel workflow (Finding 2)', async () => {
+      mockWorkflowService.cancelWorkflow.mockRejectedValue(
+        new UnauthorizedWorkflowCancellationError(mockUserId, mockExpenseId)
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
+      });
+
+      expect(response.statusCode).toBe(403);
+      const body = JSON.parse(response.body);
+      expect(body.code).toBe('UNAUTHORIZED_WORKFLOW_CANCELLATION');
+    });
+
+    it('should cancel workflow successfully with a valid reason', async () => {
+      const mockWorkflow = createMockWorkflow(mockExpenseId, 'CANCELLED');
+      mockWorkflowService.cancelWorkflow.mockResolvedValue(mockWorkflow);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
+        payload: {
+          reason: 'Expense is duplicate',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('should return 400 when cancellation reason exceeds maximum length', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/cancel`,
+        payload: {
+          reason: 'a'.repeat(1001),
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.error).toBe('VALIDATION_ERROR');
     });
   });
 
@@ -1237,7 +1332,7 @@ describe('Approval Workflow Security', () => {
     await app.inject({
       method: 'POST',
       url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}/approve`,
-      payload: {},
+      payload: { expectedStepNumber: 1 },
     });
 
     expect(mockWorkflowService.approveStep).toHaveBeenCalledWith(
@@ -1409,5 +1504,112 @@ describe('Approval Workflow Edge Cases', () => {
     });
 
     expect(response.statusCode).toBe(201);
+  });
+
+  describe('Route Contract & Error Propagation Hardening', () => {
+    it('PATCH /approval-chains/:chainId should reject empty patch body with 400', async () => {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(400);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(false);
+      expect(body.error).toBe('VALIDATION_ERROR');
+      expect(body.errors[0]?.message).toBe('At least one field must be provided for update');
+    });
+
+    it('PATCH /approval-chains/:chainId should succeed with valid update payload', async () => {
+      const mockChain = createMockApprovalChain(mockChainId, 'Updated Name');
+      mockChainService.updateChain.mockResolvedValue(mockChain);
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/workspaces/${mockWorkspaceId}/approval-chains/${mockChainId}`,
+        payload: {
+          name: 'Updated Name',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+      expect(body.data.chainId).toBe(mockChainId);
+    });
+
+    it('should propagate unhandled server errors to global errorPlugin and sanitize in production', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'production';
+        mockWorkflowService.getWorkflow.mockRejectedValue(new Error('Sensitive DB failure details'));
+
+        const response = await app.inject({
+          method: 'GET',
+          url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+        });
+
+        expect(response.statusCode).toBe(500);
+        const body = JSON.parse(response.body);
+        expect(body.success).toBe(false);
+        expect(body.error).toBe('Internal Server Error');
+        expect(body.message).toBe('An unexpected error occurred');
+        expect(body.message).not.toContain('Sensitive DB failure');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+
+    it('should sanitize explicit 5xx errors carrying statusCode: 500 in production', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'production';
+        const explicit500Error = Object.assign(
+          new Error('Sensitive DB connection pool exhausted on port 5432'),
+          { statusCode: 500 }
+        );
+        mockWorkflowService.getWorkflow.mockRejectedValue(explicit500Error);
+
+        const response = await app.inject({
+          method: 'GET',
+          url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+        });
+
+        expect(response.statusCode).toBe(500);
+        const body = JSON.parse(response.body);
+        expect(body.success).toBe(false);
+        expect(body.error).toBe('Internal Server Error');
+        expect(body.message).toBe('An unexpected error occurred');
+        expect(body.message).not.toContain('Sensitive DB connection pool');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
+
+    it('should sanitize explicit 5xx errors carrying statusCode: 503 in production', async () => {
+      const originalEnv = process.env.NODE_ENV;
+      try {
+        process.env.NODE_ENV = 'production';
+        const explicit503Error = Object.assign(
+          new Error('Upstream database cluster unreachable'),
+          { statusCode: 503 }
+        );
+        mockWorkflowService.getWorkflow.mockRejectedValue(explicit503Error);
+
+        const response = await app.inject({
+          method: 'GET',
+          url: `/workspaces/${mockWorkspaceId}/workflows/${mockExpenseId}`,
+        });
+
+        expect(response.statusCode).toBe(503);
+        const body = JSON.parse(response.body);
+        expect(body.success).toBe(false);
+        expect(body.message).toBe('An unexpected error occurred');
+        expect(body.message).not.toContain('Upstream database');
+      } finally {
+        process.env.NODE_ENV = originalEnv;
+      }
+    });
   });
 });
