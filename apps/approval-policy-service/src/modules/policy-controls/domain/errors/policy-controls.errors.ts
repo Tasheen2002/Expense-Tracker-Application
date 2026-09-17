@@ -1,81 +1,83 @@
-import { DomainError } from '@core/domain/domain-error';
+import { PureDomainError } from '../../../../shared/errors/pure-domain-error';
 
 /**
  * Base class for all policy-controls domain errors
  */
-export class PolicyControlsDomainError extends DomainError {}
+export abstract class PolicyControlsDomainError extends PureDomainError {}
 
 // ============================================
 // Policy Errors
 // ============================================
 
 export class PolicyNotFoundError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_NOT_FOUND';
   constructor(policyId: string) {
-    super(`Policy with ID ${policyId} not found`, 'POLICY_NOT_FOUND', 404);
+    super(`Policy with ID ${policyId} not found`);
   }
 }
 
 export class PolicyNameAlreadyExistsError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_NAME_EXISTS';
   constructor(name: string, workspaceId: string) {
     super(
-      `Policy with name "${name}" already exists in workspace ${workspaceId}`,
-      'POLICY_NAME_EXISTS',
-      409
+      `Policy with name "${name}" already exists in workspace ${workspaceId}`
     );
   }
 }
 
 export class InvalidPolicyConfigurationError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_POLICY_CONFIGURATION';
   constructor(message: string) {
-    super(message, 'INVALID_POLICY_CONFIGURATION', 400);
+    super(message);
   }
 }
 
 export class PolicyNameRequiredError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_NAME_REQUIRED';
   constructor() {
-    super('Policy name is required', 'POLICY_NAME_REQUIRED', 400);
+    super('Policy name is required');
   }
 }
 
 export class PolicyNameTooLongError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_NAME_TOO_LONG';
   constructor(maxLength: number) {
-    super(
-      `Policy name cannot exceed ${maxLength} characters`,
-      'POLICY_NAME_TOO_LONG',
-      400
-    );
+    super(`Policy name cannot exceed ${maxLength} characters`);
   }
 }
 
 export class PolicyDescriptionTooLongError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_DESCRIPTION_TOO_LONG';
   constructor(maxLength: number) {
-    super(
-      `Policy description cannot exceed ${maxLength} characters`,
-      'POLICY_DESCRIPTION_TOO_LONG',
-      400
-    );
+    super(`Policy description cannot exceed ${maxLength} characters`);
   }
 }
 
 export class InvalidThresholdError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_THRESHOLD';
   constructor(message: string) {
-    super(message, 'INVALID_THRESHOLD', 400);
+    super(message);
   }
 }
 
 export class PolicyAlreadyActiveError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_ALREADY_ACTIVE';
   constructor(policyId: string) {
-    super(`Policy ${policyId} is already active`, 'POLICY_ALREADY_ACTIVE', 409);
+    super(`Policy ${policyId} is already active`);
   }
 }
 
 export class PolicyAlreadyInactiveError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_ALREADY_INACTIVE';
   constructor(policyId: string) {
-    super(
-      `Policy ${policyId} is already inactive`,
-      'POLICY_ALREADY_INACTIVE',
-      409
-    );
+    super(`Policy ${policyId} is already inactive`);
+  }
+}
+
+export class PolicyInUseError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_IN_USE';
+  constructor(message: string) {
+    super(message);
   }
 }
 
@@ -84,42 +86,37 @@ export class PolicyAlreadyInactiveError extends PolicyControlsDomainError {
 // ============================================
 
 export class ViolationNotFoundError extends PolicyControlsDomainError {
+  readonly code = 'VIOLATION_NOT_FOUND';
   constructor(violationId: string) {
-    super(
-      `Violation with ID ${violationId} not found`,
-      'VIOLATION_NOT_FOUND',
-      404
-    );
+    super(`Violation with ID ${violationId} not found`);
   }
 }
 
 export class ViolationAlreadyResolvedError extends PolicyControlsDomainError {
+  readonly code = 'VIOLATION_ALREADY_RESOLVED';
   constructor(violationId: string) {
-    super(
-      `Violation ${violationId} has already been resolved`,
-      'VIOLATION_ALREADY_RESOLVED',
-      409
-    );
+    super(`Violation ${violationId} has already been resolved`);
   }
 }
 
 export class InvalidViolationTransitionError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_VIOLATION_TRANSITION';
   constructor(from: string, to: string) {
-    super(
-      `Invalid violation status transition from ${from} to ${to}`,
-      'INVALID_VIOLATION_TRANSITION',
-      400
-    );
+    super(`Invalid violation status transition from ${from} to ${to}`);
   }
 }
 
 export class UnauthorizedViolationActionError extends PolicyControlsDomainError {
+  readonly code = 'UNAUTHORIZED_VIOLATION_ACTION';
   constructor(userId: string, action: string) {
-    super(
-      `User ${userId} is not authorized to ${action} this violation`,
-      'UNAUTHORIZED_VIOLATION_ACTION',
-      403
-    );
+    super(`User ${userId} is not authorized to ${action} this violation`);
+  }
+}
+
+export class InvalidExemptionForViolationError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_EXEMPTION_FOR_VIOLATION';
+  constructor(message: string) {
+    super(message);
   }
 }
 
@@ -128,48 +125,37 @@ export class UnauthorizedViolationActionError extends PolicyControlsDomainError 
 // ============================================
 
 export class ExemptionNotFoundError extends PolicyControlsDomainError {
+  readonly code = 'EXEMPTION_NOT_FOUND';
   constructor(exemptionId: string) {
-    super(
-      `Exemption with ID ${exemptionId} not found`,
-      'EXEMPTION_NOT_FOUND',
-      404
-    );
+    super(`Exemption with ID ${exemptionId} not found`);
   }
 }
 
 export class ExemptionAlreadyProcessedError extends PolicyControlsDomainError {
+  readonly code = 'EXEMPTION_ALREADY_PROCESSED';
   constructor(exemptionId: string) {
-    super(
-      `Exemption ${exemptionId} has already been processed`,
-      'EXEMPTION_ALREADY_PROCESSED',
-      409
-    );
+    super(`Exemption ${exemptionId} has already been processed`);
   }
 }
 
 export class ExemptionExpiredError extends PolicyControlsDomainError {
+  readonly code = 'EXEMPTION_EXPIRED';
   constructor(exemptionId: string) {
-    super(`Exemption ${exemptionId} has expired`, 'EXEMPTION_EXPIRED', 400);
+    super(`Exemption ${exemptionId} has expired`);
   }
 }
 
 export class InvalidExemptionDateRangeError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_EXEMPTION_DATE_RANGE';
   constructor() {
-    super(
-      'End date must be after start date',
-      'INVALID_EXEMPTION_DATE_RANGE',
-      400
-    );
+    super('End date must be after start date');
   }
 }
 
 export class UnauthorizedExemptionApprovalError extends PolicyControlsDomainError {
+  readonly code = 'UNAUTHORIZED_EXEMPTION_APPROVAL';
   constructor(userId: string) {
-    super(
-      `User ${userId} is not authorized to approve exemptions`,
-      'UNAUTHORIZED_EXEMPTION_APPROVAL',
-      403
-    );
+    super(`User ${userId} is not authorized to approve exemptions`);
   }
 }
 
@@ -178,17 +164,54 @@ export class UnauthorizedExemptionApprovalError extends PolicyControlsDomainErro
 // ============================================
 
 export class ExpenseBlockedByPolicyError extends PolicyControlsDomainError {
+  readonly code = 'EXPENSE_BLOCKED_BY_POLICY';
   constructor(expenseId: string, policyName: string) {
-    super(
-      `Expense ${expenseId} is blocked by policy "${policyName}"`,
-      'EXPENSE_BLOCKED_BY_POLICY',
-      403
-    );
+    super(`Expense ${expenseId} is blocked by policy "${policyName}"`);
   }
 }
 
 export class PolicyEvaluationError extends PolicyControlsDomainError {
+  readonly code = 'POLICY_EVALUATION_ERROR';
   constructor(message: string) {
-    super(message, 'POLICY_EVALUATION_ERROR', 500);
+    super(message);
+  }
+}
+
+// ============================================
+// Invariant & Boundary Errors
+// ============================================
+
+export class InvalidPriorityError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_PRIORITY';
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class ExemptionDurationExceededError extends PolicyControlsDomainError {
+  readonly code = 'EXEMPTION_DURATION_EXCEEDED';
+  constructor(maxDays: number) {
+    super(`Exemption duration cannot exceed ${maxDays} days`);
+  }
+}
+
+export class ExemptionReasonLengthError extends PolicyControlsDomainError {
+  readonly code = 'EXEMPTION_REASON_LENGTH_INVALID';
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class ViolationNoteLengthError extends PolicyControlsDomainError {
+  readonly code = 'VIOLATION_NOTE_LENGTH_INVALID';
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export class InvalidScopeError extends PolicyControlsDomainError {
+  readonly code = 'INVALID_POLICY_SCOPE';
+  constructor(message: string) {
+    super(message);
   }
 }
