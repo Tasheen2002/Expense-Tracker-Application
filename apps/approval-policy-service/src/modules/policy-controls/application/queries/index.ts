@@ -1,6 +1,7 @@
 // Policy queries
 export { GetPolicyHandler, GetPolicyInput } from "./get-policy.query";
 export { ListPoliciesHandler, ListPoliciesInput } from "./list-policies.query";
+export { CheckExpenseHandler, CheckExpenseInput } from "./check-expense.query";
 
 // Violation queries
 export { GetViolationHandler, GetViolationInput } from "./get-violation.query";
