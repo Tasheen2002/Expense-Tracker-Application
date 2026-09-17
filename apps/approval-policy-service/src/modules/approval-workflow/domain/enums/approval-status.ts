@@ -5,3 +5,5 @@ export enum ApprovalStatus {
   DELEGATED = 'delegated',
   AUTO_APPROVED = 'auto_approved',
 }
+
+export type ApprovalStatusType = `${ApprovalStatus}`;

@@ -5,3 +5,5 @@ export enum WorkflowStatus {
   REJECTED = 'rejected',
   CANCELLED = 'cancelled',
 }
+
+export type WorkflowStatusType = `${WorkflowStatus}`;
