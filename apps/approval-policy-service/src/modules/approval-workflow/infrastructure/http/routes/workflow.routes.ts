@@ -1,7 +1,5 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { WorkflowController } from '../controllers/workflow.controller';
-import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
   validateQuery,
@@ -11,13 +9,23 @@ import {
   approveStepSchema,
   rejectStepSchema,
   delegateStepSchema,
+  cancelWorkflowSchema,
   paginationSchema,
+  InitiateWorkflowBody,
+  ApproveStepBody,
+  RejectStepBody,
+  DelegateStepBody,
+  CancelWorkflowBody,
+  WorkspaceParams,
+  WorkflowParams,
+  PaginationQuery,
   workspaceParamsJsonSchema,
   workflowParamsJsonSchema,
   initiateWorkflowBodyJsonSchema,
   approveStepBodyJsonSchema,
   rejectStepBodyJsonSchema,
   delegateStepBodyJsonSchema,
+  cancelWorkflowBodyJsonSchema,
   paginationQueryJsonSchema,
   workflowEnvelopeJsonSchema,
   expenseEnvelopeJsonSchema,
@@ -27,35 +35,27 @@ import {
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function workflowRoutes(
   fastify: FastifyInstance,
   controller: WorkflowController
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Initiate workflow
-  fastify.post(
+  fastify.post<{ Params: WorkspaceParams; Body: InitiateWorkflowBody }>(
     '/workspaces/:workspaceId/workflows',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateBody(initiateWorkflowSchema), workspaceAuth],
+      preHandler: [
+        writeRateLimiter,
+        validateBody(initiateWorkflowSchema),
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Initiate approval workflow for an expense',
@@ -67,16 +67,15 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.initiateWorkflow(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.initiateWorkflow(request, reply)
   );
 
   // List pending approvals (Registered before dynamic :expenseId to avoid matching conflict)
-  fastify.get(
+  fastify.get<{ Params: WorkspaceParams; Querystring: PaginationQuery }>(
     '/workspaces/:workspaceId/workflows/pending-approvals',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateQuery(paginationSchema), workspaceAuth],
+      preHandler: [validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List pending approvals for current user',
@@ -88,16 +87,15 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.listPendingApprovals(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.listPendingApprovals(request, reply)
   );
 
   // List user workflows (Registered before dynamic :expenseId to avoid matching conflict)
-  fastify.get(
+  fastify.get<{ Params: WorkspaceParams; Querystring: PaginationQuery }>(
     '/workspaces/:workspaceId/workflows/user-workflows',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateQuery(paginationSchema), workspaceAuth],
+      preHandler: [validateQuery(paginationSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all workflows for current user',
@@ -109,16 +107,14 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.listUserWorkflows(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.listUserWorkflows(request, reply)
   );
 
   // Get workflow by expense ID
-  fastify.get(
+  fastify.get<{ Params: WorkflowParams }>(
     '/workspaces/:workspaceId/workflows/:expenseId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get workflow by expense ID',
@@ -129,16 +125,18 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.getWorkflow(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.getWorkflow(request, reply)
   );
 
   // Approve step
-  fastify.post(
+  fastify.post<{ Params: WorkflowParams; Body: ApproveStepBody }>(
     '/workspaces/:workspaceId/workflows/:expenseId/approve',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateBody(approveStepSchema), workspaceAuth],
+      preHandler: [
+        writeRateLimiter,
+        validateBody(approveStepSchema),
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Approve current workflow step',
@@ -150,16 +148,18 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.approveStep(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.approveStep(request, reply)
   );
 
   // Reject step
-  fastify.post(
+  fastify.post<{ Params: WorkflowParams; Body: RejectStepBody }>(
     '/workspaces/:workspaceId/workflows/:expenseId/reject',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateBody(rejectStepSchema), workspaceAuth],
+      preHandler: [
+        writeRateLimiter,
+        validateBody(rejectStepSchema),
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Reject current workflow step',
@@ -171,16 +171,18 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.rejectStep(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.rejectStep(request, reply)
   );
 
   // Delegate step
-  fastify.post(
+  fastify.post<{ Params: WorkflowParams; Body: DelegateStepBody }>(
     '/workspaces/:workspaceId/workflows/:expenseId/delegate',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateBody(delegateStepSchema), workspaceAuth],
+      preHandler: [
+        writeRateLimiter,
+        validateBody(delegateStepSchema),
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delegate current workflow step to another user',
@@ -192,27 +194,34 @@ export async function workflowRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.delegateStep(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.delegateStep(request, reply)
   );
 
   // Cancel workflow
-  fastify.post(
+  fastify.post<{ Params: WorkflowParams; Body?: CancelWorkflowBody }>(
     '/workspaces/:workspaceId/workflows/:expenseId/cancel',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preValidation: async (request) => {
+        if (request.body === undefined) {
+          request.body = {};
+        }
+      },
+      preHandler: [
+        writeRateLimiter,
+        validateBody(cancelWorkflowSchema),
+      ],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Cancel workflow',
         security: [{ bearerAuth: [] }],
         params: workflowParamsJsonSchema,
+        body: cancelWorkflowBodyJsonSchema,
         response: {
           200: baseResponseEnvelopeJsonSchema,
         },
       },
     },
-    (request, reply) =>
-      controller.cancelWorkflow(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.cancelWorkflow(request, reply)
   );
 }

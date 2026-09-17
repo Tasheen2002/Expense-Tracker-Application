@@ -1,8 +1,5 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
-import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
   validateQuery,
@@ -11,6 +8,11 @@ import {
   createChainSchema,
   updateChainSchema,
   listChainsSchema,
+  CreateChainBody,
+  UpdateChainBody,
+  ListChainsQuery,
+  WorkspaceParams,
+  ChainParams,
   workspaceParamsJsonSchema,
   chainParamsJsonSchema,
   createChainBodyJsonSchema,
@@ -23,38 +25,26 @@ import {
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function approvalChainRoutes(
   fastify: FastifyInstance,
   controller: ApprovalChainController
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Create approval chain
-  fastify.post(
+  fastify.post<{ Params: WorkspaceParams; Body: CreateChainBody }>(
     '/workspaces/:workspaceId/approval-chains',
     {
       onRequest: [fastify.authenticate],
       preHandler: [
+        writeRateLimiter,
         validateBody(createChainSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Approval Workflow'],
@@ -67,16 +57,15 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.createChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.createChain(request, reply)
   );
 
   // List approval chains
-  fastify.get(
+  fastify.get<{ Params: WorkspaceParams; Querystring: ListChainsQuery }>(
     '/workspaces/:workspaceId/approval-chains',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateQuery(listChainsSchema), workspaceAuth],
+      preHandler: [validateQuery(listChainsSchema)],
       schema: {
         tags: ['Approval Workflow'],
         description: 'List all approval chains in workspace',
@@ -88,16 +77,14 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.listChains(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.listChains(request, reply)
   );
 
   // Get approval chain
-  fastify.get(
+  fastify.get<{ Params: ChainParams }>(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Get approval chain by ID',
@@ -108,19 +95,17 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.getChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.getChain(request, reply)
   );
 
   // Update approval chain
-  fastify.patch(
+  fastify.patch<{ Params: ChainParams; Body: UpdateChainBody }>(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       onRequest: [fastify.authenticate],
       preHandler: [
+        writeRateLimiter,
         validateBody(updateChainSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Approval Workflow'],
@@ -133,16 +118,15 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.updateChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.updateChain(request, reply)
   );
 
   // Activate approval chain
-  fastify.post(
+  fastify.post<{ Params: ChainParams }>(
     '/workspaces/:workspaceId/approval-chains/:chainId/activate',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
+      preHandler: [writeRateLimiter],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Activate approval chain',
@@ -153,16 +137,15 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.activateChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.activateChain(request, reply)
   );
 
   // Deactivate approval chain
-  fastify.post(
+  fastify.post<{ Params: ChainParams }>(
     '/workspaces/:workspaceId/approval-chains/:chainId/deactivate',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
+      preHandler: [writeRateLimiter],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Deactivate approval chain',
@@ -173,16 +156,15 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.deactivateChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.deactivateChain(request, reply)
   );
 
   // Delete approval chain
-  fastify.delete(
+  fastify.delete<{ Params: ChainParams }>(
     '/workspaces/:workspaceId/approval-chains/:chainId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth, RolePermissions.ADMIN_LEVEL],
+      preHandler: [writeRateLimiter],
       schema: {
         tags: ['Approval Workflow'],
         description: 'Delete approval chain',
@@ -196,7 +178,6 @@ export async function approvalChainRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.deleteChain(request as AuthenticatedRequest, reply)
+    (request, reply) => controller.deleteChain(request, reply)
   );
 }

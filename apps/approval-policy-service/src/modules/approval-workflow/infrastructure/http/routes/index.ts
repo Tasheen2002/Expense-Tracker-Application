@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { approvalChainRoutes } from './approval-chain.routes';
 import { workflowRoutes } from './workflow.routes';
 import { ApprovalChainController } from '../controllers/approval-chain.controller';
@@ -10,8 +9,7 @@ export async function registerApprovalWorkflowRoutes(
   controllers: {
     approvalChainController: ApprovalChainController;
     workflowController: WorkflowController;
-  },
-  _prisma: PrismaClient
+  }
 ) {
   await fastify.register(
     async (instance) => {
