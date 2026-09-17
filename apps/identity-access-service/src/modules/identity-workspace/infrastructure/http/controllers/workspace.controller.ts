@@ -78,6 +78,7 @@ export class WorkspaceController {
     const result = await this.updateWorkspaceHandler.handle({
       workspaceId: request.params.workspaceId,
       name: request.body.name,
+      isActive: request.body.isActive,
       actorId: user.userId,
     });
     return ResponseHelper.fromCommand(reply, result, 'Workspace updated successfully');

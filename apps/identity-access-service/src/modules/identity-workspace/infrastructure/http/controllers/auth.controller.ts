@@ -57,6 +57,13 @@ export class AuthController {
     reply: FastifyReply
   ): Promise<FastifyReply> {
     const user = getAuthenticatedUser(request);
+    if (user.isServicePrincipal) {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: 'Active user session required',
+      });
+    }
     const result = await this.getUserHandler.handle({
       actorId: user.userId,
       userId: user.userId,
@@ -94,6 +101,13 @@ export class AuthController {
     reply: FastifyReply
   ): Promise<FastifyReply> {
     const user = getAuthenticatedUser(request);
+    if (user.isServicePrincipal || user.sessionId === 'service-principal') {
+      return reply.status(401).send({
+        success: false,
+        statusCode: 401,
+        message: 'Active user session required',
+      });
+    }
     if (user.sessionId) {
       await this.sessionService.revokeSession(user.sessionId);
     }
