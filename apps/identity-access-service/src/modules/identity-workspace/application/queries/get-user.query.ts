@@ -23,8 +23,6 @@ export class GetUserHandler implements IQueryHandler<
   ) {}
 
   async handle(query: GetUserQuery): Promise<UserDTO> {
-    await this.operations.authorize({ actorId: query.actorId });
-
     if (!query.userId && !query.email) {
       throw new UserLookupCriteriaRequiredError();
     }
