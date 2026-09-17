@@ -10,7 +10,7 @@ export class WorkflowId extends UuidId {
     return new WorkflowId(randomUUID());
   }
 
-  static fromString(id: string): WorkflowId {
-    return new WorkflowId(id);
+  static fromString(value: string): WorkflowId {
+    return new WorkflowId(value);
   }
 }

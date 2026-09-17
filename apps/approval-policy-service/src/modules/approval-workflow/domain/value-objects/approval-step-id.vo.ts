@@ -10,7 +10,7 @@ export class ApprovalStepId extends UuidId {
     return new ApprovalStepId(randomUUID());
   }
 
-  static fromString(id: string): ApprovalStepId {
-    return new ApprovalStepId(id);
+  static fromString(value: string): ApprovalStepId {
+    return new ApprovalStepId(value);
   }
 }
