@@ -39,11 +39,11 @@ export async function registerMemberRoutes(
     (request, reply) => controller.listMembers(request, reply)
   );
 
-  // 2. Get Workspace Member by ID
+  // 2. Get Workspace Member by ID (User or Service Principal)
   app.get<{ Params: MemberParams }>(
     '/workspaces/:workspaceId/members/:userId',
     {
-      onRequest: [app.authenticate],
+      onRequest: [app.authenticateServiceOrUser],
       schema: {
         params: memberParamsJsonSchema,
         response: {

@@ -88,11 +88,11 @@ export async function registerAuthRoutes(
     (request, reply) => controller.logout(request, reply)
   );
 
-  // 5. Get User by ID (Authenticated)
+  // 5. Get User by ID (User or Service Principal)
   app.get<{ Params: UserParams }>(
     '/users/:userId',
     {
-      onRequest: [app.authenticate],
+      onRequest: [app.authenticateServiceOrUser],
       schema: {
         params: userParamsJsonSchema,
         response: {
