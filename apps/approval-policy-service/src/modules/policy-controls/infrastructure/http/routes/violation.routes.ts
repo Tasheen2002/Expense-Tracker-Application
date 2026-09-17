@@ -1,4 +1,4 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { ViolationController } from '../controllers/violation.controller';
 import {
   validateBody,
@@ -9,6 +9,7 @@ import {
   resolveViolationSchema,
   overrideViolationSchema,
   exemptViolationSchema,
+  recordViolationSchema,
   violationParamsJsonSchema,
   violationQueryJsonSchema,
   violationStatsQueryJsonSchema,
@@ -16,6 +17,7 @@ import {
   resolveViolationBodyJsonSchema,
   overrideViolationBodyJsonSchema,
   exemptViolationBodyJsonSchema,
+  recordViolationBodyJsonSchema,
   violationEnvelopeJsonSchema,
   violationListEnvelopeJsonSchema,
   violationStatsEnvelopeJsonSchema,
@@ -25,22 +27,12 @@ import {
 import {
   workspaceParamsJsonSchema,
 } from '../validation/policy.schema';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 export async function violationRoutes(
   fastify: FastifyInstance,
   controller: ViolationController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
   // List violations
   fastify.get(
     '/workspaces/:workspaceId/violations',
@@ -48,7 +40,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(violationQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -72,7 +63,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(violationStatsQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -94,7 +84,6 @@ export async function violationRoutes(
     '/workspaces/:workspaceId/violations/:violationId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get policy violation by ID',
@@ -109,6 +98,29 @@ export async function violationRoutes(
       controller.getViolation(request as AuthenticatedRequest, reply)
   );
 
+  // Record violation (Production Trigger / Admin / Internal Command)
+  fastify.post(
+    '/workspaces/:workspaceId/violations',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(recordViolationSchema),
+      ],
+      schema: {
+        tags: ['Policy Controls'],
+        description: 'Record a policy violation',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: recordViolationBodyJsonSchema,
+        response: {
+          201: violationEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.recordViolation(request as AuthenticatedRequest, reply)
+  );
+
   // Acknowledge violation
   fastify.post(
     '/workspaces/:workspaceId/violations/:violationId/acknowledge',
@@ -116,7 +128,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(acknowledgeViolationSchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -140,8 +151,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(resolveViolationSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -165,8 +174,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(exemptViolationSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -190,8 +197,6 @@ export async function violationRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(overrideViolationSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],

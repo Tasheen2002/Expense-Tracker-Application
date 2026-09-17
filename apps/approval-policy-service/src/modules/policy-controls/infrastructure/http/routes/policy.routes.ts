@@ -1,8 +1,6 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { PolicyController } from '../controllers/policy.controller';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
   validateQuery,
@@ -11,6 +9,7 @@ import {
   createPolicySchema,
   updatePolicySchema,
   policyQuerySchema,
+  evaluateExpenseSchema,
   createPolicyBodyJsonSchema,
   updatePolicyBodyJsonSchema,
   workspaceParamsJsonSchema,
@@ -20,20 +19,17 @@ import {
   createPolicyEnvelopeJsonSchema,
   policyListEnvelopeJsonSchema,
   policyActionSuccessResponseJsonSchema,
+  evaluateExpenseBodyJsonSchema,
+  evaluateExpenseEnvelopeJsonSchema,
+  checkExpenseSchema,
+  checkExpenseBodyJsonSchema,
+  checkExpenseEnvelopeJsonSchema,
 } from '../validation/policy.schema';
 
 export async function policyRoutes(
   fastify: FastifyInstance,
   controller: PolicyController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
   // Create policy
   fastify.post(
     '/workspaces/:workspaceId/policies',
@@ -41,8 +37,6 @@ export async function policyRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(createPolicySchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -59,6 +53,52 @@ export async function policyRoutes(
       controller.createPolicy(request as AuthenticatedRequest, reply)
   );
 
+  // Evaluate expense against policies
+  fastify.post(
+    '/workspaces/:workspaceId/policies/evaluate',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(evaluateExpenseSchema),
+      ],
+      schema: {
+        tags: ['Policy Controls'],
+        description: 'Evaluate an expense against active policies',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: evaluateExpenseBodyJsonSchema,
+        response: {
+          200: evaluateExpenseEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.evaluateExpense(request as AuthenticatedRequest, reply)
+  );
+
+  // Check expense against policies (dry run without saving violations)
+  fastify.post(
+    '/workspaces/:workspaceId/policies/check',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(checkExpenseSchema),
+      ],
+      schema: {
+        tags: ['Policy Controls'],
+        description: 'Dry-run evaluate an expense against active policies without recording violations',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        body: checkExpenseBodyJsonSchema,
+        response: {
+          200: checkExpenseEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.checkExpense(request as AuthenticatedRequest, reply)
+  );
+
   // List policies
   fastify.get(
     '/workspaces/:workspaceId/policies',
@@ -66,7 +106,6 @@ export async function policyRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(policyQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -88,7 +127,6 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get expense policy by ID',
@@ -110,8 +148,6 @@ export async function policyRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(updatePolicySchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -133,10 +169,6 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Delete expense policy',
@@ -156,10 +188,6 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId/activate',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Activate expense policy',
@@ -179,10 +207,6 @@ export async function policyRoutes(
     '/workspaces/:workspaceId/policies/:policyId/deactivate',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
       schema: {
         tags: ['Policy Controls'],
         description: 'Deactivate expense policy',

@@ -1,8 +1,6 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { ExemptionController } from '../controllers/exemption.controller';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
   validateBody,
   validateQuery,
@@ -23,6 +21,7 @@ import {
   createExemptionEnvelopeJsonSchema,
   exemptionListEnvelopeJsonSchema,
   activeExemptionEnvelopeJsonSchema,
+  expireExemptionsEnvelopeJsonSchema,
 } from '../validation/exemption.schema';
 import {
   workspaceParamsJsonSchema,
@@ -32,14 +31,6 @@ export async function exemptionRoutes(
   fastify: FastifyInstance,
   controller: ExemptionController
 ): Promise<void> {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(
-      request as AuthenticatedRequest,
-      reply,
-      request.server.prisma
-    );
-  };
-
   // Request exemption
   fastify.post(
     '/workspaces/:workspaceId/exemptions',
@@ -47,7 +38,6 @@ export async function exemptionRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(requestExemptionSchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -71,7 +61,6 @@ export async function exemptionRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(exemptionQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -95,7 +84,6 @@ export async function exemptionRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateQuery(checkActiveExemptionQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -117,7 +105,6 @@ export async function exemptionRoutes(
     '/workspaces/:workspaceId/exemptions/:exemptionId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
       schema: {
         tags: ['Policy Controls'],
         description: 'Get policy exemption by ID',
@@ -139,8 +126,6 @@ export async function exemptionRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(approveExemptionSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -164,8 +149,6 @@ export async function exemptionRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         validateBody(rejectExemptionSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Policy Controls'],
@@ -180,5 +163,24 @@ export async function exemptionRoutes(
     },
     (request, reply) =>
       controller.rejectExemption(request as AuthenticatedRequest, reply)
+  );
+
+  // Expire exemptions (Production Trigger / Scheduled Worker / Admin)
+  fastify.post(
+    '/workspaces/:workspaceId/exemptions/expire',
+    {
+      onRequest: [fastify.authenticate],
+      schema: {
+        tags: ['Policy Controls'],
+        description: 'Process and expire eligible policy exemptions',
+        security: [{ bearerAuth: [] }],
+        params: workspaceParamsJsonSchema,
+        response: {
+          200: expireExemptionsEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.expireExemptions(request as AuthenticatedRequest, reply)
   );
 }
