@@ -2,19 +2,26 @@ import {
   IExemptionRepository,
   ExemptionFilters,
 } from "../../domain/repositories/exemption.repository";
-import { PolicyExemption, PolicyExemptionDTO } from "../../domain/entities/policy-exemption.entity";
-import { ExemptionId } from "../../domain/value-objects/exemption-id";
+import { IPolicyRepository } from "../../domain/repositories/policy.repository";
+import { PolicyExemption, PolicyExemptionDTO, ExemptionScope } from "../../domain/entities/policy-exemption.entity";
+import { ExemptionId, PolicyId } from "../../domain/value-objects";
 import {
   ExemptionNotFoundError,
   UnauthorizedExemptionApprovalError,
+  ExemptionExpiredError,
+  PolicyNotFoundError,
 } from "../../domain/errors/policy-controls.errors";
+import { WorkspaceId, UserId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 
 export class ExemptionService {
-  constructor(private readonly exemptionRepository: IExemptionRepository) {}
+  constructor(
+    private readonly exemptionRepository: IExemptionRepository,
+    private readonly policyRepository: IPolicyRepository
+  ) {}
 
   async requestExemption(params: {
     workspaceId: string;
@@ -24,7 +31,13 @@ export class ExemptionService {
     reason: string;
     startDate: Date;
     endDate: Date;
+    scope?: ExemptionScope;
   }): Promise<PolicyExemptionDTO> {
+    const policy = await this.policyRepository.findById(PolicyId.fromString(params.policyId));
+    if (!policy || policy.workspaceId.getValue() !== params.workspaceId) {
+      throw new PolicyNotFoundError(params.policyId);
+    }
+
     const exemption = PolicyExemption.create({
       workspaceId: params.workspaceId,
       policyId: params.policyId,
@@ -33,6 +46,7 @@ export class ExemptionService {
       reason: params.reason,
       startDate: params.startDate,
       endDate: params.endDate,
+      scope: params.scope,
     });
 
     await this.exemptionRepository.save(exemption);
@@ -68,7 +82,7 @@ export class ExemptionService {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemptionDTO>> {
     const result = await this.exemptionRepository.findByWorkspace(
-      workspaceId,
+      WorkspaceId.fromString(workspaceId),
       filters,
       options,
     );
@@ -83,7 +97,11 @@ export class ExemptionService {
     userId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemptionDTO>> {
-    const result = await this.exemptionRepository.findByUser(workspaceId, userId, options);
+    const result = await this.exemptionRepository.findByUser(
+      WorkspaceId.fromString(workspaceId),
+      UserId.fromString(userId),
+      options
+    );
     return {
       ...result,
       items: result.items.map((e) => PolicyExemption.toDTO(e)),
@@ -95,7 +113,7 @@ export class ExemptionService {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<PolicyExemptionDTO>> {
     const result = await this.exemptionRepository.findPendingByWorkspace(
-      workspaceId,
+      WorkspaceId.fromString(workspaceId),
       options,
     );
     return {
@@ -108,7 +126,10 @@ export class ExemptionService {
     workspaceId: string,
     filters?: ExemptionFilters,
   ): Promise<number> {
-    return this.exemptionRepository.countByWorkspace(workspaceId, filters);
+    return this.exemptionRepository.countByWorkspace(
+      WorkspaceId.fromString(workspaceId),
+      filters
+    );
   }
 
   async checkActiveExemption(
@@ -117,9 +138,9 @@ export class ExemptionService {
     policyId: string,
   ): Promise<PolicyExemptionDTO | null> {
     const exemption = await this.exemptionRepository.findActiveForUser(
-      workspaceId,
-      userId,
-      policyId,
+      WorkspaceId.fromString(workspaceId),
+      UserId.fromString(userId),
+      PolicyId.fromString(policyId)
     );
     return exemption ? PolicyExemption.toDTO(exemption) : null;
   }
@@ -128,15 +149,22 @@ export class ExemptionService {
     exemptionId: string,
     workspaceId: string,
     approvedBy: string,
+    approvalNote?: string,
   ): Promise<PolicyExemptionDTO> {
     const exemption = await this._getExemptionEntity(exemptionId, workspaceId);
-
+    const approverUserId = UserId.fromString(approvedBy);
     // Cannot approve your own exemption request
-    if (exemption.requestedBy === approvedBy) {
+    if (exemption.requestedBy.equals(approverUserId)) {
       throw new UnauthorizedExemptionApprovalError(approvedBy);
     }
 
-    exemption.approve(approvedBy);
+    if (exemption.isExpired()) {
+      exemption.markExpired();
+      await this.exemptionRepository.save(exemption);
+      throw new ExemptionExpiredError(exemptionId);
+    }
+
+    exemption.approve(approvedBy, approvalNote);
     await this.exemptionRepository.save(exemption);
     return PolicyExemption.toDTO(exemption);
   }
@@ -145,7 +173,7 @@ export class ExemptionService {
     exemptionId: string,
     workspaceId: string,
     rejectedBy: string,
-    reason?: string,
+    reason: string,
   ): Promise<PolicyExemptionDTO> {
     const exemption = await this._getExemptionEntity(exemptionId, workspaceId);
     exemption.reject(rejectedBy, reason);

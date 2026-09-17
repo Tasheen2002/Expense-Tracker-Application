@@ -4,13 +4,15 @@ import {
   ExpensePolicyDTO,
   PolicyConfiguration,
 } from "../../domain/entities/expense-policy.entity";
-import { PolicyId } from "../../domain/value-objects/policy-id";
+import { PolicyId } from "../../domain/value-objects";
 import { PolicyType } from "../../domain/enums/policy-type.enum";
 import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
 import {
   PolicyNotFoundError,
   PolicyNameAlreadyExistsError,
+  PolicyInUseError,
 } from "../../domain/errors/policy-controls.errors";
+import { WorkspaceId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -31,7 +33,7 @@ export class PolicyService {
   }): Promise<ExpensePolicyDTO> {
     // Check if policy with same name exists in workspace
     const existingPolicy = await this.policyRepository.findByNameInWorkspace(
-      params.workspaceId,
+      WorkspaceId.fromString(params.workspaceId),
       params.name,
     );
     if (existingPolicy) {
@@ -67,7 +69,7 @@ export class PolicyService {
     if (params.name && params.name !== policy.name) {
       // Check if new name already exists
       const existingPolicy = await this.policyRepository.findByNameInWorkspace(
-        params.workspaceId,
+        WorkspaceId.fromString(params.workspaceId),
         params.name,
       );
       if (
@@ -124,15 +126,24 @@ export class PolicyService {
 
   async listPolicies(
     workspaceId: string,
-    activeOnly = false,
+    filtersOrActiveOnly: boolean | { activeOnly?: boolean; policyType?: PolicyType } = false,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpensePolicyDTO>> {
+    const filters = typeof filtersOrActiveOnly === 'boolean'
+      ? { activeOnly: filtersOrActiveOnly }
+      : filtersOrActiveOnly;
+
+    const wsId = WorkspaceId.fromString(workspaceId);
     let result: PaginatedResult<ExpensePolicy>;
-    if (activeOnly) {
-      result = await this.policyRepository.findActiveByWorkspace(workspaceId, options);
+
+    if (filters?.policyType && !filters?.activeOnly) {
+      result = await this.policyRepository.findByType(wsId, filters.policyType, options);
+    } else if (filters?.activeOnly && !filters?.policyType) {
+      result = await this.policyRepository.findActiveByWorkspace(wsId, options);
     } else {
-      result = await this.policyRepository.findByWorkspace(workspaceId, options);
+      result = await this.policyRepository.findByWorkspace(wsId, options, filters);
     }
+
     return {
       ...result,
       items: result.items.map((p) => ExpensePolicy.toDTO(p)),
@@ -144,7 +155,11 @@ export class PolicyService {
     type: PolicyType,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpensePolicyDTO>> {
-    const result = await this.policyRepository.findByType(workspaceId, type, options);
+    const result = await this.policyRepository.findByType(
+      WorkspaceId.fromString(workspaceId),
+      type,
+      options
+    );
     return {
       ...result,
       items: result.items.map((p) => ExpensePolicy.toDTO(p)),
@@ -173,6 +188,12 @@ export class PolicyService {
 
   async deletePolicy(policyId: string, workspaceId: string): Promise<void> {
     const policy = await this._getPolicyEntity(policyId, workspaceId);
+    const inUse = await this.policyRepository.hasActiveReferences(policy.id);
+    if (inUse) {
+      throw new PolicyInUseError(
+        `Cannot delete policy "${policy.name}" (${policyId}) because it is referenced by existing violations or exemptions. Deactivate it instead.`
+      );
+    }
     await this.policyRepository.delete(policy.id);
   }
 }
