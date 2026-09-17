@@ -8,6 +8,7 @@ export interface UpdateWorkspaceCommand extends ICommand {
   readonly actorId: string;
   readonly workspaceId: string;
   readonly name?: string;
+  readonly isActive?: boolean;
 }
 
 export class UpdateWorkspaceHandler implements ICommandHandler<UpdateWorkspaceCommand, CommandResult<WorkspaceDTO>> {
@@ -22,6 +23,7 @@ export class UpdateWorkspaceHandler implements ICommandHandler<UpdateWorkspaceCo
       async () => {
         return this.service.updateWorkspaceDTO(command.workspaceId, {
           ...(command.name !== undefined ? { name: command.name } : {}),
+          ...(command.isActive !== undefined ? { isActive: command.isActive } : {}),
         });
       }
     );
