@@ -25,3 +25,16 @@ export const OVERRIDE_REASON_MAX_LENGTH = 500;
 export const MAX_BLACKLISTED_MERCHANTS = 100;
 export const MAX_RESTRICTED_CATEGORIES = 50;
 export const MAX_ALLOWED_CATEGORIES = 50;
+
+// Outbox Aggregate Types
+export const AGGREGATE_TYPE_EXPENSE_POLICY = 'ExpensePolicy';
+export const AGGREGATE_TYPE_POLICY_VIOLATION = 'PolicyViolation';
+export const AGGREGATE_TYPE_POLICY_EXEMPTION = 'PolicyExemption';
+
+// Pagination constants
+export const DEFAULT_PAGE_LIMIT = 50;
+export const MAX_PAGE_LIMIT = 100;
+export const MIN_PAGE_OFFSET = 0;
+
+// System Actor (RFC 4122 v4 UUID)
+export const SYSTEM_ACTOR_ID = '00000000-0000-4000-a000-000000000000';
