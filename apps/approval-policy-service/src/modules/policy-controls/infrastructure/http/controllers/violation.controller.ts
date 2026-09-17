@@ -1,6 +1,7 @@
-﻿import { FastifyReply } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
+import { getAuthenticatedActorId, extractAuthToken } from './controller.helper';
 import {
   GetViolationHandler,
   ListViolationsHandler,
@@ -9,6 +10,7 @@ import {
   ResolveViolationHandler,
   ExemptViolationHandler,
   OverrideViolationHandler,
+  RecordViolationHandler,
 } from '../../../application';
 import {
   AcknowledgeViolationBody,
@@ -17,6 +19,7 @@ import {
   ExemptViolationBody,
   ListViolationsQuery,
   GetViolationStatsQuery,
+  RecordViolationBody,
 } from '../validation/violation.schema';
 
 export class ViolationController {
@@ -27,7 +30,8 @@ export class ViolationController {
     private readonly acknowledgeViolationHandler: AcknowledgeViolationHandler,
     private readonly resolveViolationHandler: ResolveViolationHandler,
     private readonly exemptViolationHandler: ExemptViolationHandler,
-    private readonly overrideViolationHandler: OverrideViolationHandler
+    private readonly overrideViolationHandler: OverrideViolationHandler,
+    private readonly recordViolationHandler?: RecordViolationHandler
   ) {}
 
   async getViolation(
@@ -38,8 +42,15 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
-      const violation = await this.getViolationHandler.handle({ violationId, workspaceId });
+      const violation = await this.getViolationHandler.handle({
+        actorId,
+        violationId,
+        workspaceId,
+        authToken,
+      });
 
       return ResponseHelper.ok(reply, 'Violation retrieved successfully', violation);
     } catch (error: unknown) {
@@ -57,8 +68,11 @@ export class ViolationController {
     try {
       const { workspaceId } = request.params;
       const { status, userId, expenseId, policyId, limit, offset } = request.query;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.listViolationsHandler.handle({
+        actorId,
         workspaceId,
         status,
         userId,
@@ -68,6 +82,7 @@ export class ViolationController {
           limit,
           offset,
         },
+        authToken,
       });
 
       return ResponseHelper.ok(reply, 'Violations retrieved successfully', {
@@ -92,11 +107,15 @@ export class ViolationController {
     try {
       const { workspaceId } = request.params;
       const { startDate, endDate } = request.query;
+      const actorId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const stats = await this.getViolationStatsHandler.handle({
+        actorId,
         workspaceId,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
+        authToken,
       });
 
       return ResponseHelper.ok(reply, 'Violation stats retrieved successfully', {
@@ -119,12 +138,17 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user!.userId;
+      const userId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
+      const note = request.body?.note;
 
       const result = await this.acknowledgeViolationHandler.handle({
         violationId,
         workspaceId,
+        actorId: userId,
         acknowledgedBy: userId,
+        note,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -147,13 +171,16 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user!.userId;
+      const userId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.resolveViolationHandler.handle({
         violationId,
         workspaceId,
+        actorId: userId,
         resolvedBy: userId,
         resolutionNote: request.body.resolutionNote,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -176,12 +203,16 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user!.userId;
+      const userId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.exemptViolationHandler.handle({
         violationId,
         workspaceId,
+        actorId: userId,
         exemptedBy: userId,
+        exemptionId: request.body.exemptionId,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -204,13 +235,16 @@ export class ViolationController {
   ) {
     try {
       const { workspaceId, violationId } = request.params;
-      const userId = request.user!.userId;
+      const userId = getAuthenticatedActorId(request);
+      const authToken = extractAuthToken(request);
 
       const result = await this.overrideViolationHandler.handle({
         violationId,
         workspaceId,
+        actorId: userId,
         overriddenBy: userId,
         overrideReason: request.body.overrideReason,
+        authToken,
       });
 
       return ResponseHelper.fromCommand(
@@ -218,6 +252,50 @@ export class ViolationController {
         result,
         'Violation overridden successfully',
         result.data
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async recordViolation(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string };
+      Body: RecordViolationBody;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      if (!this.recordViolationHandler) {
+        throw new Error('RecordViolationHandler is not configured');
+      }
+
+      const { workspaceId } = request.params;
+      const body = request.body;
+      const actorId = (request as any).user ? getAuthenticatedActorId(request) : undefined;
+      const authToken = extractAuthToken(request);
+      const servicePrincipal = request.servicePrincipal;
+
+      const result = await this.recordViolationHandler.handle({
+        workspaceId,
+        actorId,
+        servicePrincipal,
+        authToken,
+        policyId: body.policyId,
+        expenseId: body.expenseId,
+        userId: body.userId,
+        severity: body.severity,
+        violationDetails: body.violationDetails,
+        expenseAmount: body.expenseAmount,
+        currency: body.currency,
+      });
+
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Violation recorded successfully',
+        result.data,
+        201
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
