@@ -2,11 +2,12 @@ import { FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
 import { CommandResult } from '@core/application/command-result';
 import { QueryResult } from '@core/application/query-result';
+import { resolveHttpStatus } from './errors/error-http-mapper';
 
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -104,11 +105,11 @@ export class ResponseHelper {
    * @param data - Optional data to send (overrides result.data)
    * @param successStatusCode - HTTP status code on success (default 200)
    */
-  static fromCommand<T>(
+  static fromCommand<T, R = unknown>(
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: R,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
@@ -136,11 +137,11 @@ export class ResponseHelper {
    * @param successMessage - Message to send on success
    * @param data - Optional data to send (overrides result.data)
    */
-  static fromQuery<T>(
+  static fromQuery<T, R = unknown>(
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: R
   ): FastifyReply {
     if (!result.success) {
       const statusCode = result.statusCode ?? 404;
@@ -175,15 +176,18 @@ export class ResponseHelper {
       });
     }
 
-    // Extract statusCode from domain errors
-    const statusCode =
-      error && typeof error === 'object' && 'statusCode' in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
+    // Extract statusCode from domain errors via centralized mapper
+    const statusCode = resolveHttpStatus(error);
+    const isServerError = statusCode >= 500;
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
-    // Extract error message
-    const message =
+    // Extract error message - sanitize unexpected 500 errors in non-development
+    const rawMessage =
       error instanceof Error ? error.message : 'Internal server error';
+    const message =
+      isServerError && !isDevelopment
+        ? 'An unexpected error occurred'
+        : rawMessage;
 
     // Extract error code/name for response
     const errorCode =
