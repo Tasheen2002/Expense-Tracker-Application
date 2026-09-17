@@ -61,21 +61,31 @@ describe('Policy Controls Module - Endpoint Tests', () => {
 
   const testTimestamp = Date.now();
   const testEmail = `policy-test-${testTimestamp}@example.com`;
-  const testPassword = 'SecurePassword123!';
-  const testWorkspaceName = `Policy Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
-    app = await createServer();
-
     testUserId = '123e4567-e89b-12d3-a456-426614174001';
     testWorkspaceId = '123e4567-e89b-12d3-a456-426614174000';
     authToken = 'mock-auth-token';
 
+    const mockAuthService = {
+      authorize: vi.fn().mockImplementation(async (input: any) => ({
+        userId: input.userId,
+        workspaceId: input.workspaceId,
+        role: 'ADMIN',
+      })),
+    };
+
+    app = await createServer({
+      compositionRootOptions: {
+        workspaceAuthorizationService: mockAuthService as any,
+      },
+    });
+
     app.addHook('onRequest', async (request: any) => {
       if (request.headers.authorization) {
-        request.headers['x-user-id'] = testUserId;
-        request.headers['x-workspace-id'] = testWorkspaceId;
-        request.headers['x-user-email'] = testEmail;
+        request.headers['x-user-id'] = request.headers['x-user-id'] || testUserId;
+        request.headers['x-workspace-id'] = request.headers['x-workspace-id'] || testWorkspaceId;
+        request.headers['x-user-email'] = request.headers['x-user-email'] || testEmail;
       }
     });
 
@@ -136,7 +146,7 @@ describe('Policy Controls Module - Endpoint Tests', () => {
             policyType: 'CATEGORY_RESTRICTION',
             severity: 'MEDIUM',
             configuration: {
-              restrictedCategoryIds: ['00000000-0000-0000-0000-000000000001'],
+              restrictedCategoryIds: ['123e4567-e89b-12d3-a456-426614174003'],
             },
             priority: 50,
           },
@@ -218,7 +228,6 @@ describe('Policy Controls Module - Endpoint Tests', () => {
           },
         });
 
-        const body = JSON.parse(response.body);
         console.log('Create Duplicate Policy:', response.statusCode);
 
         expect(response.statusCode).toBe(409);
@@ -525,7 +534,6 @@ describe('Policy Controls Module - Endpoint Tests', () => {
           },
         });
 
-        const body = JSON.parse(response.body);
         console.log('Request Exemption Invalid Dates:', response.statusCode);
 
         expect(response.statusCode).toBe(400);
@@ -701,25 +709,27 @@ describe('Policy Controls Module - Endpoint Tests', () => {
 
     describe('POST /api/v1/:workspaceId/exemptions/:exemptionId/approve', () => {
       it('✅ should approve an exemption', async () => {
+        const approverId = '123e4567-e89b-12d3-a456-426614174099';
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/exemptions/${testExemptionId}/approve`,
           headers: {
             authorization: `Bearer ${authToken}`,
+            'x-user-id': approverId,
           },
-          payload: {}, // Send empty object to satisfy body validation
+          payload: {
+            approvalNote: 'Approved by finance administrator',
+          },
         });
 
         const body = JSON.parse(response.body);
         console.log('Approve Exemption:', response.statusCode, body.message);
 
-        // Note: May fail if user cannot approve their own exemption
-        if (response.statusCode === 200) {
-          expect(body.success).toBe(true);
-        } else {
-          // Self-approval may be forbidden
-          expect(response.statusCode).toBe(403);
-        }
+        expect(response.statusCode).toBe(200);
+        expect(body.success).toBe(true);
+        expect(body.data.status).toBe('APPROVED');
+        expect(body.data.approvedBy).toBe(approverId);
+        expect(body.data.approvalNote).toBe('Approved by finance administrator');
       });
     });
   });
@@ -791,6 +801,32 @@ describe('Policy Controls Module - Endpoint Tests', () => {
         expect(body.success).toBe(true);
         expect(body.data).toHaveProperty('total');
         expect(body.data).toHaveProperty('pending');
+      });
+
+      it('❌ should fail when query params contain invalid date format (e.g. abc)', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/violations/stats?startDate=abc`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        console.log('Get Stats Invalid Date:', response.statusCode);
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('❌ should fail when endDate is earlier than startDate', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/violations/stats?startDate=2026-06-01&endDate=2026-05-01`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        console.log('Get Stats Invalid Date Range:', response.statusCode);
+        expect(response.statusCode).toBe(400);
       });
 
       it('❌ should fail without auth token', async () => {
