@@ -1,4 +1,5 @@
 import { PolicyService } from '../services/policy.service';
+import { OperationService } from '@shared/services/operation.service';
 import {
   ExpensePolicyDTO,
   PolicyConfiguration,
@@ -7,7 +8,8 @@ import { PolicyType } from '../../domain/enums/policy-type.enum';
 import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
 import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
 
-export interface CreatePolicyInput extends ICommand {
+export interface CreatePolicyCommand extends ICommand {
+  readonly actorId: string;
   readonly workspaceId: string;
   readonly name: string;
   readonly description?: string;
@@ -15,16 +17,41 @@ export interface CreatePolicyInput extends ICommand {
   readonly severity: ViolationSeverity;
   readonly configuration: PolicyConfiguration;
   readonly priority?: number;
-  readonly createdBy: string;
+  readonly createdBy?: string;
+  readonly authToken?: string;
 }
 
-export class CreatePolicyHandler implements ICommandHandler<CreatePolicyInput, CommandResult<ExpensePolicyDTO>> {
-  constructor(private readonly policyService: PolicyService) {}
+export type CreatePolicyInput = CreatePolicyCommand;
+
+export class CreatePolicyHandler implements ICommandHandler<CreatePolicyCommand, CommandResult<ExpensePolicyDTO>> {
+  constructor(
+    private readonly policyService: PolicyService,
+    private readonly operations: OperationService
+  ) {}
 
   async handle(
-    input: CreatePolicyInput
+    command: CreatePolicyCommand
   ): Promise<CommandResult<ExpensePolicyDTO>> {
-    const dto = await this.policyService.createPolicy(input);
+    const actorId = command.actorId ?? command.createdBy!;
+    const dto = await this.operations.execute(
+      {
+        actorId,
+        workspaceId: command.workspaceId,
+        role: 'ADMIN',
+        authToken: command.authToken,
+      },
+      async () =>
+        this.policyService.createPolicy({
+          workspaceId: command.workspaceId,
+          name: command.name,
+          description: command.description,
+          policyType: command.policyType,
+          severity: command.severity,
+          configuration: command.configuration,
+          priority: command.priority,
+          createdBy: actorId,
+        })
+    );
     return CommandResult.success(dto);
   }
 }

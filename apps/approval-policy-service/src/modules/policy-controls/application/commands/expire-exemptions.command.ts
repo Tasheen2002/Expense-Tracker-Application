@@ -1,28 +1,54 @@
 import { IExemptionRepository } from '../../domain/repositories/exemption.repository';
-import { ExemptionStatus } from '../../domain/enums/exemption-status.enum';
+import { OperationService } from '@shared/services/operation.service';
 import { ICommand, ICommandHandler, CommandResult } from '@core/application/cqrs';
+import { WorkspaceId } from '@core/domain/value-objects';
 
-export interface ExpireExemptionsInput extends ICommand {
+import { UnauthorizedWorkspaceAccessError } from '@shared/errors/workspace-authorization.error';
+
+export interface ExpireExemptionsCommand extends ICommand {
   readonly workspaceId: string;
+  readonly actorId?: string;
+  readonly servicePrincipal?: string;
+  readonly authToken?: string;
 }
 
-export class ExpireExemptionsHandler implements ICommandHandler<ExpireExemptionsInput, CommandResult<void>> {
-  constructor(private readonly exemptionRepository: IExemptionRepository) {}
+export type ExpireExemptionsInput = ExpireExemptionsCommand;
 
-  async handle(input: ExpireExemptionsInput): Promise<CommandResult<void>> {
-    // Get all approved exemptions and check which ones have expired
-    const result = await this.exemptionRepository.findByWorkspace(
-      input.workspaceId,
-      {
-        status: ExemptionStatus.APPROVED,
-      }
-    );
+export class ExpireExemptionsHandler implements ICommandHandler<ExpireExemptionsCommand, CommandResult<void>> {
+  constructor(
+    private readonly exemptionRepository: IExemptionRepository,
+    private readonly operations: OperationService
+  ) {}
 
-    for (const exemption of result.items) {
-      if (exemption.isExpired()) {
-        exemption.markExpired();
-        await this.exemptionRepository.save(exemption);
-      }
+  async handle(command: ExpireExemptionsCommand): Promise<CommandResult<void>> {
+    if (!command.actorId && !command.servicePrincipal) {
+      throw new UnauthorizedWorkspaceAccessError(
+        'ExpireExemptions requires an authenticated actorId (ADMIN) or verified servicePrincipal'
+      );
+    }
+
+    if (command.servicePrincipal) {
+      await this.operations.authorize({
+        servicePrincipal: command.servicePrincipal,
+        workspaceId: command.workspaceId,
+        authToken: command.authToken,
+      });
+    } else if (command.actorId) {
+      await this.operations.authorize({
+        actorId: command.actorId,
+        workspaceId: command.workspaceId,
+        role: 'ADMIN',
+        authToken: command.authToken,
+      });
+    }
+
+    const wsId = WorkspaceId.fromString(command.workspaceId);
+    const now = new Date();
+    const batchSize = 100;
+
+    while (true) {
+      const count = await this.exemptionRepository.expireExpiredBatch(wsId, now, batchSize);
+      if (count < batchSize) break;
     }
 
     return CommandResult.success();
