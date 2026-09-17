@@ -6,7 +6,11 @@ import {
   FastifyRequest,
 } from 'fastify';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+} from '../shared/infrastructure/persistence/prisma.client';
+import { resolveHttpStatus } from '../shared/errors/error-http-mapper';
 
 abstract class DomainError extends Error {
   abstract readonly statusCode: number;
@@ -21,6 +25,15 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         method: request.method,
       });
 
+      if (error.validation) {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: 'VALIDATION_ERROR',
+          message: error.message,
+        });
+      }
+
       if (error.code === 'FST_ERR_VALIDATION') {
         return reply.status(400).send({
           success: false,
@@ -33,7 +46,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        error.statusCode < 500
       ) {
         return reply.status(error.statusCode).send({
           success: false,
@@ -56,7 +69,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           return reply.status(409).send({
             success: false,
@@ -86,7 +99,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      if (error instanceof Prisma.PrismaClientValidationError) {
+      if (error instanceof PrismaClientValidationError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
@@ -95,16 +108,24 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (error.statusCode && error.statusCode < 500) {
-        return reply.status(error.statusCode).send({
+
+
+      const resolvedStatus = resolveHttpStatus(error);
+      if (resolvedStatus < 500) {
+        const errWithCode = error as Error & { code?: string };
+        return reply.status(resolvedStatus).send({
           success: false,
-          statusCode: error.statusCode,
+          statusCode: resolvedStatus,
           error: error.name,
+          code: errWithCode.code,
           message: error.message,
         });
       }
 
-      const statusCode = error.statusCode || 500;
+      const statusCode =
+        typeof error.statusCode === 'number' && error.statusCode >= 500 && error.statusCode < 600
+          ? error.statusCode
+          : 500;  // Strict range check: only pass through valid 5xx codes
       const isDevelopment = process.env.NODE_ENV === 'development';
 
       return reply.status(statusCode).send({
