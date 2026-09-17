@@ -26,6 +26,11 @@ export interface WorkspaceManagementServiceOptions {
   sortOrder?: 'asc' | 'desc';
 }
 
+export interface UpdateWorkspaceData {
+  name?: string;
+  isActive?: boolean;
+}
+
 export class WorkspaceManagementService {
   constructor(
     private readonly workspaceRepository: IWorkspaceRepository,
@@ -45,7 +50,7 @@ export class WorkspaceManagementService {
 
   async updateWorkspaceDTO(
     id: string,
-    updateData: Partial<CreateWorkspaceData>
+    updateData: UpdateWorkspaceData
   ): Promise<WorkspaceDTO> {
     const workspace = await this.updateWorkspace(id, updateData);
     return Workspace.toDTO(workspace);
@@ -145,7 +150,7 @@ export class WorkspaceManagementService {
 
   async updateWorkspace(
     id: string,
-    updateData: Partial<CreateWorkspaceData>
+    updateData: UpdateWorkspaceData
   ): Promise<Workspace> {
     const workspaceId = WorkspaceId.fromString(id);
     const workspace = await this.workspaceRepository.findById(workspaceId);
@@ -163,6 +168,15 @@ export class WorkspaceManagementService {
         throw new WorkspaceAlreadyExistsError(newSlug);
       }
       workspace.updateName(updateData.name);
+    }
+
+    // Update active status if provided
+    if (updateData.isActive !== undefined) {
+      if (updateData.isActive) {
+        workspace.activate();
+      } else {
+        workspace.deactivate();
+      }
     }
 
     await this.workspaceRepository.save(workspace);

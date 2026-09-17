@@ -60,8 +60,12 @@ export class OperationService {
   }
 
   async authorizeEmailLookup(actorId: string, email: string): Promise<void> {
-    await this.authorize({ actorId });
+    if (!actorId) throw new InsufficientPermissionsError('perform this operation');
     const user = await this.users.findById(UserId.fromString(actorId));
-    if (user?.email.getValue() !== email.trim().toLowerCase()) throw new InsufficientPermissionsError('view these invitations');
+    if (!user) throw new UserNotFoundError(actorId);
+    if (!user.isActive) throw new UserInactiveError();
+    if (user.email.getValue() !== email.trim().toLowerCase()) {
+      throw new InsufficientPermissionsError('view these invitations');
+    }
   }
 }
