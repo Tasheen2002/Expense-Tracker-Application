@@ -1,10 +1,11 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from './prisma.client';
+import type { Prisma as PrismaNamespace } from '@prisma/client';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { IUnitOfWork, OperationContext } from '../../../modules/identity-workspace/application/ports/unit-of-work';
 
 interface TransactionState {
-  client: Prisma.TransactionClient;
+  client: PrismaNamespace.TransactionClient;
   metadata: OperationContext;
   aggregates: Set<AggregateRoot>;
   recordedEvents: Set<string>;
@@ -13,7 +14,7 @@ interface TransactionState {
 export class IdentityPersistenceContext implements IUnitOfWork {
   private readonly storage = new AsyncLocalStorage<TransactionState>();
   constructor(private readonly root: PrismaClient) {}
-  get client(): Prisma.TransactionClient { return this.storage.getStore()?.client ?? this.root; }
+  get client(): PrismaNamespace.TransactionClient { return this.storage.getStore()?.client ?? this.root; }
 
   async execute<T>(work: () => Promise<T>, metadata: OperationContext = {}): Promise<T> {
     if (this.storage.getStore()) return work();
@@ -42,7 +43,7 @@ export class IdentityPersistenceContext implements IUnitOfWork {
       await state.client.outboxEvent.create({ data: {
         id: event.eventId, aggregateId: event.aggregateId, aggregateType: event.aggregateType,
         eventType: event.eventType, createdAt: event.occurredAt, status: 'PENDING',
-        payload: { ...event.getPayload(), ...state.metadata, eventVersion: 1 } as Prisma.InputJsonObject,
+        payload: { ...event.getPayload(), ...state.metadata, eventVersion: 1 } as PrismaNamespace.InputJsonObject,
       } });
       state.recordedEvents.add(event.eventId);
     }
