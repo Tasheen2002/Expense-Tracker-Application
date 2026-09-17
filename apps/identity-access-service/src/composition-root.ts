@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@shared/infrastructure/persistence/prisma.client';
 import { BcryptPasswordHasher } from '@shared/infrastructure/bcrypt-password-hasher';
 import { IdentityPersistenceContext } from '@shared/infrastructure/persistence/identity-persistence.context';
 

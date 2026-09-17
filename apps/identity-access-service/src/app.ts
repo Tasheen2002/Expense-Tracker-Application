@@ -5,13 +5,14 @@ import securityPlugin from './plugins/security';
 import errorPlugin from './plugins/error';
 import rateLimit from '@fastify/rate-limit';
 import { correlationPlugin, internalAuthPlugin } from '@expense-tracker/correlation';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './shared/infrastructure/persistence/prisma.client';
 import { createCompositionRoot, CompositionRoot } from './composition-root';
 import { registerIdentityWorkspaceRoutes } from './modules/identity-workspace/infrastructure/http/routes/index';
 
 export interface IdentityAppOptions {
   enableInternalAuth?: boolean;
   logger?: boolean;
+  prisma?: PrismaClient;
   compositionRootFactory?: (prisma: PrismaClient) => CompositionRoot;
 }
 
@@ -21,7 +22,7 @@ export interface IdentityAppOptions {
 export async function buildIdentityApp(options?: IdentityAppOptions): Promise<FastifyInstance> {
   const isTest = process.env.NODE_ENV === 'test';
   const fastify = Fastify({
-    logger: options?.logger !== undefined ? options.logger : (isTest ? false : true),
+    logger: options?.logger !== undefined ? options.logger : (isTest ? false : { level: 'info' }),
   });
 
   // 1. Correlation ID plugin
@@ -38,7 +39,7 @@ export async function buildIdentityApp(options?: IdentityAppOptions): Promise<Fa
     max: 100,
     timeWindow: '1 minute',
   });
-  await fastify.register(dbPlugin);
+  await fastify.register(dbPlugin, { prisma: options?.prisma });
 
   // 4. Initialize typed Composition Root using the injected or default factory
   const rootFactory = options?.compositionRootFactory ?? createCompositionRoot;
@@ -56,10 +57,10 @@ export async function buildIdentityApp(options?: IdentityAppOptions): Promise<Fa
     root.controllers
   );
 
-  // 7. Deep Health Check (Postgres ping)
+  // 7. Deep Health Check (Postgres ping and service schema readiness)
   fastify.get('/health', async (_request, reply) => {
     try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
+      await fastify.prisma.$queryRaw`SELECT 1 FROM identity_workspace.user_account LIMIT 1`;
       return {
         status: 'ok',
         service: 'identity-access-service',
