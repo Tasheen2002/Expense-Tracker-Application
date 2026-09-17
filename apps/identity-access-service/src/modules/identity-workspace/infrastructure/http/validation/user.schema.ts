@@ -14,6 +14,7 @@ import { toJsonSchema } from './validator';
 export const registerUserSchema = z.object({
   email: z
     .string()
+    .trim()
     .max(USER_EMAIL_MAX_LENGTH, `Email cannot exceed ${USER_EMAIL_MAX_LENGTH} characters`)
     .regex(EMAIL_REGEX, 'Invalid email format'),
   password: z
@@ -22,6 +23,7 @@ export const registerUserSchema = z.object({
     .max(USER_PASSWORD_MAX_LENGTH, `Password cannot exceed ${USER_PASSWORD_MAX_LENGTH} characters`),
   fullName: z
     .string()
+    .trim()
     .max(USER_FULLNAME_MAX_LENGTH, `Full name cannot exceed ${USER_FULLNAME_MAX_LENGTH} characters`)
     .optional(),
 });
@@ -32,7 +34,7 @@ export type RegisterUserInput = z.infer<typeof registerUserSchema>;
  * Login User Schema
  */
 export const loginUserSchema = z.object({
-  email: z.string().regex(EMAIL_REGEX, 'Invalid email format'),
+  email: z.string().trim().regex(EMAIL_REGEX, 'Invalid email format'),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -41,10 +43,19 @@ export type LoginUserInput = z.infer<typeof loginUserSchema>;
 /**
  * Update User Schema
  */
-export const updateUserSchema = z.object({
-  fullName: z.string().max(USER_FULLNAME_MAX_LENGTH).optional().nullable(),
-  isActive: z.boolean().optional(),
-});
+export const updateUserSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .max(USER_FULLNAME_MAX_LENGTH, `Full name cannot exceed ${USER_FULLNAME_MAX_LENGTH} characters`)
+      .optional()
+      .nullable(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((data) => Object.values(data).some((val) => val !== undefined), {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 

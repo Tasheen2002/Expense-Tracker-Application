@@ -45,6 +45,7 @@ export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export const createWorkspaceSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(WORKSPACE_NAME_MIN_LENGTH, 'Workspace name is required')
     .max(
       WORKSPACE_NAME_MAX_LENGTH,
@@ -57,14 +58,22 @@ export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 /**
  * Update Workspace Schema
  */
-export const updateWorkspaceSchema = z.object({
-  name: z
-    .string()
-    .min(WORKSPACE_NAME_MIN_LENGTH)
-    .max(WORKSPACE_NAME_MAX_LENGTH)
-    .optional(),
-  isActive: z.boolean().optional(),
-});
+export const updateWorkspaceSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(WORKSPACE_NAME_MIN_LENGTH, 'Workspace name is required')
+      .max(
+        WORKSPACE_NAME_MAX_LENGTH,
+        `Workspace name cannot exceed ${WORKSPACE_NAME_MAX_LENGTH} characters`
+      )
+      .optional(),
+    isActive: z.boolean().optional(),
+  })
+  .refine((data) => Object.values(data).some((val) => val !== undefined), {
+    message: 'At least one field must be provided for update',
+  });
 
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 
@@ -91,7 +100,7 @@ export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
  * Invite Member Schema
  */
 export const inviteMemberSchema = z.object({
-  email: z.string().email('Invalid email format'),
+  email: z.string().trim().email('Invalid email format'),
   role: z.enum(['admin', 'member']), // Cannot invite as owner
   expiryHours: z.number().int().min(1).max(720).optional(),
 });
