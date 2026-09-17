@@ -1,5 +1,6 @@
 import { PolicyExemption } from '../entities/policy-exemption.entity';
-import { ExemptionId } from '../value-objects/exemption-id';
+import { ExemptionId, PolicyId } from '../value-objects';
+import { WorkspaceId, UserId } from '@core/domain/value-objects';
 import { ExemptionStatus } from '../enums/exemption-status.enum';
 import {
   PaginatedResult,
@@ -8,8 +9,8 @@ import {
 
 export interface ExemptionFilters {
   status?: ExemptionStatus;
-  userId?: string;
-  policyId?: string;
+  userId?: UserId | string;
+  policyId?: PolicyId | string;
   startDate?: Date;
   endDate?: Date;
 }
@@ -18,26 +19,36 @@ export interface IExemptionRepository {
   save(exemption: PolicyExemption): Promise<void>;
   findById(id: ExemptionId): Promise<PolicyExemption | null>;
   findByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     filters?: ExemptionFilters,
     options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>>;
   findByUser(
-    workspaceId: string,
-    userId: string,
+    workspaceId: WorkspaceId,
+    userId: UserId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>>;
   findActiveForUser(
-    workspaceId: string,
-    userId: string,
-    policyId: string
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    policyId: PolicyId
   ): Promise<PolicyExemption | null>;
+  findActiveForUserPolicies(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    policyIds: PolicyId[]
+  ): Promise<Map<string, PolicyExemption>>;
   findPendingByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<PolicyExemption>>;
+  expireExpiredBatch(
+    workspaceId: WorkspaceId,
+    now: Date,
+    limit?: number
+  ): Promise<number>;
   countByWorkspace(
-    workspaceId: string,
+    workspaceId: WorkspaceId,
     filters?: ExemptionFilters
   ): Promise<number>;
   delete(id: ExemptionId): Promise<void>;
