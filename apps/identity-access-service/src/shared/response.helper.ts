@@ -181,9 +181,16 @@ export class ResponseHelper {
         ? (error as { statusCode: number }).statusCode
         : 500;
 
-    // Extract error message
-    const message =
+    const isServerError = statusCode >= 500;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    // Extract error message - sanitize unexpected 500 errors in non-development
+    const rawMessage =
       error instanceof Error ? error.message : 'Internal server error';
+    const message =
+      isServerError && !isDevelopment
+        ? 'An unexpected error occurred'
+        : rawMessage;
 
     // Extract error code/name for response
     const errorCode =
