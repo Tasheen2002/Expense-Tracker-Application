@@ -1,7 +1,7 @@
 import {
   WorkflowStatus as PrismaWorkflowStatus,
   ApprovalStatus as PrismaApprovalStatus,
-} from "@prisma/client";
+} from "../../../../shared/infrastructure/persistence/prisma.client";
 import { WorkflowStatus } from "../../domain/enums/workflow-status";
 import { ApprovalStatus } from "../../domain/enums/approval-status";
 
@@ -38,17 +38,33 @@ const prismaToApprovalStatus: Record<PrismaApprovalStatus, ApprovalStatus> = {
 };
 
 export function toDbWorkflowStatus(status: WorkflowStatus): PrismaWorkflowStatus {
-  return workflowStatusToPrisma[status];
+  const mapped = workflowStatusToPrisma[status];
+  if (!mapped) {
+    throw new Error(`Unknown domain WorkflowStatus: ${status}`);
+  }
+  return mapped;
 }
 
 export function fromDbWorkflowStatus(status: PrismaWorkflowStatus): WorkflowStatus {
-  return prismaToWorkflowStatus[status];
+  const mapped = prismaToWorkflowStatus[status];
+  if (!mapped) {
+    throw new Error(`Unknown Prisma WorkflowStatus: ${status}`);
+  }
+  return mapped;
 }
 
 export function toDbApprovalStatus(status: ApprovalStatus): PrismaApprovalStatus {
-  return approvalStatusToPrisma[status];
+  const mapped = approvalStatusToPrisma[status];
+  if (!mapped) {
+    throw new Error(`Unknown domain ApprovalStatus: ${status}`);
+  }
+  return mapped;
 }
 
 export function fromDbApprovalStatus(status: PrismaApprovalStatus): ApprovalStatus {
-  return prismaToApprovalStatus[status];
+  const mapped = prismaToApprovalStatus[status];
+  if (!mapped) {
+    throw new Error(`Unknown Prisma ApprovalStatus: ${status}`);
+  }
+  return mapped;
 }
