@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
 const localEnvPath = path.resolve(__dirname, '../.env');
@@ -24,90 +28,51 @@ if (fs.existsSync(rootEnvPath)) {
   }
 }
 
-import { buildApprovalApp } from './app';
-import { container } from './container';
 import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
+import { ExemptionExpirationScheduler } from './workers/exemption-expiration.scheduler';
+
+import { buildWebhookRoutes } from './shared/infrastructure/webhooks/webhook-routing';
 
 const PORT = parseInt(process.env.PORT || '3005', 10);
 
 const start = async () => {
   try {
+    if (process.env.NODE_ENV === 'production' && !process.env.INTERNAL_API_KEY) {
+      throw new Error('Fatal configuration error: INTERNAL_API_KEY is mandatory in production');
+    }
+
+    const { buildApprovalApp } = await import('./app');
     const fastify = await buildApprovalApp();
 
-    const outboxEventRepository = container.get<any>('outboxEventRepository');
     const AUDIT_SERVICE_URL = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
     const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3008';
+    const EXPENSE_SERVICE_URL = process.env.EXPENSE_SERVICE_URL || 'http://localhost:3003';
     
-    const webhookRoutes = {
-      ApprovalChainCreated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      ApprovalChainUpdated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      ApprovalChainDeleted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      ApprovalChainActivated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      ApprovalChainDeactivated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      WorkflowInitiated: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      WorkflowStepApproved: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      WorkflowStepRejected: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      WorkflowStepDelegated: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      WorkflowCancelled: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      WorkflowCompleted: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyCreated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyUpdated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyActivated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyDeactivated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyDeleted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyExemptionCreated: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyExemptionApproved: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyExemptionRejected: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyExemptionRevoked: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyViolationDetected: [
-        `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
-        `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
-      ],
-      PolicyViolationAcknowledged: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyViolationResolved: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyViolationExempted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      PolicyViolationOverridden: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-    };
+    const webhookRoutes = buildWebhookRoutes({
+      auditServiceUrl: AUDIT_SERVICE_URL,
+      notificationServiceUrl: NOTIFICATION_SERVICE_URL,
+      expenseServiceUrl: EXPENSE_SERVICE_URL,
+    });
 
     const publisher = new HttpWebhookPublisher(webhookRoutes);
-    const outboxWorker = new OutboxWorker(outboxEventRepository, publisher, {
+    const outboxWorker = new OutboxWorker(fastify.compositionRoot.outboxEventRepository, publisher, {
       pollIntervalMs: 5000,
     });
     outboxWorker.start();
 
+    const expirationScheduler = new ExemptionExpirationScheduler(
+      fastify.compositionRoot.policyControls.expireExemptionsHandler,
+      fastify.prisma,
+      { internalApiKey: process.env.INTERNAL_API_KEY }
+    );
+    expirationScheduler.start();
+
     // Graceful shutdown hooks
     fastify.addHook('onClose', async () => {
-      outboxWorker.stop();
+      await Promise.allSettled([
+        outboxWorker.stop(),
+        expirationScheduler.stop(),
+      ]);
     });
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
@@ -121,8 +86,9 @@ const start = async () => {
         process.exit(0);
       });
     }
-  } catch (err: any) {
-    console.error('[Approval-Policy-Service] Fatal startup error:', err.message || err);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('[Approval-Policy-Service] Fatal startup error:', errMsg);
     process.exit(1);
   }
 };
