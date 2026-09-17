@@ -1,5 +1,4 @@
-﻿import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@expense-tracker/middleware';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { CreateApprovalChainHandler } from '../../../application/commands/create-approval-chain.command';
 import { UpdateApprovalChainHandler } from '../../../application/commands/update-approval-chain.command';
 import { DeleteApprovalChainHandler } from '../../../application/commands/delete-approval-chain.command';
@@ -15,6 +14,7 @@ import {
   WorkspaceParams,
   ChainParams,
 } from '../validation/approval.schema';
+import { getAuthenticatedUser } from './controller.helper';
 
 export class ApprovalChainController {
   constructor(
@@ -28,179 +28,182 @@ export class ApprovalChainController {
   ) {}
 
   async getChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: ChainParams;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, chainId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, chainId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const chain = await this.getChainHandler.handle({
-        chainId,
-        workspaceId,
-      });
+    const chain = await this.getChainHandler.handle({
+      actorId: user.userId,
+      chainId,
+      workspaceId,
+      authToken,
+    });
 
-      return ResponseHelper.ok(reply, 'Approval chain retrieved successfully', chain);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.ok(reply, 'Approval chain retrieved successfully', chain);
   }
 
   async listChains(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkspaceParams;
       Querystring: ListChainsQuery;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
-      const { activeOnly, limit, offset } = request.query;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId } = request.params;
+    const { activeOnly, limit, offset } = request.query;
+    const authToken = request.headers.authorization;
 
-      const result = await this.listChainsHandler.handle({
-        workspaceId,
-        activeOnly: activeOnly ?? false,
-        limit: limit ?? 50,
-        offset: offset ?? 0,
-      });
+    const result = await this.listChainsHandler.handle({
+      actorId: user.userId,
+      workspaceId,
+      activeOnly: activeOnly ?? false,
+      limit: limit ?? 50,
+      offset: offset ?? 0,
+      authToken,
+    });
 
-      return ResponseHelper.ok(reply, 'Approval chains retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.ok(reply, 'Approval chains retrieved successfully', {
+      items: result.items,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      },
+    });
   }
 
   async createChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkspaceParams;
       Body: CreateChainBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.createChainHandler.handle({
-        workspaceId,
-        ...request.body,
-      });
+    const result = await this.createChainHandler.handle({
+      actorId: user.userId,
+      workspaceId,
+      authToken,
+      ...request.body,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Approval chain created successfully',
-        result.data ?? undefined,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Approval chain created successfully',
+      result.data ?? undefined,
+      201
+    );
   }
 
   async updateChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: ChainParams;
       Body: UpdateChainBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, chainId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, chainId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.updateChainHandler.handle({
-        chainId,
-        workspaceId,
-        ...request.body,
-      });
+    const result = await this.updateChainHandler.handle({
+      actorId: user.userId,
+      chainId,
+      workspaceId,
+      authToken,
+      ...request.body,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Approval chain updated successfully',
-        { chainId }
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Approval chain updated successfully',
+      { chainId }
+    );
   }
 
   async activateChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: ChainParams;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, chainId } = request.params;
-      const result = await this.activateChainHandler.handle({
-        chainId,
-        workspaceId,
-      });
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, chainId } = request.params;
+    const authToken = request.headers.authorization;
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Approval chain activated successfully'
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    const result = await this.activateChainHandler.handle({
+      actorId: user.userId,
+      chainId,
+      workspaceId,
+      authToken,
+    });
+
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Approval chain activated successfully'
+    );
   }
 
   async deactivateChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: ChainParams;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, chainId } = request.params;
-      const result = await this.deactivateChainHandler.handle({
-        chainId,
-        workspaceId,
-      });
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, chainId } = request.params;
+    const authToken = request.headers.authorization;
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Approval chain deactivated successfully'
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    const result = await this.deactivateChainHandler.handle({
+      actorId: user.userId,
+      chainId,
+      workspaceId,
+      authToken,
+    });
+
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Approval chain deactivated successfully'
+    );
   }
 
   async deleteChain(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: ChainParams;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, chainId } = request.params;
-      const result = await this.deleteChainHandler.handle({
-        chainId,
-        workspaceId,
-      });
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, chainId } = request.params;
+    const authToken = request.headers.authorization;
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Approval chain deleted successfully',
-        undefined,
-        204
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    const result = await this.deleteChainHandler.handle({
+      actorId: user.userId,
+      chainId,
+      workspaceId,
+      authToken,
+    });
+
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Approval chain deleted successfully',
+      undefined,
+      204
+    );
   }
 }

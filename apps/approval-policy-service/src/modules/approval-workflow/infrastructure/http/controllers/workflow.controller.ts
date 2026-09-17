@@ -1,5 +1,4 @@
-﻿import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@expense-tracker/middleware';
+import { FastifyRequest, FastifyReply } from 'fastify';
 import { InitiateWorkflowHandler } from '../../../application/commands/initiate-workflow.command';
 import { ApproveStepHandler } from '../../../application/commands/approve-step.command';
 import { RejectStepHandler } from '../../../application/commands/reject-step.command';
@@ -14,10 +13,12 @@ import {
   ApproveStepBody,
   RejectStepBody,
   DelegateStepBody,
+  CancelWorkflowBody,
   WorkspaceParams,
   WorkflowParams,
   PaginationQuery,
 } from '../validation/approval.schema';
+import { getAuthenticatedUser } from './controller.helper';
 
 export class WorkflowController {
   constructor(
@@ -32,231 +33,221 @@ export class WorkflowController {
   ) {}
 
   async getWorkflow(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkflowParams;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, expenseId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, expenseId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const workflow = await this.getWorkflowHandler.handle({
-        expenseId,
-        workspaceId,
-      });
+    const workflow = await this.getWorkflowHandler.handle({
+      actorId: user.userId,
+      expenseId,
+      workspaceId,
+      authToken,
+    });
 
-      return ResponseHelper.ok(reply, 'Workflow retrieved successfully', workflow);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.ok(reply, 'Workflow retrieved successfully', workflow);
   }
 
   async listPendingApprovals(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkspaceParams;
       Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      // SECURITY: Use authenticated user ID instead of query param
-      const approverId = request.user.userId;
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId } = request.params;
+    const { limit, offset } = request.query;
+    const authToken = request.headers.authorization;
 
-      const result = await this.listPendingApprovalsHandler.handle({
-        approverId,
-        workspaceId,
-        limit: limit ?? 50,
-        offset: offset ?? 0,
-      });
+    const result = await this.listPendingApprovalsHandler.handle({
+      actorId: user.userId,
+      approverId: user.userId,
+      workspaceId,
+      limit: limit ?? 50,
+      offset: offset ?? 0,
+      authToken,
+    });
 
-      return ResponseHelper.ok(reply, 'Pending approvals retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.ok(reply, 'Pending approvals retrieved successfully', {
+      items: result.items,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      },
+    });
   }
 
   async listUserWorkflows(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkspaceParams;
       Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const userId = request.user.userId;
-      const { workspaceId } = request.params;
-      const { limit, offset } = request.query;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId } = request.params;
+    const { limit, offset } = request.query;
+    const authToken = request.headers.authorization;
 
-      const result = await this.listUserWorkflowsHandler.handle({
-        userId,
-        workspaceId,
-        limit: limit ?? 50,
-        offset: offset ?? 0,
-      });
+    const result = await this.listUserWorkflowsHandler.handle({
+      actorId: user.userId,
+      userId: user.userId,
+      workspaceId,
+      limit: limit ?? 50,
+      offset: offset ?? 0,
+      authToken,
+    });
 
-      return ResponseHelper.ok(reply, 'User workflows retrieved successfully', {
-        items: result.items,
-        pagination: {
-          total: result.total,
-          limit: result.limit,
-          offset: result.offset,
-          hasMore: result.hasMore,
-        },
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.ok(reply, 'User workflows retrieved successfully', {
+      items: result.items,
+      pagination: {
+        total: result.total,
+        limit: result.limit,
+        offset: result.offset,
+        hasMore: result.hasMore,
+      },
+    });
   }
 
   async initiateWorkflow(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkspaceParams;
       Body: InitiateWorkflowBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const userId = request.user.userId;
-      const { workspaceId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.initiateWorkflowHandler.handle({
-        ...request.body,
-        userId,
-        workspaceId,
-      });
+    const result = await this.initiateWorkflowHandler.handle({
+      expenseId: request.body.expenseId,
+      userId: user.userId,
+      workspaceId,
+      authToken,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Workflow initiated successfully',
-        result.data ?? undefined,
-        201
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Workflow initiated successfully',
+      result.data ?? undefined,
+      201
+    );
   }
 
   async approveStep(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkflowParams;
       Body: ApproveStepBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      // SECURITY: Use authenticated user as approver instead of trusting body
-      const approverId = request.user.userId;
-      const { workspaceId, expenseId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, expenseId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.approveStepHandler.handle({
-        expenseId,
-        workspaceId,
-        approverId,
-        comments: request.body.comments,
-      });
+    const result = await this.approveStepHandler.handle({
+      expenseId,
+      workspaceId,
+      approverId: user.userId,
+      comments: request.body.comments,
+      expectedStepNumber: request.body.expectedStepNumber,
+      authToken,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Step approved successfully',
-        { expenseId }
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Step approved successfully',
+      { expenseId }
+    );
   }
 
   async rejectStep(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkflowParams;
       Body: RejectStepBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      // SECURITY: Use authenticated user as approver instead of trusting body
-      const approverId = request.user.userId;
-      const { workspaceId, expenseId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, expenseId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.rejectStepHandler.handle({
-        expenseId,
-        workspaceId,
-        approverId,
-        comments: request.body.comments,
-      });
+    const result = await this.rejectStepHandler.handle({
+      expenseId,
+      workspaceId,
+      approverId: user.userId,
+      comments: request.body.comments,
+      authToken,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Step rejected successfully',
-        { expenseId }
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Step rejected successfully',
+      { expenseId }
+    );
   }
 
   async delegateStep(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkflowParams;
       Body: DelegateStepBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      // SECURITY: Use authenticated user as the delegating user
-      const fromUserId = request.user.userId;
-      const { workspaceId, expenseId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, expenseId } = request.params;
+    const authToken = request.headers.authorization;
 
-      const result = await this.delegateStepHandler.handle({
-        expenseId,
-        workspaceId,
-        fromUserId,
-        toUserId: request.body.toUserId,
-      });
+    const result = await this.delegateStepHandler.handle({
+      expenseId,
+      workspaceId,
+      fromUserId: user.userId,
+      toUserId: request.body.toUserId,
+      authToken,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Step delegated successfully'
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Step delegated successfully'
+    );
   }
 
   async cancelWorkflow(
-    request: AuthenticatedRequest<{
+    request: FastifyRequest<{
       Params: WorkflowParams;
+      Body?: CancelWorkflowBody;
     }>,
     reply: FastifyReply
-  ) {
-    try {
-      const { workspaceId, expenseId } = request.params;
+  ): Promise<FastifyReply> {
+    const user = getAuthenticatedUser(request);
+    const { workspaceId, expenseId } = request.params;
+    const reason = request.body?.reason;
+    const authToken = request.headers.authorization;
 
-      const result = await this.cancelWorkflowHandler.handle({
-        expenseId,
-        workspaceId,
-      });
+    const result = await this.cancelWorkflowHandler.handle({
+      expenseId,
+      workspaceId,
+      actorId: user.userId,
+      reason,
+      authToken,
+    });
 
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        'Workflow cancelled successfully'
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      'Workflow cancelled successfully'
+    );
   }
 }
