@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { IWorkspaceMembershipRepository } from '../../domain/repositories/workspace-membership.repository';
 import {
   WorkspaceMembership,
@@ -85,7 +85,7 @@ export class WorkspaceMembershipRepositoryImpl
         where: { userId: userId.getValue() },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceMembershipGetPayload<object>),
       options,
     );
   }
@@ -100,7 +100,7 @@ export class WorkspaceMembershipRepositoryImpl
         where: { workspaceId: workspaceId.getValue() },
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceMembershipGetPayload<object>),
       options,
     );
   }

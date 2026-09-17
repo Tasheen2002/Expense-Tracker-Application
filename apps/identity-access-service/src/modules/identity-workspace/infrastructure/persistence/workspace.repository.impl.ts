@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import {
   IWorkspaceRepository,
   WorkspaceQueryOptions,
@@ -87,7 +87,7 @@ export class WorkspaceRepositoryImpl
         where: { ownerId: ownerId.getValue() },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceGetPayload<object>),
       options,
     );
   }
@@ -114,7 +114,7 @@ export class WorkspaceRepositoryImpl
     return PrismaRepositoryHelper.paginate(
       this.prisma.workspace,
       { where, orderBy },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceGetPayload<object>),
       options,
     );
   }
@@ -156,7 +156,7 @@ export class WorkspaceRepositoryImpl
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceGetPayload<object>),
       options,
     );
   }

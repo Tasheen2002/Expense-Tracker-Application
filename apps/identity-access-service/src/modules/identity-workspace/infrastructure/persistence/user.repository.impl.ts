@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import {
   IUserRepository,
   UserQueryOptions,
@@ -105,7 +105,7 @@ export class UserRepositoryImpl
     return PrismaRepositoryHelper.paginate(
       this.prisma.userAccount,
       { where, orderBy },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.UserAccountGetPayload<object>),
       options,
     );
   }

@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { InvitationAlreadyAcceptedError } from '../../domain/errors/identity.errors';
 import { IWorkspaceInvitationRepository } from '../../domain/repositories/workspace-invitation.repository';
 import { WorkspaceInvitation } from '../../domain/entities/workspace-invitation.entity';
@@ -87,7 +87,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { workspaceId: workspaceId.getValue() },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceInvitationGetPayload<object>),
       options,
     );
   }
@@ -103,7 +103,7 @@ export class WorkspaceInvitationRepositoryImpl
         where: { email: emailStr },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceInvitationGetPayload<object>),
       options,
     );
   }
@@ -123,7 +123,7 @@ export class WorkspaceInvitationRepositoryImpl
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
       },
-      (row) => this.toDomain(row),
+      (row) => this.toDomain(row as Prisma.WorkspaceInvitationGetPayload<object>),
       options,
     );
   }
