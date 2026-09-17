@@ -1,4 +1,5 @@
-import { Prisma, PrismaClient, OutboxEvent } from '@prisma/client';
+import { PrismaClient } from '../shared/infrastructure/persistence/prisma.client';
+import type { Prisma, OutboxEvent } from '@prisma/client';
 import { IOutboxEventRepository, OutboxEventDTO, OutboxEventStatus } from '@expense-tracker/outbox-kit';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -132,16 +133,68 @@ export class PrismaOutboxEventRepository implements IOutboxEventRepository {
     return result.count;
   }
 
-  async markDelivered(id: string, subscriberUrl: string): Promise<void> {
-    await this.prisma.outboxEvent.update({
-      where: { id },
-      data: {
-        deliveredTo: { push: subscriberUrl },
-      },
+  async markDelivered(id: string, subscriberUrl: string, leaseToken?: string | null): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Fetch current delivery state verifying PROCESSING status and lease ownership
+      const current = await tx.outboxEvent.findFirst({
+        where: {
+          id,
+          status: 'PROCESSING',
+          ...(leaseToken ? { leaseToken } : {}),
+        },
+        select: { id: true, deliveredTo: true },
+      });
+
+      if (!current) {
+        return false;
+      }
+
+      if (current.deliveredTo.includes(subscriberUrl)) {
+        return true;
+      }
+
+      const updatedDeliveredTo = [...current.deliveredTo, subscriberUrl];
+
+      // 2. Perform atomic conditional update requiring id, status: 'PROCESSING', and leaseToken
+      const updateResult = await tx.outboxEvent.updateMany({
+        where: {
+          id,
+          status: 'PROCESSING',
+          ...(leaseToken ? { leaseToken } : {}),
+        },
+        data: {
+          deliveredTo: updatedDeliveredTo,
+        },
+      });
+
+      return updateResult.count > 0;
     });
   }
 
-  async updateStatus(id: string, status: OutboxEventStatus, error?: string | null): Promise<void> {
+  async updateStatus(
+    id: string,
+    status: OutboxEventStatus,
+    error?: string | null,
+    leaseToken?: string | null
+  ): Promise<boolean> {
+    if (leaseToken) {
+      const result = await this.prisma.outboxEvent.updateMany({
+        where: {
+          id,
+          leaseToken,
+          status: 'PROCESSING',
+        },
+        data: {
+          status,
+          processedAt: status === 'PROCESSED' ? new Date() : null,
+          leaseToken: status === 'PROCESSED' || status === 'DEAD_LETTER' ? null : undefined,
+          leaseExpiresAt: status === 'PROCESSED' || status === 'DEAD_LETTER' ? null : undefined,
+          error: error || null,
+        },
+      });
+      return result.count > 0;
+    }
+
     await this.prisma.outboxEvent.update({
       where: { id },
       data: {
@@ -152,9 +205,41 @@ export class PrismaOutboxEventRepository implements IOutboxEventRepository {
         error: error || null,
       },
     });
+    return true;
   }
 
-  async incrementRetry(id: string, error: string): Promise<void> {
+  async incrementRetry(id: string, error: string, leaseToken?: string | null): Promise<boolean> {
+    if (leaseToken) {
+      return this.prisma.$transaction(async (tx) => {
+        const event = await tx.outboxEvent.findFirst({
+          where: { id, leaseToken, status: 'PROCESSING' },
+          select: { retryCount: true },
+        });
+
+        if (!event) {
+          return false;
+        }
+
+        const newRetryCount = event.retryCount + 1;
+        // Exponential backoff: 2s, 4s, 8s, 16s, up to 5 minutes
+        const backoffMs = Math.min(1000 * Math.pow(2, newRetryCount), 300_000);
+        const nextAttemptAt = new Date(Date.now() + backoffMs);
+
+        const result = await tx.outboxEvent.updateMany({
+          where: { id, leaseToken, status: 'PROCESSING' },
+          data: {
+            retryCount: { increment: 1 },
+            error,
+            status: 'FAILED',
+            leaseToken: null,
+            leaseExpiresAt: null,
+            nextAttemptAt,
+          },
+        });
+        return result.count > 0;
+      });
+    }
+
     const event = await this.prisma.outboxEvent.findUnique({
       where: { id },
       select: { retryCount: true },
@@ -176,6 +261,21 @@ export class PrismaOutboxEventRepository implements IOutboxEventRepository {
         nextAttemptAt,
       },
     });
+    return true;
+  }
+
+  async renewLease(id: string, leaseToken: string, durationMs: number): Promise<boolean> {
+    const result = await this.prisma.outboxEvent.updateMany({
+      where: {
+        id,
+        leaseToken,
+        status: 'PROCESSING',
+      },
+      data: {
+        leaseExpiresAt: new Date(Date.now() + durationMs),
+      },
+    });
+    return result.count > 0;
   }
 
   async deleteProcessedBefore(days: number): Promise<number> {
