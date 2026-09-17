@@ -1,0 +1,44 @@
+{
+  "extends": "@expense-tracker/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": [
+      "node"
+    ],
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      "@prisma/client": [
+        "./node_modules/.prisma/client-identity"
+      ],
+      "@core/*": [
+        "../../packages/core/src/*"
+      ],
+      "@expense-tracker/middleware": [
+        "../../packages/middleware/src"
+      ],
+      "@expense-tracker/middleware/*": [
+        "../../packages/middleware/src/*"
+      ],
+      "@shared/middleware": [
+        "../../packages/middleware/src"
+      ],
+      "@shared/middleware/*": [
+        "../../packages/middleware/src/*"
+      ],
+      "@packages/*": [
+        "../../packages/*/src"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

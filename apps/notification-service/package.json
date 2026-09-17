@@ -1,0 +1,39 @@
+{
+  "name": "@expense-tracker/notification-service",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "generate": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@expense-tracker/contracts": "workspace:*",
+    "@expense-tracker/core": "workspace:*",
+    "@expense-tracker/outbox-kit": "workspace:*",
+    "@fastify/cors": "^8.5.0",
+    "@prisma/client": "^5.9.1",
+    "dotenv": "^16.4.1",
+    "fastify": "^4.26.1",
+    "fastify-plugin": "^4.5.1",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "uuid": "^13.0.0",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@expense-tracker/typescript-config": "workspace:*",
+    "@types/node": "^20.11.0",
+    "@types/uuid": "^10.0.0",
+    "prisma": "^5.9.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

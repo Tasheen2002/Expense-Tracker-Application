@@ -1,0 +1,167 @@
+generator client {
+  provider        = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["receipt_vault"]
+}
+
+model Receipt {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  expenseId       String?          @map("expense_id") @db.Uuid
+  userId          String           @map("user_id") @db.Uuid
+  fileName        String           @map("file_name") @db.VarChar(255)
+  originalName    String           @map("original_name") @db.VarChar(255)
+  filePath        String           @map("file_path") @db.VarChar(1000)
+  fileSize        Int              @map("file_size")
+  mimeType        String           @map("mime_type") @db.VarChar(100)
+  fileHash        String?          @map("file_hash") @db.VarChar(64)
+  receiptType     ReceiptType      @default(EXPENSE) @map("receipt_type")
+  status          ReceiptStatus    @default(PENDING)
+  storageProvider StorageProvider  @default(LOCAL) @map("storage_provider")
+  storageBucket   String?          @map("storage_bucket") @db.VarChar(255)
+  storageKey      String?          @map("storage_key") @db.VarChar(500)
+  thumbnailPath   String?          @map("thumbnail_path") @db.VarChar(1000)
+  ocrText         String?          @map("ocr_text")
+  ocrConfidence   Decimal?         @map("ocr_confidence") @db.Decimal(5, 2)
+  processedAt     DateTime?        @map("processed_at") @db.Timestamptz(6)
+  failureReason   String?          @map("failure_reason")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  metadata        ReceiptMetadata?
+  tags            ReceiptTag[]
+
+  @@index([workspaceId])
+  @@index([expenseId])
+  @@index([userId])
+  @@index([status])
+  @@index([receiptType])
+  @@index([createdAt])
+  @@index([fileHash])
+  @@map("receipts")
+  @@schema("receipt_vault")
+}
+
+model ReceiptMetadata {
+  id              String    @id @default(uuid()) @db.Uuid
+  receiptId       String    @unique @map("receipt_id") @db.Uuid
+  merchantName    String?   @map("merchant_name") @db.VarChar(255)
+  merchantAddress String?   @map("merchant_address")
+  merchantPhone   String?   @map("merchant_phone") @db.VarChar(50)
+  merchantTaxId   String?   @map("merchant_tax_id") @db.VarChar(50)
+  transactionDate DateTime? @map("transaction_date") @db.Date
+  transactionTime String?   @map("transaction_time") @db.VarChar(20)
+  subtotal        Decimal?  @db.Decimal(12, 2)
+  taxAmount       Decimal?  @map("tax_amount") @db.Decimal(12, 2)
+  tipAmount       Decimal?  @map("tip_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal?  @map("total_amount") @db.Decimal(12, 2)
+  currency        String?   @db.VarChar(3)
+  paymentMethod   String?   @map("payment_method") @db.VarChar(50)
+  lastFourDigits  String?   @map("last_four_digits") @db.VarChar(4)
+  invoiceNumber   String?   @map("invoice_number") @db.VarChar(100)
+  poNumber        String?   @map("po_number") @db.VarChar(100)
+  lineItems       Json?     @map("line_items")
+  notes           String?
+  customFields    Json?     @map("custom_fields")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  receipt         Receipt   @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@index([merchantName])
+  @@index([transactionDate])
+  @@index([invoiceNumber])
+  @@map("receipt_metadata")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTagDefinition {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
+  name        String       @db.VarChar(50)
+  color       String?      @db.VarChar(7)
+  description String?      @db.VarChar(255)
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  receipts    ReceiptTag[]
+
+  @@unique([workspaceId, name], map: "receipt_tag_workspace_name")
+  @@index([workspaceId])
+  @@map("receipt_tag_definitions")
+  @@schema("receipt_vault")
+}
+
+model ReceiptTag {
+  receiptId String               @map("receipt_id") @db.Uuid
+  tagId     String               @map("tag_id") @db.Uuid
+  createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  receipt   Receipt              @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  tag       ReceiptTagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([receiptId, tagId])
+  @@index([receiptId])
+  @@index([tagId])
+  @@map("receipt_tags")
+  @@schema("receipt_vault")
+}
+
+model OutboxEvent {
+  id            String            @id @default(uuid())
+  aggregateType String            @map("aggregate_type")
+  aggregateId   String            @map("aggregate_id")
+  eventType     String            @map("event_type")
+  payload       Json
+  status        OutboxEventStatus
+  createdAt     DateTime          @default(now()) @map("created_at")
+  processedAt   DateTime?         @map("processed_at")
+  retryCount    Int               @default(0) @map("retry_count")
+  error         String?
+
+  @@index([status, createdAt])
+  @@index([aggregateId])
+  @@map("outbox_event")
+  @@schema("receipt_vault")
+}
+
+enum ReceiptStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+  VERIFIED
+  REJECTED
+
+  @@schema("receipt_vault")
+}
+
+enum ReceiptType {
+  EXPENSE
+  INVOICE
+  BILL
+  TICKET
+  OTHER
+
+  @@schema("receipt_vault")
+}
+
+enum StorageProvider {
+  LOCAL
+  S3
+  AZURE_BLOB
+  GCS
+
+  @@schema("receipt_vault")
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+
+  @@schema("receipt_vault")
+}
