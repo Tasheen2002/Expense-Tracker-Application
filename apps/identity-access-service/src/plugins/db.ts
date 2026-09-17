@@ -1,12 +1,21 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../shared/infrastructure/persistence/prisma.client';
 
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
-});
+export interface DbPluginOptions {
+  prisma?: PrismaClient;
+}
 
-const dbPlugin: FastifyPluginAsync = async (fastify) => {
+const dbPlugin: FastifyPluginAsync<DbPluginOptions> = async (fastify, opts) => {
+  const prisma =
+    opts?.prisma ??
+    new PrismaClient({
+      log:
+        process.env.NODE_ENV === 'development'
+          ? ['query', 'error', 'warn']
+          : ['error'],
+    });
+
   fastify.decorate('prisma', prisma);
   fastify.log.info('Prisma client registered for identity-workspace');
 
@@ -19,4 +28,3 @@ const dbPlugin: FastifyPluginAsync = async (fastify) => {
 export default fp(dbPlugin, {
   name: 'db-plugin',
 });
-export { prisma };

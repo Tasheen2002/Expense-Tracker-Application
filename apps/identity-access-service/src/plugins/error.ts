@@ -6,7 +6,10 @@ import {
   FastifyRequest,
 } from 'fastify';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import {
+  PrismaClientKnownRequestError,
+  PrismaClientValidationError,
+} from '../shared/infrastructure/persistence/prisma.client';
 
 abstract class DomainError extends Error {
   abstract readonly statusCode: number;
@@ -79,7 +82,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           return reply.status(409).send({
             success: false,
@@ -109,7 +112,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         }
       }
 
-      if (error instanceof Prisma.PrismaClientValidationError) {
+      if (error instanceof PrismaClientValidationError) {
         return reply.status(400).send({
           success: false,
           statusCode: 400,
@@ -118,19 +121,11 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (error.statusCode && error.statusCode < 500) {
-        const errWithCode = error as Error & { code?: string; statusCode: number };
-        return reply.status(error.statusCode).send({
-          success: false,
-          statusCode: error.statusCode,
-          error: getHttpStatusErrorName(error.statusCode),
-          code: errWithCode.code || error.name,
-          message: error.message,
-        });
-      }
-
-      const statusCode = error.statusCode || 500;
-      const isDevelopment = process.env.NODE_ENV !== 'production';
+      const statusCode =
+        typeof error.statusCode === 'number' && error.statusCode >= 500 && error.statusCode < 600
+          ? error.statusCode
+          : 500;
+      const isDevelopment = process.env.NODE_ENV === 'development';
 
       return reply.status(statusCode).send({
         success: false,
