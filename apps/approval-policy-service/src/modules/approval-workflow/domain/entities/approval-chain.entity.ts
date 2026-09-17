@@ -1,12 +1,23 @@
-import { ApprovalChainId } from '../value-objects/approval-chain-id';
-import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
-import {  CategoryId  } from '@core/domain/value-objects';
+import { ApprovalChainId, ApprovalAmount } from '../value-objects';
+import { WorkspaceId, UserId, CategoryId } from '@core/domain/value-objects';
 import {
   EmptyApproverSequenceError,
+  MaxApproversExceededError,
   InvalidAmountRangeError,
-} from '../errors/approval-workflow.errors';
+  DuplicateApproversInSequenceError,
+  InvalidApprovalChainNameError,
+  ApprovalChainDescriptionTooLongError,
+} from '../errors';
+import {
+  APPROVAL_CHAIN_NAME_MIN_LENGTH,
+  APPROVAL_CHAIN_NAME_MAX_LENGTH,
+  APPROVAL_CHAIN_DESCRIPTION_MAX_LENGTH,
+  MIN_APPROVERS,
+  MAX_APPROVERS,
+} from '../constants';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import { APPROVAL_POLICY_EVENTS } from '../../../../shared/events/approval-policy-events';
 
 export class ApprovalChainCreatedEvent extends DomainEvent {
   constructor(
@@ -18,7 +29,7 @@ export class ApprovalChainCreatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.created';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_CREATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -47,7 +58,7 @@ export class ApprovalChainUpdatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.updated';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_UPDATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -70,7 +81,7 @@ export class ApproverSequenceChangedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.approver-sequence-changed';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_APPROVER_SEQUENCE_CHANGED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -92,7 +103,7 @@ export class ApprovalChainActivatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.activated';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_ACTIVATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -112,7 +123,7 @@ export class ApprovalChainDeactivatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.deactivated';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_DEACTIVATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -132,7 +143,7 @@ export class ApprovalChainDeletedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'approval-chain.deleted';
+    return APPROVAL_POLICY_EVENTS.APPROVAL_CHAIN_DELETED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -148,12 +159,13 @@ export interface ApprovalChainProps {
   workspaceId: WorkspaceId;
   name: string;
   description?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  minAmount?: ApprovalAmount;
+  maxAmount?: ApprovalAmount;
   categoryIds?: CategoryId[];
   requiresReceipt: boolean;
   approverSequence: UserId[];
   isActive: boolean;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -162,11 +174,27 @@ export interface CreateApprovalChainData {
   workspaceId: string;
   name: string;
   description?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  minAmount?: number | ApprovalAmount;
+  maxAmount?: number | ApprovalAmount;
   categoryIds?: string[];
   requiresReceipt: boolean;
   approverSequence: string[];
+}
+
+export interface ApprovalChainPersistenceData {
+  chainId: ApprovalChainId;
+  workspaceId: WorkspaceId;
+  name: string;
+  description?: string;
+  minAmount?: number | ApprovalAmount | null;
+  maxAmount?: number | ApprovalAmount | null;
+  categoryIds?: CategoryId[];
+  requiresReceipt: boolean;
+  approverSequence: UserId[];
+  isActive: boolean;
+  version?: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class ApprovalChain extends AggregateRoot {
@@ -178,31 +206,62 @@ export class ApprovalChain extends AggregateRoot {
   }
 
   static create(data: CreateApprovalChainData): ApprovalChain {
-    if (data.approverSequence.length === 0) {
-      throw new EmptyApproverSequenceError();
+    if (!data.name || !data.name.trim()) {
+      throw new InvalidApprovalChainNameError('Approval chain name cannot be empty');
     }
 
-    if (
-      data.minAmount &&
-      data.maxAmount &&
-      data.minAmount > data.maxAmount
-    ) {
-      throw new InvalidAmountRangeError();
+    const trimmedName = data.name.trim();
+    if (trimmedName.length < APPROVAL_CHAIN_NAME_MIN_LENGTH) {
+      throw new InvalidApprovalChainNameError('Approval chain name cannot be empty');
     }
+    if (trimmedName.length > APPROVAL_CHAIN_NAME_MAX_LENGTH) {
+      throw new InvalidApprovalChainNameError(
+        `Approval chain name cannot exceed ${APPROVAL_CHAIN_NAME_MAX_LENGTH} characters`
+      );
+    }
+
+    const trimmedDescription = data.description?.trim();
+    if (
+      trimmedDescription &&
+      trimmedDescription.length > APPROVAL_CHAIN_DESCRIPTION_MAX_LENGTH
+    ) {
+      throw new ApprovalChainDescriptionTooLongError(
+        APPROVAL_CHAIN_DESCRIPTION_MAX_LENGTH
+      );
+    }
+
+    if (!data.approverSequence || data.approverSequence.length < MIN_APPROVERS) {
+      throw new EmptyApproverSequenceError();
+    }
+    if (data.approverSequence.length > MAX_APPROVERS) {
+      throw new MaxApproversExceededError(MAX_APPROVERS);
+    }
+
+    const normalizedSequence = data.approverSequence.map((id) =>
+      UserId.fromString(id).getValue()
+    );
+
+    if (new Set(normalizedSequence).size !== normalizedSequence.length) {
+      throw new DuplicateApproversInSequenceError();
+    }
+
+    const { minVo, maxVo } = ApprovalChain.validateAmountRange(
+      data.minAmount,
+      data.maxAmount
+    );
 
     const chain = new ApprovalChain({
       chainId: ApprovalChainId.create(),
       workspaceId: WorkspaceId.fromString(data.workspaceId),
-      name: data.name,
-      description: data.description,
-      minAmount: data.minAmount,
-      maxAmount: data.maxAmount,
+      name: trimmedName,
+      description: trimmedDescription,
+      minAmount: minVo,
+      maxAmount: maxVo,
       categoryIds: data.categoryIds?.map((id) => CategoryId.fromString(id)),
       requiresReceipt: data.requiresReceipt,
-      approverSequence: data.approverSequence.map((id) =>
-        UserId.fromString(id)
-      ),
+      approverSequence: normalizedSequence.map((id) => UserId.fromString(id)),
       isActive: true,
+      version: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -218,12 +277,29 @@ export class ApprovalChain extends AggregateRoot {
     return chain;
   }
 
-  static fromPersistence(props: ApprovalChainProps): ApprovalChain {
-    return new ApprovalChain(props);
+  static fromPersistence(props: ApprovalChainPersistenceData): ApprovalChain {
+    const { minVo, maxVo } = ApprovalChain.validateAmountRange(
+      props.minAmount ?? undefined,
+      props.maxAmount ?? undefined
+    );
+    return new ApprovalChain({
+      ...props,
+      minAmount: minVo,
+      maxAmount: maxVo,
+      version: props.version ?? 1,
+    });
   }
 
   get id(): ApprovalChainId {
     return this.props.chainId;
+  }
+
+  get version(): number {
+    return this.props.version;
+  }
+
+  synchronizeVersion(version: number): void {
+    this.props.version = version;
   }
 
   get workspaceId(): WorkspaceId {
@@ -239,23 +315,33 @@ export class ApprovalChain extends AggregateRoot {
   }
 
   get minAmount(): number | undefined {
-    return this.props.minAmount;
+    return this.props.minAmount?.getValue();
   }
 
   get maxAmount(): number | undefined {
+    return this.props.maxAmount?.getValue();
+  }
+
+  get minApprovalAmount(): ApprovalAmount | undefined {
+    return this.props.minAmount;
+  }
+
+  get maxApprovalAmount(): ApprovalAmount | undefined {
     return this.props.maxAmount;
   }
 
-  get categoryIds(): CategoryId[] | undefined {
-    return this.props.categoryIds;
+  get categoryIds(): readonly CategoryId[] | undefined {
+    return this.props.categoryIds
+      ? Object.freeze([...this.props.categoryIds])
+      : undefined;
   }
 
   get requiresReceipt(): boolean {
     return this.props.requiresReceipt;
   }
 
-  get approverSequence(): UserId[] {
-    return this.props.approverSequence;
+  get approverSequence(): readonly UserId[] {
+    return Object.freeze([...this.props.approverSequence]);
   }
 
   get isActive(): boolean {
@@ -263,40 +349,63 @@ export class ApprovalChain extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   updateName(name: string): void {
+    if (!name || !name.trim()) {
+      throw new InvalidApprovalChainNameError('Approval chain name cannot be empty');
+    }
+    const trimmedName = name.trim();
+    if (trimmedName.length < APPROVAL_CHAIN_NAME_MIN_LENGTH) {
+      throw new InvalidApprovalChainNameError('Approval chain name cannot be empty');
+    }
+    if (trimmedName.length > APPROVAL_CHAIN_NAME_MAX_LENGTH) {
+      throw new InvalidApprovalChainNameError(
+        `Approval chain name cannot exceed ${APPROVAL_CHAIN_NAME_MAX_LENGTH} characters`
+      );
+    }
+
     const oldName = this.props.name;
-    this.props.name = name;
+    this.props.name = trimmedName;
     this.props.updatedAt = new Date();
 
-    if (oldName !== name) {
+    if (oldName !== trimmedName) {
       this.addDomainEvent(
         new ApprovalChainUpdatedEvent(
           this.id.getValue(),
           this.workspaceId.getValue(),
-          { name }
+          { name: trimmedName }
         )
       );
     }
   }
 
   updateDescription(description?: string): void {
+    const trimmedDescription = description?.trim();
+    if (
+      trimmedDescription &&
+      trimmedDescription.length > APPROVAL_CHAIN_DESCRIPTION_MAX_LENGTH
+    ) {
+      throw new ApprovalChainDescriptionTooLongError(
+        APPROVAL_CHAIN_DESCRIPTION_MAX_LENGTH
+      );
+    }
+
     const oldDescription = this.props.description;
-    this.props.description = description;
+    this.props.description = trimmedDescription;
     this.props.updatedAt = new Date();
 
-    if (oldDescription !== description) {
+    if (oldDescription !== trimmedDescription) {
       this.addDomainEvent(
         new ApprovalChainUpdatedEvent(
           this.id.getValue(),
           this.workspaceId.getValue(),
-          { description }
+          { description: trimmedDescription }
         )
       );
     }
@@ -333,30 +442,67 @@ export class ApprovalChain extends AggregateRoot {
     }
   }
 
-  updateAmountRange(minAmount?: number, maxAmount?: number): void {
-    if (minAmount && maxAmount && minAmount > maxAmount) {
-      throw new InvalidAmountRangeError();
+  private static validateAmountRange(
+    minAmount?: number | ApprovalAmount,
+    maxAmount?: number | ApprovalAmount
+  ): { minVo?: ApprovalAmount; maxVo?: ApprovalAmount } {
+    const minVo =
+      minAmount === undefined || minAmount === null
+        ? undefined
+        : minAmount instanceof ApprovalAmount
+          ? minAmount
+          : ApprovalAmount.fromNumber(minAmount);
+
+    const maxVo =
+      maxAmount === undefined || maxAmount === null
+        ? undefined
+        : maxAmount instanceof ApprovalAmount
+          ? maxAmount
+          : ApprovalAmount.fromNumber(maxAmount);
+
+    if (minVo !== undefined && maxVo !== undefined && minVo.isGreaterThan(maxVo)) {
+      throw new InvalidAmountRangeError('Min amount cannot be greater than max amount');
     }
-    this.props.minAmount = minAmount;
-    this.props.maxAmount = maxAmount;
+
+    return { minVo, maxVo };
+  }
+
+  updateAmountRange(
+    minAmount?: number | ApprovalAmount,
+    maxAmount?: number | ApprovalAmount
+  ): void {
+    const { minVo, maxVo } = ApprovalChain.validateAmountRange(minAmount, maxAmount);
+    this.props.minAmount = minVo;
+    this.props.maxAmount = maxVo;
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new ApprovalChainUpdatedEvent(
         this.id.getValue(),
         this.workspaceId.getValue(),
-        { minAmount, maxAmount }
+        { minAmount: minVo?.getValue(), maxAmount: maxVo?.getValue() }
       )
     );
   }
 
   updateApproverSequence(approverSequence: string[]): void {
-    if (approverSequence.length === 0) {
+    if (!approverSequence || approverSequence.length < MIN_APPROVERS) {
       throw new EmptyApproverSequenceError();
+    }
+    if (approverSequence.length > MAX_APPROVERS) {
+      throw new MaxApproversExceededError(MAX_APPROVERS);
+    }
+
+    const normalizedSequence = approverSequence.map((id) =>
+      UserId.fromString(id).getValue()
+    );
+
+    if (new Set(normalizedSequence).size !== normalizedSequence.length) {
+      throw new DuplicateApproversInSequenceError();
     }
 
     const oldSequence = this.props.approverSequence.map((id) => id.getValue());
-    this.props.approverSequence = approverSequence.map((id) =>
+    this.props.approverSequence = normalizedSequence.map((id) =>
       UserId.fromString(id)
     );
     this.props.updatedAt = new Date();
@@ -366,7 +512,7 @@ export class ApprovalChain extends AggregateRoot {
         this.id.getValue(),
         this.workspaceId.getValue(),
         oldSequence,
-        approverSequence
+        normalizedSequence
       )
     );
   }
@@ -409,7 +555,7 @@ export class ApprovalChain extends AggregateRoot {
   }
 
   appliesTo(params: {
-    amount: number;
+    amount: number | ApprovalAmount;
     categoryId?: string;
     hasReceipt: boolean;
   }): boolean {
@@ -417,11 +563,16 @@ export class ApprovalChain extends AggregateRoot {
       return false;
     }
 
-    if (this.props.minAmount && params.amount < this.props.minAmount) {
+    const amountVo =
+      params.amount instanceof ApprovalAmount
+        ? params.amount
+        : ApprovalAmount.fromNumber(params.amount);
+
+    if (this.props.minAmount !== undefined && amountVo.isLessThan(this.props.minAmount)) {
       return false;
     }
 
-    if (this.props.maxAmount && params.amount > this.props.maxAmount) {
+    if (this.props.maxAmount !== undefined && amountVo.isGreaterThan(this.props.maxAmount)) {
       return false;
     }
 
@@ -444,6 +595,14 @@ export class ApprovalChain extends AggregateRoot {
     return true;
   }
 
+  equals(other: ApprovalChain): boolean {
+    return this.props.chainId.equals(other.props.chainId);
+  }
+
+  toDTO(): ApprovalChainDTO {
+    return ApprovalChain.toDTO(this);
+  }
+
   static toDTO(chain: ApprovalChain): ApprovalChainDTO {
     return {
       chainId: chain.id.getValue(),
@@ -456,6 +615,7 @@ export class ApprovalChain extends AggregateRoot {
       requiresReceipt: chain.requiresReceipt,
       approverSequence: chain.approverSequence.map((id) => id.getValue()),
       isActive: chain.isActive,
+      version: chain.version,
       createdAt: chain.createdAt.toISOString(),
       updatedAt: chain.updatedAt.toISOString(),
     };
@@ -473,6 +633,7 @@ export interface ApprovalChainDTO {
   requiresReceipt: boolean;
   approverSequence: string[];
   isActive: boolean;
+  version: number;
   createdAt: string;
   updatedAt: string;
 }
