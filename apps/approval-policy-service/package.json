@@ -1,0 +1,42 @@
+{
+  "name": "@expense-tracker/approval-policy-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --external:@prisma/client --external:.prisma/* --external:fastify --external:fastify-plugin --external:dotenv --external:@fastify/* && prisma generate",
+    "type-check": "tsc --noEmit",
+    "generate": "prisma generate",
+    "prisma:generate": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@expense-tracker/contracts": "workspace:*",
+    "@expense-tracker/core": "workspace:*",
+    "@expense-tracker/correlation": "workspace:*",
+    "@expense-tracker/middleware": "workspace:*",
+    "@expense-tracker/outbox-kit": "workspace:*",
+    "@fastify/cors": "^8.5.0",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/rate-limit": "^9.1.0",
+    "@prisma/client": "^5.9.1",
+    "dotenv": "^16.4.1",
+    "fastify": "^4.26.1",
+    "fastify-plugin": "^4.5.1",
+    "ky": "^1.2.0",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@expense-tracker/typescript-config": "workspace:*",
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.20.0",
+    "prisma": "^5.9.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
