@@ -45,7 +45,7 @@ export class BudgetPlanService {
       throw new UnauthorizedBudgetPlanAccessError("create");
     }
 
-    const period = PlanPeriod.create(params.startDate, params.endDate);
+    const period = PlanPeriod.createDateOnly(params.startDate, params.endDate);
 
     // Check for overlapping active plans if needed (business rule dependent)
 
@@ -73,7 +73,7 @@ export class BudgetPlanService {
     const plan = await this.budgetPlanRepository.findById(planId, params.workspaceId);
 
     if (!plan) {
-      throw new BudgetPlanNotFoundError(params.id);
+      throw new BudgetPlanNotFoundError(params.id, params.workspaceId);
     }
 
     const isCreator = plan.createdBy.getValue() === params.userId;
@@ -96,7 +96,7 @@ export class BudgetPlanService {
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
 
     if (!plan) {
-      throw new BudgetPlanNotFoundError(id);
+      throw new BudgetPlanNotFoundError(id, workspaceId);
     }
 
     const isCreator = plan.createdBy.getValue() === userId;
@@ -114,12 +114,35 @@ export class BudgetPlanService {
     return BudgetPlan.toDTO(plan);
   }
 
+  async archivePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlanDTO> {
+    const planId = PlanId.fromString(id);
+    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
+
+    if (!plan) {
+      throw new BudgetPlanNotFoundError(id, workspaceId);
+    }
+
+    const isCreator = plan.createdBy.getValue() === userId;
+    const isAdminOrOwner = await this.checkWorkspaceAccess(
+      userId,
+      plan.workspaceId.getValue(),
+    );
+
+    if (!isCreator && !isAdminOrOwner) {
+      throw new UnauthorizedBudgetPlanAccessError("archive");
+    }
+
+    plan.updateStatus(PlanStatus.ARCHIVED);
+    await this.budgetPlanRepository.save(plan);
+    return BudgetPlan.toDTO(plan);
+  }
+
   async deletePlan(id: string, workspaceId: string, userId: string): Promise<void> {
     const planId = PlanId.fromString(id);
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
 
     if (!plan) {
-      throw new BudgetPlanNotFoundError(id);
+      throw new BudgetPlanNotFoundError(id, workspaceId);
     }
 
     const isCreator = plan.createdBy.getValue() === userId;
@@ -132,9 +155,8 @@ export class BudgetPlanService {
       throw new UnauthorizedBudgetPlanAccessError("delete");
     }
 
-    // Add validation: Cannot delete active plans? Or specific status checks.
-
-    await this.budgetPlanRepository.delete(planId);
+    plan.markAsDeleted();
+    await this.budgetPlanRepository.delete(planId, plan.workspaceId.getValue(), plan);
   }
 
   async getPlanById(id: string, workspaceId: string): Promise<BudgetPlanDTO | null> {

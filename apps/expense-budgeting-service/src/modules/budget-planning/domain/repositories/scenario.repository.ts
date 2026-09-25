@@ -14,6 +14,7 @@ export interface IScenarioRepository {
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Scenario>>;
-  delete(id: ScenarioId): Promise<void>;
-  findByName(planId: PlanId, name: string): Promise<Scenario | null>;
+  delete(id: ScenarioId, workspaceId: string): Promise<void>;
+  findByName(planId: PlanId, name: string, workspaceId: string): Promise<Scenario | null>;
+  countByPlanId(planId: PlanId, workspaceId: string): Promise<number>;
 }

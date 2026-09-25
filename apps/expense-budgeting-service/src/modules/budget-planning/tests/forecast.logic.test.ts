@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ForecastAmount } from "../domain/value-objects/forecast-amount";
-import { Decimal } from "@prisma/client/runtime/library";
+import Decimal from "decimal.js";
 
 // Mock constants if needed or rely on actual
 // Assuming MIN_AMOUNT = 0, MAX_AMOUNT = 1_000_000_000 (1 Billion) based on typical finance apps
@@ -52,7 +52,17 @@ describe("ForecastAmount Logic", () => {
   });
 
   it("should handle string inputs", () => {
-    const amount = ForecastAmount.create("123.456");
-    expect(amount.toNumber()).toBe(123.456);
+    const amount = ForecastAmount.create("123.45");
+    expect(amount.toNumber()).toBe(123.45);
+  });
+
+  it("should reject more than 2 decimal places in create and allow explicit rounding via fromRounded", () => {
+    expect(() => ForecastAmount.create("123.456")).toThrow(
+      /cannot have more than 2 decimal places/,
+    );
+
+    const rounded = ForecastAmount.fromRounded("123.456");
+    expect(rounded.toNumber()).toBe(123.46);
+    expect(rounded.toString()).toBe("123.46");
   });
 });

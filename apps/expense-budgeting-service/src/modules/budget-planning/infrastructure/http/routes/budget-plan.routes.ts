@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { BudgetPlanController } from '../controllers/budget-plan.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
@@ -188,5 +188,28 @@ export async function budgetPlanningRoutes(
     },
     (request, reply) =>
       controller.activate(request as AuthenticatedRequest, reply)
+  );
+
+  // Archive budget plan
+  fastify.patch(
+    '/workspaces/:workspaceId/budget-plans/:id/archive',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        workspaceAuth,
+        RolePermissions.ADMIN_LEVEL,
+      ],
+      schema: {
+        tags: ['Budget Planning - Plans'],
+        description: 'Archive a budget plan',
+        security: [{ bearerAuth: [] }],
+        params: planParamsJsonSchema,
+        response: {
+          200: budgetPlanEnvelopeJsonSchema,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.archive(request as AuthenticatedRequest, reply)
   );
 }

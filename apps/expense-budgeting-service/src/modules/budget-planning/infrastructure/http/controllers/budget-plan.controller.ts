@@ -1,9 +1,10 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateBudgetPlanHandler,
   UpdateBudgetPlanHandler,
   ActivateBudgetPlanHandler,
+  ArchiveBudgetPlanHandler,
   DeleteBudgetPlanHandler,
   GetBudgetPlanHandler,
   ListBudgetPlansHandler,
@@ -24,6 +25,7 @@ export class BudgetPlanController {
     private readonly createHandler: CreateBudgetPlanHandler,
     private readonly updateHandler: UpdateBudgetPlanHandler,
     private readonly activateHandler: ActivateBudgetPlanHandler,
+    private readonly archiveHandler: ArchiveBudgetPlanHandler,
     private readonly deleteHandler: DeleteBudgetPlanHandler,
     private readonly getHandler: GetBudgetPlanHandler,
     private readonly listHandler: ListBudgetPlansHandler
@@ -149,6 +151,28 @@ export class BudgetPlanController {
         reply,
         result,
         'Budget plan activated successfully'
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async archive(
+    req: AuthenticatedRequest<{ Params: PlanParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { workspaceId, id } = req.params;
+      const userId = req.user.userId;
+      const result = await this.archiveHandler.handle({
+        id,
+        workspaceId,
+        userId,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Budget plan archived successfully'
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

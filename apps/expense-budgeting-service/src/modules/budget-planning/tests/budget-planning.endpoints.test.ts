@@ -59,8 +59,6 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
   let testScenarioId: string;
   let testForecastItemId: string;
   const testEmail = `budget-planning-test-${Date.now()}@example.com`;
-  const testPassword = 'TestPassword123!';
-  const testWorkspaceName = `Budget Planning Test Workspace ${Date.now()}`;
 
   beforeAll(async () => {
     app = await createServer();
