@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateExpenseHandler,
   UpdateExpenseHandler,
@@ -17,9 +17,12 @@ import {
   CreateExpenseInput,
   UpdateExpenseInput,
   FilterExpensesQuery,
+  ExpenseStatisticsQuery,
 } from '../validation/expense.schema';
 import { paginationQuerySchema } from '../validation/common.schema';
 import { z } from 'zod';
+
+import { WorkspaceMembershipContext, WorkspaceRole } from '../../../application/ports/workspace-authorization.port';
 
 type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
@@ -37,6 +40,23 @@ export class ExpenseController {
     private readonly getExpenseStatisticsHandler: GetExpenseStatisticsHandler
   ) {}
 
+  private getVerifiedMembership(
+    request: AuthenticatedRequest,
+    userId?: string,
+    workspaceId?: string
+  ): WorkspaceMembershipContext | undefined {
+    const uid = userId || request.user?.userId || request.user?.id;
+    const wid = workspaceId || (request.params as { workspaceId?: string })?.workspaceId;
+    if (request.workspaceMembership && uid && wid) {
+      return {
+        userId: uid,
+        workspaceId: wid,
+        role: request.workspaceMembership.role as WorkspaceRole,
+      };
+    }
+    return undefined;
+  }
+
   async getExpense(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; expenseId: string };
@@ -45,10 +65,20 @@ export class ExpenseController {
   ) {
     try {
       const { workspaceId, expenseId } = request.params;
+      const userId = request.user?.userId || request.user?.id;
+      const role = request.workspaceMembership?.role;
+
+      if (!userId) {
+        return ResponseHelper.unauthorized(reply);
+      }
 
       const result = await this.getExpenseHandler.handle({
         expenseId,
         workspaceId,
+        userId,
+        role,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.ok(reply, 'Expense retrieved successfully', result);
@@ -67,12 +97,22 @@ export class ExpenseController {
     try {
       const { workspaceId } = request.params;
       const { userId, limit, offset } = request.query;
+      const actorId = request.user?.userId || request.user?.id;
+      const role = request.workspaceMembership?.role;
+
+      if (!actorId) {
+        return ResponseHelper.unauthorized(reply);
+      }
 
       const result = await this.filterExpensesHandler.handle({
         workspaceId,
-        userId: userId || request.user?.userId,
+        actorId,
+        userId,
+        role,
         limit,
         offset,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, actorId, workspaceId),
       });
 
       return ResponseHelper.ok(reply, 'Expenses retrieved successfully', {
@@ -97,9 +137,17 @@ export class ExpenseController {
     try {
       const { workspaceId } = request.params;
       const query = request.query;
+      const actorId = request.user?.userId || request.user?.id;
+      const role = request.workspaceMembership?.role;
+
+      if (!actorId) {
+        return ResponseHelper.unauthorized(reply);
+      }
 
       const result = await this.filterExpensesHandler.handle({
         workspaceId,
+        actorId,
+        role,
         userId: query.userId,
         categoryId: query.categoryId,
         status: query.status,
@@ -113,6 +161,8 @@ export class ExpenseController {
         searchText: query.searchText,
         limit: query.page && query.pageSize ? query.pageSize : undefined,
         offset: query.page && query.pageSize ? (query.page - 1) * query.pageSize : undefined,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, actorId, workspaceId),
       });
 
       return ResponseHelper.ok(reply, 'Expenses filtered successfully', {
@@ -130,18 +180,28 @@ export class ExpenseController {
   async getExpenseStatistics(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
-      Querystring: { userId?: string; currency?: string };
+      Querystring: ExpenseStatisticsQuery;
     }>,
     reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
       const { userId, currency } = request.query;
+      const actorId = request.user?.userId || request.user?.id;
+      const role = request.workspaceMembership?.role;
+
+      if (!actorId) {
+        return ResponseHelper.unauthorized(reply);
+      }
 
       const result = await this.getExpenseStatisticsHandler.handle({
         workspaceId,
+        actorId,
         userId,
+        role,
         currency,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, actorId, workspaceId),
       });
 
       return ResponseHelper.ok(reply, 'Expense statistics retrieved successfully', result);
@@ -179,6 +239,8 @@ export class ExpenseController {
         paymentMethod: body.paymentMethod,
         isReimbursable: body.isReimbursable,
         tagIds: body.tagIds ?? undefined,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -213,15 +275,17 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         userId,
-        title: body.title ?? undefined,
-        description: body.description ?? undefined,
-        amount: body.amount ?? undefined,
-        currency: body.currency ?? undefined,
+        title: body.title !== undefined ? body.title : undefined,
+        description: body.description !== undefined ? body.description : undefined,
+        amount: body.amount !== undefined ? body.amount : undefined,
+        currency: body.currency !== undefined ? body.currency : undefined,
         expenseDate: body.expenseDate ? new Date(body.expenseDate) : undefined,
-        categoryId: body.categoryId ?? undefined,
-        merchant: body.merchant ?? undefined,
-        paymentMethod: body.paymentMethod ?? undefined,
-        isReimbursable: body.isReimbursable ?? undefined,
+        categoryId: body.categoryId !== undefined ? body.categoryId : undefined,
+        merchant: body.merchant !== undefined ? body.merchant : undefined,
+        paymentMethod: body.paymentMethod !== undefined ? body.paymentMethod : undefined,
+        isReimbursable: body.isReimbursable !== undefined ? body.isReimbursable : undefined,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -253,6 +317,8 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         userId,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -285,6 +351,8 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         userId,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -316,6 +384,8 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         approverId: userId,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -350,6 +420,8 @@ export class ExpenseController {
         workspaceId,
         rejecterId: userId,
         reason,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(
@@ -381,6 +453,8 @@ export class ExpenseController {
         expenseId,
         workspaceId,
         processedBy: userId,
+        authToken: request.headers.authorization,
+        verifiedMembership: this.getVerifiedMembership(request, userId, workspaceId),
       });
 
       return ResponseHelper.fromCommand(

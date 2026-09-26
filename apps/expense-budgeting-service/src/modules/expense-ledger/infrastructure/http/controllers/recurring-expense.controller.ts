@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateRecurringExpenseHandler,
   PauseRecurringExpenseHandler,
@@ -12,6 +12,19 @@ import {
   CreateRecurringExpenseInput,
   RecurringTriggerInput,
 } from '../validation/recurring-expense.schema';
+
+import crypto from 'node:crypto';
+
+function timingSafeCompare(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a, 'utf-8');
+  const bufB = Buffer.from(b, 'utf-8');
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 export class RecurringExpenseController {
   constructor(
@@ -46,7 +59,7 @@ export class RecurringExpenseController {
         endDate: body.endDate ? new Date(body.endDate) : undefined,
         template: {
           ...body.template,
-          tagIds: body.template.categoryId ? [] : undefined, // Maintain template structure
+          tagIds: body.template.tagIds ?? undefined,
         },
       });
 
@@ -68,10 +81,14 @@ export class RecurringExpenseController {
     }>,
     reply: FastifyReply
   ) {
-    const { id } = request.params;
+    const { id, workspaceId } = request.params;
 
     try {
-      const result = await this.pauseRecurringExpenseHandler.handle({ id });
+      const result = await this.pauseRecurringExpenseHandler.handle({
+        id,
+        workspaceId,
+        userId: request.user.userId,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -89,10 +106,14 @@ export class RecurringExpenseController {
     }>,
     reply: FastifyReply
   ) {
-    const { id } = request.params;
+    const { id, workspaceId } = request.params;
 
     try {
-      const result = await this.resumeRecurringExpenseHandler.handle({ id });
+      const result = await this.resumeRecurringExpenseHandler.handle({
+        id,
+        workspaceId,
+        userId: request.user.userId,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -110,10 +131,14 @@ export class RecurringExpenseController {
     }>,
     reply: FastifyReply
   ) {
-    const { id } = request.params;
+    const { id, workspaceId } = request.params;
 
     try {
-      const result = await this.stopRecurringExpenseHandler.handle({ id });
+      const result = await this.stopRecurringExpenseHandler.handle({
+        id,
+        workspaceId,
+        userId: request.user.userId,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -126,14 +151,18 @@ export class RecurringExpenseController {
   }
 
   async trigger(
-    request: AuthenticatedRequest<{ Body: RecurringTriggerInput }>,
+    request: AuthenticatedRequest<{ Body?: RecurringTriggerInput }>,
     reply: FastifyReply
   ) {
-    const expectedSecret = process.env.CRON_SECRET;
-    if (!expectedSecret || request.body?.secret !== expectedSecret) {
+    const expectedSecret = process.env.INTERNAL_API_KEY || process.env.CRON_SECRET;
+    const incomingHeaderSecret =
+      (request.headers['x-internal-api-key'] as string | undefined) ||
+      (request.headers['x-cron-secret'] as string | undefined);
+
+    if (!expectedSecret || !incomingHeaderSecret || !timingSafeCompare(incomingHeaderSecret, expectedSecret)) {
       return ResponseHelper.forbidden(
         reply,
-        'Invalid or missing trigger secret'
+        'Invalid or missing internal authorization credentials'
       );
     }
     try {
