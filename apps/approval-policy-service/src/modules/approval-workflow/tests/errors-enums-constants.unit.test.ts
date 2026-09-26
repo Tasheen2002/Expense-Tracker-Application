@@ -30,6 +30,9 @@ import {
   UnauthorizedWorkflowViewError,
   WorkflowStepMismatchError,
   ApprovalChainInUseError,
+  ExpenseSnapshotMismatchError,
+  UnauthorizedWorkflowInitiationError,
+  ExpenseNotSubmittedError,
 } from '../domain/errors';
 import { PureDomainError } from '../../../shared/errors/pure-domain-error';
 import {
@@ -201,6 +204,7 @@ describe('Errors, Enums, and Constants Unit Tests', () => {
       { error: new SelfApprovalNotAllowedError('usr-1'), expectedHttp: 403 },
       { error: new UnauthorizedWorkflowCancellationError('usr-1', 'exp-1'), expectedHttp: 403 },
       { error: new UnauthorizedWorkflowViewError('usr-1', 'exp-1'), expectedHttp: 403 },
+      { error: new UnauthorizedWorkflowInitiationError('exp-1'), expectedHttp: 403 },
 
       { error: new WorkflowAlreadyExistsError('exp-1'), expectedHttp: 409 },
       { error: new ApprovalAlreadyProcessedError('step-1'), expectedHttp: 409 },
@@ -208,6 +212,8 @@ describe('Errors, Enums, and Constants Unit Tests', () => {
       { error: new WorkflowStepMismatchError(1, 2), expectedHttp: 409 },
       { error: new ApprovalChainInUseError('chain-1'), expectedHttp: 409 },
       { error: new ConcurrencyConflictError('wf-1'), expectedHttp: 409 },
+      { error: new ExpenseNotSubmittedError('exp-1', 'DRAFT'), expectedHttp: 409 },
+      { error: new ExpenseSnapshotMismatchError('exp-1'), expectedHttp: 502 },
 
       { error: new InvalidApprovalTransitionError('pending', 'approved'), expectedHttp: 400 },
       { error: new InvalidDelegationError('Cannot delegate to self'), expectedHttp: 400 },
@@ -508,4 +514,3 @@ describe('Errors, Enums, and Constants Unit Tests', () => {
     });
   });
 });
-
