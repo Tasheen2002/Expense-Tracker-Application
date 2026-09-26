@@ -19,40 +19,44 @@ export class CategoryRepositoryImpl
   }
 
   async save(category: Category): Promise<void> {
-    await this.prisma.category.create({
-      data: {
-        id: category.id.getValue(),
-        workspaceId: category.workspaceId,
-        name: category.name,
-        description: category.description,
-        color: category.color,
-        icon: category.icon,
-        isActive: category.isActive,
-        createdAt: category.createdAt,
-        updatedAt: category.updatedAt,
-      },
-    });
+    await this.runInTransaction(async (tx) => {
+      await tx.category.create({
+        data: {
+          id: category.id.getValue(),
+          workspaceId: category.workspaceId,
+          name: category.name,
+          description: category.description,
+          color: category.color,
+          icon: category.icon,
+          isActive: category.isActive,
+          createdAt: category.createdAt,
+          updatedAt: category.updatedAt,
+        },
+      });
 
-    await this.dispatchEvents(category);
+      await this.dispatchEvents(category, tx);
+    });
   }
 
   async update(category: Category): Promise<void> {
-    await this.prisma.category.update({
-      where: {
-        id: category.id.getValue(),
-        workspaceId: category.workspaceId,
-      },
-      data: {
-        name: category.name,
-        description: category.description,
-        color: category.color,
-        icon: category.icon,
-        isActive: category.isActive,
-        updatedAt: category.updatedAt,
-      },
-    });
+    await this.runInTransaction(async (tx) => {
+      await tx.category.update({
+        where: {
+          id: category.id.getValue(),
+          workspaceId: category.workspaceId,
+        },
+        data: {
+          name: category.name,
+          description: category.description ?? null,
+          color: category.color ?? null,
+          icon: category.icon ?? null,
+          isActive: category.isActive,
+          updatedAt: category.updatedAt,
+        },
+      });
 
-    await this.dispatchEvents(category);
+      await this.dispatchEvents(category, tx);
+    });
   }
 
   async findById(
@@ -122,12 +126,29 @@ export class CategoryRepositoryImpl
     );
   }
 
-  async delete(id: CategoryId, workspaceId: string): Promise<void> {
-    await this.prisma.category.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId,
-      },
+  async delete(id: CategoryId, workspaceId: string, category?: Category): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      let entityToDispatch = category;
+      if (!entityToDispatch) {
+        const found = await tx.category.findFirst({
+          where: { id: id.getValue(), workspaceId },
+        });
+        if (found) {
+          entityToDispatch = this.toDomain(found);
+          entityToDispatch.markAsDeleted();
+        }
+      }
+
+      await tx.category.delete({
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
+      });
+
+      if (entityToDispatch) {
+        await this.dispatchEvents(entityToDispatch, tx);
+      }
     });
   }
 

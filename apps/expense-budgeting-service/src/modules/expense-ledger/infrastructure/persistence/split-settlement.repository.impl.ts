@@ -15,10 +15,16 @@ import {
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
+import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
+
 export class SplitSettlementRepositoryImpl
   implements ISplitSettlementRepository
 {
-  constructor(protected readonly prisma: PrismaClient) {}
+  constructor(protected readonly rootPrisma: PrismaClient) {}
+
+  protected get prisma(): PrismaClient | Prisma.TransactionClient {
+    return PrismaUnitOfWork.getClient(this.rootPrisma);
+  }
 
   async save(settlement: SplitSettlement): Promise<void> {
     await this.prisma.splitSettlement.upsert({
@@ -59,6 +65,37 @@ export class SplitSettlementRepositoryImpl
     if (!settlement) return null;
 
     return this.toDomain(settlement);
+  }
+
+  async findByIdForUpdate(
+    id: SettlementId,
+    workspaceId: string,
+  ): Promise<SplitSettlement | null> {
+    const client = this.prisma;
+    if (typeof client.$queryRaw !== 'function') {
+      throw new Error(
+        'findByIdForUpdate requires a Prisma client with $queryRaw support. ' +
+        'FOR UPDATE locking is mandatory for payment safety — unlocked reads are not permitted.'
+      );
+    }
+
+    const rows = await client.$queryRaw<Prisma.SplitSettlementGetPayload<{}>[]>`
+      SELECT s.id, s.split_id as "splitId", s.from_user_id as "fromUserId",
+             s.to_user_id as "toUserId", s.total_owed_amount as "totalOwedAmount",
+             s.paid_amount as "paidAmount", s.currency, s.status,
+             s.settled_at as "settledAt", s.created_at as "createdAt",
+             s.updated_at as "updatedAt"
+      FROM "expense_ledger"."split_settlements" s
+      INNER JOIN "expense_ledger"."expense_splits" es ON s.split_id = es.id
+      WHERE s.id = ${id.getValue()}::uuid
+        AND es.workspace_id = ${workspaceId}::uuid
+      LIMIT 1
+      FOR UPDATE OF s
+    `;
+    if (Array.isArray(rows) && rows.length > 0) {
+      return this.toDomain(rows[0]);
+    }
+    return null;
   }
 
   async findBySplitId(
@@ -138,7 +175,7 @@ export class SplitSettlementRepositoryImpl
   }
 
   async delete(id: SettlementId, workspaceId: string): Promise<void> {
-    await this.prisma.splitSettlement.delete({
+    await this.prisma.splitSettlement.deleteMany({
       where: {
         id: id.getValue(),
         split: { workspaceId },

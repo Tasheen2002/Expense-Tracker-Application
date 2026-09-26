@@ -19,32 +19,36 @@ export class TagRepositoryImpl
   }
 
   async save(tag: Tag): Promise<void> {
-    await this.prisma.tag.create({
-      data: {
-        id: tag.id.getValue(),
-        workspaceId: tag.workspaceId,
-        name: tag.name,
-        color: tag.color,
-        createdAt: tag.createdAt,
-      },
-    });
+    await this.runInTransaction(async (tx) => {
+      await tx.tag.create({
+        data: {
+          id: tag.id.getValue(),
+          workspaceId: tag.workspaceId,
+          name: tag.name,
+          color: tag.color,
+          createdAt: tag.createdAt,
+        },
+      });
 
-    await this.dispatchEvents(tag);
+      await this.dispatchEvents(tag, tx);
+    });
   }
 
   async update(tag: Tag): Promise<void> {
-    await this.prisma.tag.update({
-      where: {
-        id: tag.id.getValue(),
-        workspaceId: tag.workspaceId,
-      },
-      data: {
-        name: tag.name,
-        color: tag.color,
-      },
-    });
+    await this.runInTransaction(async (tx) => {
+      await tx.tag.update({
+        where: {
+          id: tag.id.getValue(),
+          workspaceId: tag.workspaceId,
+        },
+        data: {
+          name: tag.name,
+          color: tag.color ?? null,
+        },
+      });
 
-    await this.dispatchEvents(tag);
+      await this.dispatchEvents(tag, tx);
+    });
   }
 
   async findById(id: TagId, workspaceId: string): Promise<Tag | null> {
@@ -101,12 +105,29 @@ export class TagRepositoryImpl
     return tags.map((tag) => this.toDomain(tag));
   }
 
-  async delete(id: TagId, workspaceId: string): Promise<void> {
-    await this.prisma.tag.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId,
-      },
+  async delete(id: TagId, workspaceId: string, tag?: Tag): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      let entityToDispatch = tag;
+      if (!entityToDispatch) {
+        const found = await tx.tag.findFirst({
+          where: { id: id.getValue(), workspaceId },
+        });
+        if (found) {
+          entityToDispatch = this.toDomain(found);
+          entityToDispatch.markAsDeleted();
+        }
+      }
+
+      await tx.tag.delete({
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
+      });
+
+      if (entityToDispatch) {
+        await this.dispatchEvents(entityToDispatch, tx);
+      }
     });
   }
 

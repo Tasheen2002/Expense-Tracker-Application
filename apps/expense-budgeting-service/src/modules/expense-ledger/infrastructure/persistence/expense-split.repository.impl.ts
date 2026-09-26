@@ -27,7 +27,7 @@ export class ExpenseSplitRepositoryImpl
   }
 
   async save(split: ExpenseSplit): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.runInTransaction(async (tx) => {
       await tx.expenseSplit.upsert({
         where: { id: split.id.getValue() },
         create: {
@@ -68,9 +68,9 @@ export class ExpenseSplitRepositoryImpl
           })),
         });
       }
-    });
 
-    await this.dispatchEvents(split);
+      await this.dispatchEvents(split, tx);
+    });
   }
 
   async findById(
@@ -206,12 +206,30 @@ export class ExpenseSplitRepositoryImpl
     };
   }
 
-  async delete(id: SplitId, workspaceId: string): Promise<void> {
-    await this.prisma.expenseSplit.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId,
-      },
+  async delete(id: SplitId, workspaceId: string, split?: ExpenseSplit): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      let entityToDispatch = split;
+      if (!entityToDispatch) {
+        const found = await tx.expenseSplit.findFirst({
+          where: { id: id.getValue(), workspaceId },
+          include: { participants: true },
+        });
+        if (found) {
+          entityToDispatch = this.toDomain(found);
+          entityToDispatch.markAsDeleted();
+        }
+      }
+
+      await tx.expenseSplit.delete({
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
+      });
+
+      if (entityToDispatch) {
+        await this.dispatchEvents(entityToDispatch, tx);
+      }
     });
   }
 
