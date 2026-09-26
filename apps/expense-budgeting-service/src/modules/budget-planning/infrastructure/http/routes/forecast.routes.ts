@@ -1,4 +1,4 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ForecastController } from '../controllers/forecast.controller';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
@@ -8,10 +8,18 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { validateBody } from '../validation/validator';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from '../validation/validator';
 import {
   createForecastSchema,
   addForecastItemSchema,
+  planIdParamsSchema,
+  forecastParamsSchema,
+  forecastIdParamsSchema,
+  forecastItemParamsSchema,
   planIdParamsJsonSchema,
   forecastParamsJsonSchema,
   forecastIdParamsJsonSchema,
@@ -22,6 +30,8 @@ import {
   paginatedForecastsEnvelopeJsonSchema,
   forecastItemEnvelopeJsonSchema,
   paginatedForecastItemsEnvelopeJsonSchema,
+  forecastItemQuerySchema,
+  forecastItemQueryJsonSchema,
 } from '../validation/budget-planning.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -37,13 +47,6 @@ export async function forecastRoutes(
     await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // ==========================================
   // Forecast Routes
   // ==========================================
@@ -52,8 +55,9 @@ export async function forecastRoutes(
   fastify.post(
     '/workspaces/:workspaceId/budget-plans/:planId/forecasts',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
+        validateParams(planIdParamsSchema),
         validateBody(createForecastSchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
@@ -79,6 +83,7 @@ export async function forecastRoutes(
     {
       onRequest: [fastify.authenticate],
       preHandler: [
+        validateParams(planIdParamsSchema),
         workspaceAuth,
       ],
       schema: {
@@ -101,6 +106,7 @@ export async function forecastRoutes(
     {
       onRequest: [fastify.authenticate],
       preHandler: [
+        validateParams(forecastParamsSchema),
         workspaceAuth,
       ],
       schema: {
@@ -121,8 +127,9 @@ export async function forecastRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/forecasts/:id',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
+        validateParams(forecastParamsSchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
       ],
@@ -151,8 +158,9 @@ export async function forecastRoutes(
   fastify.post(
     '/workspaces/:workspaceId/forecasts/:forecastId/items',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
+        validateParams(forecastIdParamsSchema),
         validateBody(addForecastItemSchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
@@ -178,6 +186,8 @@ export async function forecastRoutes(
     {
       onRequest: [fastify.authenticate],
       preHandler: [
+        validateParams(forecastIdParamsSchema),
+        validateQuery(forecastItemQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -185,6 +195,7 @@ export async function forecastRoutes(
         description: 'List all items in a forecast',
         security: [{ bearerAuth: [] }],
         params: forecastIdParamsJsonSchema,
+        querystring: forecastItemQueryJsonSchema,
         response: {
           200: paginatedForecastItemsEnvelopeJsonSchema,
         },
@@ -198,8 +209,9 @@ export async function forecastRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/forecast-items/:itemId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
+        validateParams(forecastItemParamsSchema),
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
       ],
