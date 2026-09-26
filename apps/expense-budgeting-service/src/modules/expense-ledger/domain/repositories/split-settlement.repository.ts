@@ -13,6 +13,10 @@ export interface ISplitSettlementRepository {
     id: SettlementId,
     workspaceId: string,
   ): Promise<SplitSettlement | null>;
+  findByIdForUpdate(
+    id: SettlementId,
+    workspaceId: string,
+  ): Promise<SplitSettlement | null>;
   findBySplitId(
     splitId: SplitId,
     workspaceId: string,

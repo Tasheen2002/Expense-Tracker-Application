@@ -89,7 +89,7 @@ export interface IExpenseRepository {
   /**
    * Delete expense
    */
-  delete(id: ExpenseId, workspaceId: string): Promise<void>;
+  delete(id: ExpenseId, workspaceId: string, expense?: Expense): Promise<void>;
 
   /**
    * Check if expense exists

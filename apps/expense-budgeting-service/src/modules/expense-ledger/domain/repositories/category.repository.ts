@@ -24,7 +24,7 @@ export interface ICategoryRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Category>>;
 
-  delete(id: CategoryId, workspaceId: string): Promise<void>;
+  delete(id: CategoryId, workspaceId: string, category?: Category): Promise<void>;
 
   exists(id: CategoryId, workspaceId: string): Promise<boolean>;
 
