@@ -10,7 +10,7 @@ export interface UpdateTagCommand extends ICommand {
   readonly tagId: string;
   readonly workspaceId: string;
   readonly name?: string;
-  readonly color?: string;
+  readonly color?: string | null;
 }
 
 export class UpdateTagHandler implements ICommandHandler<

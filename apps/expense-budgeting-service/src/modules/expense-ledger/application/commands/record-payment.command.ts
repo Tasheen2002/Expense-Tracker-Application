@@ -4,6 +4,7 @@ import {
   CommandResult,
 } from '@core/application/cqrs';
 import { ExpenseSplitService } from '../services/expense-split.service';
+import { SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 
 export interface RecordPaymentCommand extends ICommand {
   readonly settlementId: string;
@@ -14,12 +15,12 @@ export interface RecordPaymentCommand extends ICommand {
 
 export class RecordPaymentHandler implements ICommandHandler<
   RecordPaymentCommand,
-  CommandResult<void>
+  CommandResult<SplitSettlementDTO>
 > {
   constructor(private readonly splitService: ExpenseSplitService) {}
 
-  async handle(command: RecordPaymentCommand): Promise<CommandResult<void>> {
-    await this.splitService.recordPayment(command);
-    return CommandResult.success();
+  async handle(command: RecordPaymentCommand): Promise<CommandResult<SplitSettlementDTO>> {
+    const settlement = await this.splitService.recordPayment(command);
+    return CommandResult.success(settlement);
   }
 }

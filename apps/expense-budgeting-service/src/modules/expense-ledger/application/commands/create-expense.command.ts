@@ -9,11 +9,9 @@ import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ICategoryRepository } from '../../domain/repositories/category.repository';
 import { ITagRepository } from '../../domain/repositories/tag.repository';
 import { CategoryId } from '../../domain/value-objects/category-id';
-import { TagId } from '../../domain/value-objects/tag-id';
-import {
-  CategoryNotFoundError,
-  TagNotFoundError,
-} from '../../domain/errors/expense.errors';
+import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
+import { OperationService } from '../services/operation.service';
+import { WorkspaceMembershipContext } from '../ports/workspace-authorization.port';
 
 export interface CreateExpenseCommand extends ICommand {
   readonly workspaceId: string;
@@ -28,6 +26,8 @@ export interface CreateExpenseCommand extends ICommand {
   readonly categoryId?: string;
   readonly merchant?: string;
   readonly tagIds?: string[];
+  readonly authToken?: string;
+  readonly verifiedMembership?: WorkspaceMembershipContext;
 }
 
 export class CreateExpenseHandler implements ICommandHandler<
@@ -37,12 +37,30 @@ export class CreateExpenseHandler implements ICommandHandler<
   constructor(
     private readonly expenseService: ExpenseService,
     private readonly categoryRepository: ICategoryRepository,
-    private readonly tagRepository: ITagRepository
-  ) {}
+    _tagRepository: ITagRepository | undefined,
+    private readonly operationService: OperationService
+  ) {
+    if (!expenseService) {
+      throw new Error('ExpenseService is required for CreateExpenseHandler');
+    }
+    if (!categoryRepository) {
+      throw new Error('CategoryRepository is required for CreateExpenseHandler');
+    }
+    if (!operationService) {
+      throw new Error('OperationService is required for CreateExpenseHandler');
+    }
+  }
 
   async handle(
     command: CreateExpenseCommand
   ): Promise<CommandResult<ExpenseDTO>> {
+    await this.operationService.authorize({
+      actorId: command.userId,
+      workspaceId: command.workspaceId,
+      authToken: command.authToken,
+      verifiedMembership: command.verifiedMembership,
+    });
+
     if (command.categoryId) {
       const categoryExists = await this.categoryRepository.exists(
         CategoryId.fromString(command.categoryId),
@@ -53,18 +71,6 @@ export class CreateExpenseHandler implements ICommandHandler<
           command.categoryId,
           command.workspaceId
         );
-      }
-    }
-
-    if (command.tagIds && command.tagIds.length > 0) {
-      const uniqueTagIds = Array.from(new Set(command.tagIds));
-      const tagIdObjects = uniqueTagIds.map((id) => TagId.fromString(id));
-      const foundTags = await this.tagRepository.findByIds(
-        tagIdObjects,
-        command.workspaceId
-      );
-      if (foundTags.length !== uniqueTagIds.length) {
-        throw new TagNotFoundError('one_or_more', command.workspaceId);
       }
     }
 

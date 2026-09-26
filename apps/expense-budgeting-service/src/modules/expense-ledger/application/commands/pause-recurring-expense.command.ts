@@ -7,6 +7,8 @@ import { RecurringExpenseService } from '../services/recurring-expense.service';
 
 export interface PauseRecurringExpenseCommand extends ICommand {
   readonly id: string;
+  readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class PauseRecurringExpenseHandler implements ICommandHandler<
@@ -20,7 +22,11 @@ export class PauseRecurringExpenseHandler implements ICommandHandler<
   async handle(
     command: PauseRecurringExpenseCommand
   ): Promise<CommandResult<void>> {
-    await this.recurringExpenseService.pauseRecurringExpense(command.id);
+    await this.recurringExpenseService.pauseRecurringExpense(
+      command.id,
+      command.workspaceId,
+      command.userId
+    );
     return CommandResult.success();
   }
 }
