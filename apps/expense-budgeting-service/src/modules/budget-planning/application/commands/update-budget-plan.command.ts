@@ -11,7 +11,7 @@ export interface UpdateBudgetPlanCommand extends ICommand {
   readonly workspaceId: string;
   readonly userId: string;
   readonly name?: string;
-  readonly description?: string;
+  readonly description?: string | null;
 }
 
 export class UpdateBudgetPlanHandler implements ICommandHandler<
