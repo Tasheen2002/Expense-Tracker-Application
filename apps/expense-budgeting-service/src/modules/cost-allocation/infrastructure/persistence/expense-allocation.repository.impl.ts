@@ -88,7 +88,7 @@ export class ExpenseAllocationRepositoryImpl
       existing.markAsDeleted();
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.runInTransaction(async (tx) => {
       await tx.expenseAllocation.deleteMany({
         where: {
           expenseId,
