@@ -10,6 +10,8 @@ export interface GetForecastItemsQuery extends IQuery {
   readonly forecastId: string;
   readonly workspaceId: string;
   readonly userId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetForecastItemsHandler implements IQueryHandler<
@@ -22,6 +24,12 @@ export class GetForecastItemsHandler implements IQueryHandler<
     return this.forecastService.getForecastItemsByForecast(
       query.forecastId,
       query.workspaceId,
+      query.limit !== undefined || query.offset !== undefined
+        ? {
+            limit: query.limit,
+            offset: query.offset,
+          }
+        : undefined
     );
   }
 }
