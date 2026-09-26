@@ -58,8 +58,8 @@ export class ScenarioService {
     planId: string;
     workspaceId: string;
     name: string;
-    description?: string;
-    assumptions?: Record<string, unknown>;
+    description?: string | null;
+    assumptions?: Record<string, unknown> | null;
     createdBy: string;
   }): Promise<ScenarioDTO> {
     const planId = PlanId.fromString(params.planId);
@@ -113,8 +113,8 @@ export class ScenarioService {
     workspaceId: string;
     userId: string;
     name?: string;
-    description?: string;
-    assumptions?: Record<string, unknown>;
+    description?: string | null;
+    assumptions?: Record<string, unknown> | null;
   }): Promise<ScenarioDTO> {
     const scenarioId = ScenarioId.fromString(params.id);
     const scenario = await this.scenarioRepository.findById(scenarioId, params.workspaceId);

@@ -32,7 +32,7 @@ export class BudgetPlanService {
     workspaceId: string;
     name: string;
     periodType: PeriodType;
-    description?: string;
+    description?: string | null;
     startDate: Date;
     endDate: Date;
     createdBy: string;
@@ -67,7 +67,7 @@ export class BudgetPlanService {
     workspaceId: string;
     userId: string;
     name?: string;
-    description?: string;
+    description?: string | null;
   }): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(params.id);
     const plan = await this.budgetPlanRepository.findById(planId, params.workspaceId);
