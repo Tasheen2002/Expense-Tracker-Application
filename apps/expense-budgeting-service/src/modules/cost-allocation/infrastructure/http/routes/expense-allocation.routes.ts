@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
