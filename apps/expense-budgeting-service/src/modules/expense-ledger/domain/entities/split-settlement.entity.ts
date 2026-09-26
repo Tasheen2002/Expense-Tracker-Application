@@ -3,7 +3,6 @@ import { SplitId } from '../value-objects/split-id';
 import { Money } from '../value-objects/money';
 import { SettlementStatus } from '../enums/settlement-status';
 import { InvalidSettlementAmountError } from '../errors/split-expense.errors';
-import { Decimal } from '@prisma/client/runtime/library'; // Decimal used only for arithmetic
 
 export interface SplitSettlementDTO {
   id: string;
@@ -42,6 +41,10 @@ export class SplitSettlement {
     toUserId: string;
     owedAmount: Money;
   }): SplitSettlement {
+    if (!params.owedAmount.getAmount().isPositive() || params.owedAmount.getAmount().isZero()) {
+      throw new InvalidSettlementAmountError('Settlement owed amount must be greater than zero');
+    }
+
     return new SplitSettlement({
       id: SettlementId.create(),
       splitId: params.splitId,
@@ -81,46 +84,46 @@ export class SplitSettlement {
     return this.props.status;
   }
   get settledAt(): Date | undefined {
-    return this.props.settledAt;
+    return this.props.settledAt ? new Date(this.props.settledAt.getTime()) : undefined;
   }
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   getRemainingAmount(): Money {
-    const remaining = new Decimal(this.props.totalOwedAmount.getAmount()).minus(
-      this.props.paidAmount.getAmount()
-    );
-
-    return Money.create(
-      remaining.toNumber(),
-      this.props.totalOwedAmount.getCurrency()
-    );
+    return this.props.totalOwedAmount.subtract(this.props.paidAmount);
   }
 
   recordPayment(amount: Money): void {
-    const newPaidAmount = new Decimal(this.props.paidAmount.getAmount()).plus(
-      amount.getAmount()
-    );
-
-    if (newPaidAmount.greaterThan(this.props.totalOwedAmount.getAmount())) {
+    if (amount.getCurrency() !== this.props.totalOwedAmount.getCurrency()) {
       throw new InvalidSettlementAmountError(
-        `Payment amount ${newPaidAmount} exceeds owed amount ${this.props.totalOwedAmount.getAmount()}`
+        `Payment currency (${amount.getCurrency()}) does not match settlement currency (${this.props.totalOwedAmount.getCurrency()})`
       );
     }
 
-    this.props.paidAmount = Money.create(
-      newPaidAmount.toNumber(),
-      this.props.totalOwedAmount.getCurrency()
-    );
+    if (amount.getAmount().isZero() || amount.getAmount().isNegative()) {
+      throw new InvalidSettlementAmountError(
+        'Payment amount must be positive'
+      );
+    }
 
-    if (newPaidAmount.equals(this.props.totalOwedAmount.getAmount())) {
+    const newPaidAmount = this.props.paidAmount.add(amount);
+
+    if (newPaidAmount.isGreaterThan(this.props.totalOwedAmount)) {
+      throw new InvalidSettlementAmountError(
+        `Payment amount ${amount.getAmount()} would exceed owed amount ${this.props.totalOwedAmount.getAmount()}`
+      );
+    }
+
+    this.props.paidAmount = newPaidAmount;
+
+    if (newPaidAmount.equals(this.props.totalOwedAmount)) {
       this.props.status = SettlementStatus.SETTLED;
       this.props.settledAt = new Date();
-    } else if (newPaidAmount.greaterThan(0)) {
+    } else {
       this.props.status = SettlementStatus.PARTIAL;
     }
 

@@ -58,13 +58,13 @@ export class SplitParticipant {
     return this.props.isPaid;
   }
   get paidAt(): Date | undefined {
-    return this.props.paidAt;
+    return this.props.paidAt ? new Date(this.props.paidAt.getTime()) : undefined;
   }
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   markAsPaid(): void {
@@ -79,13 +79,21 @@ export class SplitParticipant {
     this.props.updatedAt = new Date();
   }
 
-  updateShareAmount(amount: Money): void {
-    this.props.shareAmount = amount;
-    this.props.updatedAt = new Date();
+  toProps(): SplitParticipantProps {
+    return {
+      id: this.props.id,
+      splitId: this.props.splitId,
+      userId: this.props.userId,
+      shareAmount: this.props.shareAmount,
+      sharePercentage: this.props.sharePercentage,
+      isPaid: this.props.isPaid,
+      paidAt: this.props.paidAt ? new Date(this.props.paidAt.getTime()) : undefined,
+      createdAt: new Date(this.props.createdAt.getTime()),
+      updatedAt: new Date(this.props.updatedAt.getTime()),
+    };
   }
 
-  updateSharePercentage(percentage: number): void {
-    this.props.sharePercentage = percentage;
-    this.props.updatedAt = new Date();
+  clone(): SplitParticipant {
+    return SplitParticipant.fromPersistence(this.toProps());
   }
 }
