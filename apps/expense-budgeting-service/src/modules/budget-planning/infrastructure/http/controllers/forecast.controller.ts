@@ -1,4 +1,4 @@
-﻿import { FastifyReply } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {
@@ -18,6 +18,7 @@ import {
   ForecastItemParams,
   CreateForecastBody,
   AddForecastItemBody,
+  ForecastItemQuery,
 } from '../validation/budget-planning.schema';
 
 export class ForecastController {
@@ -60,16 +61,22 @@ export class ForecastController {
   }
 
   async listItems(
-    req: AuthenticatedRequest<{ Params: ForecastIdParams }>,
+    req: AuthenticatedRequest<{
+      Params: ForecastIdParams;
+      Querystring: ForecastItemQuery;
+    }>,
     reply: FastifyReply
   ) {
     try {
       const userId = req.user.userId;
       const { forecastId, workspaceId } = req.params;
+      const { limit, offset } = req.query ?? {};
       const result = await this.getForecastItemsHandler.handle({
         forecastId,
         workspaceId,
         userId,
+        limit,
+        offset,
       });
       return ResponseHelper.ok(reply, 'Forecast items retrieved successfully', result);
     } catch (error: unknown) {

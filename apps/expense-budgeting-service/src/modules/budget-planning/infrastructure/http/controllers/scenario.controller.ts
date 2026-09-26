@@ -1,4 +1,4 @@
-﻿import { FastifyReply } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {

@@ -123,7 +123,7 @@ export class BudgetPlanController {
         workspaceId,
         userId,
         name: req.body.name,
-        description: req.body.description ?? undefined,
+        description: req.body.description,
       });
       return ResponseHelper.fromCommand(
         reply,
