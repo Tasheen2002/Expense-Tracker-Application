@@ -41,10 +41,9 @@ export * from './queries/list-user-splits.query';
 
 // Services
 export * from './services/attachment.service';
-export * from './services/authorization.service';
 export * from './services/category.service';
 export * from './services/expense-split.service';
 export * from './services/expense.service';
 export * from './services/recurring-expense.service';
 export * from './services/tag.service';
-export * from './services/validation.service';
+export * from './services/operation.service';
