@@ -105,19 +105,16 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           },
         });
         console.log('Create Budget Plan:', res.statusCode);
+        expect(res.statusCode).toBe(201);
 
-        if (res.statusCode === 201) {
-          const data = JSON.parse(res.payload);
-          testBudgetPlanId =
-            data.data?.budgetPlanId ||
-            data.data?.budgetPlan?.id ||
-            data.budgetPlan?.id ||
-            data.data?.id ||
-            data.id;
-        }
-
-        // 201 = created, 400 = validation, 500 = server error
-        expect([201, 400, 500]).toContain(res.statusCode);
+        const data = JSON.parse(res.payload);
+        testBudgetPlanId =
+          data.data?.budgetPlanId ||
+          data.data?.budgetPlan?.id ||
+          data.budgetPlan?.id ||
+          data.data?.id ||
+          data.id;
+        expect(testBudgetPlanId).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -155,8 +152,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Budget Plans:', res.statusCode);
-        // 200 = success, 400 = validation, 500 = server error
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('✅ should filter by status', async () => {
@@ -166,7 +162,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Budget Plans by Status:', res.statusCode);
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -189,8 +185,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Budget Plan:', res.statusCode);
-        // 200 = found, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -216,8 +211,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           payload: { name: 'Updated Annual Budget 2026' },
         });
         console.log('Update Budget Plan:', res.statusCode);
-        // 200 = updated, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -243,8 +237,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Activate Budget Plan:', res.statusCode);
-        // 200 = activated, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -322,19 +315,16 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           },
         });
         console.log('Create Forecast:', res.statusCode);
+        expect(res.statusCode).toBe(201);
 
-        if (res.statusCode === 201) {
-          const data = JSON.parse(res.payload);
-          console.log('Create Forecast Success Data:', JSON.stringify(data));
-          testForecastId =
-            data.data?.forecastId ||
-            data.data?.forecast?.id ||
-            data.forecast?.id ||
-            data.data?.id ||
-            data.id;
-        }
-
-        expect([201, 400, 404, 500]).toContain(res.statusCode);
+        const data = JSON.parse(res.payload);
+        testForecastId =
+          data.data?.forecastId ||
+          data.data?.forecast?.id ||
+          data.forecast?.id ||
+          data.data?.id ||
+          data.id;
+        expect(testForecastId).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -373,7 +363,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Forecasts:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -398,7 +388,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Forecast:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -520,17 +510,16 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           },
         });
         console.log('Add Forecast Item:', res.statusCode);
+        expect(res.statusCode).toBe(201);
 
-        if (res.statusCode === 201) {
-          const data = JSON.parse(res.payload);
-          testForecastItemId =
-            data.data?.forecastItemId ||
-            data.data?.item?.id ||
-            data.item?.id ||
-            data.data?.id ||
-            data.id;
-        }
-        expect([201, 400, 404, 500]).toContain(res.statusCode);
+        const data = JSON.parse(res.payload);
+        testForecastItemId =
+          data.data?.forecastItemId ||
+          data.data?.item?.id ||
+          data.item?.id ||
+          data.data?.id ||
+          data.id;
+        expect(testForecastItemId).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -569,7 +558,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Forecast Items:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -594,10 +583,8 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Delete Forecast Item:', res.statusCode);
-        expect([204, 404]).toContain(res.statusCode);
-        if (res.statusCode === 204) {
-          expect(res.payload).toBe('');
-        }
+        expect(res.statusCode).toBe(204);
+        expect(res.payload).toBe('');
       });
 
       it('❌ should fail without auth token', async () => {
@@ -631,18 +618,16 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           },
         });
         console.log('Create Scenario:', res.statusCode);
+        expect(res.statusCode).toBe(201);
 
-        if (res.statusCode === 201) {
-          const data = JSON.parse(res.payload);
-          testScenarioId =
-            data.data?.scenarioId ||
-            data.data?.scenario?.id ||
-            data.scenario?.id ||
-            data.data?.id ||
-            data.id;
-        }
-
-        expect([201, 400, 404, 500]).toContain(res.statusCode);
+        const data = JSON.parse(res.payload);
+        testScenarioId =
+          data.data?.scenarioId ||
+          data.data?.scenario?.id ||
+          data.scenario?.id ||
+          data.data?.id ||
+          data.id;
+        expect(testScenarioId).toBeDefined();
       });
 
       it('❌ should fail without auth token', async () => {
@@ -684,7 +669,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Scenarios:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -709,7 +694,7 @@ describe.sequential('Budget Planning Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Scenario:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
