@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { RecurringExpenseController } from '../controllers/recurring-expense.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
@@ -40,7 +40,7 @@ export async function recurringExpenseRoutes(
     );
   };
 
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }

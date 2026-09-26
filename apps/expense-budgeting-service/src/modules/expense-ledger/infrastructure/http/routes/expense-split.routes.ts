@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseSplitController } from '../controllers/expense-split.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
@@ -28,6 +28,7 @@ import {
   listSettlementsQueryJsonSchema,
   splitParamsJsonSchema,
   settlementParamsJsonSchema,
+  createSplitResponseEnvelopeJsonSchema,
   splitEnvelopeJsonSchema,
   paginatedSplitsEnvelopeJsonSchema,
   settlementEnvelopeJsonSchema,
@@ -52,7 +53,7 @@ export async function expenseSplitRoutes(
     );
   };
 
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -74,7 +75,7 @@ export async function expenseSplitRoutes(
         params: workspaceExpenseParamsJsonSchema,
         body: createSplitBodyJsonSchema,
         response: {
-          201: splitEnvelopeJsonSchema,
+          201: createSplitResponseEnvelopeJsonSchema,
         },
       },
     },

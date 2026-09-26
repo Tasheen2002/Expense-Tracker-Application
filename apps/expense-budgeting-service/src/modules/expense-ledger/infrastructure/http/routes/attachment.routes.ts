@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AttachmentController } from '../controllers/attachment.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
@@ -9,7 +9,12 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
+  validateQuery,
 } from '../validation/validator';
+import {
+  paginationQuerySchema,
+  paginationQueryJsonSchema,
+} from '../validation/common.schema';
 import {
   createAttachmentSchema,
   createAttachmentBodyJsonSchema,
@@ -37,7 +42,7 @@ export async function attachmentRoutes(
     );
   };
 
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -54,7 +59,7 @@ export async function attachmentRoutes(
       ],
       schema: {
         tags: ['Attachment'],
-        description: 'Upload and link attachment to expense',
+        description: 'Register metadata for an existing expense attachment. This endpoint does not upload or verify file contents.',
         security: [{ bearerAuth: [] }],
         params: workspaceExpenseParamsJsonSchema,
         body: createAttachmentBodyJsonSchema,
@@ -118,12 +123,14 @@ export async function attachmentRoutes(
       onRequest: [fastify.authenticate],
       preHandler: [
         workspaceAuth,
+        validateQuery(paginationQuerySchema),
       ],
       schema: {
         tags: ['Attachment'],
         description: 'List all attachments for an expense',
         security: [{ bearerAuth: [] }],
         params: workspaceExpenseParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
           200: listAttachmentsEnvelopeJsonSchema,
         },
