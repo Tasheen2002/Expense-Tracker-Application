@@ -224,7 +224,7 @@ export class Scenario {
           `Scenario description cannot exceed ${PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH} characters`
         );
       }
-      validatedDesc = trimmedDesc;
+      validatedDesc = trimmedDesc || null;
     }
 
     if (params.assumptions !== undefined) {

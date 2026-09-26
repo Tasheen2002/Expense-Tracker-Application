@@ -551,7 +551,7 @@ export class BudgetPlan extends AggregateRoot {
           `Plan description cannot exceed ${PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH} characters`
         );
       }
-      validatedDescription = trimmedDesc;
+      validatedDescription = trimmedDesc || null;
     }
 
     this.props.name = validatedName;
