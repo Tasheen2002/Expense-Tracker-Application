@@ -59,14 +59,35 @@ describe("BudgetPeriod Value Object", () => {
     expect(period.hasStarted()).toBe(false);
   });
 
-  it("should auto-calculate end date for monthly period if not provided", () => {
-    // If the logic supports auto-calculation. Assuming verification here based on domain analysis?
-    // If not supported, this test might fail or be irrelevant.
-    // Checking usage: BudgetPeriod.create usually takes explicit dates.
-    // If I'm unsure, I'll stick to validation logic.
+  it("should clamp end date to last day of February when monthly period starts on January 31 (non-leap year)", () => {
+    const jan31 = new Date("2026-01-31T00:00:00Z");
+    const period = BudgetPeriod.create(jan31, BudgetPeriodType.MONTHLY);
+
+    expect(period.endDate.getFullYear()).toBe(2026);
+    expect(period.endDate.getMonth()).toBe(1); // February (0-indexed)
+    expect(period.endDate.getDate()).toBe(28); // Feb 28, not March 3!
   });
 
-  it("should default type to custom if unspecified? No, type provided.", () => {
-    // ...
+  it("should clamp end date to February 29 in leap years when monthly period starts on January 31", () => {
+    const jan31Leap = new Date("2024-01-31T00:00:00Z");
+    const period = BudgetPeriod.create(jan31Leap, BudgetPeriodType.MONTHLY);
+
+    expect(period.endDate.getFullYear()).toBe(2024);
+    expect(period.endDate.getMonth()).toBe(1); // February (0-indexed)
+    expect(period.endDate.getDate()).toBe(29); // Feb 29
+  });
+
+  it("should defend against internal date mutations", () => {
+    const originalStart = new Date("2026-01-01T00:00:00Z");
+    const period = BudgetPeriod.create(originalStart, BudgetPeriodType.MONTHLY);
+
+    // Mutating the original Date instance
+    originalStart.setFullYear(1990);
+    expect(period.startDate.getFullYear()).toBe(2026);
+
+    // Mutating the returned getter Date instance
+    const getterDate = period.startDate;
+    getterDate.setFullYear(2050);
+    expect(period.startDate.getFullYear()).toBe(2026);
   });
 });

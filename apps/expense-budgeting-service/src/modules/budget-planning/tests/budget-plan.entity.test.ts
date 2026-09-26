@@ -51,6 +51,22 @@ describe("BudgetPlan Entity", () => {
     );
   });
 
+  it("should clear description when updated with null", () => {
+    const plan = BudgetPlan.create({
+      workspaceId,
+      name: "Plan with Description",
+      description: "Initial description",
+      periodType: PeriodType.YEARLY,
+      period,
+      createdBy,
+    });
+
+    plan.updateDetails("Updated Name", null);
+
+    expect(plan.name).toBe("Updated Name");
+    expect(plan.description).toBeNull();
+  });
+
   it("should update status", () => {
     const plan = BudgetPlan.create({
       workspaceId,

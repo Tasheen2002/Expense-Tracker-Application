@@ -2,7 +2,6 @@ import {
   describe,
   it,
   expect,
-  beforeEach,
   afterAll,
   beforeAll,
   vi,
@@ -46,8 +45,6 @@ vi.mock('@shared/middleware/role-authorization.middleware', () => ({
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
-import { BudgetService } from '../application/services/budget.service';
-import { BudgetPeriodType } from '../domain/enums/budget-period-type';
 
 describe('BudgetService Integration', () => {
   let server: FastifyInstance;

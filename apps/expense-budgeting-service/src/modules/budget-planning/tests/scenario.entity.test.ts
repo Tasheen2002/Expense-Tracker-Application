@@ -67,6 +67,25 @@ describe("Scenario Entity", () => {
     expect(scenario.assumptions).toEqual({ inflation: 0.02 });
   });
 
+  it("should clear description and assumptions when updated with null", () => {
+    const scenario = Scenario.create({
+      workspaceId,
+      planId,
+      name: "Base Case",
+      description: "Initial description",
+      assumptions: { inflation: 0.02 },
+      createdBy,
+    });
+
+    scenario.updateDetails({
+      description: null,
+      assumptions: null,
+    });
+
+    expect(scenario.description).toBeNull();
+    expect(scenario.assumptions).toBeNull();
+  });
+
   it("should deeply protect assumptions from external mutation of the input object", () => {
     const rawAssumptions = {
       rates: {

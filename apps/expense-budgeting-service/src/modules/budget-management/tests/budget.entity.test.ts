@@ -7,8 +7,6 @@ import {
   InvalidAmountError,
   InvalidCurrencyError,
   InvalidBudgetStatusError,
-  BudgetAlreadyActiveError,
-  InvalidBudgetPeriodError,
 } from "../domain/errors/budget.errors";
 
 describe("Budget Entity", () => {
