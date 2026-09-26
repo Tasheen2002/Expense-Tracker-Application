@@ -56,8 +56,6 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
   let testCostCenterId: string;
   let testProjectId: string;
   const testEmail = `cost-allocation-test-${Date.now()}@example.com`;
-  const testPassword = 'TestPassword123!';
-  const testWorkspaceName = `Cost Allocation Test Workspace ${Date.now()}`;
 
   beforeAll(async () => {
     app = await createServer();
