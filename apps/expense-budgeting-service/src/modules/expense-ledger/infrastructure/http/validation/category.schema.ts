@@ -26,7 +26,13 @@ export const updateCategorySchema = z.object({
 });
 
 export const listCategoriesQuerySchema = z.object({
-  activeOnly: z.coerce.boolean().optional().default(false),
+  activeOnly: z
+    .union([
+      z.boolean(),
+      z.enum(['true', 'false']).transform((v) => v === 'true'),
+    ])
+    .optional()
+    .default(false),
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });

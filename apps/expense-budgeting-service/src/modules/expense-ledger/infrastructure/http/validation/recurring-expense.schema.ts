@@ -19,6 +19,7 @@ export const createRecurringExpenseSchema = z.object({
     merchant: z.string().max(255).optional(),
     paymentMethod: z.string().min(1, 'Payment method is required'),
     isReimbursable: z.boolean().default(false),
+    tagIds: z.array(z.string().uuid('Invalid tag ID format')).optional(),
   }),
 });
 
@@ -36,9 +37,7 @@ export const recurringExpenseParamsSchema = z.object({
 /**
  * Recurring Trigger Schema (Internal)
  */
-export const recurringTriggerSchema = z.object({
-  secret: z.string().min(1, 'Secret is required'),
-});
+export const recurringTriggerSchema = z.object({}).optional();
 
 export type RecurringTriggerInput = z.infer<typeof recurringTriggerSchema>;
 

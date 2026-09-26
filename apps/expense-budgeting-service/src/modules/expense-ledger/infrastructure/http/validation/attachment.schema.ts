@@ -25,7 +25,8 @@ export const attachmentParamsSchema = z.object({
  */
 export const createAttachmentSchema = z.object({
   fileName: z.string().min(1, 'File name is required').max(255, 'File name cannot exceed 255 characters'),
-  filePath: z.string().min(1, 'File path is required').max(500, 'File path cannot exceed 500 characters'),
+  filePath: z.string().min(1, 'File path is required').max(500, 'File path cannot exceed 500 characters')
+    .describe('Caller-provided reference to an existing file. File contents and existence are not verified by this endpoint.'),
   fileSize: z
     .number()
     .int('File size must be an integer')
@@ -75,6 +76,10 @@ export const listAttachmentsEnvelopeJsonSchema = toJsonSchema(
     message: z.string(),
     data: z.object({
       items: z.array(attachmentResponseSchema),
+      total: z.number(),
+      limit: z.number(),
+      offset: z.number(),
+      hasMore: z.boolean(),
     }),
   })
 );
