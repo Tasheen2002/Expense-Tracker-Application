@@ -17,6 +17,7 @@ import {
   ExpenseNotFoundError,
   UnauthorizedExpenseAccessError,
   InvalidExpenseStatusError,
+  TagNotFoundError,
 } from '../../domain/errors/expense.errors';
 
 export class ExpenseService {
@@ -26,6 +27,7 @@ export class ExpenseService {
   ) {}
 
   async createExpense(params: {
+    id?: string;
     workspaceId: string;
     userId: string;
     title: string;
@@ -46,13 +48,17 @@ export class ExpenseService {
 
     // Validate tags exist via repository when available
     if (this.tagRepository && uniqueTagIds.length > 0) {
-      await this.tagRepository.findByIds(
+      const foundTags = await this.tagRepository.findByIds(
         uniqueTagIds.map((id) => TagId.fromString(id)),
         params.workspaceId
       );
+      if (foundTags.length !== uniqueTagIds.length) {
+        throw new TagNotFoundError('one_or_more', params.workspaceId);
+      }
     }
 
     const expense = Expense.create({
+      id: params.id ? ExpenseId.fromString(params.id) : undefined,
       workspaceId: params.workspaceId,
       userId: params.userId,
       title: params.title,
@@ -65,7 +71,6 @@ export class ExpenseService {
       merchant: params.merchant,
       paymentMethod: params.paymentMethod,
       isReimbursable: params.isReimbursable,
-      status: ExpenseStatus.DRAFT,
       tagIds: uniqueTagIds.map((id) => TagId.fromString(id)),
       attachmentIds: [],
     });
@@ -81,12 +86,12 @@ export class ExpenseService {
     userId: string,
     params: {
       title?: string;
-      description?: string;
+      description?: string | null;
       amount?: number;
       currency?: string;
       expenseDate?: Date | string;
-      categoryId?: string;
-      merchant?: string;
+      categoryId?: string | null;
+      merchant?: string | null;
       paymentMethod?: PaymentMethod;
       isReimbursable?: boolean;
     }
@@ -116,11 +121,16 @@ export class ExpenseService {
     }
 
     if (params.description !== undefined) {
-      expense.updateDescription(params.description);
+      expense.updateDescription(params.description || undefined);
     }
 
-    if (params.amount && params.currency) {
-      expense.updateAmount(Money.create(params.amount, params.currency));
+    if (params.amount !== undefined || params.currency !== undefined) {
+      const newAmount =
+        params.amount !== undefined
+          ? params.amount
+          : expense.amount.getAmount().toNumber();
+      const newCurrency = params.currency ?? expense.amount.getCurrency();
+      expense.updateAmount(Money.create(newAmount, newCurrency));
     }
 
     if (params.expenseDate) {
@@ -136,7 +146,7 @@ export class ExpenseService {
     }
 
     if (params.merchant !== undefined) {
-      expense.updateMerchant(params.merchant);
+      expense.updateMerchant(params.merchant || undefined);
     }
 
     if (params.paymentMethod) {
@@ -179,7 +189,8 @@ export class ExpenseService {
     expense.markAsDeleted();
     await this.expenseRepository.delete(
       ExpenseId.fromString(expenseId),
-      workspaceId
+      workspaceId,
+      expense
     );
   }
 
@@ -224,6 +235,27 @@ export class ExpenseService {
     }
 
     expense.submit(userId);
+
+    await this.expenseRepository.update(expense);
+
+    return Expense.toDTO(expense);
+  }
+
+  async revertExpenseToDraft(
+    expenseId: string,
+    workspaceId: string,
+    userId: string
+  ): Promise<ExpenseDTO> {
+    const expense = await this.expenseRepository.findById(
+      ExpenseId.fromString(expenseId),
+      workspaceId
+    );
+
+    if (!expense) {
+      throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+
+    expense.revertToDraft(userId);
 
     await this.expenseRepository.update(expense);
 
@@ -340,6 +372,7 @@ export class ExpenseService {
   async addAttachmentRecord(
     expenseId: string,
     workspaceId: string,
+    userId: string,
     attachmentId: AttachmentId
   ): Promise<void> {
     const expense = await this.expenseRepository.findById(
@@ -348,6 +381,13 @@ export class ExpenseService {
     );
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+    if (expense.userId !== userId) {
+      throw new UnauthorizedExpenseAccessError(
+        expenseId,
+        userId,
+        'add attachments to'
+      );
     }
     if (!expense.canBeEdited()) {
       throw new InvalidExpenseStatusError(
@@ -363,6 +403,7 @@ export class ExpenseService {
   async removeAttachmentRecord(
     expenseId: string,
     workspaceId: string,
+    userId: string,
     attachmentId: AttachmentId
   ): Promise<void> {
     const expense = await this.expenseRepository.findById(
@@ -371,6 +412,13 @@ export class ExpenseService {
     );
     if (!expense) {
       throw new ExpenseNotFoundError(expenseId, workspaceId);
+    }
+    if (expense.userId !== userId) {
+      throw new UnauthorizedExpenseAccessError(
+        expenseId,
+        userId,
+        'delete attachments from'
+      );
     }
     if (!expense.canBeEdited()) {
       throw new InvalidExpenseStatusError(

@@ -3,9 +3,11 @@ import { Attachment, AttachmentDTO } from '../../domain/entities/attachment.enti
 import { AttachmentId } from '../../domain/value-objects/attachment-id';
 import {
   AttachmentNotFoundError,
-  FileSizeLimitExceededError,
 } from '../../domain/errors/expense.errors';
-import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '@core/domain/interfaces/paginated-result.interface';
 
 export class AttachmentService {
   constructor(private readonly attachmentRepository: IAttachmentRepository) {}
@@ -19,16 +21,7 @@ export class AttachmentService {
     mimeType: string;
     uploadedBy: string;
   }): Promise<AttachmentDTO> {
-    // Check total attachment size limit (50MB per expense)
-    const currentTotalSize =
-      await this.attachmentRepository.getTotalSizeByExpense(params.expenseId);
     const maxTotalSize = 50 * 1024 * 1024; // 50MB
-    if (currentTotalSize + params.fileSize > maxTotalSize) {
-      throw new FileSizeLimitExceededError(
-        currentTotalSize + params.fileSize,
-        maxTotalSize
-      );
-    }
 
     const attachment = Attachment.create({
       expenseId: params.expenseId,
@@ -39,17 +32,23 @@ export class AttachmentService {
       uploadedBy: params.uploadedBy,
     });
 
-    await this.attachmentRepository.save(attachment);
+    await this.attachmentRepository.saveWithinSizeLimit(
+      attachment,
+      params.workspaceId,
+      maxTotalSize
+    );
 
     return Attachment.toDTO(attachment);
   }
 
   async deleteAttachment(
     attachmentId: string,
-    expenseId: string
+    expenseId: string,
+    workspaceId: string
   ): Promise<void> {
     const attachment = await this.attachmentRepository.findById(
-      AttachmentId.fromString(attachmentId)
+      AttachmentId.fromString(attachmentId),
+      workspaceId
     );
 
     if (!attachment) {
@@ -62,21 +61,32 @@ export class AttachmentService {
     }
 
     await this.attachmentRepository.delete(
-      AttachmentId.fromString(attachmentId)
+      AttachmentId.fromString(attachmentId),
+      workspaceId
     );
   }
 
-  async getAttachmentDTOById(attachmentId: string): Promise<AttachmentDTO | null> {
+  async getAttachmentDTOById(
+    attachmentId: string,
+    workspaceId: string
+  ): Promise<AttachmentDTO | null> {
     const attachment = await this.attachmentRepository.findById(
-      AttachmentId.fromString(attachmentId)
+      AttachmentId.fromString(attachmentId),
+      workspaceId
     );
     return attachment ? Attachment.toDTO(attachment) : null;
   }
 
   async getAttachmentDTOsByExpense(
-    expenseId: string
+    expenseId: string,
+    workspaceId: string,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<AttachmentDTO>> {
-    const result = await this.attachmentRepository.findByExpense(expenseId);
+    const result = await this.attachmentRepository.findByExpense(
+      expenseId,
+      workspaceId,
+      options
+    );
     return {
       ...result,
       items: result.items.map((a) => Attachment.toDTO(a)),
