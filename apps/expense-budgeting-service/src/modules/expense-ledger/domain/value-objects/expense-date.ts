@@ -1,10 +1,11 @@
 import { InvalidExpenseDateError } from "../errors/expense.errors";
+import { MAX_EXPENSE_DATE_PAST_YEARS } from "../constants/expense.constants";
 
 export class ExpenseDate {
   private readonly value: Date;
 
   private constructor(value: Date) {
-    this.value = value;
+    this.value = new Date(value.getTime());
   }
 
   static create(date: Date | string): ExpenseDate {
@@ -14,10 +15,30 @@ export class ExpenseDate {
       throw new InvalidExpenseDateError("format is invalid");
     }
 
-    // Ensure the date is not in the future
+    // Allow 5 minutes clock-skew leeway for distributed client clocks
     const now = new Date();
-    if (parsedDate > now) {
+    const futureGraceMs = 5 * 60 * 1000;
+    if (parsedDate.getTime() > now.getTime() + futureGraceMs) {
       throw new InvalidExpenseDateError("cannot be in the future");
+    }
+
+    // Ensure date is not older than allowed threshold (10 years)
+    const minAllowedDate = new Date();
+    minAllowedDate.setFullYear(minAllowedDate.getFullYear() - MAX_EXPENSE_DATE_PAST_YEARS);
+    if (parsedDate < minAllowedDate) {
+      throw new InvalidExpenseDateError(
+        `cannot be older than ${MAX_EXPENSE_DATE_PAST_YEARS} years`
+      );
+    }
+
+    return new ExpenseDate(parsedDate);
+  }
+
+  static fromPersistence(date: Date | string): ExpenseDate {
+    const parsedDate = typeof date === "string" ? new Date(date) : date;
+
+    if (isNaN(parsedDate.getTime())) {
+      throw new InvalidExpenseDateError("format is invalid");
     }
 
     return new ExpenseDate(parsedDate);
@@ -28,7 +49,7 @@ export class ExpenseDate {
   }
 
   getValue(): Date {
-    return this.value;
+    return new Date(this.value.getTime());
   }
 
   isBefore(other: ExpenseDate): boolean {
