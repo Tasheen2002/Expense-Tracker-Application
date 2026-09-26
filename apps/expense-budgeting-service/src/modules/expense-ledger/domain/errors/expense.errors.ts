@@ -36,7 +36,11 @@ export class UnauthorizedExpenseAccessError extends ExpenseLedgerError {
 }
 
 export class InvalidExpenseStatusError extends ExpenseLedgerError {
-  constructor(expenseId: string, currentStatus: string, operation: string) {
+  constructor(
+    public readonly expenseId: string,
+    public readonly currentStatus: string,
+    public readonly operation: string
+  ) {
     super(
       `Cannot ${operation} expense ${expenseId} with status ${currentStatus}`,
       "INVALID_EXPENSE_STATUS",
@@ -60,6 +64,16 @@ export class ExpenseAlreadyExistsError extends ExpenseLedgerError {
     super(
       `Expense with identifier ${identifier} already exists`,
       "EXPENSE_ALREADY_EXISTS",
+      409,
+    );
+  }
+}
+
+export class ExpenseConcurrencyConflictError extends ExpenseLedgerError {
+  constructor(expenseId: string) {
+    super(
+      `Expense ${expenseId} was modified by another request. Please retry.`,
+      "CONCURRENCY_CONFLICT",
       409,
     );
   }
