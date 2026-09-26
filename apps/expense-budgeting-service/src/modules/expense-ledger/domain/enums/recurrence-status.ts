@@ -3,3 +3,8 @@ export enum RecurrenceStatus {
   PAUSED = "PAUSED",
   COMPLETED = "COMPLETED",
 }
+
+export function isValidRecurrenceStatus(value: string): value is RecurrenceStatus {
+  return Object.values(RecurrenceStatus).includes(value as RecurrenceStatus);
+}
+
