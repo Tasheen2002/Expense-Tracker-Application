@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { toJsonSchema } from './validator';
 
+import { PLANNING_CONSTANTS } from '../../../domain/constants/planning.constants';
+
 // ==================== PARAM SCHEMAS ====================
 
 export const workspaceParamsSchema = z.object({
@@ -42,23 +44,57 @@ export const forecastItemParamsSchema = z.object({
 export const planStatusSchema = z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']);
 export const periodTypeSchema = z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CUSTOM']);
 
-export const createBudgetPlanSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  periodType: periodTypeSchema,
-  startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
-});
+export const createBudgetPlanSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(PLANNING_CONSTANTS.NAME_MIN_LENGTH)
+      .max(PLANNING_CONSTANTS.PLAN_NAME_MAX_LENGTH),
+    description: z
+      .string()
+      .trim()
+      .max(PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH)
+      .nullable()
+      .optional(),
+    periodType: periodTypeSchema,
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+  })
+  .refine((data) => data.endDate > data.startDate, {
+    message: 'End date must be after start date',
+    path: ['endDate'],
+  });
 
-export const updateBudgetPlanSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().nullable().optional(),
-});
+export const updateBudgetPlanSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(PLANNING_CONSTANTS.NAME_MIN_LENGTH)
+      .max(PLANNING_CONSTANTS.PLAN_NAME_MAX_LENGTH)
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH)
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => data.name !== undefined || data.description !== undefined, {
+    message: 'At least one field (name or description) must be provided for update',
+  });
 
 export const budgetPlanQuerySchema = z.object({
   status: planStatusSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PLANNING_CONSTANTS.MAX_PAGE_LIMIT)
+    .default(PLANNING_CONSTANTS.DEFAULT_PAGE_LIMIT)
+    .optional(),
+  offset: z.coerce.number().int().min(0).default(0).optional(),
 });
 
 // ==================== FORECAST SCHEMAS ====================
@@ -66,29 +102,112 @@ export const budgetPlanQuerySchema = z.object({
 export const forecastTypeSchema = z.enum(['BASELINE', 'OPTIMISTIC', 'PESSIMISTIC', 'CUSTOM']);
 
 export const createForecastSchema = z.object({
-  name: z.string().min(1).max(100),
+  name: z
+    .string()
+    .trim()
+    .min(PLANNING_CONSTANTS.NAME_MIN_LENGTH)
+    .max(PLANNING_CONSTANTS.FORECAST_NAME_MAX_LENGTH),
   type: forecastTypeSchema,
 });
 
 export const addForecastItemSchema = z.object({
   categoryId: z.string().uuid(),
-  amount: z.coerce.number().min(0),
-  notes: z.string().max(500).optional(),
+  amount: z.coerce
+    .number()
+    .min(PLANNING_CONSTANTS.MIN_AMOUNT)
+    .max(PLANNING_CONSTANTS.MAX_AMOUNT)
+    .refine(
+      (val) => {
+        if (!Number.isFinite(val)) return false;
+        const parts = val.toString().split('.');
+        return parts.length < 2 || parts[1].length <= 2;
+      },
+      { message: 'Amount cannot have more than 2 decimal places' }
+    ),
+  notes: z
+    .string()
+    .trim()
+    .max(PLANNING_CONSTANTS.NOTES_MAX_LENGTH)
+    .optional(),
+});
+
+export const forecastItemQuerySchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(PLANNING_CONSTANTS.MAX_PAGE_LIMIT)
+    .default(PLANNING_CONSTANTS.DEFAULT_PAGE_LIMIT)
+    .optional(),
+  offset: z.coerce.number().int().min(0).default(0).optional(),
 });
 
 // ==================== SCENARIO SCHEMAS ====================
 
+export const scenarioAssumptionsSchema = z
+  .record(z.unknown())
+  .refine(
+    (val) => {
+      if (val === null || val === undefined) return true;
+      if (typeof val !== 'object' || Array.isArray(val)) return false;
+      try {
+        const str = JSON.stringify(val);
+        if (!str) return false;
+        for (const [, v] of Object.entries(val)) {
+          if (typeof v === 'number' && (!Number.isFinite(v) || Number.isNaN(v))) {
+            return false;
+          }
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { message: 'Assumptions must be a valid JSON object with finite values' }
+  )
+  .nullable()
+  .optional();
+
 export const createScenarioSchema = z.object({
-  name: z.string().min(3).max(100),
-  description: z.string().max(500).optional(),
-  assumptions: z.record(z.unknown()).optional(),
+  name: z
+    .string()
+    .trim()
+    .min(PLANNING_CONSTANTS.NAME_MIN_LENGTH)
+    .max(PLANNING_CONSTANTS.SCENARIO_NAME_MAX_LENGTH),
+  description: z
+    .string()
+    .trim()
+    .max(PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH)
+    .nullable()
+    .optional(),
+  assumptions: scenarioAssumptionsSchema,
 });
 
-export const updateScenarioSchema = z.object({
-  name: z.string().min(3).max(100).optional(),
-  description: z.string().max(500).optional(),
-  assumptions: z.record(z.unknown()).optional(),
-});
+export const updateScenarioSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(PLANNING_CONSTANTS.NAME_MIN_LENGTH)
+      .max(PLANNING_CONSTANTS.SCENARIO_NAME_MAX_LENGTH)
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(PLANNING_CONSTANTS.DESCRIPTION_MAX_LENGTH)
+      .nullable()
+      .optional(),
+    assumptions: scenarioAssumptionsSchema,
+  })
+  .refine(
+    (data) =>
+      data.name !== undefined ||
+      data.description !== undefined ||
+      data.assumptions !== undefined,
+    {
+      message: 'At least one field (name, description, or assumptions) must be provided for update',
+    }
+  );
 
 // ==================== RESPONSE SCHEMAS ====================
 
@@ -110,6 +229,7 @@ export const budgetPlanResponseSchema = z.object({
 
 export const forecastResponseSchema = z.object({
   id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
   planId: z.string().uuid(),
   name: z.string(),
   type: forecastTypeSchema,
@@ -120,6 +240,7 @@ export const forecastResponseSchema = z.object({
 
 export const forecastItemResponseSchema = z.object({
   id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
   forecastId: z.string().uuid(),
   categoryId: z.string().uuid(),
   amount: z.number(),
@@ -130,6 +251,7 @@ export const forecastItemResponseSchema = z.object({
 
 export const scenarioResponseSchema = z.object({
   id: z.string().uuid(),
+  workspaceId: z.string().uuid(),
   planId: z.string().uuid(),
   name: z.string(),
   description: z.string().nullable(),
@@ -155,6 +277,7 @@ export type BudgetPlanQuery = z.infer<typeof budgetPlanQuerySchema>;
 
 export type CreateForecastBody = z.infer<typeof createForecastSchema>;
 export type AddForecastItemBody = z.infer<typeof addForecastItemSchema>;
+export type ForecastItemQuery = z.infer<typeof forecastItemQuerySchema>;
 
 export type CreateScenarioBody = z.infer<typeof createScenarioSchema>;
 export type UpdateScenarioBody = z.infer<typeof updateScenarioSchema>;
@@ -173,10 +296,10 @@ export const createBudgetPlanBodyJsonSchema = (() => {
   const schema = toJsonSchema(createBudgetPlanSchema) as any;
   if (schema && schema.properties) {
     if (schema.properties.startDate) {
-      schema.properties.startDate.format = 'date';
+      delete schema.properties.startDate.format;
     }
     if (schema.properties.endDate) {
-      schema.properties.endDate.format = 'date';
+      delete schema.properties.endDate.format;
     }
   }
   return schema;
@@ -186,6 +309,7 @@ export const budgetPlanQueryJsonSchema = toJsonSchema(budgetPlanQuerySchema);
 
 export const createForecastBodyJsonSchema = toJsonSchema(createForecastSchema);
 export const addForecastItemBodyJsonSchema = toJsonSchema(addForecastItemSchema);
+export const forecastItemQueryJsonSchema = toJsonSchema(forecastItemQuerySchema);
 
 export const createScenarioBodyJsonSchema = toJsonSchema(createScenarioSchema);
 export const updateScenarioBodyJsonSchema = toJsonSchema(updateScenarioSchema);
