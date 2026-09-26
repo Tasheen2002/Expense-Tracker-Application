@@ -37,16 +37,16 @@ vi.mock('@shared/middleware/role-authorization.middleware', () => ({
 
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
 
 describe('Expense-Ledger Module - Expense Service', () => {
-  let server: FastifyInstance;
+  let server: FastifyInstance & { prisma: PrismaClient };
   let token: string;
   let workspaceId: string;
-  let categoryId: string;
   let tagId: string;
 
   beforeAll(async () => {
-    server = await createServer();
+    server = (await createServer()) as FastifyInstance & { prisma: PrismaClient };
 
     const uniqueId = Date.now();
     const email = `ledger_${uniqueId}@test.com`;
@@ -65,7 +65,7 @@ describe('Expense-Ledger Module - Expense Service', () => {
     await server.ready();
 
     // Clear existing data to avoid conflicts
-    const prisma = (server as any).prisma;
+    const prisma = server.prisma;
     await prisma.expenseTag.deleteMany({});
     await prisma.expense.deleteMany({});
     await prisma.tag.deleteMany({});
