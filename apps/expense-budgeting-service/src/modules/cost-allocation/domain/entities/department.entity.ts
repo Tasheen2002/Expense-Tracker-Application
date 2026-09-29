@@ -1,4 +1,6 @@
 import { DepartmentId } from '../value-objects/department-id';
+import { DepartmentCode } from '../value-objects/department-code';
+import { InvalidAllocationNameError, InvalidDepartmentHierarchyError } from '../errors/cost-allocation.errors';
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
@@ -92,26 +94,6 @@ export class DepartmentDeactivatedEvent extends DomainEvent {
   }
 }
 
-export class DepartmentDeletedEvent extends DomainEvent {
-  constructor(
-    public readonly departmentId: string,
-    public readonly workspaceId: string
-  ) {
-    super(departmentId, 'Department');
-  }
-
-  get eventType(): string {
-    return 'DepartmentDeleted';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      departmentId: this.departmentId,
-      workspaceId: this.workspaceId,
-    };
-  }
-}
-
 // ============================================================================
 // Entity
 // ============================================================================
@@ -127,6 +109,7 @@ interface DepartmentProps {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  version: number;
 }
 
 export class Department extends AggregateRoot {
@@ -145,22 +128,23 @@ export class Department extends AggregateRoot {
     const department = new Department({
       id: DepartmentId.create(),
       workspaceId: params.workspaceId,
-      name: params.name,
-      code: params.code,
+      name: Department.validName(params.name),
+      code: DepartmentCode.create(params.code).value,
       description: params.description || null,
       managerId: params.managerId || null,
       parentDepartmentId: params.parentDepartmentId || null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      version: 1,
     });
 
     department.addDomainEvent(
       new DepartmentCreatedEvent(
         department.props.id.getValue(),
         params.workspaceId.getValue(),
-        params.name,
-        params.code
+        department.props.name,
+        department.props.code
       )
     );
 
@@ -178,6 +162,7 @@ export class Department extends AggregateRoot {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
+    version?: number;
   }): Department {
     return new Department({
       id: DepartmentId.fromString(params.id),
@@ -190,8 +175,9 @@ export class Department extends AggregateRoot {
         ? DepartmentId.fromString(params.parentDepartmentId)
         : null,
       isActive: params.isActive,
-      createdAt: params.createdAt,
-      updatedAt: params.updatedAt,
+      createdAt: new Date(params.createdAt),
+      updatedAt: new Date(params.updatedAt),
+      version: params.version ?? 1,
     });
   }
 
@@ -203,8 +189,18 @@ export class Department extends AggregateRoot {
   get managerId(): UserId | null { return this.props.managerId; }
   get parentDepartmentId(): DepartmentId | null { return this.props.parentDepartmentId; }
   get isActive(): boolean { return this.props.isActive; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt); }
+  get version(): number { return this.props.version; }
+  synchronizeVersion(version: number): void { this.props.version = version; }
+
+  private static validName(name: string): string {
+    const normalized = typeof name === 'string' ? name.trim() : '';
+    if (normalized.length < 2 || normalized.length > 100) {
+      throw new InvalidAllocationNameError('Department');
+    }
+    return normalized;
+  }
 
   updateDetails(params: {
     name?: string;
@@ -213,14 +209,19 @@ export class Department extends AggregateRoot {
     managerId?: UserId | null;
     parentDepartmentId?: DepartmentId | null;
   }): void {
-    const changes: Record<string, unknown> = {};
-    if (params.name !== undefined) {
-      this.props.name = params.name;
-      changes.name = params.name;
+    const code = params.code === undefined ? undefined : DepartmentCode.create(params.code).value;
+    const name = params.name === undefined ? undefined : Department.validName(params.name);
+    if (params.parentDepartmentId?.equals(this.props.id)) {
+      throw new InvalidDepartmentHierarchyError('a department cannot be its own parent');
     }
-    if (params.code !== undefined) {
-      this.props.code = params.code;
-      changes.code = params.code;
+    const changes: Record<string, unknown> = {};
+    if (name !== undefined) {
+      this.props.name = name;
+      changes.name = name;
+    }
+    if (code !== undefined) {
+      this.props.code = code;
+      changes.code = this.props.code;
     }
     if (params.description !== undefined) {
       this.props.description = params.description;
@@ -234,9 +235,8 @@ export class Department extends AggregateRoot {
       this.props.parentDepartmentId = params.parentDepartmentId;
       changes.parentDepartmentId = params.parentDepartmentId?.getValue() ?? null;
     }
-    this.props.updatedAt = new Date();
-
     if (Object.keys(changes).length > 0) {
+      this.props.updatedAt = new Date();
       this.addDomainEvent(
         new DepartmentUpdatedEvent(this.props.id.getValue(), changes)
       );
@@ -255,15 +255,6 @@ export class Department extends AggregateRoot {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new DepartmentActivatedEvent(this.props.id.getValue()));
-  }
-
-  markAsDeleted(): void {
-    this.addDomainEvent(
-      new DepartmentDeletedEvent(
-        this.props.id.getValue(),
-        this.props.workspaceId.getValue()
-      )
-    );
   }
 
   static toDTO(department: Department): DepartmentDTO {

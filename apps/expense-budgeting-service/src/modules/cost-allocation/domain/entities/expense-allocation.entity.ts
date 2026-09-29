@@ -4,7 +4,9 @@ import { DepartmentId } from '../value-objects/department-id';
 import { CostCenterId } from '../value-objects/cost-center-id';
 import { ProjectId } from '../value-objects/project-id';
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
-import { InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
+import { AllocationPercentageMismatchError, InvalidAllocationExpenseIdError, InvalidAllocationNotesError, InvalidAllocationPercentageError, InvalidAllocationTargetError } from '../errors/cost-allocation.errors';
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
+import Decimal from 'decimal.js';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
 
@@ -121,6 +123,8 @@ interface ExpenseAllocationProps {
 }
 
 export class ExpenseAllocation extends AggregateRoot {
+  private deleted = false;
+
   private constructor(private props: ExpenseAllocationProps) {
     super();
   }
@@ -136,6 +140,20 @@ export class ExpenseAllocation extends AggregateRoot {
     notes?: string | null;
     createdBy: UserId;
   }): ExpenseAllocation {
+    if (!UuidId.isValid(params.expenseId)) {
+      throw new InvalidAllocationExpenseIdError();
+    }
+    if (params.percentage !== undefined && params.percentage !== null) {
+      const percentage = params.percentage;
+      if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100 ||
+          new Decimal(percentage).decimalPlaces() > 2) {
+        throw new InvalidAllocationPercentageError();
+      }
+    }
+    if (params.notes !== undefined && params.notes !== null && params.notes.length > 500) {
+      throw new InvalidAllocationNotesError();
+    }
+
     // Validate that exactly one target is provided
     const targets = [
       params.departmentId,
@@ -215,7 +233,7 @@ export class ExpenseAllocation extends AggregateRoot {
       projectId: params.projectId ? ProjectId.fromString(params.projectId) : null,
       notes: params.notes,
       createdBy: UserId.fromString(params.createdBy),
-      createdAt: params.createdAt,
+      createdAt: new Date(params.createdAt),
     });
   }
 
@@ -229,13 +247,27 @@ export class ExpenseAllocation extends AggregateRoot {
   get projectId(): ProjectId | null { return this.props.projectId; }
   get notes(): string | null { return this.props.notes; }
   get createdBy(): UserId { return this.props.createdBy; }
-  get createdAt(): Date { return this.props.createdAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+
+  /** A supplied percentage represents the share of the expense total, rounded to cents. */
+  validatePercentageOf(expenseAmount: Decimal.Value): void {
+    if (this.props.percentage === null) return;
+    const expectedAmount = new Decimal(expenseAmount)
+      .times(this.props.percentage)
+      .div(100)
+      .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    if (!this.props.amount.getValue().equals(expectedAmount)) {
+      throw new AllocationPercentageMismatchError();
+    }
+  }
 
   /**
    * Marks this allocation as deleted and emits a domain event.
    * Call this before persisting the deletion so the event can be dispatched.
    */
   markAsDeleted(): void {
+    if (this.deleted) return;
+    this.deleted = true;
     this.addDomainEvent(
       new ExpenseAllocationDeletedEvent(
         this.props.id.getValue(),
@@ -248,9 +280,16 @@ export class ExpenseAllocation extends AggregateRoot {
   /**
    * Records that all allocations for the given expense have been replaced.
    */
-  recordReplacement(expenseId: string, workspaceId: string, newAllocationCount: number): void {
+  recordReplacement(newAllocationCount: number): void {
+    if (!Number.isSafeInteger(newAllocationCount) || newAllocationCount < 0) {
+      throw new InvalidAllocationTargetError('Replacement allocation count must be a nonnegative integer.');
+    }
     this.addDomainEvent(
-      new ExpenseAllocationsReplacedEvent(expenseId, workspaceId, newAllocationCount)
+      new ExpenseAllocationsReplacedEvent(
+        this.props.expenseId,
+        this.props.workspaceId.getValue(),
+        newAllocationCount,
+      )
     );
   }
 
