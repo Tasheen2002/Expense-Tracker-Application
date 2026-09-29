@@ -13,10 +13,11 @@ export class PrismaExpenseLookupAdapter implements IExpenseLookupPort {
 
   async findExpenseForAllocation(
     expenseId: string,
+    workspaceId: string,
   ): Promise<ExpenseAllocationData | null> {
-    const expense = await this.prisma.expense.findUnique({
-      where: { id: expenseId },
-      select: { id: true, amount: true, workspaceId: true, userId: true },
+    const expense = await this.prisma.expense.findFirst({
+      where: { id: expenseId, workspaceId },
+      select: { id: true, amount: true, workspaceId: true },
     });
 
     if (!expense) {
@@ -26,7 +27,6 @@ export class PrismaExpenseLookupAdapter implements IExpenseLookupPort {
     return {
       id: expense.id,
       workspaceId: expense.workspaceId,
-      userId: expense.userId,
       amount: expense.amount,
     };
   }
