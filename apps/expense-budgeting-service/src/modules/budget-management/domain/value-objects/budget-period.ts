@@ -14,9 +14,24 @@ export class BudgetPeriod {
     endDate: Date,
     periodType: BudgetPeriodType,
   ) {
-    this._startDate = startDate;
-    this._endDate = endDate;
+    this._startDate = BudgetPeriod.toUtcDate(startDate);
+    this._endDate = BudgetPeriod.toUtcDate(endDate);
     this._periodType = periodType;
+  }
+
+  private static toUtcDate(date: Date): Date {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) {
+      throw new InvalidBudgetPeriodError("Dates must be valid");
+    }
+    const normalized = new Date(date.getTime());
+    normalized.setUTCHours(0, 0, 0, 0);
+    return normalized;
+  }
+
+  private static validateType(periodType: BudgetPeriodType): void {
+    if (!Object.values(BudgetPeriodType).includes(periodType)) {
+      throw new InvalidBudgetPeriodError("Unsupported budget period type");
+    }
   }
 
   static create(
@@ -24,20 +39,30 @@ export class BudgetPeriod {
     periodType: BudgetPeriodType,
     customEndDate?: Date,
   ): BudgetPeriod {
+    BudgetPeriod.validateType(periodType);
+    const normalizedStart = BudgetPeriod.toUtcDate(startDate);
+
     if (periodType === BudgetPeriodType.CUSTOM) {
-      if (!customEndDate) {
+      if (customEndDate === undefined) {
         throw new InvalidBudgetPeriodError(
           "Custom period requires an explicit end date",
         );
       }
-      if (customEndDate <= startDate) {
-        throw new InvalidBudgetPeriodError("End date must be after start date");
+      const normalizedEnd = BudgetPeriod.toUtcDate(customEndDate);
+      if (normalizedEnd < normalizedStart) {
+        throw new InvalidBudgetPeriodError("End date must not precede start date");
       }
-      return new BudgetPeriod(startDate, customEndDate, periodType);
+      return new BudgetPeriod(normalizedStart, normalizedEnd, periodType);
     }
 
-    const endDate = calculateEndDate(startDate, periodType);
-    return new BudgetPeriod(startDate, endDate, periodType);
+    if (customEndDate !== undefined) {
+      throw new InvalidBudgetPeriodError(
+        "An explicit end date is only supported for custom periods",
+      );
+    }
+
+    const endDate = calculateEndDate(normalizedStart, periodType);
+    return new BudgetPeriod(normalizedStart, endDate, periodType);
   }
 
   static fromDates(
@@ -45,18 +70,21 @@ export class BudgetPeriod {
     endDate: Date,
     periodType: BudgetPeriodType,
   ): BudgetPeriod {
-    if (endDate <= startDate) {
-      throw new InvalidBudgetPeriodError("End date must be after start date");
+    BudgetPeriod.validateType(periodType);
+    const normalizedStart = BudgetPeriod.toUtcDate(startDate);
+    const normalizedEnd = BudgetPeriod.toUtcDate(endDate);
+    if (normalizedEnd < normalizedStart) {
+      throw new InvalidBudgetPeriodError("End date must not precede start date");
     }
-    return new BudgetPeriod(startDate, endDate, periodType);
+    return new BudgetPeriod(normalizedStart, normalizedEnd, periodType);
   }
 
   get startDate(): Date {
-    return this._startDate;
+    return new Date(this._startDate.getTime());
   }
 
   get endDate(): Date {
-    return this._endDate;
+    return new Date(this._endDate.getTime());
   }
 
   get periodType(): BudgetPeriodType {
@@ -64,22 +92,20 @@ export class BudgetPeriod {
   }
 
   isActive(currentDate: Date = new Date()): boolean {
-    return currentDate >= this.startDate && currentDate <= this.endDate;
+    const today = BudgetPeriod.toUtcDate(currentDate);
+    return today >= this._startDate && today <= this._endDate;
   }
 
   hasStarted(currentDate: Date = new Date()): boolean {
-    return currentDate >= this.startDate;
+    return BudgetPeriod.toUtcDate(currentDate) >= this._startDate;
   }
 
   hasEnded(currentDate: Date = new Date()): boolean {
-    return currentDate > this.endDate;
+    return BudgetPeriod.toUtcDate(currentDate) > this._endDate;
   }
 
   getDurationInDays(): number {
-    const diffTime = Math.abs(
-      this.endDate.getTime() - this.startDate.getTime(),
-    );
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return (this._endDate.getTime() - this._startDate.getTime()) / 86_400_000 + 1;
   }
 
   equals(other: BudgetPeriod): boolean {
