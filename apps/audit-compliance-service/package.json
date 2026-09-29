@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc --noEmit && esbuild ./src/index.ts --bundle --platform=node --format=cjs --target=node20 --external:fastify --external:fastify-plugin --external:@fastify/helmet --external:dotenv --external:zod --tsconfig=tsconfig.json --outfile=dist/index.js",
     "type-check": "tsc --noEmit",
     "generate": "prisma generate",
     "prisma:generate": "prisma generate",
@@ -29,6 +29,7 @@
   "devDependencies": {
     "@expense-tracker/typescript-config": "workspace:*",
     "@types/node": "^20.11.0",
+    "esbuild": "^0.21.5",
     "prisma": "^5.9.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
