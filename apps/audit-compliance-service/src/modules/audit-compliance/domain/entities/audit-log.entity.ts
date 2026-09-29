@@ -1,67 +1,9 @@
 import { AggregateRoot } from '@core/domain/aggregate-root';
-import { DomainEvent } from '@core/domain/events/domain-event';
 import { AuditLogId } from '../value-objects/audit-log-id.vo';
 import { AuditAction } from '../value-objects/audit-action.vo';
 import { AuditResource } from '../value-objects/audit-resource.vo';
-
-// ============================================================================
-// Domain Events
-// ============================================================================
-
-/**
- * Emitted when a new audit log entry is created.
- */
-export class AuditLogCreatedEvent extends DomainEvent {
-  constructor(
-    public readonly auditLogId: string,
-    public readonly workspaceId: string,
-    public readonly userId: string | null,
-    public readonly action: string,
-    public readonly entityType: string,
-    public readonly entityId: string
-  ) {
-    super(auditLogId, 'AuditLog');
-  }
-
-  get eventType(): string {
-    return 'audit.log_created';
-  }
-
-  public getPayload(): Record<string, unknown> {
-    return {
-      auditLogId: this.auditLogId,
-      workspaceId: this.workspaceId,
-      userId: this.userId,
-      action: this.action,
-      entityType: this.entityType,
-      entityId: this.entityId,
-    };
-  }
-}
-
-export class AuditLogsPurgedEvent extends DomainEvent {
-  constructor(
-    public readonly workspaceId: string,
-    public readonly beforeDate: string,
-    public readonly deletedCount: number
-  ) {
-    // Use workspaceId as the aggregate id since there is no single
-    // audit-log aggregate that owns this bulk operation.
-    super(workspaceId, 'AuditLog');
-  }
-
-  get eventType(): string {
-    return 'audit.logs_purged';
-  }
-
-  public getPayload(): Record<string, unknown> {
-    return {
-      workspaceId: this.workspaceId,
-      beforeDate: this.beforeDate,
-      deletedCount: this.deletedCount,
-    };
-  }
-}
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
+import { InvalidAuditIdentityError } from '../errors/audit.errors';
 
 // ============================================================================
 // Entity
@@ -95,6 +37,8 @@ export interface AuditLogProps {
 }
 
 export interface CreateAuditLogData {
+  id?: AuditLogId;
+  createdAt?: Date;
   workspaceId: string;
   userId: string | null;
   action: string;
@@ -111,11 +55,22 @@ export class AuditLog extends AggregateRoot {
 
   private constructor(props: AuditLogProps) {
     super();
-    this.props = props;
+    this.props = {
+      ...props,
+      details: props.details === null ? null : structuredClone(props.details),
+      metadata: props.metadata === null ? null : structuredClone(props.metadata),
+      createdAt: new Date(props.createdAt),
+    };
   }
 
   static create(data: CreateAuditLogData): AuditLog {
-    const auditLogId = AuditLogId.create();
+    const auditLogId = data.id ?? AuditLogId.create();
+    const createdAt = data.createdAt ?? new Date();
+    if (Number.isNaN(createdAt.getTime())) {
+      throw new Error('Invalid audit log timestamp');
+    }
+    if (!UuidId.isValid(data.workspaceId)) throw new InvalidAuditIdentityError('workspaceId');
+    if (data.userId !== null && !UuidId.isValid(data.userId)) throw new InvalidAuditIdentityError('userId');
 
     const auditLog = new AuditLog({
       id: auditLogId,
@@ -127,19 +82,8 @@ export class AuditLog extends AggregateRoot {
       metadata: data.metadata,
       ipAddress: data.ipAddress,
       userAgent: data.userAgent,
-      createdAt: new Date(),
+      createdAt: new Date(createdAt),
     });
-
-    auditLog.addDomainEvent(
-      new AuditLogCreatedEvent(
-        auditLogId.getValue(),
-        data.workspaceId,
-        data.userId,
-        data.action,
-        data.entityType,
-        data.entityId
-      )
-    );
 
     return auditLog;
   }
@@ -186,11 +130,11 @@ export class AuditLog extends AggregateRoot {
   }
 
   get details(): Record<string, unknown> | null {
-    return this.props.details;
+    return this.props.details === null ? null : structuredClone(this.props.details);
   }
 
   get metadata(): Record<string, unknown> | null {
-    return this.props.metadata;
+    return this.props.metadata === null ? null : structuredClone(this.props.metadata);
   }
 
   get ipAddress(): string | null {
@@ -202,6 +146,6 @@ export class AuditLog extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt);
   }
 }
