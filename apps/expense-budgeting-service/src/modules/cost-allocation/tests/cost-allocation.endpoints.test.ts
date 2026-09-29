@@ -2,10 +2,14 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { createServer } from '../../../app';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 
 vi.mock('../infrastructure/adapters/prisma-workspace-access.adapter', () => ({
   PrismaWorkspaceAccessAdapter: class {
     async isAdminOrOwner() {
+      return true;
+    }
+    async isMember() {
       return true;
     }
   }
@@ -55,6 +59,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
   let testDepartmentId: string;
   let testCostCenterId: string;
   let testProjectId: string;
+  const testExpenseId = randomUUID();
   const testEmail = `cost-allocation-test-${Date.now()}@example.com`;
 
   beforeAll(async () => {
@@ -62,7 +67,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
     prisma = new PrismaClient();
 
     testUserId = '123e4567-e89b-12d3-a456-426614174001';
-    testWorkspaceId = '123e4567-e89b-12d3-a456-426614174000';
+    testWorkspaceId = randomUUID();
     authToken = 'mock-auth-token';
 
     app.addHook('onRequest', async (request: any) => {
@@ -75,11 +80,6 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
 
     await app.ready();
 
-    // Clear existing data to avoid conflicts
-    await prisma.expenseAllocation.deleteMany({});
-    await prisma.project.deleteMany({});
-    await prisma.costCenter.deleteMany({});
-    await prisma.department.deleteMany({});
   });
 
   afterAll(async () => {
@@ -105,6 +105,12 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
         headers: { Authorization: `Bearer ${authToken}` },
       });
     }
+    await prisma.expenseAllocation.deleteMany({ where: { workspaceId: testWorkspaceId } });
+    await prisma.expense.deleteMany({ where: { id: testExpenseId, workspaceId: testWorkspaceId } });
+    await prisma.project.deleteMany({ where: { workspaceId: testWorkspaceId } });
+    await prisma.costCenter.deleteMany({ where: { workspaceId: testWorkspaceId } });
+    await prisma.department.updateMany({ where: { workspaceId: testWorkspaceId }, data: { parentDepartmentId: null } });
+    await prisma.department.deleteMany({ where: { workspaceId: testWorkspaceId } });
     await prisma.$disconnect();
     await app.close();
   });
@@ -168,8 +174,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Departments:', res.statusCode);
-        // 200 = success, 400 = validation, 500 = server error
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -192,8 +197,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Department:', res.statusCode);
-        // 200 = found, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -219,8 +223,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           payload: { name: 'Updated Engineering Dept' },
         });
         console.log('Update Department:', res.statusCode);
-        // 200 = updated, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: deptId, name: 'Updated Engineering Dept' });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -246,8 +250,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Activate Department:', res.statusCode);
-        // 200 = activated, 400 = validation, 404 = not found, 500 = error
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: deptId, isActive: true });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -289,7 +293,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Delete Department:', res.statusCode);
-        expect([200, 204, 400]).toContain(res.statusCode);
+        expect(createRes.statusCode).toBe(201);
+        expect(res.statusCode).toBe(204);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -363,7 +368,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Cost Centers:', res.statusCode);
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -385,7 +390,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Cost Center:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -409,7 +414,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           payload: { name: 'Updated IT Operations' },
         });
         console.log('Update Cost Center:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: ccId, name: 'Updated IT Operations' });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -433,7 +439,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Activate Cost Center:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: ccId, isActive: true });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -473,7 +480,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Delete Cost Center:', res.statusCode);
-        expect([200, 204, 400]).toContain(res.statusCode);
+        expect(createRes.statusCode).toBe(201);
+        expect(res.statusCode).toBe(204);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -553,7 +561,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('List Projects:', res.statusCode);
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -575,7 +583,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Project:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -599,7 +607,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           payload: { name: 'Updated Website Redesign', budget: 75000 },
         });
         console.log('Update Project:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: projId, name: 'Updated Website Redesign', budget: 75000 });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -623,7 +632,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Activate Project:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
+        expect(res.json().data).toMatchObject({ id: projId, isActive: true });
       });
 
       it('❌ should fail without auth token', async () => {
@@ -667,7 +677,8 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Delete Project:', res.statusCode);
-        expect([200, 204, 400]).toContain(res.statusCode);
+        expect(createRes.statusCode).toBe(201);
+        expect(res.statusCode).toBe(204);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -684,7 +695,20 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
 
   // ==================== EXPENSE ALLOCATION ENDPOINTS ====================
   describe('Expense Allocation Endpoints', () => {
-    const testExpenseId = '00000000-0000-0000-0000-000000000001';
+    beforeAll(async () => {
+      await prisma.department.update({ where: { id: testDepartmentId }, data: { isActive: true } });
+      await prisma.expense.create({
+        data: {
+          id: testExpenseId,
+          workspaceId: testWorkspaceId,
+          userId: testUserId,
+          title: 'Allocation endpoint expense',
+          amount: 200,
+          currency: 'USD',
+          expenseDate: new Date(),
+        },
+      });
+    });
 
     describe('POST /api/v1/:workspaceId/expenses/:expenseId/allocations', () => {
       it('✅ should allocate expense', async () => {
@@ -705,7 +729,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           },
         });
         console.log('Allocate Expense:', res.statusCode);
-        expect([201, 404]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(201);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -740,7 +764,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Expense Allocations:', res.statusCode);
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -761,7 +785,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Delete Expense Allocations:', res.statusCode);
-        expect([200, 204, 404]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(204);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -782,7 +806,7 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Allocation Summary:', res.statusCode);
-        expect([200, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -793,6 +817,78 @@ describe('Cost Allocation Module - Endpoint Tests', () => {
         console.log('Get Allocation Summary No Auth:', res.statusCode);
         expect(res.statusCode).toBe(401);
       });
+    });
+  });
+
+  it('does not read or update another workspace\'s management records', async () => {
+    const otherWorkspaceId = randomUUID();
+    for (const [resource, id] of [
+      ['departments', testDepartmentId],
+      ['cost-centers', testCostCenterId],
+      ['projects', testProjectId],
+    ] as const) {
+      const url = `/api/v1/workspaces/${otherWorkspaceId}/${resource}/${id}`;
+      const headers = { Authorization: `Bearer ${authToken}` };
+      const read = await app.inject({ method: 'GET', url, headers });
+      const update = await app.inject({ method: 'PUT', url, headers, payload: { name: 'Unauthorized change' } });
+      expect(read.statusCode).toBe(404);
+      expect(update.statusCode).toBe(404);
+    }
+  });
+
+  it('returns the stable domain code for a missing department', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/workspaces/${testWorkspaceId}/departments/${randomUUID()}`,
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({
+      success: false,
+      code: 'DEPARTMENT_NOT_FOUND',
+    });
+  });
+
+  it('preserves explicit nulls when clearing department and project details', async () => {
+    const parentId = randomUUID();
+    const childId = randomUUID();
+    const projectId = randomUUID();
+    await prisma.department.create({
+      data: { id: parentId, workspaceId: testWorkspaceId, name: 'Parent', code: `P${parentId.slice(0, 12)}` },
+    });
+    await prisma.department.create({
+      data: {
+        id: childId, workspaceId: testWorkspaceId, name: 'Child', code: `C${childId.slice(0, 12)}`,
+        managerId: testUserId, parentDepartmentId: parentId,
+      },
+    });
+    await prisma.project.create({
+      data: {
+        id: projectId, workspaceId: testWorkspaceId, name: 'Clearable project', code: `J${projectId.slice(0, 12)}`,
+        startDate: new Date('2026-01-01'), endDate: new Date('2026-12-31'), managerId: testUserId, budget: 100,
+      },
+    });
+
+    const headers = { Authorization: `Bearer ${authToken}` };
+    const departmentResponse = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/workspaces/${testWorkspaceId}/departments/${childId}`,
+      headers,
+      payload: { managerId: null, parentDepartmentId: null },
+    });
+    const projectResponse = await app.inject({
+      method: 'PUT',
+      url: `/api/v1/workspaces/${testWorkspaceId}/projects/${projectId}`,
+      headers,
+      payload: { endDate: null, managerId: null, budget: null },
+    });
+    expect(departmentResponse.statusCode).toBe(200);
+    expect(projectResponse.statusCode).toBe(200);
+    expect(await prisma.department.findUniqueOrThrow({ where: { id: childId } })).toMatchObject({
+      managerId: null, parentDepartmentId: null,
+    });
+    expect(await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).toMatchObject({
+      endDate: null, managerId: null, budget: null,
     });
   });
 
