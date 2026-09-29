@@ -15,14 +15,20 @@ export interface BudgetFilters {
 }
 
 export interface IBudgetRepository {
+  create(budget: Budget): Promise<void>;
   save(budget: Budget): Promise<void>;
+  /**
+   * Saves budget updates (e.g. totalAmount reduction) with atomic validation against
+   * current allocated amounts under an exclusive row lock.
+   */
+  saveWithAllocationValidation(budget: Budget): Promise<void>;
   findById(id: BudgetId, workspaceId: string): Promise<Budget | null>;
   /**
-   * Internal-only lookup by ID without workspace scoping.
-   * MUST NOT be exposed via HTTP endpoints — for trusted internal service
-   * operations (e.g. marking a budget exceeded when processing allocation spending).
+   * Internal-only lookup by ID with exclusive coordination of concurrent writes.
+   * MUST NOT be exposed via HTTP endpoints — for coordinating concurrent modifications
+   * across child aggregates (e.g. updating allocation spending and parent budget status).
    */
-  findByIdInternal(id: BudgetId): Promise<Budget | null>;
+  findByIdInternalWithLock(id: BudgetId): Promise<Budget | null>;
   findByWorkspace(
     workspaceId: string,
     options?: PaginationOptions
