@@ -6,18 +6,8 @@ import {
 
 export interface IInventoryTransactionRepository {
   save(transaction: InventoryTransaction): Promise<void>;
-  findByWorkspace(
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransaction>>;
-  findByVariant(
-    variantId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransaction>>;
-  findByLocation(
-    locationId: string,
-    workspaceId: string,
+  findByFilters(
+    filters: { workspaceId: string; variantId?: string; locationId?: string },
     options?: PaginationOptions
   ): Promise<PaginatedResult<InventoryTransaction>>;
 }

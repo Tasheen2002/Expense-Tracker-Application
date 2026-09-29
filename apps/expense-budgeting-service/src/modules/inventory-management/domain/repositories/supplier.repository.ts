@@ -12,7 +12,7 @@ export interface ISupplierRepository {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<Supplier>>;
-  delete(id: SupplierId, workspaceId: string): Promise<void>;
+  delete(supplier: Supplier): Promise<void>;
   exists(id: SupplierId, workspaceId: string): Promise<boolean>;
   existsByName(name: string, workspaceId: string): Promise<boolean>;
 }

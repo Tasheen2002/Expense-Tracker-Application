@@ -12,7 +12,7 @@ export interface ILocationRepository {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<Location>>;
-  delete(id: LocationId, workspaceId: string): Promise<void>;
+  delete(location: Location): Promise<void>;
   exists(id: LocationId, workspaceId: string): Promise<boolean>;
   existsByName(name: string, workspaceId: string): Promise<boolean>;
 }
