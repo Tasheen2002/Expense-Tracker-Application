@@ -66,7 +66,7 @@ async function setupTestApp(
   });
 
   // Map Fastify validation errors to VALIDATION_ERROR format
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error, _request, reply) => {
     if (error.code === 'FST_ERR_VALIDATION') {
       return reply.status(400).send({
         success: false,
