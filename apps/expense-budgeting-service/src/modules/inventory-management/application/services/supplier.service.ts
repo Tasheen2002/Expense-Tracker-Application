@@ -20,15 +20,15 @@ export class SupplierService {
     contactPhone?: string;
     address?: string;
   }): Promise<SupplierDTO> {
+    const supplier = Supplier.create(params);
     const nameExists = await this.supplierRepository.existsByName(
-      params.name,
+      supplier.name,
       params.workspaceId
     );
     if (nameExists) {
-      throw new SupplierAlreadyExistsError(params.name, params.workspaceId);
+      throw new SupplierAlreadyExistsError(supplier.name, params.workspaceId);
     }
 
-    const supplier = Supplier.create(params);
     await this.supplierRepository.save(supplier);
     return Supplier.toDTO(supplier);
   }
@@ -52,13 +52,14 @@ export class SupplierService {
     }
 
     if (updates.name !== undefined) {
-      if (updates.name !== supplier.name) {
+      const normalizedName = updates.name.trim();
+      if (normalizedName !== supplier.name) {
         const nameExists = await this.supplierRepository.existsByName(
-          updates.name,
+          normalizedName,
           workspaceId
         );
         if (nameExists) {
-          throw new SupplierAlreadyExistsError(updates.name, workspaceId);
+          throw new SupplierAlreadyExistsError(normalizedName, workspaceId);
         }
       }
       supplier.updateName(updates.name);
@@ -86,10 +87,7 @@ export class SupplierService {
       throw new SupplierNotFoundError(supplierId, workspaceId);
     }
     supplier.markAsDeleted();
-    await this.supplierRepository.delete(
-      SupplierId.fromString(supplierId),
-      workspaceId
-    );
+    await this.supplierRepository.delete(supplier);
   }
 
   async getSupplierById(

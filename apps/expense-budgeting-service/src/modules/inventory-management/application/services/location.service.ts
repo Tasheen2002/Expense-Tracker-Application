@@ -20,15 +20,15 @@ export class LocationService {
     type?: LocationType;
     address?: string;
   }): Promise<LocationDTO> {
+    const location = Location.create(params);
     const nameExists = await this.locationRepository.existsByName(
-      params.name,
+      location.name,
       params.workspaceId
     );
     if (nameExists) {
-      throw new LocationAlreadyExistsError(params.name, params.workspaceId);
+      throw new LocationAlreadyExistsError(location.name, params.workspaceId);
     }
 
-    const location = Location.create(params);
     await this.locationRepository.save(location);
     return Location.toDTO(location);
   }
@@ -51,13 +51,14 @@ export class LocationService {
     }
 
     if (updates.name !== undefined) {
-      if (updates.name !== location.name) {
+      const normalizedName = updates.name.trim();
+      if (normalizedName !== location.name) {
         const nameExists = await this.locationRepository.existsByName(
-          updates.name,
+          normalizedName,
           workspaceId
         );
         if (nameExists) {
-          throw new LocationAlreadyExistsError(updates.name, workspaceId);
+          throw new LocationAlreadyExistsError(normalizedName, workspaceId);
         }
       }
       location.updateName(updates.name);
@@ -82,10 +83,7 @@ export class LocationService {
       throw new LocationNotFoundError(locationId, workspaceId);
     }
     location.markAsDeleted();
-    await this.locationRepository.delete(
-      LocationId.fromString(locationId),
-      workspaceId
-    );
+    await this.locationRepository.delete(location);
   }
 
   async getLocationById(

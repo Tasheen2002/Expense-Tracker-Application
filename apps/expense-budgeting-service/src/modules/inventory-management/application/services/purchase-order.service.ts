@@ -4,12 +4,20 @@ import { PurchaseOrder, PurchaseOrderDTO } from '../../domain/entities/purchase-
 import { PurchaseOrderItem, PurchaseOrderItemDTO } from '../../domain/entities/purchase-order-item.entity';
 import { PurchaseOrderId } from '../../domain/value-objects/purchase-order-id.vo';
 import { PurchaseOrderItemId } from '../../domain/value-objects/purchase-order-item-id.vo';
+import Decimal from 'decimal.js';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
+import { IInventoryWriteLock } from '../ports/inventory-write-lock.port';
+import { StockService } from './stock.service';
+import { TransactionType } from '../../domain/enums/transaction-type';
 import { SupplierId } from '../../domain/value-objects/supplier-id.vo';
 import { PurchaseOrderStatus } from '../../domain/enums/purchase-order-status';
 import {
   PurchaseOrderNotFoundError,
   PurchaseOrderItemNotFoundError,
   SupplierNotFoundError,
+  SupplierInactiveError,
+  InvalidInventoryDataError,
+  InvalidPurchaseOrderStatusError,
 } from '../../domain/errors/inventory.errors';
 import {
   PaginatedResult,
@@ -19,8 +27,18 @@ import {
 export class PurchaseOrderService {
   constructor(
     private readonly poRepository: IPurchaseOrderRepository,
-    private readonly supplierRepository: ISupplierRepository
+    private readonly supplierRepository: ISupplierRepository,
+    private readonly stockService: StockService,
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly writeLock: IInventoryWriteLock
   ) {}
+
+  private async write<T>(workspaceId: string, work: () => Promise<T>): Promise<T> {
+    return this.unitOfWork.execute(async () => {
+      await this.writeLock.acquire(workspaceId);
+      return work();
+    });
+  }
 
   async createPurchaseOrder(params: {
     workspaceId: string;
@@ -31,17 +49,22 @@ export class PurchaseOrderService {
     currency?: string;
     createdBy: string;
   }): Promise<PurchaseOrderDTO> {
-    const supplierExists = await this.supplierRepository.exists(
-      SupplierId.fromString(params.supplierId),
-      params.workspaceId
-    );
-    if (!supplierExists) {
-      throw new SupplierNotFoundError(params.supplierId, params.workspaceId);
-    }
+    return this.write(params.workspaceId, async () => {
+      const supplier = await this.supplierRepository.findById(
+        SupplierId.fromString(params.supplierId),
+        params.workspaceId
+      );
+      if (!supplier) {
+        throw new SupplierNotFoundError(params.supplierId, params.workspaceId);
+      }
+      if (!supplier.isActive) {
+        throw new SupplierInactiveError(params.supplierId);
+      }
 
-    const po = PurchaseOrder.create(params);
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+      const po = PurchaseOrder.create(params);
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
   async updatePurchaseOrder(
@@ -52,66 +75,92 @@ export class PurchaseOrderService {
       expectedDate?: Date | null;
     }
   ): Promise<PurchaseOrderDTO> {
-    const po = await this.poRepository.findById(
-      PurchaseOrderId.fromString(poId),
-      workspaceId
-    );
-    if (!po) {
-      throw new PurchaseOrderNotFoundError(poId, workspaceId);
-    }
+    return this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
 
-    if (updates.notes !== undefined) {
-      po.updateNotes(updates.notes);
-    }
-    if (updates.expectedDate !== undefined) {
-      po.updateExpectedDate(updates.expectedDate);
-    }
+      if (updates.notes !== undefined) {
+        po.updateNotes(updates.notes);
+      }
+      if (updates.expectedDate !== undefined) {
+        po.updateExpectedDate(updates.expectedDate);
+      }
 
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
   async deletePurchaseOrder(poId: string, workspaceId: string): Promise<void> {
-    const po = await this.poRepository.findById(
-      PurchaseOrderId.fromString(poId),
-      workspaceId
-    );
-    if (!po) {
-      throw new PurchaseOrderNotFoundError(poId, workspaceId);
-    }
-    po.markAsDeleted();
-    await this.poRepository.delete(
-      PurchaseOrderId.fromString(poId),
-      workspaceId
-    );
+    await this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
+      po.markAsDeleted();
+      await this.poRepository.delete(po);
+    });
   }
 
   async submitPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
-    const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
-    po.submit();
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+    return this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
+      const items = await this.poRepository.findItemsByPurchaseOrder(poId, workspaceId);
+      po.submit(items);
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
   async approvePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
-    const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
-    po.approve();
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+    return this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
+      po.approve();
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
-  async receivePurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
-    const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
-    po.receive();
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+  async receivePurchaseOrder(
+    poId: string,
+    workspaceId: string,
+    locationId: string,
+    receivedBy: string
+  ): Promise<PurchaseOrderDTO> {
+    return this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
+      if (!po.isApproved()) {
+        throw new InvalidPurchaseOrderStatusError(po.status, PurchaseOrderStatus.RECEIVED);
+      }
+      const items = await this.poRepository.findItemsByPurchaseOrder(poId, workspaceId);
+      const outstanding = items.filter((item) => item.receivedQuantity < item.quantity);
+      if (outstanding.length === 0) throw new InvalidInventoryDataError('Purchase order has no outstanding items');
+      const completedItems = [...items];
+      for (const item of outstanding) {
+        const remaining = item.quantity - item.receivedQuantity;
+        const receivedItem = po.receiveItem(item, item.quantity);
+        await this.stockService.adjustStock({
+          workspaceId,
+          variantId: item.variantId,
+          locationId,
+          quantity: remaining,
+          type: TransactionType.IN,
+          referenceId: poId,
+          referenceType: 'PURCHASE_ORDER',
+          createdBy: receivedBy,
+        });
+        await this.poRepository.saveItem(receivedItem, workspaceId);
+        completedItems[items.indexOf(item)] = receivedItem;
+      }
+      po.receive(completedItems);
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
   async cancelPurchaseOrder(poId: string, workspaceId: string): Promise<PurchaseOrderDTO> {
-    const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
-    po.cancel();
-    await this.poRepository.save(po);
-    return PurchaseOrder.toDTO(po);
+    return this.write(workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(poId, workspaceId);
+      po.cancel();
+      await this.poRepository.save(po);
+      return PurchaseOrder.toDTO(po);
+    });
   }
 
   // Item management
@@ -123,52 +172,54 @@ export class PurchaseOrderService {
     quantity: number;
     unitPrice: number | string;
   }): Promise<PurchaseOrderItemDTO> {
-    const po = await this.getPurchaseOrderOrThrow(
-      params.purchaseOrderId,
-      params.workspaceId
-    );
+    return this.write(params.workspaceId, async () => {
+      const po = await this.getPurchaseOrderOrThrow(
+        params.purchaseOrderId,
+        params.workspaceId
+      );
 
-    const item = PurchaseOrderItem.create({
-      purchaseOrderId: po.id.getValue(),
-      variantId: params.variantId,
-      variantName: params.variantName,
-      quantity: params.quantity,
-      unitPrice:
-        typeof params.unitPrice === 'string'
-          ? parseFloat(params.unitPrice)
-          : params.unitPrice,
+      const item = po.addItem({
+        variantId: params.variantId,
+        variantName: params.variantName,
+        quantity: params.quantity,
+        unitPrice:
+          typeof params.unitPrice === 'string'
+            ? Number(params.unitPrice)
+            : params.unitPrice,
+      });
+
+      await this.poRepository.saveItem(item, params.workspaceId);
+      await this.recalculateTotal(po, params.workspaceId);
+      return PurchaseOrderItem.toDTO(item);
     });
-
-    await this.poRepository.saveItem(item);
-    await this.recalculateTotal(po.id.getValue(), params.workspaceId);
-    return PurchaseOrderItem.toDTO(item);
   }
 
-  async removeItem(itemId: string, workspaceId: string): Promise<void> {
-    const item = await this.poRepository.findItemById(
-      PurchaseOrderItemId.fromString(itemId)
-    );
-    if (!item) {
-      throw new PurchaseOrderItemNotFoundError(itemId);
-    }
+  async removeItem(itemId: string, purchaseOrderId: string, workspaceId: string): Promise<void> {
+    await this.write(workspaceId, async () => {
+      const item = await this.poRepository.findItemById(
+        PurchaseOrderItemId.fromString(itemId), workspaceId
+      );
+      if (!item) {
+        throw new PurchaseOrderItemNotFoundError(itemId);
+      }
+      if (item.purchaseOrderId !== purchaseOrderId) {
+        throw new PurchaseOrderItemNotFoundError(itemId);
+      }
 
-    await this.poRepository.deleteItem(PurchaseOrderItemId.fromString(itemId));
-    await this.recalculateTotal(item.purchaseOrderId, workspaceId);
+      const po = await this.getPurchaseOrderOrThrow(purchaseOrderId, workspaceId);
+      po.removeItem(item);
+      await this.poRepository.deleteItem(PurchaseOrderItemId.fromString(itemId), workspaceId);
+      await this.recalculateTotal(po, workspaceId);
+    });
   }
 
-  private async recalculateTotal(poId: string, workspaceId: string): Promise<void> {
-    const po = await this.poRepository.findById(
-      PurchaseOrderId.fromString(poId),
-      workspaceId
-    );
-    if (!po) return;
-
-    const items = await this.poRepository.findItemsByPurchaseOrder(poId);
-    let total = 0;
+  private async recalculateTotal(po: PurchaseOrder, workspaceId: string): Promise<void> {
+    const items = await this.poRepository.findItemsByPurchaseOrder(po.id.getValue(), workspaceId);
+    let total = new Decimal(0);
     for (const item of items) {
-      total += item.getLineTotal();
+      total = total.plus(item.getLineTotal());
     }
-    po.updateTotalAmount(total);
+    po.updateTotalAmount(total.toNumber());
     await this.poRepository.save(po);
   }
 
@@ -206,8 +257,8 @@ export class PurchaseOrderService {
     };
   }
 
-  async getItemsByPurchaseOrder(purchaseOrderId: string): Promise<PurchaseOrderItemDTO[]> {
-    const items = await this.poRepository.findItemsByPurchaseOrder(purchaseOrderId);
+  async getItemsByPurchaseOrder(purchaseOrderId: string, workspaceId: string): Promise<PurchaseOrderItemDTO[]> {
+    const items = await this.poRepository.findItemsByPurchaseOrder(purchaseOrderId, workspaceId);
     return items.map((item) => PurchaseOrderItem.toDTO(item));
   }
 
