@@ -64,6 +64,28 @@ export class SupplierAlreadyExistsError extends InventoryManagementError {
   }
 }
 
+export class PurchaseOrderCannotBeDeletedError extends InventoryManagementError {
+  constructor(status: string) {
+    super(`Purchase order in ${status} status cannot be deleted`, 'PURCHASE_ORDER_CANNOT_BE_DELETED', 409);
+  }
+}
+
+export class SupplierInUseError extends InventoryManagementError {
+  constructor(supplierId: string) {
+    super(
+      `Supplier ${supplierId} cannot be deleted while purchase orders reference it`,
+      'SUPPLIER_IN_USE',
+      409
+    );
+  }
+}
+
+export class SupplierInactiveError extends InventoryManagementError {
+  constructor(supplierId: string) {
+    super(`Supplier ${supplierId} is inactive`, 'SUPPLIER_INACTIVE', 409);
+  }
+}
+
 export class LocationNotFoundError extends InventoryManagementError {
   constructor(locationId: string, workspaceId?: string) {
     const message = workspaceId
@@ -83,13 +105,25 @@ export class LocationAlreadyExistsError extends InventoryManagementError {
   }
 }
 
-export class StockNotFoundError extends InventoryManagementError {
-  constructor(variantId: string, locationId: string) {
+export class LocationInUseError extends InventoryManagementError {
+  constructor(locationId: string) {
     super(
-      `Stock not found for variant ${variantId} at location ${locationId}`,
-      'STOCK_NOT_FOUND',
-      404
+      `Location ${locationId} cannot be deleted while inventory references it`,
+      'LOCATION_IN_USE',
+      409
     );
+  }
+}
+
+export class LocationInactiveError extends InventoryManagementError {
+  constructor(locationId: string) {
+    super(`Location ${locationId} is inactive`, 'LOCATION_INACTIVE', 409);
+  }
+}
+
+export class StockNotFoundError extends InventoryManagementError {
+  constructor(stockId: string, workspaceId: string) {
+    super(`Stock ${stockId} not found in workspace ${workspaceId}`, 'STOCK_NOT_FOUND', 404);
   }
 }
 
