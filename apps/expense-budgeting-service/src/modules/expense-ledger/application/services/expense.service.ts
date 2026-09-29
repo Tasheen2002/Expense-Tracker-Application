@@ -12,6 +12,8 @@ import { AttachmentId } from '../../domain/value-objects/attachment-id';
 import { Money } from '../../domain/value-objects/money';
 import { ExpenseDate } from '../../domain/value-objects/expense-date';
 import { PaymentMethod } from '../../domain/enums/payment-method';
+import { IApprovedExpensePolicy } from '../ports/approved-expense-policy.port';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 import {
   ExpenseNotFoundError,
@@ -23,7 +25,9 @@ import {
 export class ExpenseService {
   constructor(
     private readonly expenseRepository: IExpenseRepository,
-    private readonly tagRepository?: ITagRepository
+    private readonly tagRepository?: ITagRepository,
+    private readonly approvedExpensePolicy?: IApprovedExpensePolicy,
+    private readonly unitOfWork?: IUnitOfWork
   ) {}
 
   async createExpense(params: {
@@ -285,9 +289,17 @@ export class ExpenseService {
       );
     }
 
-    expense.approve(approverId);
-
-    await this.expenseRepository.update(expense);
+    const approve = async () => {
+      await this.approvedExpensePolicy?.validate(expense);
+      expense.approve(approverId);
+      await this.expenseRepository.update(expense);
+      await this.approvedExpensePolicy?.synchronize(expense);
+    };
+    if (this.approvedExpensePolicy && this.unitOfWork) {
+      await this.unitOfWork.execute(approve);
+    } else {
+      await approve();
+    }
 
     return Expense.toDTO(expense);
   }
