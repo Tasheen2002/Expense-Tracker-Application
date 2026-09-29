@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import Decimal from 'decimal.js';
 import { toJsonSchema } from './validator';
 import {
   SUPPLIER_NAME_MIN_LENGTH,
@@ -6,6 +7,7 @@ import {
   LOCATION_NAME_MIN_LENGTH,
   LOCATION_NAME_MAX_LENGTH,
   VARIANT_NAME_MAX_LENGTH,
+  VARIANT_ID_MAX_LENGTH,
   NOTES_MAX_LENGTH,
   MIN_QUANTITY,
   MAX_QUANTITY,
@@ -58,17 +60,18 @@ export const stockParamsSchema = z.object({
 export const createSupplierSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(SUPPLIER_NAME_MIN_LENGTH, 'Supplier name is required')
     .max(SUPPLIER_NAME_MAX_LENGTH, `Supplier name cannot exceed ${SUPPLIER_NAME_MAX_LENGTH} characters`),
-  contactEmail: z.string().email('Invalid email format').optional(),
+  contactEmail: z.string().email('Invalid email format').max(255).optional(),
   contactPhone: z.string().max(50).optional(),
   address: z.string().optional(),
 });
 
 export const updateSupplierSchema = z
   .object({
-    name: z.string().min(SUPPLIER_NAME_MIN_LENGTH).max(SUPPLIER_NAME_MAX_LENGTH).optional(),
-    contactEmail: z.string().email('Invalid email format').optional().nullable(),
+    name: z.string().trim().min(SUPPLIER_NAME_MIN_LENGTH).max(SUPPLIER_NAME_MAX_LENGTH).optional(),
+    contactEmail: z.string().email('Invalid email format').max(255).optional().nullable(),
     contactPhone: z.string().max(50).optional().nullable(),
     address: z.string().optional().nullable(),
   })
@@ -83,6 +86,7 @@ export const updateSupplierSchema = z
 export const createLocationSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(LOCATION_NAME_MIN_LENGTH, 'Location name is required')
     .max(LOCATION_NAME_MAX_LENGTH, `Location name cannot exceed ${LOCATION_NAME_MAX_LENGTH} characters`),
   type: z.nativeEnum(LocationType).optional(),
@@ -91,7 +95,7 @@ export const createLocationSchema = z.object({
 
 export const updateLocationSchema = z
   .object({
-    name: z.string().min(LOCATION_NAME_MIN_LENGTH).max(LOCATION_NAME_MAX_LENGTH).optional(),
+    name: z.string().trim().min(LOCATION_NAME_MIN_LENGTH).max(LOCATION_NAME_MAX_LENGTH).optional(),
     type: z.nativeEnum(LocationType).optional(),
     address: z.string().optional().nullable(),
   })
@@ -108,13 +112,10 @@ export const createPurchaseOrderSchema = z.object({
   orderDate: z.string().datetime('Invalid order date format'),
   expectedDate: z.string().datetime('Invalid expected date format').optional(),
   notes: z.string().max(NOTES_MAX_LENGTH).optional(),
-  currency: z
-    .string()
-    .length(3, 'Currency must be a 3-letter code')
-    .refine((val) => SUPPORTED_CURRENCIES.includes(val), {
-      message: `Currency must be one of: ${SUPPORTED_CURRENCIES.join(', ')}`,
-    })
-    .optional(),
+  currency: z.enum(SUPPORTED_CURRENCIES as [string, ...string[]]).optional(),
+}).refine((data) => !data.expectedDate || new Date(data.expectedDate) >= new Date(data.orderDate), {
+  message: 'Expected date cannot be before order date',
+  path: ['expectedDate'],
 });
 
 export const updatePurchaseOrderSchema = z
@@ -127,10 +128,18 @@ export const updatePurchaseOrderSchema = z
   });
 
 export const addPurchaseOrderItemSchema = z.object({
-  variantId: z.string().min(1, 'Variant ID is required').max(255),
-  variantName: z.string().min(1, 'Variant name is required').max(VARIANT_NAME_MAX_LENGTH),
+  variantId: z.string().trim().min(1, 'Variant ID is required').max(VARIANT_ID_MAX_LENGTH),
+  variantName: z.string().trim().min(1, 'Variant name is required').max(VARIANT_NAME_MAX_LENGTH),
   quantity: z.number().int().min(1, 'Quantity must be at least 1').max(MAX_QUANTITY),
-  unitPrice: z.number().min(MIN_UNIT_PRICE).max(MAX_UNIT_PRICE),
+  unitPrice: z.number().min(MIN_UNIT_PRICE).max(MAX_UNIT_PRICE)
+    .refine((price) => new Decimal(price).decimalPlaces() <= 2, 'Unit price cannot exceed two decimal places'),
+}).refine((data) => new Decimal(data.unitPrice).times(data.quantity).lte(MAX_UNIT_PRICE), {
+  message: 'Line total exceeds the allowed amount',
+  path: ['unitPrice'],
+});
+
+export const receivePurchaseOrderSchema = z.object({
+  locationId: z.string().uuid('Invalid destination location ID format'),
 });
 
 // ============================================
@@ -138,13 +147,16 @@ export const addPurchaseOrderItemSchema = z.object({
 // ============================================
 
 export const adjustStockSchema = z.object({
-  variantId: z.string().min(1, 'Variant ID is required').max(255),
+  variantId: z.string().trim().min(1, 'Variant ID is required').max(VARIANT_ID_MAX_LENGTH),
   locationId: z.string().uuid('Invalid location ID format'),
-  quantity: z.number().int().min(1, 'Quantity must be at least 1').max(MAX_QUANTITY),
-  type: z.nativeEnum(TransactionType),
+  quantity: z.number().int().min(0).max(MAX_QUANTITY),
+  type: z.enum([TransactionType.IN, TransactionType.OUT, TransactionType.ADJUSTMENT]),
   notes: z.string().max(NOTES_MAX_LENGTH).optional(),
   referenceId: z.string().uuid().optional(),
   referenceType: z.string().max(50).optional(),
+}).refine((data) => data.type === TransactionType.ADJUSTMENT || data.quantity > 0, {
+  message: 'Quantity must be at least 1 except for an adjustment to zero',
+  path: ['quantity'],
 });
 
 export const updateStockSettingsSchema = z
@@ -160,29 +172,31 @@ export const updateStockSettingsSchema = z
 // List Query Schemas
 // ============================================
 
+const MAX_LIST_OFFSET = 1_000_000;
+
 export const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  offset: z.coerce.number().int().min(0).max(MAX_LIST_OFFSET).optional(),
 });
 
 export const listPurchaseOrdersQuerySchema = z.object({
   status: z.nativeEnum(PurchaseOrderStatus).optional(),
   supplierId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  offset: z.coerce.number().int().min(0).max(MAX_LIST_OFFSET).optional(),
 });
 
 export const listStockQuerySchema = z.object({
   locationId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  offset: z.coerce.number().int().min(0).max(MAX_LIST_OFFSET).optional(),
 });
 
 export const listTransactionsQuerySchema = z.object({
-  variantId: z.string().optional(),
+  variantId: z.string().trim().min(1).max(255).optional(),
   locationId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  offset: z.coerce.number().int().min(0).max(MAX_LIST_OFFSET).optional(),
 });
 
 // ============================================
@@ -196,7 +210,9 @@ export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
 export type CreatePurchaseOrderInput = z.infer<typeof createPurchaseOrderSchema>;
 export type UpdatePurchaseOrderInput = z.infer<typeof updatePurchaseOrderSchema>;
 export type AddPurchaseOrderItemInput = z.infer<typeof addPurchaseOrderItemSchema>;
+export type ReceivePurchaseOrderInput = z.infer<typeof receivePurchaseOrderSchema>;
 export type AdjustStockInput = z.infer<typeof adjustStockSchema>;
+export type UpdateStockSettingsInput = z.infer<typeof updateStockSettingsSchema>;
 export type ListQuery = z.infer<typeof listQuerySchema>;
 export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersQuerySchema>;
 export type ListStockQuery = z.infer<typeof listStockQuerySchema>;
@@ -222,6 +238,7 @@ export const updateLocationBodyJsonSchema = toJsonSchema(updateLocationSchema);
 export const createPurchaseOrderBodyJsonSchema = toJsonSchema(createPurchaseOrderSchema);
 export const updatePurchaseOrderBodyJsonSchema = toJsonSchema(updatePurchaseOrderSchema);
 export const addPurchaseOrderItemBodyJsonSchema = toJsonSchema(addPurchaseOrderItemSchema);
+export const receivePurchaseOrderBodyJsonSchema = toJsonSchema(receivePurchaseOrderSchema);
 
 export const adjustStockBodyJsonSchema = toJsonSchema(adjustStockSchema);
 export const updateStockSettingsBodyJsonSchema = toJsonSchema(updateStockSettingsSchema);
@@ -373,6 +390,13 @@ export const adjustStockEnvelopeSchema = z.object({
   }),
 });
 
+export const stockEnvelopeSchema = z.object({
+  success: z.boolean(),
+  statusCode: z.number(),
+  message: z.string(),
+  data: stockResponseSchema,
+});
+
 export const paginatedStockEnvelopeSchema = z.object({
   success: z.boolean(),
   statusCode: z.number(),
@@ -432,6 +456,7 @@ export const supplierEnvelopeJsonSchema = toJsonSchema(supplierEnvelopeSchema);
 export const paginatedSuppliersEnvelopeJsonSchema = toJsonSchema(paginatedSuppliersEnvelopeSchema);
 
 export const adjustStockEnvelopeJsonSchema = toJsonSchema(adjustStockEnvelopeSchema);
+export const stockEnvelopeJsonSchema = toJsonSchema(stockEnvelopeSchema);
 export const paginatedStockEnvelopeJsonSchema = toJsonSchema(paginatedStockEnvelopeSchema);
 export const paginatedTransactionsEnvelopeJsonSchema = toJsonSchema(paginatedTransactionsEnvelopeSchema);
 
