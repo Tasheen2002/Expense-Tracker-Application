@@ -13,9 +13,7 @@ export {
   InvalidTotalAllocationError,
   InvalidAllocationAmountError,
   InvalidAllocationTargetError,
-  AllocationExceedsExpenseError,
   ExpenseNotFoundError,
-  ExpenseWorkspaceMismatchError,
   InvalidCodeError,
 } from './domain/errors/cost-allocation.errors';
 
