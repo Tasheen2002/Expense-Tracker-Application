@@ -158,10 +158,7 @@ export class AuditLogController {
         entityId: body.entityId,
         details: body.details ?? undefined,
         metadata: body.metadata ?? undefined,
-        ipAddress:
-          (request.headers['x-forwarded-for'] as string) ||
-          request.ip ||
-          undefined,
+        ipAddress: request.ip || undefined,
         userAgent: request.headers['user-agent'] || undefined,
       });
 
@@ -169,7 +166,7 @@ export class AuditLogController {
         reply,
         result,
         'Audit log created successfully',
-        result.data ? { auditLogId: result.data } : undefined,
+        result.data ? { auditLogId: result.data.id } : undefined,
         201
       );
     } catch (error) {
@@ -191,6 +188,7 @@ export class AuditLogController {
       const result = await this.purgeAuditLogsHandler.handle({
         workspaceId,
         olderThanDays,
+        purgedBy: request.user.userId,
       });
 
       return ResponseHelper.fromCommand(
