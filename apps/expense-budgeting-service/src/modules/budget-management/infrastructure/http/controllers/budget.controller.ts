@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateBudgetHandler,
   UpdateBudgetHandler,
@@ -13,12 +13,14 @@ import {
   ListBudgetsHandler,
   GetAllocationsHandler,
   GetUnreadAlertsHandler,
+  MarkAlertReadHandler,
 } from '../../../application';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { BudgetStatus } from '../../../domain/enums/budget-status';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   WorkspaceParams,
+  AlertParams,
   BudgetParams,
   AllocationParams,
   CreateBudgetBody,
@@ -26,6 +28,7 @@ import {
   AddAllocationBody,
   UpdateAllocationBody,
   ListBudgetsQuery,
+  PaginationQuery,
 } from '../validation/budget.schema';
 
 export class BudgetController {
@@ -41,7 +44,8 @@ export class BudgetController {
     private readonly getBudgetHandler: GetBudgetHandler,
     private readonly listBudgetsHandler: ListBudgetsHandler,
     private readonly getAllocationsHandler: GetAllocationsHandler,
-    private readonly getUnreadAlertsHandler: GetUnreadAlertsHandler
+    private readonly getUnreadAlertsHandler: GetUnreadAlertsHandler,
+    private readonly markAlertReadHandler: MarkAlertReadHandler
   ) {}
 
   async getBudget(
@@ -96,15 +100,19 @@ export class BudgetController {
   async getAllocations(
     request: AuthenticatedRequest<{
       Params: BudgetParams;
+      Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
   ) {
     try {
       const { workspaceId, budgetId } = request.params;
+      const { limit, offset } = (request.query as PaginationQuery) || {};
 
       const result = await this.getAllocationsHandler.handle({
         budgetId,
         workspaceId,
+        limit,
+        offset,
       });
 
       return ResponseHelper.ok(reply, 'Allocations retrieved successfully', result);
@@ -116,17 +124,33 @@ export class BudgetController {
   async getUnreadAlerts(
     request: AuthenticatedRequest<{
       Params: WorkspaceParams;
+      Querystring: PaginationQuery;
     }>,
     reply: FastifyReply
   ) {
     try {
       const { workspaceId } = request.params;
+      const { limit, offset } = (request.query as PaginationQuery) || {};
 
       const result = await this.getUnreadAlertsHandler.handle({
         workspaceId,
+        limit,
+        offset,
       });
 
       return ResponseHelper.ok(reply, 'Alerts retrieved successfully', result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async markAlertRead(
+    request: AuthenticatedRequest<{ Params: AlertParams }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const result = await this.markAlertReadHandler.handle(request.params);
+      return ResponseHelper.ok(reply, 'Alert marked as read', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -322,10 +346,11 @@ export class BudgetController {
   ) {
     try {
       const userId = request.user.userId;
-      const { workspaceId, allocationId } = request.params;
+      const { workspaceId, budgetId, allocationId } = request.params;
 
       const result = await this.updateAllocationHandler.handle({
         allocationId,
+        budgetId,
         workspaceId,
         userId,
         allocatedAmount: request.body.allocatedAmount,
@@ -350,10 +375,11 @@ export class BudgetController {
   ) {
     try {
       const userId = request.user.userId;
-      const { workspaceId, allocationId } = request.params;
+      const { workspaceId, budgetId, allocationId } = request.params;
 
       const result = await this.deleteAllocationHandler.handle({
         allocationId,
+        budgetId,
         workspaceId,
         userId,
       });
