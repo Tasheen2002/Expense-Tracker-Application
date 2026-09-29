@@ -66,6 +66,10 @@ describe('Composition Root — Typed Factory Pattern (Unit)', () => {
 
     expect(root.inventoryManagement).toBeDefined();
     expect(root.inventoryManagement.supplierController).toBeDefined();
+    expect(root.inventoryManagement.locationController).toBeDefined();
+    expect(root.inventoryManagement.purchaseOrderController).toBeDefined();
+    expect(root.inventoryManagement.stockController).toBeDefined();
+    expect(root.inventoryManagement.prisma).toBe(mockPrisma);
 
     expect(root.outboxEventRepository).toBeDefined();
 
@@ -110,6 +114,9 @@ describe('Composition Root — Typed Factory Pattern (Unit)', () => {
     expect(factoryCalledWithPrisma).toBe(app.prisma);
     expect(app.compositionRoot).toBeDefined();
     expect(app.compositionRoot.expenseLedger).toBeDefined();
+    expect(app.compositionRoot.inventoryManagement.prisma).toBe(app.prisma);
+    expect(app.hasRoute({ method: 'POST', url: '/api/v1/workspaces/:workspaceId/purchase-orders' })).toBe(true);
+    expect(app.hasRoute({ method: 'POST', url: '/api/v1/workspaces/:workspaceId/stock/adjust' })).toBe(true);
 
     await app.close();
   });
