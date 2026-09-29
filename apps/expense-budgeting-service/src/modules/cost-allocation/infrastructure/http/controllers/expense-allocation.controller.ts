@@ -36,6 +36,7 @@ export class ExpenseAllocationController {
       const allocations = await this.getExpenseAllocationsHandler.handle({
         expenseId,
         workspaceId,
+        actorId: request.user.userId,
       });
 
       return ResponseHelper.ok(reply, 'Allocations retrieved successfully', allocations);
@@ -54,6 +55,7 @@ export class ExpenseAllocationController {
       const { workspaceId } = request.params;
       const summary = await this.getAllocationSummaryHandler.handle({
         workspaceId,
+        actorId: request.user.userId,
       });
 
       return ResponseHelper.ok(reply, 'Allocation summary retrieved successfully', summary);
