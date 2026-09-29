@@ -8,6 +8,16 @@ import { SupplierController } from '../controllers/supplier.controller';
 import { LocationController } from '../controllers/location.controller';
 import { PurchaseOrderController } from '../controllers/purchase-order.controller';
 import { StockController } from '../controllers/stock.controller';
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from '@shared/middleware/rate-limiter.middleware';
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function registerInventoryRoutes(
   fastify: FastifyInstance,
@@ -21,6 +31,11 @@ export async function registerInventoryRoutes(
 ): Promise<void> {
   await fastify.register(
     async (instance) => {
+      instance.addHook('preHandler', async (request, reply) => {
+        if (request.method !== 'GET') {
+          await writeRateLimiter(request, reply);
+        }
+      });
       await supplierRoutes(instance, controllers.supplierController);
       await locationRoutes(instance, controllers.locationController);
       await purchaseOrderRoutes(instance, controllers.purchaseOrderController);

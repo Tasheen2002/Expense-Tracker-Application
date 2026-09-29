@@ -1,13 +1,8 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PurchaseOrderController } from '../controllers/purchase-order.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  userKeyGenerator,
-} from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
   validateQuery,
@@ -16,6 +11,7 @@ import {
   createPurchaseOrderSchema,
   updatePurchaseOrderSchema,
   addPurchaseOrderItemSchema,
+  receivePurchaseOrderSchema,
   listPurchaseOrdersQuerySchema,
   workspaceParamsJsonSchema,
   purchaseOrderParamsJsonSchema,
@@ -23,6 +19,7 @@ import {
   createPurchaseOrderBodyJsonSchema,
   updatePurchaseOrderBodyJsonSchema,
   addPurchaseOrderItemBodyJsonSchema,
+  receivePurchaseOrderBodyJsonSchema,
   listPurchaseOrdersQueryJsonSchema,
   purchaseOrderEnvelopeJsonSchema,
   purchaseOrderWithItemsEnvelopeJsonSchema,
@@ -30,11 +27,6 @@ import {
   purchaseOrderItemEnvelopeJsonSchema,
 } from '../validation/inventory.schema';
 import { noContentResponse } from '@shared/http/response-schemas';
-
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
 
 export async function purchaseOrderRoutes(
   fastify: FastifyInstance,
@@ -48,13 +40,6 @@ export async function purchaseOrderRoutes(
     );
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Create purchase order
   fastify.post(
     '/workspaces/:workspaceId/purchase-orders',
@@ -63,6 +48,7 @@ export async function purchaseOrderRoutes(
       preHandler: [
         validateBody(createPurchaseOrderSchema),
         workspaceAuth,
+        RolePermissions.MANAGER_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -131,6 +117,7 @@ export async function purchaseOrderRoutes(
       preHandler: [
         validateBody(updatePurchaseOrderSchema),
         workspaceAuth,
+        RolePermissions.MANAGER_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -175,7 +162,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/submit',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [workspaceAuth, RolePermissions.MANAGER_LEVEL],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Submit purchase order for approval',
@@ -218,12 +205,13 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/receive',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [validateBody(receivePurchaseOrderSchema), workspaceAuth, RolePermissions.MANAGER_LEVEL],
       schema: {
         tags: ['Inventory - Purchase Order'],
-        description: 'Mark purchase order as received',
+        description: 'Receive all outstanding purchase-order items into a location',
         security: [{ bearerAuth: [] }],
         params: purchaseOrderParamsJsonSchema,
+        body: receivePurchaseOrderBodyJsonSchema,
         response: {
           200: purchaseOrderEnvelopeJsonSchema,
         },
@@ -238,7 +226,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/cancel',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [workspaceAuth, RolePermissions.MANAGER_LEVEL],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Cancel purchase order',
@@ -261,6 +249,7 @@ export async function purchaseOrderRoutes(
       preHandler: [
         validateBody(addPurchaseOrderItemSchema),
         workspaceAuth,
+        RolePermissions.MANAGER_LEVEL,
       ],
       schema: {
         tags: ['Inventory - Purchase Order'],
@@ -282,7 +271,7 @@ export async function purchaseOrderRoutes(
     '/workspaces/:workspaceId/purchase-orders/:purchaseOrderId/items/:itemId',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [workspaceAuth, RolePermissions.MANAGER_LEVEL],
       schema: {
         tags: ['Inventory - Purchase Order'],
         description: 'Remove item from purchase order',
