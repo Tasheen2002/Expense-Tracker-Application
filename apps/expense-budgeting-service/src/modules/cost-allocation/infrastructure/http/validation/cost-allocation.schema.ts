@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Decimal } from '@prisma/client/runtime/library';
 import { toJsonSchema } from './validator';
 
 // ==================== PARAM SCHEMAS ====================
@@ -29,17 +30,19 @@ export const expenseParamsSchema = z.object({
 
 // ==================== DEPARTMENT SCHEMAS ====================
 
+const codeSchema = z.string().trim().min(2).max(20).regex(/^[A-Za-z0-9_-]+$/);
+
 export const createDepartmentSchema = z.object({
-  name: z.string().min(2).max(100),
-  code: z.string().min(2).max(20),
+  name: z.string().trim().min(2).max(100),
+  code: codeSchema,
   description: z.string().optional(),
   managerId: z.string().uuid().optional(),
   parentDepartmentId: z.string().uuid().optional(),
 });
 
 export const updateDepartmentSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  code: z.string().min(2).max(20).optional(),
+  name: z.string().trim().min(2).max(100).optional(),
+  code: codeSchema.optional(),
   description: z.string().nullable().optional(),
   managerId: z.string().uuid().nullable().optional(),
   parentDepartmentId: z.string().uuid().nullable().optional(),
@@ -48,35 +51,38 @@ export const updateDepartmentSchema = z.object({
 // ==================== COST CENTER SCHEMAS ====================
 
 export const createCostCenterSchema = z.object({
-  name: z.string().min(2).max(100),
-  code: z.string().min(2).max(20),
+  name: z.string().trim().min(2).max(100),
+  code: codeSchema,
   description: z.string().optional(),
 });
 
 export const updateCostCenterSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  code: z.string().min(2).max(20).optional(),
+  name: z.string().trim().min(2).max(100).optional(),
+  code: codeSchema.optional(),
   description: z.string().nullable().optional(),
 });
 
 // ==================== PROJECT SCHEMAS ====================
 
+// Keep the Zod input contract aligned with the date-time JSON Schema used by Fastify.
+const projectDateSchema = z.string().datetime({ offset: true }).transform((value) => new Date(value));
+
 export const createProjectSchema = z.object({
-  name: z.string().min(2).max(100),
-  code: z.string().min(2).max(20),
-  startDate: z.coerce.date(),
+  name: z.string().trim().min(2).max(100),
+  code: codeSchema,
+  startDate: projectDateSchema,
   description: z.string().optional(),
-  endDate: z.coerce.date().optional(),
+  endDate: projectDateSchema.optional(),
   managerId: z.string().uuid().optional(),
   budget: z.coerce.number().min(0).optional(),
 });
 
 export const updateProjectSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  code: z.string().min(2).max(20).optional(),
+  name: z.string().trim().min(2).max(100).optional(),
+  code: codeSchema.optional(),
   description: z.string().nullable().optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().nullable().optional(),
+  startDate: projectDateSchema.optional(),
+  endDate: projectDateSchema.nullable().optional(),
   managerId: z.string().uuid().nullable().optional(),
   budget: z.coerce.number().min(0).nullable().optional(),
 });
@@ -87,7 +93,9 @@ export const allocateExpenseSchema = z.object({
   allocations: z.array(
     z.object({
       amount: z.coerce.number().min(0.01),
-      percentage: z.coerce.number().min(0).max(100).optional(),
+      percentage: z.coerce.number().finite().min(0).max(100)
+        .refine((value) => new Decimal(value).decimalPlaces() <= 2, 'Percentage cannot exceed two decimal places')
+        .optional(),
       departmentId: z.string().uuid().optional(),
       costCenterId: z.string().uuid().optional(),
       projectId: z.string().uuid().optional(),
@@ -100,7 +108,7 @@ export const allocateExpenseSchema = z.object({
 
 export const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(50),
-  offset: z.coerce.number().int().min(0).optional().default(0),
+  offset: z.coerce.number().int().min(0).max(100_000).optional().default(0),
 });
 
 // ==================== RESPONSE SCHEMAS ====================
@@ -164,7 +172,8 @@ export const allocationSummaryResponseSchema = z.object({
     z.object({
       departmentId: z.string().uuid(),
       departmentName: z.string(),
-      total: z.number(),
+      currency: z.string().length(3),
+      total: z.string(),
       count: z.number(),
     })
   ),
@@ -172,7 +181,8 @@ export const allocationSummaryResponseSchema = z.object({
     z.object({
       costCenterId: z.string().uuid(),
       costCenterName: z.string(),
-      total: z.number(),
+      currency: z.string().length(3),
+      total: z.string(),
       count: z.number(),
     })
   ),
@@ -180,7 +190,8 @@ export const allocationSummaryResponseSchema = z.object({
     z.object({
       projectId: z.string().uuid(),
       projectName: z.string(),
-      total: z.number(),
+      currency: z.string().length(3),
+      total: z.string(),
       count: z.number(),
     })
   ),
