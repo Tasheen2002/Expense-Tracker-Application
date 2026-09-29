@@ -70,6 +70,36 @@ describe('PrismaUnitOfWork & Repository Ambient Context', () => {
     expect(PrismaUnitOfWork.getClient(rootPrisma)).toBe(rootPrisma);
   });
 
+  it('reuses the same client transaction for a nested unit of work', async () => {
+    const mockTx = {} as Prisma.TransactionClient;
+    const rootPrisma = createMockPrisma(vi.fn(async (callback: (tx: Prisma.TransactionClient) => Promise<unknown>) => callback(mockTx)));
+    const outer = new PrismaUnitOfWork(rootPrisma);
+    const inner = new PrismaUnitOfWork(rootPrisma);
+
+    await outer.execute(async () => {
+      await inner.execute(async () => {
+        expect(PrismaUnitOfWork.getClient(rootPrisma)).toBe(mockTx);
+      });
+    });
+
+    expect(rootPrisma.$transaction).toHaveBeenCalledOnce();
+  });
+
+  it('rejects a different Prisma client inside an active unit of work', async () => {
+    const mockTx = {} as Prisma.TransactionClient;
+    const first = createMockPrisma(vi.fn(async (callback: (tx: Prisma.TransactionClient) => Promise<unknown>) => callback(mockTx)));
+    const second = createMockPrisma(vi.fn());
+
+    await new PrismaUnitOfWork(first).execute(async () => {
+      expect(() => PrismaUnitOfWork.getClient(second)).toThrow('different PrismaClient');
+      await expect(new PrismaUnitOfWork(second).execute(async () => undefined))
+        .rejects.toThrow('different PrismaClient');
+      expect(PrismaUnitOfWork.getClient(first)).toBe(mockTx);
+    });
+
+    expect(second.$transaction).not.toHaveBeenCalled();
+  });
+
   it('executes post-commit hooks ONLY AFTER transaction commits successfully', async () => {
     const mockTx = {} as Prisma.TransactionClient;
     const executionOrder: string[] = [];
