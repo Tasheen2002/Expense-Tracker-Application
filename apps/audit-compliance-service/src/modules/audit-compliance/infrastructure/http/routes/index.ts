@@ -1,20 +1,18 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import type { AuditCompositionRoot } from '../../../../../composition-root';
 import { auditLogRoutes } from './audit-log.routes';
 import { registerAuditOutboxEventRoutes } from './outbox-event.routes';
-import { AuditLogController } from '../controllers/audit-log.controller';
 
 export async function registerAuditComplianceRoutes(
   fastify: FastifyInstance,
-  controllers: { auditLogController: AuditLogController },
-  prisma: PrismaClient
+  root: AuditCompositionRoot
 ) {
   await fastify.register(
     async (instance) => {
       // Register audit log routes
-      await auditLogRoutes(instance, controllers.auditLogController);
+      await auditLogRoutes(instance, root.auditLogController);
       // Register outbox webhook event consumer
-      await registerAuditOutboxEventRoutes(instance, prisma);
+      await registerAuditOutboxEventRoutes(instance, root.auditService);
     },
     { prefix: '/api/v1' }
   );
