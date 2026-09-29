@@ -27,8 +27,32 @@ function formatZodErrors(error: ZodError) {
  *     schema: { body: toJsonSchema(createXSchema) },
  *   }, ...);
  */
+function prioritizeNullInAnyOf(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(prioritizeNullInAnyOf);
+  }
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'anyOf' && Array.isArray(value)) {
+      const sorted = [...value].sort((a, b) => {
+        const aIsNull = a && typeof a === 'object' && a.type === 'null';
+        const bIsNull = b && typeof b === 'object' && b.type === 'null';
+        if (aIsNull && !bIsNull) return -1;
+        if (!aIsNull && bIsNull) return 1;
+        return 0;
+      });
+      result[key] = sorted.map(prioritizeNullInAnyOf);
+    } else {
+      result[key] = prioritizeNullInAnyOf(value);
+    }
+  }
+  return result;
+}
+
 export function toJsonSchema(schema: ZodSchema): object {
-  return zodToJsonSchema(schema, { target: "jsonSchema7" });
+  const jsonSchema = zodToJsonSchema(schema, { target: "jsonSchema7" });
+  return prioritizeNullInAnyOf(jsonSchema);
 }
 
 /**
