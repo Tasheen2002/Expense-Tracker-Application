@@ -21,23 +21,9 @@ export class ListTransactionsHandler
   async handle(query: ListTransactionsQuery): Promise<PaginatedResult<InventoryTransactionDTO>> {
     const options = { limit: query.limit, offset: query.offset };
 
-    if (query.variantId) {
-      return this.stockService.getTransactionsByVariant(
-        query.variantId,
-        query.workspaceId,
-        options
-      );
-    } else if (query.locationId) {
-      return this.stockService.getTransactionsByLocation(
-        query.locationId,
-        query.workspaceId,
-        options
-      );
-    } else {
-      return this.stockService.getTransactionsByWorkspace(
-        query.workspaceId,
-        options
-      );
-    }
+    return this.stockService.getTransactionsByFilters(
+      { workspaceId: query.workspaceId, variantId: query.variantId, locationId: query.locationId },
+      options
+    );
   }
 }
