@@ -1,7 +1,6 @@
-﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance } from 'fastify';
 import { ExpenseAllocationController } from '../controllers/expense-allocation.controller';
 import { AuthenticatedRequest } from '@expense-tracker/middleware';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   validateBody,
 } from '../validation/validator';
@@ -18,7 +17,6 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -29,26 +27,13 @@ export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
   controller: ExpenseAllocationController
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  // Apply write rate limiting to all mutation routes via hooks
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Allocate expense to departments/cost centers/projects
   fastify.post(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(allocateExpenseSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
@@ -70,9 +55,6 @@ export async function expenseAllocationRoutes(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get all allocations for an expense',
@@ -91,11 +73,7 @@ export async function expenseAllocationRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/expenses/:expenseId/allocations',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Delete all allocations for an expense',
@@ -118,9 +96,6 @@ export async function expenseAllocationRoutes(
     '/workspaces/:workspaceId/allocations/summary',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
       schema: {
         tags: ['Cost Allocation - Expense Allocations'],
         description: 'Get allocation summary statistics for workspace',
