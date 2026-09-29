@@ -4,15 +4,20 @@ import { BudgetStatus, isValidStatusTransition } from '../enums/budget-status';
 import { BudgetAllocationExceededError } from '../errors/budget.errors';
 import {
   InvalidAmountError,
-  InvalidCurrencyError,
   InvalidBudgetStatusError,
-  NegativeAmountError,
-  InvalidBudgetDataError,
+  InvalidBudgetPeriodError,
 } from '../errors/budget.errors';
 import { BudgetPeriodType } from '../enums/budget-period-type';
-import { Decimal } from '@prisma/client/runtime/library';
+import Decimal from 'decimal.js';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import {
+  normalizeBudgetName,
+  normalizeCurrency,
+  normalizeDescription,
+  normalizeRequiredId,
+  parseMoney,
+} from './entity-validation';
 
 export interface BudgetDTO {
   budgetId: string;
@@ -335,43 +340,23 @@ export interface CreateBudgetData {
 export class Budget extends AggregateRoot {
   private constructor(private props: BudgetProps) {
     super();
+    this.props = {
+      ...props,
+      createdAt: new Date(props.createdAt.getTime()),
+      updatedAt: new Date(props.updatedAt.getTime()),
+    };
   }
 
   static create(data: CreateBudgetData): Budget {
-    // Validate name
-    if (!data.name || data.name.trim().length === 0) {
-      throw new InvalidBudgetDataError('Budget name is required');
+    if (data.rolloverUnused && !data.isRecurring) {
+      throw new InvalidBudgetPeriodError('Rollover requires a recurring budget');
     }
-    if (data.name.length > 255) {
-      throw new InvalidBudgetDataError(
-        'Budget name cannot exceed 255 characters'
-      );
-    }
-
-    // Validate total amount
-    const totalAmount =
-      typeof data.totalAmount === 'number' ||
-      typeof data.totalAmount === 'string'
-        ? new Decimal(data.totalAmount)
-        : data.totalAmount;
-
-    // ...
-    if (totalAmount.isNegative() || totalAmount.isZero()) {
-      throw new InvalidAmountError('Total amount must be greater than zero');
-    }
-
-    if (totalAmount.decimalPlaces() > 2) {
-      throw new InvalidAmountError(
-        'Total amount cannot have more than 2 decimal places'
-      );
-    }
-
-    // Validate currency
-    if (!data.currency || data.currency.length !== 3) {
-      throw new InvalidCurrencyError(
-        'Currency must be a valid 3-letter ISO code'
-      );
-    }
+    const workspaceId = normalizeRequiredId(data.workspaceId, 'Workspace ID');
+    const createdBy = normalizeRequiredId(data.createdBy, 'Creator ID');
+    const name = normalizeBudgetName(data.name);
+    const totalAmount = parseMoney(data.totalAmount, 'Total amount');
+    const currency = normalizeCurrency(data.currency);
+    const description = normalizeDescription(data.description);
 
     const now = new Date();
     const period = BudgetPeriod.create(
@@ -382,14 +367,14 @@ export class Budget extends AggregateRoot {
 
     const budget = new Budget({
       id: BudgetId.create(),
-      workspaceId: data.workspaceId,
-      name: data.name,
-      description: data.description || null,
+      workspaceId,
+      name,
+      description,
       totalAmount,
-      currency: data.currency,
+      currency,
       period,
       status: BudgetStatus.DRAFT,
-      createdBy: data.createdBy,
+      createdBy,
       isRecurring: data.isRecurring || false,
       rolloverUnused: data.rolloverUnused || false,
       createdAt: now,
@@ -399,11 +384,11 @@ export class Budget extends AggregateRoot {
     budget.addDomainEvent(
       new BudgetCreatedEvent(
         budget.id.getValue(),
-        data.workspaceId,
-        data.name,
+        workspaceId,
+        name,
         totalAmount.toNumber(),
-        data.currency,
-        data.createdBy
+        currency,
+        createdBy
       )
     );
 
@@ -415,63 +400,43 @@ export class Budget extends AggregateRoot {
   }
 
   updateName(newName: string): void {
-    if (!newName || newName.trim().length === 0) {
-      throw new InvalidBudgetDataError('Budget name is required');
-    }
+    const name = normalizeBudgetName(newName);
     const oldName = this.props.name;
-    this.props.name = newName;
+    if (oldName === name) return;
+    this.props.name = name;
     this.props.updatedAt = new Date();
 
-    if (oldName !== newName) {
-      this.addDomainEvent(
-        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
-          name: newName,
-        })
-      );
-    }
+    this.addDomainEvent(
+      new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, { name })
+    );
   }
 
   updateTotalAmount(amount: number | string | Decimal): void {
-    const newAmount =
-      typeof amount === 'number' || typeof amount === 'string'
-        ? new Decimal(amount)
-        : amount;
-
-    if (newAmount.isNegative() || newAmount.isZero()) {
-      throw new InvalidAmountError('Total amount must be greater than zero');
-    }
-
-    if (newAmount.decimalPlaces() > 2) {
-      throw new InvalidAmountError(
-        'Total amount cannot have more than 2 decimal places'
-      );
-    }
+    const newAmount = parseMoney(amount, 'Total amount');
     const oldAmount = this.props.totalAmount;
+    if (oldAmount.equals(newAmount)) return;
     this.props.totalAmount = newAmount;
     this.props.updatedAt = new Date();
 
-    if (!oldAmount.equals(newAmount)) {
-      this.addDomainEvent(
-        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
-          totalAmount: newAmount.toString(),
-        })
-      );
-    }
+    this.addDomainEvent(
+      new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
+        totalAmount: newAmount.toString(),
+      })
+    );
   }
 
   updateDescription(description: string | null): void {
     const oldDescription = this.props.description;
-    const newDescription = description ? description.trim() : null;
+    const newDescription = normalizeDescription(description);
+    if (oldDescription === newDescription) return;
     this.props.description = newDescription;
     this.props.updatedAt = new Date();
 
-    if (oldDescription !== newDescription) {
-      this.addDomainEvent(
-        new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
-          description: newDescription,
-        })
-      );
-    }
+    this.addDomainEvent(
+      new BudgetUpdatedEvent(this.id.getValue(), this.workspaceId, {
+        description: newDescription,
+      })
+    );
   }
 
   activate(): void {
@@ -495,6 +460,13 @@ export class Budget extends AggregateRoot {
         this.props.status,
         BudgetStatus.EXCEEDED
       );
+    }
+    const spent = parseMoney(currentSpending, 'Current spending', {
+      allowZero: true,
+      unbounded: true,
+    });
+    if (!spent.greaterThan(this.props.totalAmount)) {
+      throw new InvalidAmountError('Current spending must exceed the budget total');
     }
     this.props.status = BudgetStatus.EXCEEDED;
     this.props.updatedAt = new Date();
@@ -604,11 +576,11 @@ export class Budget extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   recordAllocationDeleted(allocationId: string): void {
@@ -633,11 +605,12 @@ export class Budget extends AggregateRoot {
   }
 
   validateAllocationAmount(amount: Decimal, currentAllocated: Decimal): void {
-    if (amount.isNegative()) {
-      throw new NegativeAmountError(amount.toNumber());
-    }
+    const allocation = parseMoney(amount, 'Allocation amount');
+    const allocated = parseMoney(currentAllocated, 'Current allocated amount', {
+      allowZero: true,
+    });
 
-    const projectedTotal = currentAllocated.plus(amount);
+    const projectedTotal = allocated.plus(allocation);
 
     if (projectedTotal.gt(this.props.totalAmount)) {
       throw new BudgetAllocationExceededError(

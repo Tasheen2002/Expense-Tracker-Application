@@ -2,9 +2,10 @@ import { AlertId } from '../value-objects/alert-id';
 import { BudgetId } from '../value-objects/budget-id';
 import { AllocationId } from '../value-objects/allocation-id';
 import { AlertLevel, getAlertLevel } from '../enums/alert-level';
-import { Decimal } from '@prisma/client/runtime/library';
+import Decimal from 'decimal.js';
+import { ALERT_THRESHOLDS } from '../enums/alert-level';
+import { parseMoney } from './entity-validation';
 import {
-  InvalidAmountError,
   InvalidAlertThresholdError,
   AlertAlreadyNotifiedError,
 } from '../errors/budget.errors';
@@ -46,24 +47,19 @@ export interface BudgetAlertDTO {
 
 export class BudgetAlert {
   private constructor(private props: BudgetAlertProps) {
+    this.props = {
+      ...props,
+      notifiedAt: props.notifiedAt ? new Date(props.notifiedAt.getTime()) : null,
+      createdAt: new Date(props.createdAt.getTime()),
+    };
   }
 
   static create(data: CreateBudgetAlertData): BudgetAlert {
-    const currentSpent =
-      typeof data.currentSpent === 'number' ||
-      typeof data.currentSpent === 'string'
-        ? new Decimal(data.currentSpent)
-        : data.currentSpent;
-
-    const allocatedAmount =
-      typeof data.allocatedAmount === 'number' ||
-      typeof data.allocatedAmount === 'string'
-        ? new Decimal(data.allocatedAmount)
-        : data.allocatedAmount;
-
-    if (allocatedAmount.isZero()) {
-      throw new InvalidAmountError('Allocated amount cannot be zero');
-    }
+    const currentSpent = parseMoney(data.currentSpent, 'Current spending', {
+      allowZero: true,
+      storageMaximum: true,
+    });
+    const allocatedAmount = parseMoney(data.allocatedAmount, 'Allocated amount');
 
     const spentPercentage = currentSpent
       .div(allocatedAmount)
@@ -71,14 +67,14 @@ export class BudgetAlert {
       .toNumber();
 
     // Only create alert if threshold is met
-    if (spentPercentage < 50) {
+    if (spentPercentage < ALERT_THRESHOLDS[AlertLevel.INFO]) {
       throw new InvalidAlertThresholdError(
         'Alert threshold not met (minimum 50%)'
       );
     }
 
     const level = getAlertLevel(spentPercentage);
-    const threshold = new Decimal(spentPercentage.toFixed(2));
+    const threshold = new Decimal(ALERT_THRESHOLDS[level]);
 
     const message =
       data.customMessage ||
@@ -171,11 +167,13 @@ export class BudgetAlert {
   }
 
   get notifiedAt(): Date | null {
-    return this.props.notifiedAt;
+    return this.props.notifiedAt
+      ? new Date(this.props.notifiedAt.getTime())
+      : null;
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   // Business logic methods

@@ -1,14 +1,14 @@
 import { SpendingLimitId } from '../value-objects/spending-limit-id';
 import { BudgetPeriodType } from '../enums/budget-period-type';
-import { Decimal } from '@prisma/client/runtime/library';
+import Decimal from 'decimal.js';
 import {
-  InvalidAmountError,
-  InvalidCurrencyError,
   BudgetAlreadyActiveError,
   SpendingLimitAlreadyInactiveError,
+  InvalidBudgetPeriodError,
 } from '../errors/budget.errors';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import { normalizeCurrency, normalizeOptionalId, normalizeRequiredId, parseMoney } from './entity-validation';
 
 export interface SpendingLimitDTO {
   limitId: string;
@@ -162,31 +162,25 @@ export interface CreateSpendingLimitData {
 export class SpendingLimit extends AggregateRoot {
   private constructor(private props: SpendingLimitProps) {
     super();
+    this.props = {
+      ...props,
+      createdAt: new Date(props.createdAt.getTime()),
+      updatedAt: new Date(props.updatedAt.getTime()),
+    };
   }
 
   static create(data: CreateSpendingLimitData): SpendingLimit {
-    // Validate limit amount
-    const limitAmount =
-      typeof data.limitAmount === 'number' ||
-      typeof data.limitAmount === 'string'
-        ? new Decimal(data.limitAmount)
-        : data.limitAmount;
-
-    // ...
-    if (limitAmount.isNegative() || limitAmount.isZero()) {
-      throw new InvalidAmountError('Limit amount must be greater than zero');
-    }
-
-    if (limitAmount.decimalPlaces() > 2) {
-      throw new InvalidAmountError(
-        'Limit amount cannot have more than 2 decimal places'
-      );
-    }
-
-    // Validate currency
-    if (!data.currency || data.currency.length !== 3) {
-      throw new InvalidCurrencyError(
-        'Currency must be a valid 3-letter ISO code'
+    const workspaceId = normalizeRequiredId(data.workspaceId, 'Workspace ID');
+    const userId = normalizeOptionalId(data.userId, 'User ID');
+    const categoryId = normalizeOptionalId(data.categoryId, 'Category ID');
+    const limitAmount = parseMoney(data.limitAmount, 'Limit amount');
+    const currency = normalizeCurrency(data.currency);
+    if (
+      !Object.values(BudgetPeriodType).includes(data.periodType) ||
+      data.periodType === BudgetPeriodType.CUSTOM
+    ) {
+      throw new InvalidBudgetPeriodError(
+        'Spending limits require a monthly, quarterly, or yearly period',
       );
     }
 
@@ -194,11 +188,11 @@ export class SpendingLimit extends AggregateRoot {
 
     const spendingLimit = new SpendingLimit({
       id: SpendingLimitId.create(),
-      workspaceId: data.workspaceId,
-      userId: data.userId || null,
-      categoryId: data.categoryId || null,
+      workspaceId,
+      userId,
+      categoryId,
       limitAmount,
-      currency: data.currency.toUpperCase(),
+      currency,
       periodType: data.periodType,
       isActive: true,
       createdAt: now,
@@ -208,7 +202,7 @@ export class SpendingLimit extends AggregateRoot {
     spendingLimit.addDomainEvent(
       new SpendingLimitCreatedEvent(
         spendingLimit.id.getValue(),
-        data.workspaceId,
+        workspaceId,
         limitAmount.toString(),
         data.periodType
       )
@@ -255,44 +249,30 @@ export class SpendingLimit extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   // Business logic methods
   updateLimitAmount(amount: number | string | Decimal): void {
-    const newAmount =
-      typeof amount === 'number' || typeof amount === 'string'
-        ? new Decimal(amount)
-        : amount;
-
-    if (newAmount.isNegative() || newAmount.isZero()) {
-      throw new InvalidAmountError('Limit amount must be greater than zero');
-    }
-
-    if (newAmount.decimalPlaces() > 2) {
-      throw new InvalidAmountError(
-        'Limit amount cannot have more than 2 decimal places'
-      );
-    }
+    const newAmount = parseMoney(amount, 'Limit amount');
 
     const oldAmount = this.props.limitAmount;
+    if (oldAmount.equals(newAmount)) return;
     this.props.limitAmount = newAmount;
     this.props.updatedAt = new Date();
 
-    if (!oldAmount.equals(newAmount)) {
-      this.addDomainEvent(
-        new SpendingLimitUpdatedEvent(
-          this.id.getValue(),
-          this.workspaceId,
-          oldAmount.toString(),
-          newAmount.toString()
-        )
-      );
-    }
+    this.addDomainEvent(
+      new SpendingLimitUpdatedEvent(
+        this.id.getValue(),
+        this.workspaceId,
+        oldAmount.toString(),
+        newAmount.toString()
+      )
+    );
   }
 
   // ...
@@ -349,30 +329,10 @@ export class SpendingLimit extends AggregateRoot {
   }
 
   appliesTo(userId?: string, categoryId?: string): boolean {
-    // Workspace-wide limit applies to everyone
-    if (this.isWorkspaceWide()) {
-      return true;
-    }
-
-    // User-specific limit
-    if (this.props.userId && userId) {
-      if (this.props.userId !== userId) {
-        return false;
-      }
-      // If also category-specific, check category too
-      if (this.props.categoryId && categoryId) {
-        return this.props.categoryId === categoryId;
-      }
-      // User matches and no category restriction
-      return !this.props.categoryId;
-    }
-
-    // Category-specific limit (any user)
-    if (this.props.categoryId && categoryId) {
-      return this.props.categoryId === categoryId;
-    }
-
-    return false;
+    return (
+      (this.props.userId === null || this.props.userId === userId) &&
+      (this.props.categoryId === null || this.props.categoryId === categoryId)
+    );
   }
 
   equals(other: SpendingLimit): boolean {
