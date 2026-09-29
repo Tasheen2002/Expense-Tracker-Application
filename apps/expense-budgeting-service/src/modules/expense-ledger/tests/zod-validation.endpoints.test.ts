@@ -53,6 +53,7 @@ describe('Expense Ledger - Extended Validation Tests', () => {
   let testUserId: string;
   let testWorkspaceId: string;
   let testExpenseId: string;
+  let testSplitId: string;
 
   beforeAll(async () => {
     app = await createServer();
@@ -152,6 +153,83 @@ describe('Expense Ledger - Extended Validation Tests', () => {
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
       expect(body.data).toHaveProperty('splitId');
+      testSplitId = body.data.splitId;
+    });
+
+    it('retrieves and deletes the split through its workspace-scoped routes', async () => {
+      const headers = { authorization: `Bearer ${authToken}` };
+      const byId = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/splits/${testSplitId}`,
+        headers,
+      });
+      expect(byId.statusCode).toBe(200);
+      expect(byId.json().data.id).toBe(testSplitId);
+
+      const byExpense = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/expenses/${testExpenseId}/split`,
+        headers,
+      });
+      expect(byExpense.statusCode).toBe(200);
+      expect(byExpense.json().data.id).toBe(testSplitId);
+
+      const userSplits = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/splits?limit=10&offset=0`,
+        headers,
+      });
+      expect(userSplits.statusCode).toBe(200);
+      expect(userSplits.json().data).toMatchObject({ limit: 10, offset: 0 });
+
+      const settlements = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/splits/${testSplitId}/settlements`,
+        headers,
+      });
+      expect(settlements.statusCode).toBe(200);
+      expect(settlements.json().data.items).toBeInstanceOf(Array);
+
+      const userSettlements = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/settlements?limit=10&offset=0`,
+        headers,
+      });
+      expect(userSettlements.statusCode).toBe(200);
+      expect(userSettlements.json().data).toMatchObject({ limit: 10, offset: 0 });
+
+      const settlementId = settlements.json().data.items[0]?.id;
+      expect(settlementId).toBeDefined();
+      const payment = await app.inject({
+        method: 'POST',
+        url: `/api/v1/workspaces/${testWorkspaceId}/settlements/${settlementId}/payment`,
+        headers,
+        payload: { amount: 10 },
+      });
+      expect(payment.statusCode).toBe(200);
+      expect(payment.json().data.id).toBe(settlementId);
+
+      const otherWorkspace = 'e737cbab-4ad0-4a27-a3a6-f91cc78d8d9e';
+      const crossWorkspace = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${otherWorkspace}/splits/${testSplitId}`,
+        headers,
+      });
+      expect(crossWorkspace.statusCode).toBe(404);
+
+      const deleted = await app.inject({
+        method: 'DELETE',
+        url: `/api/v1/workspaces/${testWorkspaceId}/splits/${testSplitId}`,
+        headers,
+      });
+      expect(deleted.statusCode).toBe(204);
+
+      const missing = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${testWorkspaceId}/splits/${testSplitId}`,
+        headers,
+      });
+      expect(missing.statusCode).toBe(404);
     });
   });
 
