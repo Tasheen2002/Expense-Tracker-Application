@@ -8,6 +8,7 @@ import {
 
 export interface DeleteAllocationCommand extends ICommand {
   readonly allocationId: string;
+  readonly budgetId?: string;
   readonly workspaceId: string;
   readonly userId: string;
 }
@@ -22,7 +23,8 @@ export class DeleteAllocationHandler implements ICommandHandler<
     await this.budgetService.deleteAllocation(
       command.allocationId,
       command.workspaceId,
-      command.userId
+      command.userId,
+      command.budgetId
     );
     return CommandResult.success(undefined);
   }

@@ -9,6 +9,7 @@ import {
 
 export interface UpdateAllocationCommand extends ICommand {
   readonly allocationId: string;
+  readonly budgetId?: string;
   readonly workspaceId: string;
   readonly userId: string;
   readonly allocatedAmount?: number | string;
@@ -29,7 +30,8 @@ export class UpdateAllocationHandler implements ICommandHandler<
       {
         allocatedAmount: command.allocatedAmount,
         description: command.description,
-      }
+      },
+      command.budgetId
     );
     return CommandResult.success(dto);
   }
