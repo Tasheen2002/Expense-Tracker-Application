@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { SpendingLimitController } from '../controllers/spending-limit.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import {
   createRateLimiter,
@@ -38,18 +38,11 @@ export async function spendingLimitRoutes(
     await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Create spending limit
   fastify.post(
     '/workspaces/:workspaceId/spending-limits',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(createSpendingLimitSchema),
         workspaceAuth,
@@ -120,7 +113,7 @@ export async function spendingLimitRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(updateSpendingLimitSchema),
         workspaceAuth,
@@ -145,7 +138,7 @@ export async function spendingLimitRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/spending-limits/:limitId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
