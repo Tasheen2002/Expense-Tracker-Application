@@ -6,6 +6,7 @@ import {
 
 export interface RemovePurchaseOrderItemCommand extends ICommand {
   readonly itemId: string;
+  readonly purchaseOrderId: string;
   readonly workspaceId: string;
 }
 
@@ -15,7 +16,7 @@ export class RemovePurchaseOrderItemHandler
   constructor(private readonly poService: PurchaseOrderService) {}
 
   async handle(command: RemovePurchaseOrderItemCommand): Promise<CommandResult<void>> {
-    await this.poService.removeItem(command.itemId, command.workspaceId);
+    await this.poService.removeItem(command.itemId, command.purchaseOrderId, command.workspaceId);
     return CommandResult.success(undefined);
   }
 }
