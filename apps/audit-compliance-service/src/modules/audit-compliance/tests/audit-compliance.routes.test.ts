@@ -23,7 +23,7 @@ function createMockAuditLog(
   id: string = mockAuditLogId,
   action: string = 'EXPENSE_CREATED',
   entityType: string = 'EXPENSE',
-  entityId: string = 'expense-123'
+  entityId: string = '123e4567-e89b-12d3-a456-426614174021'
 ): AuditLog {
   return AuditLog.fromPersistence({
     id: AuditLogId.fromString(id),
@@ -344,13 +344,13 @@ describe('Audit Compliance Endpoints', () => {
           mockAuditLogId,
           'EXPENSE_CREATED',
           'EXPENSE',
-          'expense-123'
+          '123e4567-e89b-12d3-a456-426614174021'
         ),
         createMockAuditLog(
           '123e4567-e89b-12d3-a456-426614174012',
           'EXPENSE_UPDATED',
           'EXPENSE',
-          'expense-123'
+          '123e4567-e89b-12d3-a456-426614174021'
         ),
       ];
       (
@@ -365,7 +365,7 @@ describe('Audit Compliance Endpoints', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityType=EXPENSE&entityId=expense-123`,
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityType=EXPENSE&entityId=123e4567-e89b-12d3-a456-426614174021`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -377,7 +377,7 @@ describe('Audit Compliance Endpoints', () => {
     it('should return 400 when entityType missing', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityId=expense-123`,
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityId=123e4567-e89b-12d3-a456-426614174021`,
       });
 
       expect(response.statusCode).toBe(400);
@@ -394,6 +394,16 @@ describe('Audit Compliance Endpoints', () => {
       expect(response.statusCode).toBe(400);
     });
 
+    it('rejects an entity ID that the UUID database column cannot store', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs`,
+        payload: { action: 'EXPENSE_CREATED', entityType: 'EXPENSE', entityId: 'expense-123' },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(mockHandlers.createAuditLogHandler.handle).not.toHaveBeenCalled();
+    });
+
     it('should return empty list when no history found', async () => {
       (
         mockHandlers.getEntityAuditHistoryHandler.handle as any
@@ -407,7 +417,7 @@ describe('Audit Compliance Endpoints', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityType=EXPENSE&entityId=non-existent`,
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/entity-history?entityType=EXPENSE&entityId=123e4567-e89b-12d3-a456-426614174099`,
       });
 
       expect(response.statusCode).toBe(200);
@@ -417,10 +427,28 @@ describe('Audit Compliance Endpoints', () => {
   });
 
   describe('POST /api/v1/workspaces/:workspaceId/audit-logs', () => {
+    it('uses the connection IP rather than an untrusted forwarded header', async () => {
+      (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue({
+        success: true, data: { id: mockAuditLogId },
+      });
+      const response = await app.inject({
+        method: 'POST',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs`,
+        headers: { 'x-forwarded-for': 'not-an-ip, 127.0.0.1' },
+        payload: {
+          action: 'EXPENSE_CREATED', entityType: 'EXPENSE',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
+        },
+      });
+      expect(response.statusCode).toBe(201);
+      const command = (mockHandlers.createAuditLogHandler.handle as any).mock.calls[0][0];
+      expect(command.ipAddress).not.toContain('not-an-ip');
+    });
+
     it('should create an audit log', async () => {
       const mockResult = {
         success: true,
-        data: mockAuditLogId,
+        data: { id: mockAuditLogId },
       };
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue(
         mockResult
@@ -432,7 +460,7 @@ describe('Audit Compliance Endpoints', () => {
         payload: {
           action: 'EXPENSE_CREATED',
           entityType: 'EXPENSE',
-          entityId: 'expense-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
           details: { amount: 100 },
         },
       });
@@ -448,7 +476,7 @@ describe('Audit Compliance Endpoints', () => {
         url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs`,
         payload: {
           entityType: 'EXPENSE',
-          entityId: 'expense-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
         },
       });
 
@@ -463,7 +491,7 @@ describe('Audit Compliance Endpoints', () => {
         url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs`,
         payload: {
           action: 'EXPENSE_CREATED',
-          entityId: 'expense-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
         },
       });
 
@@ -486,7 +514,7 @@ describe('Audit Compliance Endpoints', () => {
     it('should create audit log with optional metadata', async () => {
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
-        data: mockAuditLogId,
+        data: { id: mockAuditLogId },
       });
 
       const response = await app.inject({
@@ -495,7 +523,7 @@ describe('Audit Compliance Endpoints', () => {
         payload: {
           action: 'EXPENSE_CREATED',
           entityType: 'EXPENSE',
-          entityId: 'expense-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
           details: { amount: 100, currency: 'USD' },
           metadata: { source: 'mobile_app', version: '1.0.0' },
         },
@@ -552,14 +580,14 @@ describe('Audit Compliance Endpoints', () => {
 
       const response = await app.inject({
         method: 'GET',
-        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?entityId=expense-123`,
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?entityId=123e4567-e89b-12d3-a456-426614174021`,
       });
 
       expect(response.statusCode).toBe(200);
       expect(mockHandlers.listAuditLogsHandler.handle).toHaveBeenCalledWith(
         expect.objectContaining({
           workspaceId: mockWorkspaceId,
-          filters: expect.objectContaining({ entityId: 'expense-123' }),
+          filters: expect.objectContaining({ entityId: '123e4567-e89b-12d3-a456-426614174021' }),
           limit: expect.anything(),
           offset: expect.anything(),
         })
@@ -674,7 +702,7 @@ describe('Audit Compliance Endpoints', () => {
     it.each(actionTypes)('should handle %s action type', async (actionType) => {
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
-        data: mockAuditLogId,
+        data: { id: mockAuditLogId },
       });
 
       const response = await app.inject({
@@ -683,7 +711,7 @@ describe('Audit Compliance Endpoints', () => {
         payload: {
           action: actionType,
           entityType: 'EXPENSE',
-          entityId: 'expense-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174021',
         },
       });
 
@@ -708,7 +736,7 @@ describe('Audit Compliance Endpoints', () => {
     it.each(entityTypes)('should handle %s entity type', async (entityType) => {
       (mockHandlers.createAuditLogHandler.handle as any).mockResolvedValue({
         success: true,
-        data: mockAuditLogId,
+        data: { id: mockAuditLogId },
       });
 
       const response = await app.inject({
@@ -717,7 +745,7 @@ describe('Audit Compliance Endpoints', () => {
         payload: {
           action: 'ENTITY_CREATED',
           entityType: entityType,
-          entityId: 'entity-123',
+          entityId: '123e4567-e89b-12d3-a456-426614174022',
         },
       });
 
@@ -742,6 +770,7 @@ describe('Audit Compliance Endpoints', () => {
         expect.objectContaining({
           workspaceId: mockWorkspaceId,
           olderThanDays: 30,
+          purgedBy: mockUserId,
         })
       );
     });
@@ -764,6 +793,35 @@ describe('Audit Compliance Endpoints', () => {
       });
 
       expect(response.statusCode).toBe(400);
+    });
+  });
+
+  describe('read and retention input boundaries', () => {
+    it.each([
+      'limit=1.5',
+      'offset=1.5',
+      'offset=2147483648',
+      'entityId=not-a-uuid',
+      'startDate=2026-02-01T00%3A00%3A00Z&endDate=2026-01-01T00%3A00%3A00Z',
+    ])('rejects invalid audit list query %s', async (query) => {
+      const response = await app.inject({ method: 'GET', url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?${query}` });
+      expect(response.statusCode).toBe(400);
+      expect(mockHandlers.listAuditLogsHandler.handle).not.toHaveBeenCalled();
+    });
+
+    it('rejects a reversed summary range before invoking the handler', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs/summary?startDate=2026-02-01T00%3A00%3A00Z&endDate=2026-01-01T00%3A00%3A00Z`,
+      });
+      expect(response.statusCode).toBe(400);
+      expect(mockHandlers.getAuditSummaryHandler.handle).not.toHaveBeenCalled();
+    });
+
+    it.each(['30.5', '36501'])('rejects invalid purge days %s', async (days) => {
+      const response = await app.inject({ method: 'DELETE', url: `/api/v1/workspaces/${mockWorkspaceId}/audit-logs?olderThanDays=${days}` });
+      expect(response.statusCode).toBe(400);
+      expect(mockHandlers.purgeAuditLogsHandler.handle).not.toHaveBeenCalled();
     });
   });
 });
