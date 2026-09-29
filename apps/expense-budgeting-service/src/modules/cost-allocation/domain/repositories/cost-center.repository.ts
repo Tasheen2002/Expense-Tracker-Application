@@ -8,14 +8,16 @@ import {
 
 export interface ICostCenterRepository {
   save(costCenter: CostCenter): Promise<void>;
-  findById(id: CostCenterId): Promise<CostCenter | null>;
+  /** Includes inactive cost centers so they can be reactivated. */
+  findById(id: CostCenterId, workspaceId: WorkspaceId): Promise<CostCenter | null>;
+  /** Codes remain reserved while a cost center is inactive. */
   findByCode(
     code: string,
     workspaceId: WorkspaceId,
   ): Promise<CostCenter | null>;
+  /** Includes active and inactive cost centers in a deterministic order. */
   findAll(
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<CostCenter>>;
-  delete(id: CostCenterId, workspaceId: WorkspaceId): Promise<void>;
 }
