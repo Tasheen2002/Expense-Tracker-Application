@@ -19,30 +19,31 @@ export class StockRepositoryImpl
   }
 
   async save(stock: Stock): Promise<void> {
-    await this.prisma.stock.upsert({
-      where: { id: stock.id.getValue() },
-      create: {
-        id: stock.id.getValue(),
-        workspaceId: stock.workspaceId,
-        variantId: stock.variantId,
-        locationId: stock.locationId,
-        quantity: stock.quantity,
-        reservedQuantity: stock.reservedQuantity,
-        reorderLevel: stock.reorderLevel,
-        reorderQuantity: stock.reorderQuantity,
-        createdAt: stock.createdAt,
-        updatedAt: stock.updatedAt,
-      },
-      update: {
-        quantity: stock.quantity,
-        reservedQuantity: stock.reservedQuantity,
-        reorderLevel: stock.reorderLevel,
-        reorderQuantity: stock.reorderQuantity,
-        updatedAt: stock.updatedAt,
-      },
+    await this.runInTransaction(async (tx) => {
+      await tx.stock.upsert({
+        where: { id: stock.id.getValue(), workspaceId: stock.workspaceId },
+        create: {
+          id: stock.id.getValue(),
+          workspaceId: stock.workspaceId,
+          variantId: stock.variantId,
+          locationId: stock.locationId,
+          quantity: stock.quantity,
+          reservedQuantity: stock.reservedQuantity,
+          reorderLevel: stock.reorderLevel,
+          reorderQuantity: stock.reorderQuantity,
+          createdAt: stock.createdAt,
+          updatedAt: stock.updatedAt,
+        },
+        update: {
+          quantity: stock.quantity,
+          reservedQuantity: stock.reservedQuantity,
+          reorderLevel: stock.reorderLevel,
+          reorderQuantity: stock.reorderQuantity,
+          updatedAt: stock.updatedAt,
+        },
+      });
+      await this.dispatchEvents(stock, tx);
     });
-
-    await this.dispatchEvents(stock);
   }
 
   async findById(id: StockId, workspaceId: string): Promise<Stock | null> {
@@ -72,7 +73,7 @@ export class StockRepositoryImpl
   ): Promise<PaginatedResult<Stock>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.stock,
-      { where: { locationId, workspaceId }, orderBy: { createdAt: 'desc' } },
+      { where: { locationId, workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
@@ -84,7 +85,7 @@ export class StockRepositoryImpl
   ): Promise<PaginatedResult<Stock>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.stock,
-      { where: { workspaceId }, orderBy: { createdAt: 'desc' } },
+      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
