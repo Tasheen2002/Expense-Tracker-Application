@@ -1,6 +1,7 @@
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { LocationId } from '../value-objects/location-id.vo';
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 import { LocationType } from '../enums/location-type';
 import { InvalidInventoryDataError } from '../errors/inventory.errors';
 import {
@@ -115,25 +116,31 @@ export interface LocationDTO {
 }
 
 export class Location extends AggregateRoot {
+  private deletionMarked = false;
   private constructor(private props: LocationProps) {
     super();
   }
 
   static create(data: CreateLocationData): Location {
-    if (!data.name || data.name.trim().length < LOCATION_NAME_MIN_LENGTH) {
+    if (!UuidId.isValid(data.workspaceId)) throw new InvalidInventoryDataError('Invalid workspace ID');
+    const name = data.name?.trim();
+    if (!name || name.length < LOCATION_NAME_MIN_LENGTH) {
       throw new InvalidInventoryDataError('Location name is required');
     }
-    if (data.name.length > LOCATION_NAME_MAX_LENGTH) {
+    if (name.length > LOCATION_NAME_MAX_LENGTH) {
       throw new InvalidInventoryDataError(
         `Location name cannot exceed ${LOCATION_NAME_MAX_LENGTH} characters`
       );
+    }
+    if (data.type !== undefined && !Object.values(LocationType).includes(data.type)) {
+      throw new InvalidInventoryDataError('Invalid location type');
     }
 
     const now = new Date();
     const location = new Location({
       id: LocationId.create(),
       workspaceId: data.workspaceId,
-      name: data.name.trim(),
+      name,
       type: data.type || LocationType.WAREHOUSE,
       address: data.address || null,
       isActive: true,
@@ -153,43 +160,55 @@ export class Location extends AggregateRoot {
   }
 
   static fromPersistence(props: LocationProps): Location {
-    return new Location(props);
+    return new Location({ ...props, createdAt: new Date(props.createdAt), updatedAt: new Date(props.updatedAt) });
   }
 
   updateName(name: string): void {
-    if (!name || name.trim().length < LOCATION_NAME_MIN_LENGTH) {
+    const normalized = name?.trim();
+    if (!normalized || normalized.length < LOCATION_NAME_MIN_LENGTH) {
       throw new InvalidInventoryDataError('Location name is required');
     }
-    this.props.name = name.trim();
+    if (normalized.length > LOCATION_NAME_MAX_LENGTH) {
+      throw new InvalidInventoryDataError(`Location name cannot exceed ${LOCATION_NAME_MAX_LENGTH} characters`);
+    }
+    if (normalized === this.props.name) return;
+    this.props.name = normalized;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   updateType(type: LocationType): void {
+    if (!Object.values(LocationType).includes(type)) throw new InvalidInventoryDataError('Invalid location type');
+    if (type === this.props.type) return;
     this.props.type = type;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   updateAddress(address: string | null): void {
+    if (address === this.props.address) return;
     this.props.address = address;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   deactivate(): void {
+    if (!this.props.isActive) return;
     this.props.isActive = false;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationDeactivatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   activate(): void {
+    if (this.props.isActive) return;
     this.props.isActive = true;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationActivatedEvent(this.id.getValue(), this.workspaceId));
   }
 
   markAsDeleted(): void {
+    if (this.deletionMarked) return;
+    this.deletionMarked = true;
     this.addDomainEvent(
       new LocationDeletedEvent(this.id.getValue(), this.workspaceId)
     );
@@ -214,10 +233,10 @@ export class Location extends AggregateRoot {
     return this.props.isActive;
   }
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt);
   }
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt);
   }
 
   equals(other: Location): boolean {
