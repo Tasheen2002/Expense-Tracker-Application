@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { CreateSupplierHandler } from '../../../application/commands/create-supplier.command';
 import { UpdateSupplierHandler } from '../../../application/commands/update-supplier.command';
 import { DeleteSupplierHandler } from '../../../application/commands/delete-supplier.command';
@@ -32,7 +32,10 @@ export class SupplierController {
       const { workspaceId } = request.params;
       const result = await this.createSupplierHandler.handle({
         workspaceId,
-        ...request.body,
+        name: request.body.name,
+        contactEmail: request.body.contactEmail,
+        contactPhone: request.body.contactPhone,
+        address: request.body.address,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -58,7 +61,10 @@ export class SupplierController {
       const result = await this.updateSupplierHandler.handle({
         supplierId,
         workspaceId,
-        ...request.body,
+        name: request.body.name,
+        contactEmail: request.body.contactEmail,
+        contactPhone: request.body.contactPhone,
+        address: request.body.address,
       });
       return ResponseHelper.fromCommand(
         reply,

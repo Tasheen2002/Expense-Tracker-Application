@@ -1,11 +1,10 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { CreateLocationHandler } from '../../../application/commands/create-location.command';
 import { UpdateLocationHandler } from '../../../application/commands/update-location.command';
 import { DeleteLocationHandler } from '../../../application/commands/delete-location.command';
 import { GetLocationHandler } from '../../../application/queries/get-location.query';
 import { ListLocationsHandler } from '../../../application/queries/list-locations.query';
-import { LocationType } from '../../../domain/enums/location-type';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   CreateLocationInput,
@@ -34,7 +33,7 @@ export class LocationController {
       const result = await this.createLocationHandler.handle({
         workspaceId,
         name: request.body.name,
-        type: request.body.type as LocationType | undefined,
+        type: request.body.type,
         address: request.body.address,
       });
       return ResponseHelper.fromCommand(
@@ -62,7 +61,7 @@ export class LocationController {
         locationId,
         workspaceId,
         name: request.body.name,
-        type: request.body.type as LocationType | undefined,
+        type: request.body.type,
         address: request.body.address,
       });
       return ResponseHelper.fromCommand(
