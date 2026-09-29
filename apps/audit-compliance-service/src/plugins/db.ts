@@ -2,15 +2,16 @@ import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
-// Singleton Prisma Client
-const prisma = new PrismaClient({
-  log:
-    process.env.NODE_ENV === 'development'
+export interface DbPluginOptions {
+  prisma?: PrismaClient;
+}
+
+const dbPlugin: FastifyPluginAsync<DbPluginOptions> = async (fastify, options) => {
+  const prisma = options.prisma ?? new PrismaClient({
+    log: process.env.NODE_ENV === 'development'
       ? ['query', 'error', 'warn']
       : ['error'],
-});
-
-const dbPlugin: FastifyPluginAsync = async (fastify) => {
+  });
   fastify.decorate('prisma', prisma);
   fastify.log.info('Database client registered for audit-compliance-service');
 

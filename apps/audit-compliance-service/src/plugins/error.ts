@@ -8,10 +8,6 @@ import {
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 
-abstract class DomainError extends Error {
-  abstract readonly statusCode: number;
-}
-
 const errorPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.setErrorHandler(
     (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
@@ -33,7 +29,8 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        error.statusCode >= 400 &&
+        error.statusCode < 500
       ) {
         return reply.status(error.statusCode).send({
           success: false,
@@ -63,7 +60,6 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             statusCode: 409,
             error: 'Conflict',
             message: 'Resource already exists',
-            details: error.meta,
           });
         }
 
@@ -104,7 +100,8 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      const statusCode = error.statusCode || 500;
+      const statusCode = error.statusCode && error.statusCode >= 500 && error.statusCode < 600
+        ? error.statusCode : 500;
       const isDevelopment = process.env.NODE_ENV === 'development';
 
       return reply.status(statusCode).send({
@@ -132,4 +129,3 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
 export default fp(errorPlugin, {
   name: 'error-plugin',
 });
-export { DomainError };
