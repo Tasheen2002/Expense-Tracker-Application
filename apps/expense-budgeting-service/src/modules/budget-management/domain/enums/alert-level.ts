@@ -1,4 +1,5 @@
 import { InvalidAlertThresholdError } from "../errors/budget.errors";
+import { DEFAULT_ALERT_THRESHOLDS } from "../constants/budget.constants";
 
 export enum AlertLevel {
   INFO = "INFO", // 50% threshold
@@ -7,21 +8,21 @@ export enum AlertLevel {
   EXCEEDED = "EXCEEDED", // 100%+ threshold
 }
 
-export const ALERT_THRESHOLDS: Record<AlertLevel, number> = {
-  [AlertLevel.INFO]: 50,
-  [AlertLevel.WARNING]: 75,
-  [AlertLevel.CRITICAL]: 90,
-  [AlertLevel.EXCEEDED]: 100,
-};
+export const ALERT_THRESHOLDS: Readonly<Record<AlertLevel, number>> =
+  DEFAULT_ALERT_THRESHOLDS;
 
 export function getAlertLevel(spentPercentage: number): AlertLevel {
-  if (spentPercentage >= 100) {
+  if (!Number.isFinite(spentPercentage)) {
+    throw new InvalidAlertThresholdError("Spending percentage must be finite");
+  }
+
+  if (spentPercentage >= ALERT_THRESHOLDS[AlertLevel.EXCEEDED]) {
     return AlertLevel.EXCEEDED;
-  } else if (spentPercentage >= 90) {
+  } else if (spentPercentage >= ALERT_THRESHOLDS[AlertLevel.CRITICAL]) {
     return AlertLevel.CRITICAL;
-  } else if (spentPercentage >= 75) {
+  } else if (spentPercentage >= ALERT_THRESHOLDS[AlertLevel.WARNING]) {
     return AlertLevel.WARNING;
-  } else if (spentPercentage >= 50) {
+  } else if (spentPercentage >= ALERT_THRESHOLDS[AlertLevel.INFO]) {
     return AlertLevel.INFO;
   }
 

@@ -7,35 +7,53 @@ export enum BudgetPeriodType {
   CUSTOM = "CUSTOM",
 }
 
-export const PERIOD_TYPE_DURATIONS: Record<BudgetPeriodType, number> = {
-  [BudgetPeriodType.MONTHLY]: 30,
-  [BudgetPeriodType.QUARTERLY]: 90,
-  [BudgetPeriodType.YEARLY]: 365,
-  [BudgetPeriodType.CUSTOM]: 0, // Variable duration
-};
-
 export function calculateEndDate(
   startDate: Date,
   periodType: BudgetPeriodType,
 ): Date {
-  const endDate = new Date(startDate);
+  if (!(startDate instanceof Date) || !Number.isFinite(startDate.getTime())) {
+    throw new InvalidBudgetPeriodError("Start date must be valid");
+  }
+
+  const endDate = new Date(startDate.getTime());
 
   switch (periodType) {
-    case BudgetPeriodType.MONTHLY:
-      endDate.setMonth(endDate.getMonth() + 1);
+    case BudgetPeriodType.MONTHLY: {
+      const expectedMonth = (endDate.getUTCMonth() + 1) % 12;
+      endDate.setUTCMonth(endDate.getUTCMonth() + 1);
+      if (endDate.getUTCMonth() !== expectedMonth) {
+        endDate.setUTCDate(0);
+      }
       break;
-    case BudgetPeriodType.QUARTERLY:
-      endDate.setMonth(endDate.getMonth() + 3);
+    }
+    case BudgetPeriodType.QUARTERLY: {
+      const expectedMonth = (endDate.getUTCMonth() + 3) % 12;
+      endDate.setUTCMonth(endDate.getUTCMonth() + 3);
+      if (endDate.getUTCMonth() !== expectedMonth) {
+        endDate.setUTCDate(0);
+      }
       break;
-    case BudgetPeriodType.YEARLY:
-      endDate.setFullYear(endDate.getFullYear() + 1);
+    }
+    case BudgetPeriodType.YEARLY: {
+      const targetYear = endDate.getUTCFullYear() + 1;
+      endDate.setUTCFullYear(targetYear);
+      if (endDate.getUTCMonth() !== startDate.getUTCMonth()) {
+        endDate.setUTCDate(0);
+      }
       break;
-
-    // ...
+    }
     case BudgetPeriodType.CUSTOM:
       throw new InvalidBudgetPeriodError(
         "Custom period requires explicit end date",
       );
+    default:
+      throw new InvalidBudgetPeriodError("Unsupported budget period type");
+  }
+
+  // Period end dates are inclusive. When the anniversary exists, the prior day
+  // closes the period; a missing anniversary is already clamped to month end.
+  if (endDate.getUTCDate() === startDate.getUTCDate()) {
+    endDate.setUTCDate(endDate.getUTCDate() - 1);
   }
 
   return endDate;
