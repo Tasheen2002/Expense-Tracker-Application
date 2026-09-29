@@ -6,6 +6,8 @@ export type { AuditLogDTO } from './domain/entities/audit-log.entity';
 export {
   InvalidAuditActionError,
   InvalidAuditResourceError,
+  InvalidAuditIdentityError,
+  AuditEventConflictError,
   AuditLogNotFoundError,
   UnauthorizedAuditAccessError,
   InvalidAuditDateRangeError,
@@ -14,9 +16,3 @@ export {
   AuditLogImmutableError,
   AuditLogExportLimitExceededError,
 } from './domain/errors/audit.errors';
-
-// Domain enums (safe to share — value objects, not entities)
-export {
-  AuditActionType,
-  AuditEntityType,
-} from './domain/enums/audit-action-type.enum';
