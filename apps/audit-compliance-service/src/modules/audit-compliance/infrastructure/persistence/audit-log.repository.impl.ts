@@ -1,14 +1,9 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
 import {
   IAuditLogRepository,
   AuditLogFilter,
 } from '../../domain/repositories/audit-log.repository';
-import {
-  AuditLog,
-  AuditLogsPurgedEvent,
-} from '../../domain/entities/audit-log.entity';
+import { AuditLog } from '../../domain/entities/audit-log.entity';
 import { AuditLogId } from '../../domain/value-objects/audit-log-id.vo';
 import {
   PaginatedResult,
@@ -17,25 +12,46 @@ import {
 import { AuditAction } from '../../domain/value-objects/audit-action.vo';
 import { AuditResource } from '../../domain/value-objects/audit-resource.vo';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { isDeepStrictEqual } from 'node:util';
+import { AuditEventConflictError } from '../../domain/errors/audit.errors';
 
 export class AuditLogRepositoryImpl
-  extends PrismaRepository<AuditLog>
   implements IAuditLogRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(private readonly prisma: PrismaClient) {}
 
   async save(auditLog: AuditLog): Promise<void> {
     const data = this.toPersistence(auditLog);
 
     await this.prisma.auditLog.create({ data });
-    await this.dispatchEvents(auditLog);
   }
 
-  async findById(id: AuditLogId): Promise<AuditLog | null> {
-    const data = await this.prisma.auditLog.findUnique({
-      where: { id: id.getValue() },
+  async saveIfAbsent(auditLog: AuditLog): Promise<boolean> {
+    const result = await this.prisma.auditLog.createMany({
+      data: [this.toPersistence(auditLog)],
+      skipDuplicates: true,
+    });
+    if (result.count === 1) return true;
+
+    const existing = await this.prisma.auditLog.findUnique({ where: { id: auditLog.id.getValue() } });
+    if (!existing) {
+      throw new Error('Audit event could not be verified after a duplicate insert');
+    }
+    const eventTimestamp = auditLog.metadata?.eventTimestamp;
+    const matches = existing.workspaceId === auditLog.workspaceId &&
+      existing.userId === auditLog.userId &&
+      existing.action === auditLog.action.getValue() &&
+      existing.entityType === auditLog.resource.entityType &&
+      existing.entityId === auditLog.resource.entityId &&
+      isDeepStrictEqual(existing.details, auditLog.details) &&
+      (typeof eventTimestamp !== 'string' || existing.createdAt.getTime() === Date.parse(eventTimestamp));
+    if (!matches) throw new AuditEventConflictError(auditLog.id.getValue());
+    return false;
+  }
+
+  async findById(id: AuditLogId, workspaceId: string): Promise<AuditLog | null> {
+    const data = await this.prisma.auditLog.findFirst({
+      where: { id: id.getValue(), workspaceId },
     });
 
     return data ? this.toDomain(data) : null;
@@ -50,7 +66,7 @@ export class AuditLogRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: 'desc' } },
+      { where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       { limit, offset }
     );
@@ -87,7 +103,7 @@ export class AuditLogRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: 'desc' } },
+      { where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       { limit: filter.limit, offset: filter.offset }
     );
@@ -107,7 +123,7 @@ export class AuditLogRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.auditLog,
-      { where, orderBy: { createdAt: 'desc' } },
+      { where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
@@ -156,36 +172,32 @@ export class AuditLogRepositoryImpl
   }
 
   async saveMany(auditLogs: AuditLog[]): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      await tx.auditLog.createMany({
-        data: auditLogs.map((auditLog) => this.toPersistence(auditLog)),
-      });
+    await this.prisma.auditLog.createMany({
+      data: auditLogs.map((auditLog) => this.toPersistence(auditLog)),
     });
-
-    await Promise.all(auditLogs.map((log) => this.dispatchEvents(log)));
   }
 
-  async deleteOlderThan(workspaceId: string, olderThan: Date): Promise<number> {
-    const deleted = await this.prisma.auditLog.deleteMany({
-      where: {
-        workspaceId,
-        createdAt: {
-          lt: olderThan,
-        },
-      },
-    });
-
-    if (deleted.count > 0) {
-      await this.eventBus.publish(
-        new AuditLogsPurgedEvent(
+  async deleteOlderThan(workspaceId: string, olderThan: Date, purgedBy: string, requestedDays: number): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const deleted = await tx.auditLog.deleteMany({
+        where: { workspaceId, createdAt: { lt: olderThan } },
+      });
+      if (deleted.count > 0) {
+        const marker = AuditLog.create({
           workspaceId,
-          olderThan.toISOString(),
-          deleted.count
-        )
-      );
-    }
-
-    return deleted.count;
+          userId: purgedBy,
+          action: 'audit.logs_purged',
+          entityType: 'Workspace',
+          entityId: workspaceId,
+          details: { deletedCount: deleted.count, olderThanDays: requestedDays },
+          metadata: { source: 'audit-retention' },
+          ipAddress: null,
+          userAgent: null,
+        });
+        await tx.auditLog.create({ data: this.toPersistence(marker) });
+      }
+      return deleted.count;
+    });
   }
 
   private toPersistence(
