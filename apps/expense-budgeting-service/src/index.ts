@@ -1,120 +1,81 @@
-import 'dotenv/config';
-import Fastify from 'fastify';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 
-import dbPlugin from './plugins/db';
-import authPlugin from './plugins/auth';
-import securityPlugin from './plugins/security';
-import errorPlugin from './plugins/error';
-import { container } from './container';
-import { registerExpenseLedgerRoutes } from './modules/expense-ledger/infrastructure/http/routes';
-import { registerBudgetRoutes } from './modules/budget-management/infrastructure/http/routes';
-import { registerCostAllocationRoutes } from './modules/cost-allocation/infrastructure/http/routes';
-import { registerBudgetPlanningRoutes } from './modules/budget-planning/infrastructure/http/routes';
-import { registerInventoryRoutes } from './modules/inventory-management/infrastructure/http/routes';
+// 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
+const localEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(localEnvPath)) {
+  const localEnvConfig = dotenv.parse(fs.readFileSync(localEnvPath));
+  for (const k in localEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = localEnvConfig[k];
+    }
+  }
+}
+
+// 2. Load root .env as fallback for shared config (JWT_SECRET, REDIS_URL, etc.)
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+if (fs.existsSync(rootEnvPath)) {
+  const rootEnvConfig = dotenv.parse(fs.readFileSync(rootEnvPath));
+  for (const k in rootEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = rootEnvConfig[k];
+    }
+  }
+}
+
+import { buildExpenseApp } from './app';
 import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
 import { PrismaOutboxEventRepository } from './repositories/outbox-event.repository';
-
-const fastify = Fastify({
-  logger: true,
-});
+import { buildWebhookRoutes } from './shared/infrastructure/webhooks/webhook-routing';
+import { BudgetExpirationWorker } from './modules/budget-management/infrastructure/workers/budget-expiration.worker';
 
 const PORT = parseInt(process.env.PORT || '3003', 10);
 
 const start = async () => {
   try {
-    // 1. Register security, db, auth, and error plugins
-    await fastify.register(securityPlugin);
-    await fastify.register(dbPlugin);
-    await fastify.register(authPlugin);
-    await fastify.register(errorPlugin);
+    const fastify = await buildExpenseApp();
 
-    // 2. Initialize DI container
-    container.register(fastify.prisma);
-
-    // 3. Register route handlers for all modules
-    const expenseLedgerServices = container.getExpenseLedgerServices();
-    await registerExpenseLedgerRoutes(
-      fastify as any,
-      expenseLedgerServices,
-      expenseLedgerServices.prisma
-    );
-
-    const budgetManagementServices = container.getBudgetManagementServices();
-    await registerBudgetRoutes(
-      fastify as any,
-      budgetManagementServices,
-      budgetManagementServices.prisma
-    );
-
-    const costAllocationServices = container.getCostAllocationServices();
-    await registerCostAllocationRoutes(
-      fastify as any,
-      costAllocationServices,
-      costAllocationServices.prisma
-    );
-
-    const budgetPlanningServices = container.getBudgetPlanningServices();
-    await registerBudgetPlanningRoutes(
-      fastify as any,
-      budgetPlanningServices,
-      budgetPlanningServices.prisma
-    );
-
-    const inventoryManagementServices = container.getInventoryManagementServices();
-    await registerInventoryRoutes(
-      fastify as any,
-      inventoryManagementServices,
-      inventoryManagementServices.prisma
-    );
-
-    // 4. Start Outbox Worker with HttpWebhookPublisher
+    // Start Outbox Worker with HttpWebhookPublisher
     const outboxRepo = new PrismaOutboxEventRepository(fastify.prisma);
-    const webhookRoutes = {
-      'expense.created': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-      ],
-      'expense.approved': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-        'http://localhost:3008/api/v1/event-outbox/events', // Notification
-      ],
-      'expense.rejected': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-        'http://localhost:3008/api/v1/event-outbox/events', // Notification
-      ],
-      'expense.submitted': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-      ],
-      'expense.status_changed': [
-        'http://localhost:3008/api/v1/event-outbox/events', // Notification
-      ],
-      'budget.threshold_exceeded': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-        'http://localhost:3008/api/v1/event-outbox/events', // Notification
-      ],
-      'budget.updated': [
-        'http://localhost:3009/api/v1/event-outbox/events', // Audit
-      ],
-    };
-    
+    const AUDIT_SERVICE_URL = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
+    const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3008';
+
+    const webhookRoutes = buildWebhookRoutes({
+      auditServiceUrl: AUDIT_SERVICE_URL,
+      notificationServiceUrl: NOTIFICATION_SERVICE_URL,
+    });
+
     const publisher = new HttpWebhookPublisher(webhookRoutes);
     const outboxWorker = new OutboxWorker(outboxRepo, publisher, {
       pollIntervalMs: 5000,
     });
     outboxWorker.start();
+    const budgetExpirationWorker = new BudgetExpirationWorker(
+      fastify.prisma,
+      fastify.compositionRoot.budgetManagement.budgetService,
+      (error) => fastify.log.error({ error }, 'Budget expiration processing failed')
+    );
+    await budgetExpirationWorker.start();
 
     // Graceful shutdown hooks
     fastify.addHook('onClose', async () => {
-      outboxWorker.stop();
-    });
-
-    fastify.get('/health', async () => {
-      return { status: 'ok', service: 'expense-budgeting-service', uptime: process.uptime() };
+      await Promise.all([outboxWorker.stop(), budgetExpirationWorker.stop()]);
     });
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     console.log(`[Expense-Budgeting-Service] Running on http://localhost:${PORT}`);
-  } catch (err) {
-    fastify.log.error(err);
+
+    const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+    for (const signal of signals) {
+      process.on(signal, async () => {
+        fastify.log.info(`[Expense-Budgeting-Service] Received ${signal}, closing server gracefully...`);
+        await fastify.close();
+        process.exit(0);
+      });
+    }
+  } catch (err: any) {
+    console.error('[Expense-Budgeting-Service] Fatal startup error:', err.message || err);
     process.exit(1);
   }
 };
