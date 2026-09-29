@@ -9,13 +9,14 @@ import {
 
 describe('PurchaseOrder Entity', () => {
   const validData = {
-    workspaceId: 'workspace-123',
-    supplierId: 'supplier-123',
+    workspaceId: '123e4567-e89b-42d3-a456-426614174000',
+    supplierId: '123e4567-e89b-42d3-a456-426614174001',
     orderDate: new Date('2024-01-15'),
     expectedDate: new Date('2024-02-15'),
     notes: 'Test order',
-    createdBy: 'user-123',
+    createdBy: '123e4567-e89b-42d3-a456-426614174003',
   };
+  const itemFor = (po: PurchaseOrder) => po.addItem({ variantId: 'widget', variantName: 'Widget', quantity: 2, unitPrice: 1 });
 
   describe('create', () => {
     it('should create a valid purchase order', () => {
@@ -23,7 +24,7 @@ describe('PurchaseOrder Entity', () => {
       expect(po).toBeDefined();
       expect(po.id).toBeDefined();
       expect(po.status).toBe(PurchaseOrderStatus.DRAFT);
-      expect(po.supplierId).toBe('supplier-123');
+      expect(po.supplierId).toBe(validData.supplierId);
       expect(po.currency).toBe('USD');
       expect(po.totalAmount).toBe(0);
     });
@@ -44,23 +45,24 @@ describe('PurchaseOrder Entity', () => {
   describe('status transitions', () => {
     it('should transition DRAFT -> SUBMITTED', () => {
       const po = PurchaseOrder.create(validData);
-      po.submit();
+      po.submit([itemFor(po)]);
       expect(po.status).toBe(PurchaseOrderStatus.SUBMITTED);
       expect(po.isSubmitted()).toBe(true);
     });
 
     it('should transition SUBMITTED -> APPROVED', () => {
       const po = PurchaseOrder.create(validData);
-      po.submit();
+      po.submit([itemFor(po)]);
       po.approve();
       expect(po.status).toBe(PurchaseOrderStatus.APPROVED);
     });
 
     it('should transition APPROVED -> RECEIVED', () => {
       const po = PurchaseOrder.create(validData);
-      po.submit();
+      const item = itemFor(po);
+      po.submit([item]);
       po.approve();
-      po.receive();
+      po.receive([po.receiveItem(item, 2)]);
       expect(po.status).toBe(PurchaseOrderStatus.RECEIVED);
       expect(po.receivedDate).toBeDefined();
     });
@@ -80,18 +82,20 @@ describe('PurchaseOrder Entity', () => {
 
     it('should throw on invalid transition RECEIVED -> SUBMITTED', () => {
       const po = PurchaseOrder.create(validData);
-      po.submit();
+      const item = itemFor(po);
+      po.submit([item]);
       po.approve();
-      po.receive();
+      po.receive([po.receiveItem(item, 2)]);
       expect(() => {
-        po.submit();
+        po.submit([item]);
       }).toThrow(InvalidPurchaseOrderStatusError);
     });
 
     it('should add status change event on each transition', () => {
       const po = PurchaseOrder.create(validData);
+      const item = itemFor(po);
       po.clearDomainEvents(); // clear the created event
-      po.submit();
+      po.submit([item]);
       expect(po.domainEvents).toHaveLength(1);
       expect(po.domainEvents[0].eventType).toBe('purchase_order.status_changed');
     });
@@ -106,7 +110,7 @@ describe('PurchaseOrder Entity', () => {
 
     it('should throw when editing non-DRAFT order', () => {
       const po = PurchaseOrder.create(validData);
-      po.submit();
+      po.submit([itemFor(po)]);
       expect(() => {
         po.updateNotes('Cannot update');
       }).toThrow(PurchaseOrderCannotBeEditedError);
@@ -119,7 +123,7 @@ describe('PurchaseOrder Entity', () => {
       const dto = PurchaseOrder.toDTO(po);
       expect(dto.purchaseOrderId).toBe(po.id.getValue());
       expect(dto.status).toBe(PurchaseOrderStatus.DRAFT);
-      expect(dto.supplierId).toBe('supplier-123');
+      expect(dto.supplierId).toBe(validData.supplierId);
       expect(dto.totalAmount).toBe('0');
       expect(dto.currency).toBe('USD');
     });

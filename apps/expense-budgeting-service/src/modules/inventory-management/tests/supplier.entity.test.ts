@@ -4,7 +4,7 @@ import { InvalidInventoryDataError } from '../domain/errors/inventory.errors';
 
 describe('Supplier Entity', () => {
   const validData = {
-    workspaceId: 'workspace-123',
+    workspaceId: '123e4567-e89b-42d3-a456-426614174000',
     name: 'Acme Corp',
     contactEmail: 'contact@acme.com',
     contactPhone: '+1234567890',
@@ -17,14 +17,14 @@ describe('Supplier Entity', () => {
       expect(supplier).toBeDefined();
       expect(supplier.id).toBeDefined();
       expect(supplier.name).toBe('Acme Corp');
-      expect(supplier.workspaceId).toBe('workspace-123');
+      expect(supplier.workspaceId).toBe('123e4567-e89b-42d3-a456-426614174000');
       expect(supplier.contactEmail).toBe('contact@acme.com');
       expect(supplier.isActive).toBe(true);
     });
 
     it('should create supplier with minimal data', () => {
       const supplier = Supplier.create({
-        workspaceId: 'workspace-123',
+        workspaceId: '123e4567-e89b-42d3-a456-426614174000',
         name: 'Minimal Supplier',
       });
       expect(supplier.contactEmail).toBeNull();

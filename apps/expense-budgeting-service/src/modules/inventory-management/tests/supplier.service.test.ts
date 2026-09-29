@@ -30,7 +30,7 @@ describe('SupplierService', () => {
       vi.mocked(mockSupplierRepository.existsByName).mockResolvedValue(false);
 
       const supplierDTO = await service.createSupplier({
-        workspaceId: 'workspace-123',
+        workspaceId: '123e4567-e89b-42d3-a456-426614174000',
         name: 'Acme Corp',
       });
 
@@ -44,17 +44,31 @@ describe('SupplierService', () => {
 
       await expect(
         service.createSupplier({
-          workspaceId: 'workspace-123',
+          workspaceId: '123e4567-e89b-42d3-a456-426614174000',
           name: 'Existing Corp',
         })
       ).rejects.toThrow(SupplierAlreadyExistsError);
+    });
+
+    it('checks the normalized name used by the entity', async () => {
+      vi.mocked(mockSupplierRepository.existsByName).mockResolvedValue(true);
+
+      await expect(service.createSupplier({
+        workspaceId: '123e4567-e89b-42d3-a456-426614174000',
+        name: '  Acme Corp  ',
+      })).rejects.toThrow(SupplierAlreadyExistsError);
+
+      expect(mockSupplierRepository.existsByName).toHaveBeenCalledWith(
+        'Acme Corp', '123e4567-e89b-42d3-a456-426614174000'
+      );
+      expect(mockSupplierRepository.save).not.toHaveBeenCalled();
     });
   });
 
   describe('updateSupplier', () => {
     it('should update supplier fields', async () => {
       const existingSupplier = Supplier.create({
-        workspaceId: 'workspace-123',
+        workspaceId: '123e4567-e89b-42d3-a456-426614174000',
         name: 'Old Name',
       });
       vi.mocked(mockSupplierRepository.findById).mockResolvedValue(existingSupplier);
@@ -62,7 +76,7 @@ describe('SupplierService', () => {
 
       const updated = await service.updateSupplier(
         existingSupplier.id.getValue(),
-        'workspace-123',
+        '123e4567-e89b-42d3-a456-426614174000',
         {
           name: 'New Name',
           contactEmail: 'new@email.com',
@@ -80,22 +94,36 @@ describe('SupplierService', () => {
       await expect(
         service.updateSupplier(
           randomUUID(),
-          'workspace-123',
+          '123e4567-e89b-42d3-a456-426614174000',
           { name: 'Updated' }
         )
       ).rejects.toThrow(SupplierNotFoundError);
+    });
+
+    it('checks a renamed supplier by its normalized name', async () => {
+      const workspaceId = '123e4567-e89b-42d3-a456-426614174000';
+      const existing = Supplier.create({ workspaceId, name: 'Old Name' });
+      vi.mocked(mockSupplierRepository.findById).mockResolvedValue(existing);
+      vi.mocked(mockSupplierRepository.existsByName).mockResolvedValue(true);
+
+      await expect(service.updateSupplier(existing.id.getValue(), workspaceId, {
+        name: '  Existing Name  ',
+      })).rejects.toThrow(SupplierAlreadyExistsError);
+
+      expect(mockSupplierRepository.existsByName).toHaveBeenCalledWith('Existing Name', workspaceId);
+      expect(mockSupplierRepository.save).not.toHaveBeenCalled();
     });
   });
 
   describe('deleteSupplier', () => {
     it('should delete existing supplier', async () => {
       const existingSupplier = Supplier.create({
-        workspaceId: 'workspace-123',
+        workspaceId: '123e4567-e89b-42d3-a456-426614174000',
         name: 'To Delete',
       });
       vi.mocked(mockSupplierRepository.findById).mockResolvedValue(existingSupplier);
 
-      await service.deleteSupplier(existingSupplier.id.getValue(), 'workspace-123');
+      await service.deleteSupplier(existingSupplier.id.getValue(), '123e4567-e89b-42d3-a456-426614174000');
 
       expect(mockSupplierRepository.delete).toHaveBeenCalled();
     });
@@ -105,7 +133,7 @@ describe('SupplierService', () => {
       vi.mocked(mockSupplierRepository.findById).mockResolvedValue(null);
 
       await expect(
-        service.deleteSupplier(supplierId, 'workspace-123')
+        service.deleteSupplier(supplierId, '123e4567-e89b-42d3-a456-426614174000')
       ).rejects.toThrow(SupplierNotFoundError);
     });
   });
