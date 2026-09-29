@@ -4,6 +4,8 @@ import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetCostCenterQuery extends IQuery {
   readonly id: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
 }
 
 export class GetCostCenterHandler implements IQueryHandler<GetCostCenterQuery, CostCenterDTO> {
@@ -12,6 +14,6 @@ export class GetCostCenterHandler implements IQueryHandler<GetCostCenterQuery, C
   ) {}
 
   async handle(query: GetCostCenterQuery): Promise<CostCenterDTO> {
-    return this.allocationManagementService.getCostCenter(query.id);
+    return this.allocationManagementService.getCostCenter(query.id, query.workspaceId, query.actorId);
   }
 }
