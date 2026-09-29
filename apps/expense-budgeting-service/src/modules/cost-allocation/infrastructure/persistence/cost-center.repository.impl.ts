@@ -10,6 +10,10 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { managementOrderBy } from './management-order';
+import { isWorkspaceCodeConflict } from './management-constraint';
+import { DuplicateCostCenterCodeError, ManagementConcurrencyConflictError } from '../../domain/errors/cost-allocation.errors';
+import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
 export class CostCenterRepositoryImpl
   extends PrismaRepository<CostCenter>
@@ -20,35 +24,56 @@ export class CostCenterRepositoryImpl
   }
 
   async save(costCenter: CostCenter): Promise<void> {
-    await this.prisma.costCenter.upsert({
-      where: {
-        id: costCenter.id.getValue(),
-      },
-      create: {
-        id: costCenter.id.getValue(),
-        workspaceId: costCenter.workspaceId.getValue(),
-        name: costCenter.name,
-        code: costCenter.code,
-        description: costCenter.description,
-        isActive: costCenter.isActive,
-        createdAt: costCenter.createdAt,
-        updatedAt: costCenter.updatedAt,
-      },
-      update: {
-        name: costCenter.name,
-        code: costCenter.code,
-        description: costCenter.description,
-        isActive: costCenter.isActive,
-        updatedAt: costCenter.updatedAt,
-      },
-    });
+    try {
+      await this.runInTransaction(async (tx) => {
+        const id = costCenter.id.getValue();
+        const workspaceId = costCenter.workspaceId.getValue();
+        const existing = await tx.costCenter.findUnique({ where: { id }, select: { id: true } });
+        if (!existing) {
+          await tx.costCenter.create({
+            data: {
+              id,
+              workspaceId,
+              name: costCenter.name,
+              code: costCenter.code,
+              description: costCenter.description,
+              isActive: costCenter.isActive,
+              createdAt: costCenter.createdAt,
+              updatedAt: costCenter.updatedAt,
+              version: costCenter.version,
+            },
+          });
+        } else {
+          const updated = await tx.costCenter.updateMany({
+            where: { id, workspaceId, version: costCenter.version },
+            data: {
+              name: costCenter.name,
+              code: costCenter.code,
+              description: costCenter.description,
+              isActive: costCenter.isActive,
+              updatedAt: costCenter.updatedAt,
+              version: { increment: 1 },
+            },
+          });
+          if (updated.count !== 1) {
+            throw new ManagementConcurrencyConflictError('Cost center', id);
+          }
+          const previousVersion = costCenter.version;
+          costCenter.synchronizeVersion(previousVersion + 1);
+          PrismaUnitOfWork.addRollbackHook(() => costCenter.synchronizeVersion(previousVersion));
+        }
 
-    await this.dispatchEvents(costCenter);
+        await this.dispatchEvents(costCenter, tx);
+      });
+    } catch (error) {
+      if (isWorkspaceCodeConflict(error)) throw new DuplicateCostCenterCodeError(costCenter.code);
+      throw error;
+    }
   }
 
-  async findById(id: CostCenterId): Promise<CostCenter | null> {
+  async findById(id: CostCenterId, workspaceId: WorkspaceId): Promise<CostCenter | null> {
     const data = await this.prisma.costCenter.findUnique({
-      where: { id: id.getValue() },
+      where: { id_workspaceId: { id: id.getValue(), workspaceId: workspaceId.getValue() } },
     });
 
     if (!data) return null;
@@ -62,6 +87,7 @@ export class CostCenterRepositoryImpl
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      version: data.version,
     });
   }
 
@@ -72,7 +98,7 @@ export class CostCenterRepositoryImpl
     const data = await this.prisma.costCenter.findFirst({
       where: {
         workspaceId: workspaceId.getValue(),
-        code: code,
+        code: { equals: code, mode: 'insensitive' },
       },
     });
 
@@ -87,6 +113,7 @@ export class CostCenterRepositoryImpl
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      version: data.version,
     });
   }
 
@@ -100,7 +127,7 @@ export class CostCenterRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.costCenter,
-      { where },
+      { where, orderBy: managementOrderBy(options, 'costCenter') },
       (c) =>
         CostCenter.fromPersistence({
           id: c.id,
@@ -111,17 +138,10 @@ export class CostCenterRepositoryImpl
           isActive: c.isActive,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
+          version: c.version,
         }),
       options,
     );
   }
 
-  async delete(id: CostCenterId, workspaceId: WorkspaceId): Promise<void> {
-    await this.prisma.costCenter.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId: workspaceId.getValue(),
-      },
-    });
-  }
 }
