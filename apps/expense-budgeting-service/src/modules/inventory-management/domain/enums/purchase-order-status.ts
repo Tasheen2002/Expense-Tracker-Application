@@ -1,6 +1,7 @@
 export enum PurchaseOrderStatus {
   DRAFT = 'DRAFT',
   SUBMITTED = 'SUBMITTED',
+  // Remains APPROVED while one or more items are partially received.
   APPROVED = 'APPROVED',
   RECEIVED = 'RECEIVED',
   CANCELLED = 'CANCELLED',
