@@ -11,8 +11,13 @@ export {
   InvalidQuantityError,
   InvalidPurchaseOrderStatusError,
   PurchaseOrderCannotBeEditedError,
+  PurchaseOrderCannotBeDeletedError,
   SupplierAlreadyExistsError,
+  SupplierInactiveError,
+  SupplierInUseError,
   LocationAlreadyExistsError,
+  LocationInactiveError,
+  LocationInUseError,
   InvalidInventoryDataError,
   UnauthorizedInventoryAccessError,
 } from './domain/errors/inventory.errors';
