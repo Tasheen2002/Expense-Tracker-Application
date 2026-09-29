@@ -11,14 +11,14 @@ import {
 
 describe("Budget Entity", () => {
   const validData = {
-    workspaceId: "workspace-123",
+    workspaceId: "11111111-1111-4111-8111-111111111111",
     name: "Test Budget",
     description: "A test budget",
     totalAmount: new Decimal(1000),
     currency: "USD",
     periodType: BudgetPeriodType.MONTHLY,
     startDate: new Date("2023-01-01"),
-    createdBy: "user-123",
+    createdBy: "44444444-4444-4444-8444-444444444444",
     isRecurring: false,
     rolloverUnused: false,
   };

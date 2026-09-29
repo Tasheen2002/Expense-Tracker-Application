@@ -12,12 +12,14 @@ import { BudgetStatus } from "../domain/enums/budget-status";
 import { Decimal } from "@prisma/client/runtime/library";
 import {
   AllocationNotFoundError,
+  BudgetAlreadyExistsError,
   BudgetNotFoundError,
   UnauthorizedBudgetAccessError,
 } from "../domain/errors/budget.errors";
 
 // Mock dependencies
 const mockBudgetRepository = {
+  create: vi.fn(),
   save: vi.fn(),
   saveWithAllocationValidation: vi.fn(),
   findById: vi.fn(),
@@ -37,6 +39,7 @@ const mockAllocationRepository = {
   getTotalSpentAmount: vi.fn(),
   save: vi.fn(),
   findById: vi.fn(),
+  findByIdInWorkspace: vi.fn(),
   saveWithAlerts: vi.fn(),
   delete: vi.fn(),
   findByBudget: vi.fn(),
@@ -63,16 +66,21 @@ describe("BudgetService", () => {
       mockUnitOfWork as any
     );
     vi.clearAllMocks();
+    vi.mocked(mockBudgetRepository.existsByName).mockReset();
+    vi.mocked(mockBudgetRepository.findByIdInternalWithLock).mockReset();
+    vi.mocked(mockBudgetRepository.findByIdInternalWithLock).mockImplementation(
+      async (id) => mockBudgetRepository.findById(id, validBudgetParams.workspaceId)
+    );
   });
 
   const validBudgetParams = {
-    workspaceId: "workspace-123",
+    workspaceId: "11111111-1111-4111-8111-111111111111",
     name: "Test Budget",
     totalAmount: 1000,
     currency: "USD",
     periodType: BudgetPeriodType.MONTHLY,
     startDate: new Date(),
-    createdBy: "user-123",
+    createdBy: "44444444-4444-4444-8444-444444444444",
     isRecurring: false,
     rolloverUnused: false,
   };
@@ -83,11 +91,37 @@ describe("BudgetService", () => {
 
       expect(budgetDTO).toBeDefined();
       expect(budgetDTO.name).toBe("Test Budget");
-      expect(mockBudgetRepository.save).toHaveBeenCalledTimes(1);
+      expect(mockBudgetRepository.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("checks the normalized name before saving", async () => {
+      await service.createBudget({ ...validBudgetParams, name: '  Travel  ' });
+      expect(mockBudgetRepository.existsByName).toHaveBeenCalledWith(
+        'Travel', validBudgetParams.workspaceId
+      );
     });
   });
 
   describe("updateBudget", () => {
+    it("rejects an empty name instead of silently skipping it", async () => {
+      const budget = Budget.create(validBudgetParams);
+      vi.spyOn(mockBudgetRepository, 'findById').mockResolvedValue(budget);
+      await expect(service.updateBudget(
+        budget.id.getValue(), budget.workspaceId, budget.createdBy, { name: '' }
+      )).rejects.toThrow();
+      expect(mockBudgetRepository.save).not.toHaveBeenCalled();
+    });
+
+    it("rejects a renamed budget when the name already exists in its workspace", async () => {
+      const budget = Budget.create(validBudgetParams);
+      vi.spyOn(mockBudgetRepository, 'findById').mockResolvedValue(budget);
+      vi.spyOn(mockBudgetRepository, 'existsByName').mockResolvedValue(true);
+      await expect(service.updateBudget(
+        budget.id.getValue(), budget.workspaceId, budget.createdBy, { name: '  Travel  ' }
+      )).rejects.toThrow(BudgetAlreadyExistsError);
+      expect(mockBudgetRepository.existsByName).toHaveBeenCalledWith('Travel', budget.workspaceId);
+      expect(mockBudgetRepository.save).not.toHaveBeenCalled();
+    });
     it("should update and save an existing budget with totalAmount via saveWithAllocationValidation", async () => {
       const existingBudget = Budget.create(validBudgetParams);
       vi.spyOn(mockBudgetRepository, "findById").mockResolvedValue(
@@ -96,8 +130,8 @@ describe("BudgetService", () => {
 
       const updatedBudgetDTO = await service.updateBudget(
         existingBudget.id.getValue(),
-        "workspace-123",
-        "user-123",
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444",
         { name: "Updated Name", totalAmount: "2000" },
       );
 
@@ -114,8 +148,8 @@ describe("BudgetService", () => {
 
       const updatedBudgetDTO = await service.updateBudget(
         existingBudget.id.getValue(),
-        "workspace-123",
-        "user-123",
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444",
         { name: "Updated Name Only" },
       );
 
@@ -130,8 +164,8 @@ describe("BudgetService", () => {
       await expect(
         service.updateBudget(
           "123e4567-e89b-12d3-a456-426614174000",
-          "workspace-123",
-          "user-123",
+          "11111111-1111-4111-8111-111111111111",
+          "44444444-4444-4444-8444-444444444444",
           {},
         ),
       ).rejects.toThrow(BudgetNotFoundError);
@@ -146,8 +180,8 @@ describe("BudgetService", () => {
       await expect(
         service.updateBudget(
           existingBudget.id.getValue(),
-          "workspace-123",
-          "other-user",
+          "11111111-1111-4111-8111-111111111111",
+          "66666666-6666-4666-8666-666666666666",
           {},
         ),
       ).rejects.toThrow(UnauthorizedBudgetAccessError);
@@ -163,8 +197,8 @@ describe("BudgetService", () => {
 
       const dto = await service.activateBudget(
         existingBudget.id.getValue(),
-        "workspace-123",
-        "user-123",
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444",
       );
 
       expect(dto.status).toBe(BudgetStatus.ACTIVE);
@@ -181,8 +215,8 @@ describe("BudgetService", () => {
 
       await service.deleteBudget(
         existingBudget.id.getValue(),
-        "workspace-123",
-        "user-123"
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444"
       );
 
       expect(mockBudgetRepository.save).toHaveBeenCalledTimes(1);
@@ -207,8 +241,8 @@ describe("BudgetService", () => {
 
       await uowService.deleteBudget(
         existingBudget.id.getValue(),
-        "workspace-123",
-        "user-123"
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444"
       );
 
       expect(mockUnitOfWork.execute).toHaveBeenCalledTimes(1);
@@ -219,13 +253,13 @@ describe("BudgetService", () => {
 
   describe("deleteAllocation", () => {
     it("should throw AllocationNotFoundError if allocation does not exist", async () => {
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(null);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(null);
 
       await expect(
         service.deleteAllocation(
           "123e4567-e89b-12d3-a456-426614174099",
-          "workspace-123",
-          "user-123",
+          "11111111-1111-4111-8111-111111111111",
+          "44444444-4444-4444-8444-444444444444",
           "123e4567-e89b-12d3-a456-426614174000"
         )
       ).rejects.toThrow(AllocationNotFoundError);
@@ -237,41 +271,39 @@ describe("BudgetService", () => {
         budgetId: budget.id.getValue(),
         allocatedAmount: 100,
       });
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(allocation);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(allocation);
 
       await expect(
         service.deleteAllocation(
           allocation.id.getValue(),
-          "workspace-123",
-          "user-123",
+          "11111111-1111-4111-8111-111111111111",
+          "44444444-4444-4444-8444-444444444444",
           "123e4567-e89b-12d3-a456-999999999999" // different budgetId
         )
       ).rejects.toThrow(AllocationNotFoundError);
     });
 
-    it("should throw BudgetNotFoundError if parent budget is not in the specified workspace (cross-workspace protection)", async () => {
+    it("should not find an allocation outside the specified workspace", async () => {
       // Allocation belongs to Workspace B's budget
       const budgetInWorkspaceB = Budget.create({
         ...validBudgetParams,
-        workspaceId: "workspace-B",
+        workspaceId: "33333333-3333-4333-8333-333333333333",
       });
       const allocationInWorkspaceB = BudgetAllocation.create({
         budgetId: budgetInWorkspaceB.id.getValue(),
         allocatedAmount: 100,
       });
 
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(allocationInWorkspaceB);
-      // Querying with workspace-A returns null because budget is in workspace-B
-      vi.spyOn(mockBudgetRepository, "findById").mockResolvedValue(null);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(null);
 
       await expect(
         service.deleteAllocation(
           allocationInWorkspaceB.id.getValue(),
-          "workspace-A", // Attempting cross-workspace deletion through workspace-A
-          "user-123",
+          "22222222-2222-4222-8222-222222222222", // Attempting cross-workspace deletion through 22222222-2222-4222-8222-222222222222
+          "44444444-4444-4444-8444-444444444444",
           budgetInWorkspaceB.id.getValue()
         )
-      ).rejects.toThrow(BudgetNotFoundError);
+      ).rejects.toThrow(AllocationNotFoundError);
 
       expect(mockAllocationRepository.delete).not.toHaveBeenCalled();
     });
@@ -279,21 +311,21 @@ describe("BudgetService", () => {
     it("should throw UnauthorizedBudgetAccessError if user is not budget creator", async () => {
       const budget = Budget.create({
         ...validBudgetParams,
-        createdBy: "user-owner",
+        createdBy: "55555555-5555-4555-8555-555555555555",
       });
       const allocation = BudgetAllocation.create({
         budgetId: budget.id.getValue(),
         allocatedAmount: 100,
       });
 
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(allocation);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(allocation);
       vi.spyOn(mockBudgetRepository, "findById").mockResolvedValue(budget);
 
       await expect(
         service.deleteAllocation(
           allocation.id.getValue(),
-          "workspace-123",
-          "other-user", // Not creator
+          "11111111-1111-4111-8111-111111111111",
+          "66666666-6666-4666-8666-666666666666", // Not creator
           budget.id.getValue()
         )
       ).rejects.toThrow(UnauthorizedBudgetAccessError);
@@ -308,13 +340,13 @@ describe("BudgetService", () => {
         allocatedAmount: 100,
       });
 
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(allocation);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(allocation);
       vi.spyOn(mockBudgetRepository, "findById").mockResolvedValue(budget);
 
       await service.deleteAllocation(
         allocation.id.getValue(),
-        "workspace-123",
-        "user-123",
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444",
         budget.id.getValue()
       );
 
@@ -339,13 +371,13 @@ describe("BudgetService", () => {
         allocatedAmount: 100,
       });
 
-      vi.spyOn(mockAllocationRepository, "findById").mockResolvedValue(allocation);
+      vi.spyOn(mockAllocationRepository, "findByIdInWorkspace").mockResolvedValue(allocation);
       vi.spyOn(mockBudgetRepository, "findById").mockResolvedValue(budget);
 
       await uowService.deleteAllocation(
         allocation.id.getValue(),
-        "workspace-123",
-        "user-123",
+        "11111111-1111-4111-8111-111111111111",
+        "44444444-4444-4444-8444-444444444444",
         budget.id.getValue()
       );
 
@@ -418,15 +450,20 @@ describe("BudgetService", () => {
     it("should process all expired budgets across multiple pages until none remain", async () => {
       // Create batch of 50 budgets for page 1, and 25 for page 2
       const page1Budgets = Array.from({ length: 50 }, (_, i) => {
-        const b = Budget.create({ ...validBudgetParams, name: `Budget P1-${i}` });
+        const b = Budget.create({ ...validBudgetParams, name: `Budget P1-${i}`, startDate: new Date('2020-01-01') });
         b.activate();
         return b;
       });
       const page2Budgets = Array.from({ length: 25 }, (_, i) => {
-        const b = Budget.create({ ...validBudgetParams, name: `Budget P2-${i}` });
+        const b = Budget.create({ ...validBudgetParams, name: `Budget P2-${i}`, startDate: new Date('2020-01-01') });
         b.activate();
         return b;
       });
+
+      const byId = new Map([...page1Budgets, ...page2Budgets].map((budget) => [budget.id.getValue(), budget]));
+      vi.spyOn(mockBudgetRepository, 'findByIdInternalWithLock').mockImplementation(async (id) =>
+        byId.get(id.getValue()) ?? null
+      );
 
       // First call returns 50 items, second call returns 25 items (< batchSize of 50, terminating loop)
       vi.spyOn(mockBudgetRepository, "findExpiredBudgets")
@@ -445,7 +482,7 @@ describe("BudgetService", () => {
           hasMore: false,
         });
 
-      const processedCount = await service.processExpiredBudgets("workspace-123");
+      const processedCount = await service.processExpiredBudgets("11111111-1111-4111-8111-111111111111");
 
       expect(processedCount).toBe(75);
       expect(mockBudgetRepository.findExpiredBudgets).toHaveBeenCalledTimes(2);
@@ -466,10 +503,37 @@ describe("BudgetService", () => {
         hasMore: false,
       });
 
-      const processedCount = await service.processExpiredBudgets("workspace-123");
+      const processedCount = await service.processExpiredBudgets("11111111-1111-4111-8111-111111111111");
 
       expect(processedCount).toBe(0);
       expect(mockBudgetRepository.findExpiredBudgets).toHaveBeenCalledTimes(1);
+      expect(mockBudgetRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('does not archive a budget another worker already archived', async () => {
+      const stale = Budget.create({ ...validBudgetParams, startDate: new Date('2020-01-01') });
+      stale.activate();
+      const current = Budget.fromPersistence({
+        id: stale.id,
+        workspaceId: stale.workspaceId,
+        name: stale.name,
+        description: stale.description,
+        totalAmount: stale.totalAmount,
+        currency: stale.currency,
+        period: stale.period,
+        status: BudgetStatus.ARCHIVED,
+        createdBy: stale.createdBy,
+        isRecurring: stale.isRecurring(),
+        rolloverUnused: stale.shouldRolloverUnused(),
+        createdAt: stale.createdAt,
+        updatedAt: stale.updatedAt,
+      });
+      vi.spyOn(mockBudgetRepository, 'findExpiredBudgets').mockResolvedValueOnce({
+        items: [stale], total: 1, limit: 50, offset: 0, hasMore: false,
+      });
+      vi.spyOn(mockBudgetRepository, 'findByIdInternalWithLock').mockResolvedValue(current);
+
+      expect(await service.processExpiredBudgets(validBudgetParams.workspaceId)).toBe(0);
       expect(mockBudgetRepository.save).not.toHaveBeenCalled();
     });
   });

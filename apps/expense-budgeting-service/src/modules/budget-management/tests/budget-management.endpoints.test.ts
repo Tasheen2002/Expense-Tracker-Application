@@ -38,9 +38,11 @@ vi.mock('@shared/middleware/role-authorization.middleware', () => ({
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 describe('Budget Management Module - Endpoint Tests', () => {
   let app: FastifyInstance;
+  let prisma: PrismaClient;
 
   // Test data - will be populated during tests
   let authToken: string;
@@ -52,11 +54,10 @@ describe('Budget Management Module - Endpoint Tests', () => {
 
   const testTimestamp = Date.now();
   const testEmail = `budget-test-${testTimestamp}@example.com`;
-  const testPassword = 'SecurePassword123!';
-  const testWorkspaceName = `Budget Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
     app = await createServer();
+    prisma = (app as any).prisma;
 
     testUserId = '123e4567-e89b-12d3-a456-426614174001';
     testWorkspaceId = '123e4567-e89b-12d3-a456-426614174000';
@@ -72,17 +73,19 @@ describe('Budget Management Module - Endpoint Tests', () => {
 
     await app.ready();
 
-    // Clear existing data to avoid conflicts
-    const prisma = new PrismaClient();
-    await prisma.budgetAlert.deleteMany({});
-    await prisma.spendingLimit.deleteMany({});
-    await prisma.budgetAllocation.deleteMany({});
-    await prisma.budget.deleteMany({});
-    await prisma.$disconnect();
+    // Clear only this test workspace; other modules may share the same database.
+    await prisma.budgetAlert.deleteMany({ where: { budget: { workspaceId: testWorkspaceId } } });
+    await prisma.spendingLimit.deleteMany({ where: { workspaceId: testWorkspaceId } });
+    await prisma.budgetAllocation.deleteMany({ where: { budget: { workspaceId: testWorkspaceId } } });
+    await prisma.budget.deleteMany({ where: { workspaceId: testWorkspaceId } });
   });
 
   afterAll(async () => {
     if (app) {
+      await prisma.budgetAlert.deleteMany({ where: { budget: { workspaceId: testWorkspaceId } } });
+      await prisma.spendingLimit.deleteMany({ where: { workspaceId: testWorkspaceId } });
+      await prisma.budgetAllocation.deleteMany({ where: { budget: { workspaceId: testWorkspaceId } } });
+      await prisma.budget.deleteMany({ where: { workspaceId: testWorkspaceId } });
       await app.close();
     }
   });
@@ -94,8 +97,6 @@ describe('Budget Management Module - Endpoint Tests', () => {
     describe('POST /api/v1/:workspaceId/budgets', () => {
       it('✅ should create a budget', async () => {
         const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1);
 
         const response = await app.inject({
           method: 'POST',
@@ -110,7 +111,6 @@ describe('Budget Management Module - Endpoint Tests', () => {
             currency: 'USD',
             periodType: 'MONTHLY',
             startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
             isRecurring: false,
             rolloverUnused: false,
           },
@@ -227,6 +227,30 @@ describe('Budget Management Module - Endpoint Tests', () => {
         console.log('List Budgets No Auth:', response.statusCode);
         expect(response.statusCode).toBe(401);
       });
+
+      it('❌ should reject fractional pagination parameters (offset=1.5)', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets?offset=1.5`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('❌ should reject fractional pagination parameters (limit=2.5)', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets?limit=2.5`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+      });
     });
 
     describe('GET /api/v1/:workspaceId/budgets/:budgetId', () => {
@@ -262,6 +286,40 @@ describe('Budget Management Module - Endpoint Tests', () => {
     });
 
     describe('PUT /api/v1/:workspaceId/budgets/:budgetId', () => {
+      it('rejects budget update fields that the use case cannot apply', async () => {
+        const response = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets/${testBudgetId}`,
+          headers: { authorization: `Bearer ${authToken}` },
+          payload: { currency: 'EUR' },
+        });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('rejects an offset beyond Prisma skip range', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets?offset=2147483648`,
+          headers: { authorization: `Bearer ${authToken}` },
+        });
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('rejects whitespace names and amounts with excess precision', async () => {
+        const base = {
+          currency: 'USD', periodType: 'MONTHLY', startDate: new Date().toISOString(),
+        };
+        for (const payload of [
+          { ...base, name: '   ', totalAmount: 10 },
+          { ...base, name: 'Precise budget', totalAmount: 10.001 },
+        ]) {
+          const response = await app.inject({
+            method: 'POST', url: `/api/v1/workspaces/${testWorkspaceId}/budgets`,
+            headers: { authorization: `Bearer ${authToken}` }, payload,
+          });
+          expect(response.statusCode).toBe(400);
+        }
+      });
       it('✅ should update budget', async () => {
         const response = await app.inject({
           method: 'PATCH',
@@ -527,6 +585,18 @@ describe('Budget Management Module - Endpoint Tests', () => {
         );
         expect(response.statusCode).toBe(400);
       });
+
+      it('rejects malformed and over-precise spending limits', async () => {
+        for (const limitAmount of ['not-money', '10.001']) {
+          const response = await app.inject({
+            method: 'POST',
+            url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits`,
+            headers: { authorization: `Bearer ${authToken}` },
+            payload: { limitAmount, currency: 'USD', periodType: 'MONTHLY' },
+          });
+          expect(response.statusCode).toBe(400);
+        }
+      });
     });
 
     describe('GET /api/v1/workspaces/:workspaceId/spending-limits', () => {
@@ -572,9 +642,42 @@ describe('Budget Management Module - Endpoint Tests', () => {
         console.log('List Spending Limits No Auth:', response.statusCode);
         expect(response.statusCode).toBe(401);
       });
+
+      it('❌ should reject fractional pagination parameters (offset=1.5)', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits?offset=1.5`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+      });
+
+      it('❌ should reject fractional pagination parameters (limit=2.5)', async () => {
+        const response = await app.inject({
+          method: 'GET',
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits?limit=2.5`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+      });
     });
 
     describe('PUT /api/v1/workspaces/:workspaceId/spending-limits/:limitId', () => {
+      it('rejects spending-limit retargeting that the use case cannot apply', async () => {
+        const response = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/workspaces/${testWorkspaceId}/spending-limits/${testSpendingLimitId}`,
+          headers: { authorization: `Bearer ${authToken}` },
+          payload: { userId: randomUUID() },
+        });
+        expect(response.statusCode).toBe(400);
+      });
       it('✅ should update spending limit', async () => {
         const response = await app.inject({
           method: 'PATCH',
@@ -659,6 +762,111 @@ describe('Budget Management Module - Endpoint Tests', () => {
 
         console.log('Delete Allocation No Auth:', response.statusCode);
         expect(response.statusCode).toBe(401);
+      });
+
+      it('❌ should reject deletion when route budgetId does not match allocation budget', async () => {
+        const mismatchedBudgetId = '99999999-9999-9999-9999-999999999999';
+        const response = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets/${mismatchedBudgetId}/allocations/${testAllocationId}`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        console.log('Delete Allocation Mismatched Budget:', response.statusCode);
+        expect(response.statusCode).toBe(404);
+
+        // Verify allocation still exists
+        const allocation = await prisma.budgetAllocation.findUnique({
+          where: { id: testAllocationId },
+        });
+        expect(allocation).not.toBeNull();
+      });
+
+      it('❌ should reject deletion of an allocation belonging to another workspace (cross-workspace protection)', async () => {
+        const ownBudgetId = randomUUID();
+        // Create an attacker's budget in workspace A
+        const ownBudget = await prisma.budget.create({
+          data: {
+            id: ownBudgetId,
+            workspaceId: testWorkspaceId,
+            name: `Attacker Budget ${Date.now()}`,
+            totalAmount: 10000,
+            currency: 'USD',
+            periodType: 'MONTHLY',
+            startDate: new Date('2026-01-01'),
+            endDate: new Date('2026-02-01'),
+            createdBy: testUserId,
+            status: 'ACTIVE',
+          },
+        });
+
+        // Create a foreign budget and allocation in workspace B
+        const otherWorkspaceId = randomUUID();
+        const foreignBudgetId = randomUUID();
+        const foreignAllocationId = randomUUID();
+        const foreignBudget = await prisma.budget.create({
+          data: {
+            id: foreignBudgetId,
+            workspaceId: otherWorkspaceId,
+            name: `Foreign Budget ${Date.now()}`,
+            totalAmount: 10000,
+            currency: 'USD',
+            periodType: 'MONTHLY',
+            startDate: new Date('2026-01-01'),
+            endDate: new Date('2026-02-01'),
+            createdBy: randomUUID(),
+            status: 'ACTIVE',
+          },
+        });
+        const foreignAllocation = await prisma.budgetAllocation.create({
+          data: {
+            id: foreignAllocationId,
+            budgetId: foreignBudget.id,
+            allocatedAmount: 1500,
+          },
+        });
+
+        // Attacker in testWorkspaceId attempts to delete foreignAllocation via testWorkspaceId route with attacker's own budget
+        const response = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets/${ownBudget.id}/allocations/${foreignAllocation.id}`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        console.log('Delete Foreign Allocation with own budget:', response.statusCode, response.body);
+        expect(response.statusCode).toBe(404);
+
+        // Verify the foreign allocation was NOT deleted
+        let stillExists = await prisma.budgetAllocation.findUnique({
+          where: { id: foreignAllocation.id },
+        });
+        expect(stillExists).not.toBeNull();
+
+        // Also test: supplying foreignBudget.id with foreignAllocation.id under testWorkspaceId
+        const response2 = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/workspaces/${testWorkspaceId}/budgets/${foreignBudget.id}/allocations/${foreignAllocation.id}`,
+          headers: {
+            authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        console.log('Delete Foreign Allocation with foreign budget:', response2.statusCode, response2.body);
+        expect(response2.statusCode).toBe(404);
+
+        stillExists = await prisma.budgetAllocation.findUnique({
+          where: { id: foreignAllocation.id },
+        });
+        expect(stillExists).not.toBeNull();
+
+        // Clean up records
+        await prisma.budgetAllocation.delete({ where: { id: foreignAllocation.id } });
+        await prisma.budget.delete({ where: { id: foreignBudget.id } });
+        await prisma.budget.delete({ where: { id: ownBudget.id } });
       });
 
       it('✅ should delete allocation', async () => {
