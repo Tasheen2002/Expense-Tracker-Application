@@ -170,4 +170,71 @@ describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency in Expense
     });
     expect(reloaded?.deliveredTo).toEqual([sub1, sub2]);
   });
+
+  it('rejects stale lease tokens when recording delivery, retrying, or completing an event', async () => {
+    const event = await prismaAdmin.outboxEvent.create({
+      data: {
+        aggregateType: TEST_AGGREGATE_TYPE,
+        aggregateId: 'stale-lease-test',
+        eventType: 'expense.created',
+        payload: {},
+        status: 'PROCESSING',
+        leaseToken: 'current-lease',
+        leaseExpiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+
+    expect(await repoWorker1.markDelivered(event.id, 'http://audit/events', 'old-lease')).toBe(false);
+    expect(await repoWorker1.incrementRetry(event.id, 'temporary failure', 'old-lease')).toBe(false);
+    expect(await repoWorker1.updateStatus(event.id, 'PROCESSED', undefined, 'old-lease')).toBe(false);
+    expect(await repoWorker1.renewLease(event.id, 'old-lease', 60_000)).toBe(false);
+
+    const unchanged = await prismaAdmin.outboxEvent.findUniqueOrThrow({ where: { id: event.id } });
+    expect(unchanged).toMatchObject({
+      status: 'PROCESSING',
+      leaseToken: 'current-lease',
+      retryCount: 0,
+      deliveredTo: [],
+    });
+  });
+
+  it('persists retry backoff and claims an eligible failed event with a new lease', async () => {
+    const event = await prismaAdmin.outboxEvent.create({
+      data: {
+        aggregateType: TEST_AGGREGATE_TYPE,
+        aggregateId: 'failed-retry-test',
+        eventType: 'expense.created',
+        payload: {},
+        status: 'PROCESSING',
+        leaseToken: 'first-lease',
+        leaseExpiresAt: new Date(Date.now() + 60_000),
+        createdAt: new Date('2000-01-01T00:00:00.000Z'),
+      },
+    });
+
+    const beforeRetry = Date.now();
+    expect(await repoWorker1.incrementRetry(event.id, 'subscriber unavailable', 'first-lease')).toBe(true);
+    const failed = await prismaAdmin.outboxEvent.findUniqueOrThrow({ where: { id: event.id } });
+    expect(failed.status).toBe('FAILED');
+    expect(failed.retryCount).toBe(1);
+    expect(failed.leaseToken).toBeNull();
+    expect(failed.nextAttemptAt.getTime()).toBeGreaterThanOrEqual(beforeRetry + 2_000);
+
+    await prismaAdmin.outboxEvent.update({
+      where: { id: event.id },
+      data: { nextAttemptAt: new Date(Date.now() - 1_000) },
+    });
+    const claimed = await repoWorker2.claimFailed(1, 5);
+    expect(claimed).toHaveLength(1);
+    expect(claimed[0]).toMatchObject({ id: event.id, status: 'PROCESSING', retryCount: 1 });
+    expect(claimed[0].leaseToken).toBeTruthy();
+    expect(claimed[0].leaseToken).not.toBe('first-lease');
+    expect(await repoWorker1.updateStatus(event.id, 'PROCESSED', undefined, 'first-lease')).toBe(false);
+    expect(await repoWorker2.updateStatus(event.id, 'PROCESSED', undefined, claimed[0].leaseToken)).toBe(true);
+
+    const processed = await prismaAdmin.outboxEvent.findUniqueOrThrow({ where: { id: event.id } });
+    expect(processed.status).toBe('PROCESSED');
+    expect(processed.processedAt).not.toBeNull();
+    expect(processed.leaseToken).toBeNull();
+  });
 });
