@@ -4,18 +4,23 @@ import authPlugin from './plugins/auth';
 import securityPlugin from './plugins/security';
 import errorPlugin from './plugins/error';
 import { correlationPlugin, internalAuthPlugin } from '@expense-tracker/correlation';
-import { container } from './container';
+import type { PrismaClient } from '@prisma/client';
+import { createCompositionRoot } from './composition-root';
 import { registerAuditComplianceRoutes } from './modules/audit-compliance/infrastructure/http/routes';
 
 export interface AuditAppOptions {
   enableInternalAuth?: boolean;
   logger?: boolean;
+  prisma?: PrismaClient;
 }
 
 /**
  * Factory to construct and configure the Audit Compliance Service Fastify application.
  */
 export async function buildAuditComplianceApp(options?: AuditAppOptions): Promise<FastifyInstance> {
+  if (process.env.NODE_ENV === 'production' && options?.enableInternalAuth === false) {
+    throw new Error('Internal authentication cannot be disabled in production');
+  }
   const isTest = process.env.NODE_ENV === 'test';
   const fastify = Fastify({
     logger: options?.logger !== undefined ? options.logger : (isTest ? false : true),
@@ -31,48 +36,36 @@ export async function buildAuditComplianceApp(options?: AuditAppOptions): Promis
 
   // 3. Security, database, auth, and error plugins
   await fastify.register(securityPlugin);
-  await fastify.register(dbPlugin);
+  await fastify.register(dbPlugin, { prisma: options?.prisma });
   await fastify.register(authPlugin);
   await fastify.register(errorPlugin);
 
-  // 5. Initialize DI container
-  container.register(fastify.prisma);
-
-  // 6. Register module routes
-  const auditServices = container.getAuditServices();
-  await registerAuditComplianceRoutes(
-    fastify as any,
-    auditServices,
-    auditServices.prisma
-  );
+  // 4. Construct dependencies for this app and register its routes.
+  const root = createCompositionRoot(fastify.prisma);
+  await registerAuditComplianceRoutes(fastify, root);
 
   // 7. Deep Health Check (Postgres ping)
   fastify.get('/health', async (_request, reply) => {
     try {
-      await fastify.prisma.$queryRaw`SELECT 1`;
+      await fastify.prisma.$queryRaw`SELECT 1 FROM audit_compliance.audit_logs LIMIT 1`;
       return {
         status: 'ok',
         service: 'audit-compliance-service',
         uptime: process.uptime(),
         database: 'connected',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      fastify.log.error({ err: error }, 'Audit database health check failed');
       return reply.code(503).send({
         status: 'degraded',
         service: 'audit-compliance-service',
         uptime: process.uptime(),
         database: 'disconnected',
-        error: error.message,
+        error: process.env.NODE_ENV === 'development' && error instanceof Error
+          ? error.message : 'Database service unavailable',
       });
     }
   });
 
   return fastify;
-}
-
-/**
- * Backward-compatible helper for tests
- */
-export async function createServer(): Promise<FastifyInstance> {
-  return buildAuditComplianceApp({ enableInternalAuth: false, logger: false });
 }
