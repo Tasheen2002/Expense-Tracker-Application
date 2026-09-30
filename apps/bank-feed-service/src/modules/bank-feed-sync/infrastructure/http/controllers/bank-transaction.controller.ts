@@ -120,8 +120,10 @@ export class BankTransactionController {
       const result = await this.processTransactionHandler.handle({
         workspaceId,
         transactionId,
+        actorId: request.user.userId,
         action: body.action,
         expenseId: body.expenseId,
+        authToken: request.headers.authorization,
       });
 
       return ResponseHelper.fromCommand(
