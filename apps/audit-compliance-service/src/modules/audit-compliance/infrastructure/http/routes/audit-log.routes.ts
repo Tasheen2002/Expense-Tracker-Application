@@ -45,13 +45,6 @@ export async function auditLogRoutes(
     await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // GET /summary
   fastify.get(
     '/workspaces/:workspaceId/audit-logs/summary',
@@ -139,7 +132,7 @@ export async function auditLogRoutes(
   fastify.post(
     '/workspaces/:workspaceId/audit-logs',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(createAuditLogSchema),
         workspaceAuth,
@@ -164,7 +157,7 @@ export async function auditLogRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/audit-logs',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateQuery(purgeAuditLogsQuerySchema),
         workspaceAuth,
