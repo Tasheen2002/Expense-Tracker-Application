@@ -2,15 +2,11 @@ import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
-// Singleton Prisma Client
-const prisma = new PrismaClient({
-  log:
-    process.env.NODE_ENV === 'development'
-      ? ['query', 'error', 'warn']
-      : ['error'],
-});
-
 const dbPlugin: FastifyPluginAsync = async (fastify) => {
+  // Each app owns its pool and can close it without affecting another app.
+  const prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
   // Decorate Fastify instance with Prisma client
   fastify.decorate('prisma', prisma);
 
