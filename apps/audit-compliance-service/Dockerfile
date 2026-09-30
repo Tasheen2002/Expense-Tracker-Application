@@ -2,7 +2,8 @@
 # Stage 1: Builder — install deps, generate Prisma, compile TypeScript
 # ============================================================================
 FROM node:20-alpine AS builder
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -23,7 +24,8 @@ RUN pnpm build
 # Stage 2: Production — minimal runtime image
 # ============================================================================
 FROM node:20-alpine AS production
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
