@@ -2,7 +2,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
+// Preserve an explicitly supplied DATABASE_URL so integration tests can target
+// an isolated database instead of the developer's service-local database.
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
