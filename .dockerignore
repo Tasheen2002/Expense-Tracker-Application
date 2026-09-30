@@ -1,0 +1,65 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.next
+**/.next
+
+# Source control
+.git
+.gitignore
+
+# IDE & Editor
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/tests/
+**/coverage/
+**/.tsbuildinfo
+
+# Documentation & metadata
+*.md
+*.MD
+LICENSE
+CHANGELOG
+
+# Environment files (secrets — never bake into images)
+.env
+**/.env
+.env.*
+**/.env.*
+!**/.env.example
+
+# Development files
+docker-compose.yml
+docker-compose.*.yml
+.prettierrc
+.editorconfig
+.eslintrc*
+vitest.config.*
+**/vitest.config.*
+setup-frontend.bat
+test-output.txt
+
+# Uploads (runtime data, not build artifacts)
+uploads/
+**/uploads/
+
+# GitHub
+.github/
+
+# Lock files not needed (pnpm-lock.yaml IS needed for reproducible installs)
+package-lock.json
