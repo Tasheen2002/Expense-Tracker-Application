@@ -8,6 +8,8 @@ import {
 
 export interface IBankConnectionRepository {
   save(connection: BankConnection): Promise<void>;
+  recordSyncSuccess(connection: BankConnection): Promise<boolean>;
+  recordSyncFailure(connection: BankConnection): Promise<boolean>;
   findById(
     id: BankConnectionId,
     workspaceId: WorkspaceId
@@ -26,5 +28,4 @@ export interface IBankConnectionRepository {
     userId: UserId,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BankConnection>>;
-  delete(id: BankConnectionId, workspaceId: WorkspaceId): Promise<void>;
 }

@@ -11,17 +11,19 @@ import {
 
 export interface IBankTransactionRepository {
   save(transaction: BankTransaction): Promise<void>;
-  saveBatch(transactions: BankTransaction[]): Promise<void>;
+  saveBatch(transactions: BankTransaction[], expectedConnectionVersion: number): Promise<number>;
   findById(
     id: BankTransactionId,
     workspaceId: WorkspaceId
   ): Promise<BankTransaction | null>;
   findByExternalId(
     workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
     externalId: string
   ): Promise<BankTransaction | null>;
   findByExternalIds(
     workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
     externalIds: string[]
   ): Promise<Set<string>>;
   findByConnection(
@@ -47,7 +49,7 @@ export interface IBankTransactionRepository {
   ): Promise<PaginatedResult<BankTransaction>>;
   findPotentialDuplicates(
     workspaceId: WorkspaceId,
-    amount: number,
+    amount: string,
     transactionDate: Date,
     description: string
   ): Promise<BankTransaction[]>;
