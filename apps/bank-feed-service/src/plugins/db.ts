@@ -1,16 +1,11 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-import { PrismaClient } from '@prisma/client';
-
-// Singleton Prisma Client
-const prisma = new PrismaClient({
-  log:
-    process.env.NODE_ENV === 'development'
-      ? ['query', 'error', 'warn']
-      : ['error'],
-});
+import { PrismaClient } from '../prisma-client';
 
 const dbPlugin: FastifyPluginAsync = async (fastify) => {
+  const prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
   fastify.decorate('prisma', prisma);
   fastify.log.info('Database client registered for bank-feed-service');
 

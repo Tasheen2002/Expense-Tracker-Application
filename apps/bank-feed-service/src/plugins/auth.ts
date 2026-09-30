@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync, FastifyRequest } from 'fastify';
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 
 export interface UserContext {
   userId: string;
@@ -22,16 +23,16 @@ const contextAuthPlugin: FastifyPluginAsync = async (fastify) => {
     const email = request.headers['x-user-email'];
     const workspaceId = request.headers['x-workspace-id'];
 
-    if (!userId) {
+    if (typeof userId !== 'string' || !UuidId.isValid(userId)) {
       const err = new Error('Unauthorized: Missing gateway context headers') as Error & { statusCode: number };
       err.statusCode = 401;
       throw err;
     }
 
     request.user = {
-      userId: userId as string,
-      email: (email || '') as string,
-      workspaceId: workspaceId ? (workspaceId as string) : undefined,
+      userId,
+      email: typeof email === 'string' ? email : '',
+      workspaceId: typeof workspaceId === 'string' ? workspaceId : undefined,
     };
   });
 

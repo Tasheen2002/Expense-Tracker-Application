@@ -6,7 +6,7 @@ import {
   FastifyRequest,
 } from 'fastify';
 import { ZodError } from 'zod';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '../prisma-client';
 
 abstract class DomainError extends Error {
   abstract readonly statusCode: number;
@@ -33,7 +33,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 500
       ) {
         return reply.status(error.statusCode).send({
           success: false,
@@ -95,16 +95,8 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      if (error.statusCode && error.statusCode < 500) {
-        return reply.status(error.statusCode).send({
-          success: false,
-          statusCode: error.statusCode,
-          error: error.name,
-          message: error.message,
-        });
-      }
-
-      const statusCode = error.statusCode || 500;
+      const statusCode = Number.isInteger(error.statusCode) && error.statusCode && error.statusCode >= 500 && error.statusCode < 600
+        ? error.statusCode : 500;
       const isDevelopment = process.env.NODE_ENV === 'development';
 
       return reply.status(statusCode).send({
