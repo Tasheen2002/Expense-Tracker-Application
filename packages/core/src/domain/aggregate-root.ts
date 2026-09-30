@@ -14,4 +14,8 @@ export abstract class AggregateRoot {
   public clearDomainEvents(): void {
     this._domainEvents = [];
   }
+
+  public restoreDomainEvents(events: readonly DomainEvent[]): void {
+    this._domainEvents = [...events, ...this._domainEvents];
+  }
 }
