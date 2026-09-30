@@ -7,5 +7,6 @@ export enum ConnectionStatus {
   EXPIRED = "EXPIRED", // Token expired, needs re-authorization
   ERROR = "ERROR", // Connection error occurred
   DISCONNECTED = "DISCONNECTED", // User disconnected the account
+  DELETED = "DELETED", // Hidden tombstone; transaction history is retained
 }
 
