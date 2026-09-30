@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["bank_feed_sync", "identity_workspace"]
+  schemas  = ["bank_feed_sync"]
 }
 
 model BankConnection {
@@ -26,12 +26,14 @@ model BankConnection {
   lastSyncAt      DateTime?         @map("last_sync_at")
   tokenExpiresAt  DateTime?         @map("token_expires_at")
   errorMessage    String?           @map("error_message")
+  version         Int               @default(0)
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
   transactions    BankTransaction[]
   syncSessions    SyncSession[]
 
   @@unique([workspaceId, institutionId, accountId])
+  @@unique([id, workspaceId])
   @@map("bank_connection")
   @@schema("bank_feed_sync")
 }
@@ -51,8 +53,10 @@ model SyncSession {
   createdAt             DateTime          @default(now()) @map("created_at")
   updatedAt             DateTime          @updatedAt @map("updated_at")
   transactions          BankTransaction[]
-  connection            BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection            BankConnection    @relation(fields: [connectionId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
 
+  @@unique([id, workspaceId, connectionId])
+  @@index([workspaceId, connectionId, startedAt])
   @@map("sync_session")
   @@schema("bank_feed_sync")
 }
@@ -63,7 +67,7 @@ model BankTransaction {
   connectionId    String            @map("connection_id")
   sessionId       String            @map("session_id")
   externalId      String            @map("external_id")
-  amount          Float
+  amount          Decimal           @db.Decimal(20, 6)
   currency        String
   description     String
   merchantName    String?           @map("merchant_name")
@@ -75,10 +79,13 @@ model BankTransaction {
   metadata        Json?
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
-  connection      BankConnection    @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  session         SyncSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  connection      BankConnection    @relation(fields: [connectionId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  session         SyncSession       @relation(fields: [sessionId, workspaceId, connectionId], references: [id, workspaceId, connectionId], onDelete: Restrict)
 
-  @@unique([workspaceId, externalId])
+  @@unique([connectionId, externalId])
+  @@index([workspaceId, connectionId, transactionDate])
+  @@index([workspaceId, status, transactionDate])
+  @@index([sessionId, workspaceId, connectionId])
   @@map("bank_transaction")
   @@schema("bank_feed_sync")
 }
@@ -92,8 +99,12 @@ model OutboxEvent {
   status        OutboxEventStatus
   createdAt     DateTime          @default(now()) @map("created_at")
   processedAt   DateTime?         @map("processed_at")
-  retryCount    Int               @default(0) @map("retry_count")
-  error         String?
+    retryCount    Int               @default(0) @map("retry_count")
+    error         String?
+    deliveredTo    String[]          @default([]) @map("delivered_to")
+    leaseToken     String?           @map("lease_token")
+    leaseExpiresAt DateTime?         @map("lease_expires_at")
+    nextAttemptAt  DateTime          @default(now()) @map("next_attempt_at")
 
   @@index([status, createdAt])
   @@index([aggregateId])
@@ -107,6 +118,7 @@ enum ConnectionStatus {
   EXPIRED
   ERROR
   DISCONNECTED
+  DELETED
 
   @@schema("bank_feed_sync")
 }
@@ -139,17 +151,4 @@ enum OutboxEventStatus {
   DEAD_LETTER
 
   @@schema("bank_feed_sync")
-}
-
-model WorkspaceMembership {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  workspaceId String   @map("workspace_id")
-  role        String
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@unique([userId, workspaceId])
-  @@map("workspace_membership")
-  @@schema("identity_workspace")
 }
