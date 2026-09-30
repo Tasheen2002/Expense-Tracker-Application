@@ -2,15 +2,18 @@ import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
 import { SyncSessionId } from '../../domain/value-objects/sync-session-id';
+import { ISyncCompletionWriter } from '../ports/sync-completion-writer';
 import { BankConnection, BankConnectionDTO } from '../../domain/entities/bank-connection.entity';
 import { SyncSession, SyncSessionDTO } from '../../domain/entities/sync-session.entity';
 import { BankTransaction, BankTransactionDTO } from '../../domain/entities/bank-transaction.entity';
 import { TransactionStatus } from '../../domain/enums/transaction-status.enum';
 import { SyncStatus } from '../../domain/enums/sync-status.enum';
+import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
 import { ISyncSessionRepository } from '../../domain/repositories/sync-session.repository';
 import { IBankTransactionRepository } from '../../domain/repositories/bank-transaction.repository';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import {
+  BankFeedSyncDomainError,
   BankConnectionNotFoundError,
   BankConnectionAlreadyExistsError,
   BankTransactionNotFoundError,
@@ -19,6 +22,7 @@ import {
   SyncTooFrequentError,
   MissingExpenseIdError,
   InvalidTransactionActionError,
+  InvalidBankTokenError,
 } from '../../domain/errors/bank-feed-sync.errors';
 import {
   PaginatedResult,
@@ -27,11 +31,14 @@ import {
 import {
   MIN_SYNC_INTERVAL_MINUTES,
   DEFAULT_LOOKBACK_DAYS,
+  MAX_LOOKBACK_DAYS,
+  MAX_TRANSACTIONS_PER_SYNC,
+  STALE_SYNC_MINUTES,
 } from '../../domain/constants/bank-feed-sync.constants';
 
 export interface BankAPITransaction {
   externalId: string;
-  amount: number;
+  amount: string;
   currency: string;
   description: string;
   merchantName?: string;
@@ -49,12 +56,23 @@ export interface IBankAPIClient {
   ): Promise<BankAPITransaction[]>;
 }
 
+export interface IExpenseReferenceChecker {
+  exists(input: {
+    workspaceId: string;
+    expenseId: string;
+    actorId: string;
+    authorization: string;
+  }): Promise<boolean>;
+}
+
 export class TransactionSyncService {
   constructor(
     private readonly connectionRepository: IBankConnectionRepository,
     private readonly sessionRepository: ISyncSessionRepository,
     private readonly transactionRepository: IBankTransactionRepository,
-    private readonly bankAPIClient: IBankAPIClient
+    private readonly bankAPIClient: IBankAPIClient,
+    private readonly expenseReferenceChecker: IExpenseReferenceChecker,
+    private readonly syncCompletionWriter: ISyncCompletionWriter
   ) {}
 
   async connectBank(command: {
@@ -80,10 +98,21 @@ export class TransactionSyncService {
     );
 
     if (existing) {
-      throw new BankConnectionAlreadyExistsError(
-        command.institutionId,
-        command.accountId
-      );
+      if (existing.status !== ConnectionStatus.DISCONNECTED && existing.status !== ConnectionStatus.DELETED) {
+        throw new BankConnectionAlreadyExistsError(command.institutionId, command.accountId);
+      }
+      existing.reconnect({
+        userId,
+        institutionName: command.institutionName,
+        accountName: command.accountName,
+        accountType: command.accountType,
+        currency: command.currency,
+        accessToken: command.accessToken,
+        accountMask: command.accountMask,
+        tokenExpiresAt: command.tokenExpiresAt,
+      });
+      await this.connectionRepository.save(existing);
+      return BankConnection.toDTO(existing);
     }
 
     const connection = BankConnection.create(
@@ -126,6 +155,24 @@ export class TransactionSyncService {
     if (!connection) {
       throw new BankConnectionNotFoundError(command.connectionId);
     }
+    if (!connection.isActive()) {
+      throw new BankFeedSyncDomainError('Bank connection is not active', 'BANK_CONNECTION_INACTIVE', 409);
+    }
+
+    const toDate = command.toDate || new Date();
+    const fromDate = command.fromDate ||
+      new Date(toDate.getTime() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime()) ||
+        fromDate > toDate ||
+        toDate.getTime() - fromDate.getTime() > MAX_LOOKBACK_DAYS * 24 * 60 * 60 * 1000) {
+      throw new BankFeedSyncDomainError('Invalid sync date range', 'INVALID_SYNC_DATE_RANGE', 422);
+    }
+
+    await this.sessionRepository.expireStaleByConnection(
+      workspaceId,
+      connectionId,
+      new Date(Date.now() - STALE_SYNC_MINUTES * 60 * 1000)
+    );
 
     // Check for active sync
     const activeSync = await this.sessionRepository.findActiveByConnection(
@@ -156,22 +203,16 @@ export class TransactionSyncService {
 
     // Create sync session
     const session = SyncSession.create(workspaceId, connectionId, {
-      fromDate: command.fromDate,
-      toDate: command.toDate,
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString(),
     });
 
     await this.sessionRepository.save(session);
 
-    // Start sync
-    session.start();
-    await this.sessionRepository.save(session);
-
     try {
-      // Calculate date range
-      const toDate = command.toDate || new Date();
-      const fromDate =
-        command.fromDate ||
-        new Date(Date.now() - DEFAULT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+      // Start sync
+      session.start();
+      await this.sessionRepository.save(session);
 
       // Fetch transactions from bank API
       const apiTransactions = await this.bankAPIClient.fetchTransactions(
@@ -179,24 +220,26 @@ export class TransactionSyncService {
         fromDate,
         toDate
       );
-
-      let imported = 0;
-      let duplicates = 0;
+      if (apiTransactions.length > MAX_TRANSACTIONS_PER_SYNC) {
+        throw new BankFeedSyncDomainError('Bank provider returned too many transactions', 'SYNC_RESULT_TOO_LARGE', 422);
+      }
 
       // Batch check for existing transactions to avoid N+1 queries
       const existingExternalIds =
         await this.transactionRepository.findByExternalIds(
           workspaceId,
+          connectionId,
           apiTransactions.map((t) => t.externalId)
         );
 
       // Process each transaction
       const transactions: BankTransaction[] = [];
+      const seenExternalIds = new Set(existingExternalIds);
       for (const apiTxn of apiTransactions) {
-        if (existingExternalIds.has(apiTxn.externalId)) {
-          duplicates++;
+        if (seenExternalIds.has(apiTxn.externalId)) {
           continue;
         }
+        seenExternalIds.add(apiTxn.externalId);
 
         const transaction = BankTransaction.create(
           workspaceId,
@@ -214,33 +257,35 @@ export class TransactionSyncService {
         );
 
         transactions.push(transaction);
-        imported++;
       }
 
-      // Batch save transactions
-      if (transactions.length > 0) {
-        await this.transactionRepository.saveBatch(transactions);
-      }
-
-      // Complete session
-      session.complete(apiTransactions.length, imported, duplicates);
-      await this.sessionRepository.save(session);
-
-      // Update connection last sync timestamp
-      connection.updateLastSync();
-      await this.connectionRepository.save(connection);
+      await this.syncCompletionWriter.commit({
+        connection,
+        session,
+        transactions,
+        finalize: (imported) => {
+          session.complete(apiTransactions.length, imported, apiTransactions.length - imported);
+          connection.updateLastSync();
+        },
+      });
 
       return SyncSession.toDTO(session);
     } catch (error) {
       // Mark session as failed
       const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      session.fail(errorMessage);
-      await this.sessionRepository.save(session);
+        error instanceof BankFeedSyncDomainError ? error.message : 'Sync failed due to an internal error';
+      const persistedSession = await this.sessionRepository.findById(session.id, workspaceId);
+      if (persistedSession &&
+          (persistedSession.status === SyncStatus.PENDING || persistedSession.status === SyncStatus.IN_PROGRESS)) {
+        persistedSession.fail(errorMessage, connection.userId);
+        await this.sessionRepository.save(persistedSession);
 
-      // Mark connection as error
-      connection.markAsError(errorMessage);
-      await this.connectionRepository.save(connection);
+        if (error instanceof InvalidBankTokenError) {
+          // A concurrent disconnect or deletion must not be overwritten by this sync.
+          connection.markAsError(errorMessage);
+          await this.connectionRepository.recordSyncFailure(connection);
+        }
+      }
 
       throw error;
     }
@@ -296,7 +341,7 @@ export class TransactionSyncService {
       throw new BankConnectionNotFoundError(connectionId);
     }
     connection.markAsDeleted();
-    await this.connectionRepository.delete(connId, wsId);
+    await this.connectionRepository.save(connection);
   }
 
   async updateConnectionToken(
@@ -367,8 +412,10 @@ export class TransactionSyncService {
   async processTransaction(params: {
     workspaceId: string;
     transactionId: string;
+    actorId: string;
     action: 'import' | 'match' | 'ignore';
     expenseId?: string;
+    authToken?: string;
   }): Promise<void> {
     const transaction = await this.transactionRepository.findById(
       BankTransactionId.fromString(params.transactionId),
@@ -376,6 +423,20 @@ export class TransactionSyncService {
     );
     if (!transaction) {
       throw new BankTransactionNotFoundError(params.transactionId);
+    }
+    if (params.action === 'import' || params.action === 'match') {
+      if (!params.expenseId) throw new MissingExpenseIdError(params.action);
+      if (!params.authToken) {
+        throw new BankFeedSyncDomainError('Authentication token is required', 'AUTH_TOKEN_REQUIRED', 401);
+      }
+      if (!await this.expenseReferenceChecker.exists({
+        workspaceId: params.workspaceId,
+        expenseId: params.expenseId,
+        actorId: params.actorId,
+        authorization: params.authToken,
+      })) {
+        throw new BankFeedSyncDomainError('Expense not found in workspace', 'EXPENSE_REFERENCE_NOT_FOUND', 404);
+      }
     }
     switch (params.action) {
       case 'import':
