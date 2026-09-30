@@ -8,8 +8,10 @@ import {
 export interface ProcessTransactionCommand extends ICommand {
   readonly workspaceId: string;
   readonly transactionId: string;
+  readonly actorId: string;
   readonly action: 'import' | 'match' | 'ignore';
   readonly expenseId?: string;
+  readonly authToken?: string;
 }
 
 export class ProcessTransactionHandler implements ICommandHandler<
@@ -26,8 +28,10 @@ export class ProcessTransactionHandler implements ICommandHandler<
     await this.transactionSyncService.processTransaction({
       workspaceId: command.workspaceId,
       transactionId: command.transactionId,
+      actorId: command.actorId,
       action: command.action,
       expenseId: command.expenseId,
+      authToken: command.authToken,
     });
     return CommandResult.success();
   }
