@@ -15,6 +15,7 @@ export default defineConfig({
     },
   },
   test: {
+    env: { BANK_FEED_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64') },
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
