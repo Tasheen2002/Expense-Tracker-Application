@@ -3,7 +3,8 @@ import path from 'path';
 import { defineConfig } from 'vitest/config';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env'), override: true });
+// Explicit environment values (especially isolated test database URLs) take priority.
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   resolve: {
