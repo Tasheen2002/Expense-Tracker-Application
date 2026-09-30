@@ -2,7 +2,8 @@
 # Stage 1: Builder — install deps, generate Prisma, compile TypeScript
 # ============================================================================
 FROM node:20-alpine AS builder
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -14,7 +15,7 @@ COPY packages/ ./packages/
 COPY apps/bank-feed-service/ ./apps/bank-feed-service/
 
 # Install dependencies for this service and its workspace deps
-RUN pnpm install --filter @expense-tracker/bank-feed-service...
+RUN pnpm install --frozen-lockfile --filter @expense-tracker/bank-feed-service...
 
 WORKDIR /app/apps/bank-feed-service
 RUN npx prisma generate
@@ -24,7 +25,8 @@ RUN pnpm build
 # Stage 2: Production — minimal runtime image
 # ============================================================================
 FROM node:20-alpine AS production
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -37,13 +39,15 @@ COPY apps/bank-feed-service/package.json ./apps/bank-feed-service/
 COPY apps/bank-feed-service/prisma/ ./apps/bank-feed-service/prisma/
 
 # Install production dependencies only
-RUN pnpm install --filter @expense-tracker/bank-feed-service... --prod
+RUN pnpm install --frozen-lockfile --filter @expense-tracker/bank-feed-service... --prod
 
 WORKDIR /app/apps/bank-feed-service
 
 # Copy compiled output from builder
 COPY --from=builder /app/apps/bank-feed-service/dist ./dist
-RUN npx prisma generate
+
+# Use the generated client from the build stage; Prisma CLI is a dev dependency.
+COPY --from=builder /app/apps/bank-feed-service/node_modules/.prisma /app/apps/bank-feed-service/node_modules/.prisma
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:' + (process.env.PORT || 3006) + '/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
