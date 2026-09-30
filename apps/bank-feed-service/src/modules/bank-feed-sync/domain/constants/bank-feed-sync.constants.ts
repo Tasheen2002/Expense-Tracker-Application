@@ -7,6 +7,7 @@ export const ACCESS_TOKEN_EXPIRY_DAYS = 90;
 
 // Sync intervals
 export const MIN_SYNC_INTERVAL_MINUTES = 15;
+export const STALE_SYNC_MINUTES = 30;
 export const DEFAULT_SYNC_INTERVAL_HOURS = 24;
 
 // Transaction lookback period (days)
