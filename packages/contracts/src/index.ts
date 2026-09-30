@@ -18,7 +18,7 @@ export type BaseEvent = z.infer<typeof BaseEventSchema>;
 // ============================================================================
 
 export const UserCreatedEventSchema = BaseEventSchema.extend({
-  eventType: z.literal('UserCreated'),
+  eventType: z.union([z.literal('identity.user_created'), z.literal('UserCreated')]),
   data: z.object({
     userId: z.string().uuid(),
     email: z.string().email(),
@@ -28,7 +28,7 @@ export const UserCreatedEventSchema = BaseEventSchema.extend({
 export type UserCreatedEvent = z.infer<typeof UserCreatedEventSchema>;
 
 export const WorkspaceCreatedEventSchema = BaseEventSchema.extend({
-  eventType: z.literal('WorkspaceCreated'),
+  eventType: z.union([z.literal('identity.workspace_created'), z.literal('WorkspaceCreated')]),
   data: z.object({
     ownerId: z.string().uuid(),
     name: z.string(),
@@ -37,7 +37,7 @@ export const WorkspaceCreatedEventSchema = BaseEventSchema.extend({
 export type WorkspaceCreatedEvent = z.infer<typeof WorkspaceCreatedEventSchema>;
 
 export const MemberJoinedWorkspaceEventSchema = BaseEventSchema.extend({
-  eventType: z.literal('MemberJoinedWorkspace'),
+  eventType: z.union([z.literal('identity.member_joined'), z.literal('MemberJoinedWorkspace')]),
   data: z.object({
     userId: z.string().uuid(),
     role: z.string(),
@@ -46,7 +46,7 @@ export const MemberJoinedWorkspaceEventSchema = BaseEventSchema.extend({
 export type MemberJoinedWorkspaceEvent = z.infer<typeof MemberJoinedWorkspaceEventSchema>;
 
 export const MemberRoleChangedEventSchema = BaseEventSchema.extend({
-  eventType: z.literal('MemberRoleChanged'),
+  eventType: z.union([z.literal('identity.member_role_changed'), z.literal('MemberRoleChanged')]),
   data: z.object({
     userId: z.string().uuid(),
     oldRole: z.string(),
@@ -171,3 +171,46 @@ export const ApprovalWorkflowRejectedEventSchema = BaseEventSchema.extend({
   }),
 });
 export type ApprovalWorkflowRejectedEvent = z.infer<typeof ApprovalWorkflowRejectedEventSchema>;
+
+// ============================================================================
+// Notification Events
+// ============================================================================
+
+export const NotificationCreatedEventSchema = BaseEventSchema.extend({
+  eventType: z.union([z.literal('notification.created'), z.literal('NotificationCreated')]),
+  data: z.object({
+    notificationId: z.string().uuid(),
+    userId: z.string().uuid(),
+    title: z.string(),
+    message: z.string(),
+    type: z.string(),
+  }),
+});
+export type NotificationCreatedEvent = z.infer<typeof NotificationCreatedEventSchema>;
+
+export const NotificationSentEventSchema = BaseEventSchema.extend({
+  eventType: z.union([z.literal('notification.sent'), z.literal('NotificationSent')]),
+  data: z.object({
+    notificationId: z.string().uuid(),
+    sentAt: z.coerce.date(),
+  }),
+});
+export type NotificationSentEvent = z.infer<typeof NotificationSentEventSchema>;
+
+export const NotificationFailedEventSchema = BaseEventSchema.extend({
+  eventType: z.union([z.literal('notification.failed'), z.literal('NotificationFailed')]),
+  data: z.object({
+    notificationId: z.string().uuid(),
+    reason: z.string(),
+  }),
+});
+export type NotificationFailedEvent = z.infer<typeof NotificationFailedEventSchema>;
+
+export const NotificationReadEventSchema = BaseEventSchema.extend({
+  eventType: z.union([z.literal('notification.read'), z.literal('NotificationRead')]),
+  data: z.object({
+    notificationId: z.string().uuid(),
+    readAt: z.coerce.date(),
+  }),
+});
+export type NotificationReadEvent = z.infer<typeof NotificationReadEventSchema>;
