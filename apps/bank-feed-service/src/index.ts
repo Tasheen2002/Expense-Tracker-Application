@@ -25,7 +25,6 @@ if (fs.existsSync(rootEnvPath)) {
 }
 
 import { buildBankFeedApp } from './app';
-import { container } from './container';
 import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
 
 const PORT = parseInt(process.env.PORT || '3006', 10);
@@ -34,49 +33,66 @@ const start = async () => {
   try {
     const fastify = await buildBankFeedApp();
 
-    const outboxEventRepository = container.get<any>('outboxEventRepository');
+    const outboxEventRepository = fastify.compositionRoot.outboxEventRepository;
     const AUDIT_SERVICE_URL = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
     const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3008';
 
     const webhookRoutes = {
-      BankConnected: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      BankDisconnected: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionCreated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionActivated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionDisconnected: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionExpired: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionSynced: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankConnectionError: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
       BankConnectionTokenUpdated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
       BankConnectionDeleted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      SyncSessionCreated: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
       SyncSessionStarted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
       SyncSessionCompleted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      SyncSessionPartiallyCompleted: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
       SyncSessionFailed: [
         `${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`,
         `${NOTIFICATION_SERVICE_URL}/api/v1/event-outbox/events`,
       ],
-      BankTransactionsSynced: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
-      BankTransactionProcessed: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankTransactionSynced: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankTransactionMatched: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankTransactionImported: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankTransactionIgnored: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
+      BankTransactionDuplicateDetected: [`${AUDIT_SERVICE_URL}/api/v1/event-outbox/events`],
     };
 
     const publisher = new HttpWebhookPublisher(webhookRoutes);
     const outboxWorker = new OutboxWorker(outboxEventRepository, publisher, {
       pollIntervalMs: 5000,
     });
-    outboxWorker.start();
-
     // Graceful shutdown hooks
     fastify.addHook('onClose', async () => {
-      outboxWorker.stop();
+      await outboxWorker.stop();
     });
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    outboxWorker.start();
     console.log(`[Bank-Feed-Service] Running on http://localhost:${PORT}`);
 
     const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+    let closing = false;
     for (const signal of signals) {
       process.on(signal, async () => {
+        if (closing) return;
+        closing = true;
         fastify.log.info(`[Bank-Feed-Service] Received ${signal}, closing server gracefully...`);
-        await fastify.close();
-        process.exit(0);
+        try {
+          await outboxWorker.stop();
+          await fastify.close();
+          process.exitCode = 0;
+        } catch (error) {
+          fastify.log.error(error, 'Graceful shutdown failed');
+          process.exitCode = 1;
+        }
       });
     }
-  } catch (err: any) {
-    console.error('[Bank-Feed-Service] Fatal startup error:', err.message || err);
+  } catch (err: unknown) {
+    console.error('[Bank-Feed-Service] Fatal startup error:', err instanceof Error ? err.message : err);
     process.exit(1);
   }
 };
