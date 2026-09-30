@@ -29,12 +29,12 @@ export const transactionParamsSchema = z.object({
  */
 export const paginationQuerySchema = z.object({
   limit: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
+    (val) => (typeof val === 'string' && /^\d+$/.test(val) ? Number(val) : val),
     z.number().int().min(1).max(100).default(50)
   ),
   offset: z.preprocess(
-    (val) => (typeof val === 'string' ? parseInt(val, 10) : val),
-    z.number().int().min(0).default(0)
+    (val) => (typeof val === 'string' && /^\d+$/.test(val) ? Number(val) : val),
+    z.number().int().min(0).max(2_147_483_647).default(0)
   ),
 });
 
@@ -47,47 +47,27 @@ export const connectBankBodySchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
   accountName: z.string().min(1, 'Account name is required'),
   accountType: z.string().min(1, 'Account type is required'),
-  currency: z.string().length(3, 'Currency must be a 3-letter code'),
+  currency: z.string().regex(/^[A-Z]{3}$/, 'Currency must be an uppercase 3-letter code'),
   accessToken: z.string().min(1, 'Access token is required'),
   accountMask: z.string().optional(),
-  tokenExpiresAt: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
+  tokenExpiresAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
 });
 
 export const updateConnectionTokenBodySchema = z.object({
   accessToken: z.string().min(1, 'Access token is required'),
-  tokenExpiresAt: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
+  tokenExpiresAt: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
 });
 
 /**
  * Transaction Sync schemas
  */
 export const syncTransactionsBodySchema = z.object({
-  fromDate: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
-  toDate: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
-  startDate: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
-  endDate: z.preprocess(
-    (val) => (typeof val === 'string' ? new Date(val) : val),
-    z.date().optional()
-  ),
-  forceSync: z.preprocess(
-    (val) => (typeof val === 'string' ? val === 'true' : val),
-    z.boolean().optional().default(false)
-  ),
+  fromDate: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+  toDate: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+  startDate: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+  endDate: z.string().datetime({ offset: true }).transform((value) => new Date(value)).optional(),
+  // This synchronous endpoint always enforces the cooldown.
+  forceSync: z.literal(false).optional(),
 });
 
 export const syncHistoryQuerySchema = paginationQuerySchema.extend({});
@@ -169,7 +149,7 @@ export const bankTransactionResponseSchema = z.object({
   connectionId: z.string().uuid(),
   sessionId: z.string().uuid(),
   externalId: z.string(),
-  amount: z.number(),
+  amount: z.string(),
   currency: z.string(),
   description: z.string(),
   merchantName: z.string().nullable().optional(),
@@ -204,7 +184,7 @@ export const syncSessionResponseSchema = z.object({
   transactionsDuplicate: z.number().int(),
 });
 
-export const syncAcceptedResponseSchema = z.object({
+export const syncCompletedResponseSchema = z.object({
   sessionId: z.string().uuid(),
 });
 
@@ -288,12 +268,12 @@ export const paginatedSyncSessionsEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const syncAcceptedEnvelopeJsonSchema = toJsonSchema(
+export const syncCompletedEnvelopeJsonSchema = toJsonSchema(
   z.object({
     success: z.boolean(),
     statusCode: z.number(),
     message: z.string(),
-    data: syncAcceptedResponseSchema,
+    data: syncCompletedResponseSchema,
   })
 );
 
