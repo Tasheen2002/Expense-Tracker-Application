@@ -12,7 +12,7 @@ import {
   paginationQueryJsonSchema,
   syncSessionEnvelopeJsonSchema,
   paginatedSyncSessionsEnvelopeJsonSchema,
-  syncAcceptedEnvelopeJsonSchema,
+  syncCompletedEnvelopeJsonSchema,
 } from '../validation/bank-sync.schema';
 import {
   createRateLimiter,
@@ -59,7 +59,7 @@ export async function transactionSyncRoutes(
         params: connectionParamsJsonSchema,
         body: syncTransactionsBodyJsonSchema,
         response: {
-          202: syncAcceptedEnvelopeJsonSchema,
+          200: syncCompletedEnvelopeJsonSchema,
         },
       },
     },

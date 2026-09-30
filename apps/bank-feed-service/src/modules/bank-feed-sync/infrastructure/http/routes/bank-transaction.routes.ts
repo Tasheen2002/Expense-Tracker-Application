@@ -7,6 +7,7 @@ import {
   endpointKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import { validateBody, validateQuery } from '../validation/validator';
 import {
   pendingTransactionsQuerySchema,
@@ -88,7 +89,7 @@ export async function bankTransactionRoutes(
     '/workspaces/:workspaceId/bank-feed-sync/transactions/:transactionId/process',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [validateBody(processTransactionBodySchema), workspaceAuth],
+      preHandler: [validateBody(processTransactionBodySchema), workspaceAuth, RolePermissions.MEMBER_LEVEL],
       schema: {
         tags: ['Bank Transaction'],
         description: 'Process a bank transaction (import, match, or ignore)',
