@@ -6,7 +6,7 @@ import { QueryResult } from '@core/application/query-result';
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -108,16 +108,17 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: unknown,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
-      const statusCode = result.statusCode ?? 400;
+      const statusCode = ResponseHelper.failureStatus(result.statusCode, 400);
+      if (statusCode >= 500) reply.log.error({ error: result.error }, 'Command failed');
       return reply.status(statusCode).send({
         success: false,
         statusCode,
         error: ResponseHelper.getErrorName(statusCode),
-        message: result.error ?? 'Operation failed',
+        message: ResponseHelper.failureMessage(statusCode, result.error ?? 'Operation failed'),
       });
     }
     return ResponseHelper.success(
@@ -140,15 +141,16 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: unknown
   ): FastifyReply {
     if (!result.success) {
-      const statusCode = result.statusCode ?? 404;
+      const statusCode = ResponseHelper.failureStatus(result.statusCode, 404);
+      if (statusCode >= 500) reply.log.error({ error: result.error }, 'Query failed');
       return reply.status(statusCode).send({
         success: false,
         statusCode,
         error: ResponseHelper.getErrorName(statusCode),
-        message: result.error ?? 'Resource not found',
+        message: ResponseHelper.failureMessage(statusCode, result.error ?? 'Resource not found'),
       });
     }
     const finalData = data !== undefined ? data : (result.data ?? undefined);
@@ -176,14 +178,20 @@ export class ResponseHelper {
     }
 
     // Extract statusCode from domain errors
-    const statusCode =
+    const candidateStatus =
       error && typeof error === 'object' && 'statusCode' in error
-        ? (error as { statusCode: number }).statusCode
+        ? (error as { statusCode: unknown }).statusCode
         : 500;
+    const statusCode = typeof candidateStatus === 'number' && Number.isInteger(candidateStatus)
+      && candidateStatus >= 400 && candidateStatus <= 599 ? candidateStatus : 500;
+
+    if (statusCode >= 500) reply.log.error({ err: error }, 'Request failed');
 
     // Extract error message
     const message =
-      error instanceof Error ? error.message : 'Internal server error';
+      statusCode >= 500 && process.env.NODE_ENV !== 'development'
+        ? 'An unexpected error occurred'
+        : error instanceof Error ? error.message : 'Internal server error';
 
     // Extract error code/name for response
     const errorCode =
@@ -197,9 +205,19 @@ export class ResponseHelper {
       success: false,
       statusCode,
       error: errorName,
-      code: errorCode,
+      code: statusCode < 500 || process.env.NODE_ENV === 'development' ? errorCode : undefined,
       message,
     });
+  }
+
+  private static failureStatus(statusCode: number | undefined, fallback: number): number {
+    if (statusCode === undefined) return fallback;
+    return Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599 ? statusCode : 500;
+  }
+
+  private static failureMessage(statusCode: number, message: string): string {
+    return statusCode >= 500 && process.env.NODE_ENV !== 'development'
+      ? 'An unexpected error occurred' : message;
   }
 
   /**
