@@ -3,6 +3,8 @@ import { NotificationChannel } from '../enums/notification-channel.enum';
 import { TemplateId } from '../value-objects/template-id';
 import { WorkspaceId } from '../value-objects';
 import { AggregateRoot } from '@core/domain/aggregate-root';
+import { TEMPLATE_NAME_MAX_LENGTH, TEMPLATE_SUBJECT_MAX_LENGTH, TEMPLATE_BODY_MAX_LENGTH } from '../constants';
+import { validateText, validateEnum, copyDate } from './entity-validation';
 
 export interface NotificationTemplateProps {
   id: TemplateId;
@@ -20,6 +22,7 @@ export interface NotificationTemplateProps {
 export class NotificationTemplate extends AggregateRoot {
   private constructor(private props: NotificationTemplateProps) {
     super();
+    this.props = { ...props, createdAt: copyDate(props.createdAt), updatedAt: copyDate(props.updatedAt) };
   }
 
   static create(params: {
@@ -30,6 +33,11 @@ export class NotificationTemplate extends AggregateRoot {
     subjectTemplate: string;
     bodyTemplate: string;
   }): NotificationTemplate {
+    validateText('name', params.name, TEMPLATE_NAME_MAX_LENGTH);
+    validateText('subjectTemplate', params.subjectTemplate, TEMPLATE_SUBJECT_MAX_LENGTH);
+    validateText('bodyTemplate', params.bodyTemplate, TEMPLATE_BODY_MAX_LENGTH);
+    validateEnum('type', params.type, Object.values(NotificationType));
+    validateEnum('channel', params.channel, Object.values(NotificationChannel));
     return new NotificationTemplate({
       id: TemplateId.create(),
       workspaceId: params.workspaceId,
@@ -56,21 +64,26 @@ export class NotificationTemplate extends AggregateRoot {
   get subjectTemplate(): string { return this.props.subjectTemplate; }
   get bodyTemplate(): string { return this.props.bodyTemplate; }
   get isActive(): boolean { return this.props.isActive; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return copyDate(this.props.createdAt); }
+  get updatedAt(): Date { return copyDate(this.props.updatedAt); }
 
   updateTemplates(subject: string, body: string): void {
+    validateText('subjectTemplate', subject, TEMPLATE_SUBJECT_MAX_LENGTH);
+    validateText('bodyTemplate', body, TEMPLATE_BODY_MAX_LENGTH);
+    if (subject === this.props.subjectTemplate && body === this.props.bodyTemplate) return;
     this.props.subjectTemplate = subject;
     this.props.bodyTemplate = body;
     this.props.updatedAt = new Date();
   }
 
   activate(): void {
+    if (this.props.isActive) return;
     this.props.isActive = true;
     this.props.updatedAt = new Date();
   }
 
   deactivate(): void {
+    if (!this.props.isActive) return;
     this.props.isActive = false;
     this.props.updatedAt = new Date();
   }
