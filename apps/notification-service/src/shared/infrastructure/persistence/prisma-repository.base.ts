@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../../../prisma-client';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { IEventBus } from '@core/domain/events/domain-event';
 
