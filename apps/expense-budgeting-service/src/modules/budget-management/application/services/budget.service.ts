@@ -11,11 +11,14 @@ import { BudgetId } from '../../domain/value-objects/budget-id';
 import { AllocationId } from '../../domain/value-objects/allocation-id';
 import { AlertId } from '../../domain/value-objects/alert-id';
 import { BudgetPeriodType } from '../../domain/enums/budget-period-type';
-import { Decimal } from '@prisma/client/runtime/library';
+import { BudgetStatus } from '../../domain/enums/budget-status';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
+import { IBudgetSpendingReader } from '../ports/budget-spending-reader.port';
+import { IWorkspaceAccountingLock } from '../ports/workspace-accounting-lock.port';
 
 import {
   BudgetNotFoundError,
@@ -25,14 +28,34 @@ import {
   UnauthorizedBudgetAccessError,
 } from '../../domain/errors/budget.errors';
 
-import { BudgetAllocationExceededError } from '../../domain/errors/budget.errors';
-
 export class BudgetService {
   constructor(
     private readonly budgetRepository: IBudgetRepository,
     private readonly allocationRepository: IBudgetAllocationRepository,
-    private readonly alertRepository: IBudgetAlertRepository
+    private readonly alertRepository: IBudgetAlertRepository,
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly spendingReader?: IBudgetSpendingReader,
+    private readonly accountingLock?: IWorkspaceAccountingLock
   ) {}
+
+  // Call only inside unitOfWork.execute so the row lock covers the write.
+  private async getOwnedBudgetForWrite(
+    budgetId: string,
+    workspaceId: string,
+    userId: string,
+    operation: string
+  ): Promise<Budget> {
+    const budget = await this.budgetRepository.findByIdInternalWithLock(
+      BudgetId.fromString(budgetId)
+    );
+    if (!budget || budget.workspaceId !== workspaceId) {
+      throw new BudgetNotFoundError(budgetId, workspaceId);
+    }
+    if (budget.createdBy !== userId) {
+      throw new UnauthorizedBudgetAccessError(operation);
+    }
+    return budget;
+  }
 
   async createBudget(params: {
     workspaceId: string;
@@ -47,15 +70,6 @@ export class BudgetService {
     isRecurring?: boolean;
     rolloverUnused?: boolean;
   }): Promise<BudgetDTO> {
-    // Check for duplicate budget name in workspace
-    const nameExists = await this.budgetRepository.existsByName(
-      params.name,
-      params.workspaceId
-    );
-    if (nameExists) {
-      throw new BudgetAlreadyExistsError(params.name, params.workspaceId);
-    }
-
     const budget = Budget.create({
       workspaceId: params.workspaceId,
       name: params.name,
@@ -70,7 +84,11 @@ export class BudgetService {
       rolloverUnused: params.rolloverUnused,
     });
 
-    await this.budgetRepository.save(budget);
+    if (await this.budgetRepository.existsByName(budget.name, budget.workspaceId)) {
+      throw new BudgetAlreadyExistsError(budget.name, budget.workspaceId);
+    }
+
+    await this.budgetRepository.create(budget);
 
     return Budget.toDTO(budget);
   }
@@ -85,45 +103,27 @@ export class BudgetService {
       totalAmount?: number | string;
     }
   ): Promise<BudgetDTO> {
-    const budget = await this.budgetRepository.findById(
-      BudgetId.fromString(budgetId),
-      workspaceId
-    );
-
-    if (!budget) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
-    if (budget.createdBy !== userId) {
-      throw new UnauthorizedBudgetAccessError('update');
-    }
-
-    if (updates.name) {
-      budget.updateName(updates.name);
-    }
-
-    if (updates.description !== undefined) {
-      budget.updateDescription(updates.description);
-    }
-
-    if (updates.totalAmount !== undefined) {
-      const newTotal = new Decimal(updates.totalAmount);
-      const currentAllocated =
-        await this.allocationRepository.getTotalAllocatedAmount(budget.id);
-
-      if (newTotal.lt(currentAllocated)) {
-        throw new BudgetAllocationExceededError(
-          budget.id.getValue(),
-          newTotal.toNumber(),
-          currentAllocated.toNumber()
-        );
+    return this.unitOfWork.execute(async () => {
+      const budget = await this.getOwnedBudgetForWrite(budgetId, workspaceId, userId, 'update');
+      if (updates.name !== undefined) {
+        const previousName = budget.name;
+        budget.updateName(updates.name);
+        if (
+          budget.name !== previousName &&
+          await this.budgetRepository.existsByName(budget.name, workspaceId)
+        ) {
+          throw new BudgetAlreadyExistsError(budget.name, workspaceId);
+        }
       }
-      budget.updateTotalAmount(updates.totalAmount);
-    }
-
-    await this.budgetRepository.save(budget);
-
-    return Budget.toDTO(budget);
+      if (updates.description !== undefined) budget.updateDescription(updates.description);
+      if (updates.totalAmount !== undefined) {
+        budget.updateTotalAmount(updates.totalAmount);
+        await this.budgetRepository.saveWithAllocationValidation(budget);
+      } else {
+        await this.budgetRepository.save(budget);
+      }
+      return Budget.toDTO(budget);
+    });
   }
 
   async activateBudget(
@@ -131,24 +131,17 @@ export class BudgetService {
     workspaceId: string,
     userId: string
   ): Promise<BudgetDTO> {
-    const budget = await this.budgetRepository.findById(
-      BudgetId.fromString(budgetId),
-      workspaceId
-    );
-
-    if (!budget) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
-    if (budget.createdBy !== userId) {
-      throw new UnauthorizedBudgetAccessError('activate');
-    }
-
-    budget.activate();
-
-    await this.budgetRepository.save(budget);
-
-    return Budget.toDTO(budget);
+    return this.unitOfWork.execute(async () => {
+      await this.accountingLock?.acquire(workspaceId);
+      const budget = await this.getOwnedBudgetForWrite(budgetId, workspaceId, userId, 'activate');
+      budget.activate();
+      await this.budgetRepository.save(budget);
+      if (this.spendingReader) {
+        await this.synchronizeBudgetAllocations(budget);
+      }
+      const current = await this.budgetRepository.findById(budget.id, workspaceId);
+      return Budget.toDTO(current ?? budget);
+    });
   }
 
   async archiveBudget(
@@ -156,24 +149,12 @@ export class BudgetService {
     workspaceId: string,
     userId: string
   ): Promise<BudgetDTO> {
-    const budget = await this.budgetRepository.findById(
-      BudgetId.fromString(budgetId),
-      workspaceId
-    );
-
-    if (!budget) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
-    if (budget.createdBy !== userId) {
-      throw new UnauthorizedBudgetAccessError('archive');
-    }
-
-    budget.archive();
-
-    await this.budgetRepository.save(budget);
-
-    return Budget.toDTO(budget);
+    return this.unitOfWork.execute(async () => {
+      const budget = await this.getOwnedBudgetForWrite(budgetId, workspaceId, userId, 'archive');
+      budget.archive();
+      await this.budgetRepository.save(budget);
+      return Budget.toDTO(budget);
+    });
   }
 
   async deleteBudget(
@@ -182,25 +163,14 @@ export class BudgetService {
     userId: string
   ): Promise<void> {
     const budgetIdObj = BudgetId.fromString(budgetId);
-
-    const budget = await this.budgetRepository.findById(
-      budgetIdObj,
-      workspaceId
-    );
-    if (!budget) {
-      throw new BudgetNotFoundError(budgetId, workspaceId);
-    }
-
-    if (budget.createdBy !== userId) {
-      throw new UnauthorizedBudgetAccessError('delete');
-    }
-
-    // Emit the deleted domain event before removing the record
-    budget.markAsDeleted();
-    await this.budgetRepository.save(budget);
-
-    // Delete budget (cascade will handle allocations and alerts)
-    await this.budgetRepository.delete(budgetIdObj, workspaceId);
+    await this.unitOfWork.execute(async () => {
+      const budget = await this.getOwnedBudgetForWrite(budgetId, workspaceId, userId, 'delete');
+      // Emit the deleted domain event before removing the record
+      budget.markAsDeleted();
+      await this.budgetRepository.save(budget);
+      // Delete budget (cascade will handle allocations and alerts)
+      await this.budgetRepository.delete(budgetIdObj, workspaceId);
+    });
   }
 
   async getBudgetById(
@@ -268,13 +238,17 @@ export class BudgetService {
       description: params.description,
     });
 
-    // Use transactional validation to prevent TOCTOU race conditions
-    await this.allocationRepository.saveWithBudgetValidation(
-      allocation,
-      budget.totalAmount
-    );
-
-    return BudgetAllocation.toDTO(allocation);
+    return this.unitOfWork.execute(async () => {
+      await this.accountingLock?.acquire(params.workspaceId);
+      await this.allocationRepository.saveWithBudgetValidation(allocation);
+      if (this.spendingReader && budget.status === BudgetStatus.ACTIVE) {
+        return this.updateAllocationSpent(
+          allocation.id.getValue(),
+          await this.spendingReader.total(budget, allocation.categoryId)
+        );
+      }
+      return BudgetAllocation.toDTO(allocation);
+    });
   }
 
   async updateAllocation(
@@ -284,17 +258,23 @@ export class BudgetService {
     updates: {
       allocatedAmount?: number | string;
       description?: string | null;
-    }
+    },
+    budgetId?: string
   ): Promise<BudgetAllocationDTO> {
-    const allocation = await this.allocationRepository.findById(
-      AllocationId.fromString(allocationId)
+    const allocation = await this.allocationRepository.findByIdInWorkspace(
+      AllocationId.fromString(allocationId), workspaceId
     );
 
     if (!allocation) {
       throw new AllocationNotFoundError(allocationId);
     }
 
-    // Verify ownership via parent budget
+    // If budgetId was specified in the route, verify allocation belongs to it
+    if (budgetId && allocation.budgetId.getValue() !== budgetId) {
+      throw new AllocationNotFoundError(allocationId);
+    }
+
+    // Verify ownership via parent budget in the specified workspace
     const budget = await this.budgetRepository.findById(
       allocation.budgetId,
       workspaceId
@@ -324,7 +304,6 @@ export class BudgetService {
       // Exclude this allocation's old amount from the total check
       await this.allocationRepository.saveWithBudgetValidation(
         allocation,
-        budget.totalAmount,
         allocationId
       );
     } else {
@@ -338,81 +317,98 @@ export class BudgetService {
     allocationId: string,
     spentAmount: number | string
   ): Promise<BudgetAllocationDTO> {
-    const allocation = await this.allocationRepository.findById(
-      AllocationId.fromString(allocationId)
-    );
+    const id = AllocationId.fromString(allocationId);
+    const allocation = await this.allocationRepository.findById(id);
 
     if (!allocation) {
       throw new AllocationNotFoundError(allocationId);
     }
 
-    allocation.updateSpentAmount(spentAmount);
+    const executeAtomicUpdate = async () => {
+      // Pessimistically lock and retrieve parent budget row first to serialize concurrent
+      // spending updates across allocations under the same budget.
+      const budget = await this.budgetRepository.findByIdInternalWithLock(
+        allocation.budgetId
+      );
 
-    // Alert creation is a domain decision: the entity knows its own thresholds
-    const alerts = allocation.collectTriggeredAlerts();
-
-    await this.allocationRepository.saveWithAlerts(allocation, alerts);
-
-    // Load the parent budget to emit child-entity events on the aggregate root
-    const budget = await this.budgetRepository.findByIdInternal(
-      allocation.budgetId
-    );
-
-    if (budget) {
-      // Emit alert_generated events on the Budget aggregate for each alert raised
-      for (const alert of alerts) {
-        budget.recordAlertGenerated(alert.id.getValue(), alert.level);
+      // Reload after acquiring the lock so threshold crossings are evaluated against
+      // the last committed spending value, including concurrent updates.
+      const currentAllocation = await this.allocationRepository.findById(id);
+      if (!currentAllocation || !currentAllocation.budgetId.equals(allocation.budgetId)) {
+        throw new AllocationNotFoundError(allocationId);
       }
+      currentAllocation.updateSpentAmount(spentAmount);
+      const alerts = currentAllocation.collectTriggeredAlerts();
 
-      // If spending has reached or exceeded the allocated amount, mark the parent
-      // budget as EXCEEDED so its status accurately reflects its state.
-      if (allocation.isOverBudget() && budget.isActive()) {
-        try {
-          budget.markAsExceeded(allocation.spentAmount.toNumber());
-        } catch {
-          // Status transition may already be EXCEEDED; ignore duplicate transitions
+      await this.allocationRepository.saveWithAlerts(currentAllocation, alerts);
+
+      if (budget) {
+        // Emit alert_generated events on the Budget aggregate for each alert raised
+        for (const alert of alerts) {
+          budget.recordAlertGenerated(alert.id.getValue(), alert.level);
+        }
+
+        // Check whether the total spending across all allocations has exceeded
+        // the parent budget's total limit before marking the entire budget as EXCEEDED.
+        const totalSpent = await this.allocationRepository.getTotalSpentAmount(
+          currentAllocation.budgetId
+        );
+        if (totalSpent.greaterThan(budget.totalAmount) && budget.isActive()) {
+          budget.markAsExceeded(totalSpent.toNumber());
+        }
+
+        if (budget.domainEvents.length > 0 || budget.isExceeded()) {
+          await this.budgetRepository.save(budget);
         }
       }
+      return currentAllocation;
+    };
 
-      if (budget.domainEvents.length > 0) {
-        await this.budgetRepository.save(budget);
-      }
-    }
+    const updatedAllocation = await this.unitOfWork.execute(executeAtomicUpdate);
 
-    return BudgetAllocation.toDTO(allocation);
+    return BudgetAllocation.toDTO(updatedAllocation);
   }
 
   async deleteAllocation(
     allocationId: string,
     workspaceId: string,
-    userId: string
+    userId: string,
+    budgetId?: string
   ): Promise<void> {
-    const allocation = await this.allocationRepository.findById(
-      AllocationId.fromString(allocationId)
+    const allocation = await this.allocationRepository.findByIdInWorkspace(
+      AllocationId.fromString(allocationId), workspaceId
     );
 
     if (!allocation) {
       throw new AllocationNotFoundError(allocationId);
     }
 
-    // Check Auth
-    const budget = await this.budgetRepository.findById(
-      allocation.budgetId,
-      workspaceId
-    );
-    if (budget && budget.createdBy !== userId) {
-      throw new UnauthorizedBudgetAccessError('delete allocation in');
+    // If budgetId was specified in the route, verify allocation belongs to it
+    if (budgetId && allocation.budgetId.getValue() !== budgetId) {
+      throw new AllocationNotFoundError(allocationId);
     }
 
-    // Emit allocation_deleted on the parent Budget aggregate
-    if (budget) {
+    const executeDelete = async () => {
+      const budget = await this.getOwnedBudgetForWrite(
+        allocation.budgetId.getValue(), workspaceId, userId, 'delete allocation in'
+      );
+      const currentAllocation = await this.allocationRepository.findByIdInWorkspace(
+        AllocationId.fromString(allocationId), workspaceId
+      );
+      if (!currentAllocation || !currentAllocation.budgetId.equals(allocation.budgetId)) {
+        throw new AllocationNotFoundError(allocationId);
+      }
+      // Emit allocation_deleted on the parent Budget aggregate
       budget.recordAllocationDeleted(allocationId);
       await this.budgetRepository.save(budget);
-    }
 
-    await this.allocationRepository.delete(
-      AllocationId.fromString(allocationId)
-    );
+      await this.allocationRepository.delete(
+        AllocationId.fromString(allocationId),
+        workspaceId
+      );
+    };
+
+    await this.unitOfWork.execute(executeDelete);
   }
 
   async getAllocationsByBudget(
@@ -430,6 +426,7 @@ export class BudgetService {
     }
     const result = await this.allocationRepository.findByBudget(
       BudgetId.fromString(budgetId),
+      workspaceId,
       options
     );
     return { ...result, items: result.items.map((alloc) => BudgetAllocation.toDTO(alloc)) };
@@ -444,9 +441,10 @@ export class BudgetService {
     return { ...result, items: result.items.map((alert) => BudgetAlert.toDTO(alert)) };
   }
 
-  async markAlertAsRead(alertId: string): Promise<BudgetAlertDTO> {
+  async markAlertAsRead(alertId: string, workspaceId: string): Promise<BudgetAlertDTO> {
     const alert = await this.alertRepository.findById(
-      AlertId.fromString(alertId)
+      AlertId.fromString(alertId),
+      workspaceId
     );
 
     if (!alert) {
@@ -455,20 +453,142 @@ export class BudgetService {
 
     alert.markAsRead();
 
-    await this.alertRepository.save(alert);
+    await this.alertRepository.save(alert, workspaceId);
 
     return BudgetAlert.toDTO(alert);
   }
 
   // Budget period management
   async processExpiredBudgets(workspaceId: string): Promise<number> {
-    const result = await this.budgetRepository.findExpiredBudgets(workspaceId);
+    let totalProcessed = 0;
+    const batchSize = 50;
 
-    for (const budget of result.items) {
-      budget.archive();
-      await this.budgetRepository.save(budget);
+    while (totalProcessed < 500) {
+      const result = await this.budgetRepository.findExpiredBudgets(workspaceId, {
+        limit: batchSize,
+        offset: 0,
+      });
+
+      if (!result.items || result.items.length === 0) {
+        break;
+      }
+
+      for (const budget of result.items) {
+        const archived = await this.unitOfWork.execute(async () => {
+          await this.accountingLock?.acquire(workspaceId);
+          const current = await this.budgetRepository.findByIdInternalWithLock(budget.id);
+          if (!current || current.workspaceId !== workspaceId ||
+              ![BudgetStatus.ACTIVE, BudgetStatus.EXCEEDED].includes(current.status) || !current.hasExpired()) {
+            return false;
+          }
+          if (current.isRecurring()) {
+            await this.createNextPeriod(current);
+          }
+          current.archive();
+          await this.budgetRepository.save(current);
+          return true;
+        });
+        if (archived) totalProcessed += 1;
+      }
+
+      if (result.items.length < batchSize) {
+        break;
+      }
     }
 
-    return result.items.length;
+    return totalProcessed;
+  }
+
+  /** Corrects previously persisted totals from the approved-expense source of truth. */
+  async reconcileActiveSpending(workspaceId: string): Promise<number> {
+    if (!this.spendingReader || !this.accountingLock) return 0;
+    let offset = 0;
+    let reconciled = 0;
+    while (true) {
+      const page = await this.budgetRepository.findByWorkspace(workspaceId, {
+        limit: 100, offset,
+      });
+      for (const budget of page.items) {
+        if (![BudgetStatus.ACTIVE, BudgetStatus.EXCEEDED].includes(budget.status)) continue;
+        await this.unitOfWork.execute(async () => {
+          await this.accountingLock!.acquire(workspaceId);
+          const current = await this.budgetRepository.findByIdInternalWithLock(budget.id);
+          if (!current || current.workspaceId !== workspaceId ||
+              ![BudgetStatus.ACTIVE, BudgetStatus.EXCEEDED].includes(current.status)) return;
+          await this.synchronizeBudgetAllocations(current);
+          reconciled += 1;
+        });
+      }
+      offset += page.items.length;
+      if (page.items.length < 100) break;
+    }
+    return reconciled;
+  }
+
+  private async createNextPeriod(current: Budget): Promise<void> {
+    const nextStart = current.period.endDate;
+    nextStart.setUTCDate(nextStart.getUTCDate() + 1);
+    const suffix = ` (${nextStart.toISOString().slice(0, 10)})`;
+    const base = current.name.replace(/ \(\d{4}-\d{2}-\d{2}\)$/, '');
+    const nextName = `${base.slice(0, 255 - suffix.length)}${suffix}`;
+    const spent = await this.allocationRepository.getTotalSpentAmount(current.id);
+    const unused = current.totalAmount.minus(spent);
+    const total = current.totalAmount.plus(
+      current.shouldRolloverUnused() && unused.isPositive() ? unused : 0
+    );
+    const next = Budget.create({
+      workspaceId: current.workspaceId,
+      name: nextName,
+      description: current.description ?? undefined,
+      totalAmount: total,
+      currency: current.currency,
+      periodType: current.period.periodType,
+      startDate: nextStart,
+      endDate: current.period.periodType === BudgetPeriodType.CUSTOM
+        ? new Date(nextStart.getTime() + (current.period.getDurationInDays() - 1) * 86_400_000)
+        : undefined,
+      createdBy: current.createdBy,
+      isRecurring: true,
+      rolloverUnused: current.shouldRolloverUnused(),
+    });
+    next.activate();
+    await this.budgetRepository.create(next);
+
+    let offset = 0;
+    while (true) {
+      const page = await this.allocationRepository.findByBudget(
+        current.id, current.workspaceId, { limit: 100, offset }
+      );
+      for (const previous of page.items) {
+        const allocation = BudgetAllocation.create({
+          budgetId: next.id.getValue(),
+          categoryId: previous.categoryId ?? undefined,
+          allocatedAmount: previous.allocatedAmount,
+          description: previous.description ?? undefined,
+        });
+        await this.allocationRepository.saveWithBudgetValidation(allocation);
+      }
+      offset += page.items.length;
+      if (page.items.length < 100) break;
+    }
+    await this.synchronizeBudgetAllocations(next);
+  }
+
+  private async synchronizeBudgetAllocations(budget: Budget): Promise<void> {
+    if (!this.spendingReader) return;
+    let offset = 0;
+    while (true) {
+      const page = await this.allocationRepository.findByBudget(
+        budget.id, budget.workspaceId, { limit: 100, offset }
+      );
+      for (const allocation of page.items) {
+        await this.updateAllocationSpent(
+          allocation.id.getValue(),
+          await this.spendingReader.total(budget, allocation.categoryId)
+        );
+      }
+      offset += page.items.length;
+      if (page.items.length < 100) break;
+    }
   }
 }

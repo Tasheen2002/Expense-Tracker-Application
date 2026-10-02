@@ -12,6 +12,9 @@ import {
   CurrentStepNotFoundError,
   UnauthorizedWorkflowCancellationError,
   WorkflowStepMismatchError,
+  ExpenseSnapshotMismatchError,
+  UnauthorizedWorkflowInitiationError,
+  ExpenseNotSubmittedError,
 } from '../../domain/errors/approval-workflow.errors';
 import { IWorkspaceAuthorizationService } from '../../../../shared/ports/workspace-authorization.port';
 import { IExpenseSnapshotService } from '../../../../shared/ports/expense-snapshot.port';
@@ -104,27 +107,19 @@ export class WorkflowService {
     });
 
     if (snapshot.expenseId !== params.expenseId) {
-      throw new Error(
-        `Expense ID mismatch: requested ${params.expenseId}, retrieved ${snapshot.expenseId}`
-      );
+      throw new ExpenseSnapshotMismatchError(params.expenseId);
     }
 
     if (snapshot.workspaceId !== params.workspaceId) {
-      throw new Error(
-        `Expense ${params.expenseId} belongs to workspace ${snapshot.workspaceId}, not ${params.workspaceId}`
-      );
+      throw new UnauthorizedWorkflowInitiationError(params.expenseId);
     }
 
     if (snapshot.userId !== params.userId) {
-      throw new Error(
-        `Caller ${params.userId} is not authorized to initiate workflow for expense ${params.expenseId} owned by user ${snapshot.userId}`
-      );
+      throw new UnauthorizedWorkflowInitiationError(params.expenseId);
     }
 
     if (!snapshot.status || snapshot.status.toUpperCase() !== 'SUBMITTED') {
-      throw new Error(
-        `Cannot initiate approval workflow for expense ${params.expenseId} in state '${snapshot.status}'. Only SUBMITTED expenses are eligible for approval.`
-      );
+      throw new ExpenseNotSubmittedError(params.expenseId, snapshot.status);
     }
 
     const authoritativeAmount = snapshot.amount;

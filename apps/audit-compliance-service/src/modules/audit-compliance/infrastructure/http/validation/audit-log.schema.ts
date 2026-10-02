@@ -18,31 +18,36 @@ export const auditLogParamsSchema = workspaceParamsSchema.extend({
  */
 export const listAuditLogsQuerySchema = z.object({
   userId: z.string().uuid().optional(),
-  action: z.string().optional(),
-  entityType: z.string().optional(),
-  entityId: z.string().optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  action: z.string().trim().min(1).max(100).optional(),
+  entityType: z.string().trim().min(1).max(100).optional(),
+  entityId: z.string().uuid().optional(),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(2147483647).default(0),
+}).refine((value) => !value.startDate || !value.endDate ||
+  new Date(value.startDate) <= new Date(value.endDate), {
+  message: 'startDate must be before or equal to endDate', path: ['endDate'],
 });
 
 export const entityHistoryQuerySchema = z.object({
-  entityType: z.string().min(1, 'entityType is required'),
-  entityId: z.string().min(1, 'entityId is required'),
-  limit: z.coerce.number().min(1).max(100).default(50),
-  offset: z.coerce.number().min(0).default(0),
+  entityType: z.string().trim().min(1, 'entityType is required').max(100),
+  entityId: z.string().uuid('entityId must be a UUID'),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(2147483647).default(0),
 });
 
 export const auditSummaryQuerySchema = z.object({
-  startDate: z.string().datetime('startDate must be a valid ISO date'),
-  endDate: z.string().datetime('endDate must be a valid ISO date'),
+  startDate: z.string().datetime({ offset: true }),
+  endDate: z.string().datetime({ offset: true }),
+}).refine((value) => new Date(value.startDate) <= new Date(value.endDate), {
+  message: 'startDate must be before or equal to endDate', path: ['endDate'],
 });
 
 export const createAuditLogSchema = z.object({
-  action: z.string().min(1, 'action is required'),
-  entityType: z.string().min(1, 'entityType is required'),
-  entityId: z.string().min(1, 'entityId is required'),
+  action: z.string().trim().min(1, 'action is required').max(100),
+  entityType: z.string().trim().min(1, 'entityType is required').max(100),
+  entityId: z.string().uuid('entityId must be a UUID'),
   details: z.record(z.unknown()).nullable().optional(),
   metadata: z.record(z.unknown()).nullable().optional(),
 });
@@ -50,7 +55,9 @@ export const createAuditLogSchema = z.object({
 export const purgeAuditLogsQuerySchema = z.object({
   olderThanDays: z.coerce
     .number()
-    .min(30, 'Minimum retention period is 30 days'),
+    .int()
+    .min(30, 'Minimum retention period is 30 days')
+    .max(36500),
 });
 
 export const auditLogResponseSchema = z.object({

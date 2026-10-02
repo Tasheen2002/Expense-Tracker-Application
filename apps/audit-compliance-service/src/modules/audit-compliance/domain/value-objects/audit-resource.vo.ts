@@ -6,6 +6,7 @@ export interface ResourceProps {
 }
 
 export class AuditResource {
+  private static readonly UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   private readonly props: ResourceProps;
 
   private constructor(props: ResourceProps) {
@@ -13,11 +14,11 @@ export class AuditResource {
   }
 
   static create(entityType: string, entityId: string): AuditResource {
-    if (!entityType || entityType.trim().length === 0) {
-      throw new InvalidAuditResourceError("Entity type is required");
+    if (!entityType || entityType.trim().length === 0 || entityType.trim().length > 100) {
+      throw new InvalidAuditResourceError('Entity type must contain 1 to 100 characters');
     }
-    if (!entityId || entityId.trim().length === 0) {
-      throw new InvalidAuditResourceError("Entity ID is required");
+    if (!entityId || !AuditResource.UUID_PATTERN.test(entityId)) {
+      throw new InvalidAuditResourceError('Entity ID must be a UUID');
     }
 
     return new AuditResource({

@@ -5,7 +5,6 @@ import {
 } from '@core/application/cqrs';
 import { CategoryService } from '../services/category.service';
 import { IExpenseRepository } from '../../domain/repositories/expense.repository';
-import { CategoryId } from '../../domain/value-objects/category-id';
 
 export interface DeleteCategoryCommand extends ICommand {
   readonly categoryId: string;
@@ -18,23 +17,11 @@ export class DeleteCategoryHandler implements ICommandHandler<
 > {
   constructor(
     private readonly categoryService: CategoryService,
-    private readonly expenseRepository: IExpenseRepository
+    _expenseRepository?: IExpenseRepository
   ) {}
 
   async handle(command: DeleteCategoryCommand): Promise<CommandResult<void>> {
-    const categoryId = CategoryId.fromString(command.categoryId);
-
-    // Nullify categoryId on all expenses that reference this category
-    const expensesResult = await this.expenseRepository.findByCategory(
-      categoryId,
-      command.workspaceId,
-      { limit: 1000, offset: 0 }
-    );
-    for (const expense of expensesResult.items) {
-      expense.updateCategory(undefined);
-      await this.expenseRepository.update(expense);
-    }
-
+    // Database foreign key constraint uses ON DELETE SET NULL for expenses referencing this category
     await this.categoryService.deleteCategory(
       command.categoryId,
       command.workspaceId

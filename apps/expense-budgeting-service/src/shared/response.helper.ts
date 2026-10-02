@@ -1,5 +1,6 @@
 import { FastifyReply } from 'fastify';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { CommandResult } from '@core/application/command-result';
 import { QueryResult } from '@core/application/query-result';
 
@@ -165,39 +166,115 @@ export class ResponseHelper {
    * @param error - Error object (preferably a domain error with statusCode)
    */
   static error(reply: FastifyReply, error: unknown): FastifyReply {
+    // If reply is part of a Fastify application lifecycle (has .server), delegate
+    // to Fastify's registered global error handler (plugins/error.ts) so that request
+    // logging, Prisma constraint mapping (e.g. P2002 -> 409 Conflict), and production
+    // 500 message sanitization are applied centrally.
+    if ((reply as any)?.server && typeof (reply as any)?.send === 'function') {
+      const err =
+        error instanceof Error
+          ? error
+          : new Error(typeof error === 'string' ? error : 'Internal server error');
+      return reply.send(err);
+    }
+
+    // Fallback implementation for standalone or mock testing environments
+    if (reply.log?.error) {
+      reply.log.error(error);
+    }
+
     // Handle ZodError
     if (error instanceof ZodError) {
       return reply.status(400).send({
         success: false,
         statusCode: 400,
-        message: 'Validation failed',
-        error: error.format(),
+        error: 'Validation Error',
+        message: 'Invalid request data',
+        details: error.errors.map((err) => ({
+          field: err.path.join('.'),
+          message: err.message,
+        })),
       });
     }
 
-    // Extract statusCode from domain errors
-    const statusCode =
-      error && typeof error === 'object' && 'statusCode' in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
+    // Handle Prisma Client Known Request Errors
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      (error && typeof error === 'object' && (error as any).name === 'PrismaClientKnownRequestError')
+    ) {
+      const prismaError = error as Prisma.PrismaClientKnownRequestError;
+      if (prismaError.code === 'P2002') {
+        return reply.status(409).send({
+          success: false,
+          statusCode: 409,
+          error: 'Conflict',
+          message: 'Resource already exists',
+        });
+      }
 
-    // Extract error message
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
+      if (prismaError.code === 'P2025') {
+        return reply.status(404).send({
+          success: false,
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'Resource not found',
+        });
+      }
+
+      if (prismaError.code === 'P2003') {
+        return reply.status(400).send({
+          success: false,
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Invalid reference to related resource',
+        });
+      }
+    }
+
+    // Handle Prisma Client Validation Errors
+    if (
+      error instanceof Prisma.PrismaClientValidationError ||
+      (error && typeof error === 'object' && (error as any).name === 'PrismaClientValidationError')
+    ) {
+      return reply.status(400).send({
+        success: false,
+        statusCode: 400,
+        error: 'Validation Error',
+        message: 'Invalid database operation',
+      });
+    }
+
+    // Extract statusCode from domain errors (statusCode < 600)
+    const isDomainError =
+      error &&
+      typeof error === 'object' &&
+      'statusCode' in error &&
+      typeof (error as any).statusCode === 'number' &&
+      (error as any).statusCode < 600;
+
+    const statusCode = isDomainError ? (error as { statusCode: number }).statusCode : 500;
+    const isServerError = statusCode >= 500;
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    // Sanitize unexpected 500 errors to prevent leaking database/query details
+    const rawMessage = error instanceof Error ? error.message : 'Internal server error';
+    const message = isServerError && !isDevelopment ? 'An unexpected error occurred' : rawMessage;
 
     // Extract error code/name for response
     const errorCode =
-      error && typeof error === 'object' && 'code' in error
+      error && typeof error === 'object' && 'code' in error && typeof (error as any).code === 'string'
         ? (error as { code: string }).code
         : undefined;
 
-    const errorName = ResponseHelper.getErrorName(statusCode);
+    const errorName = isServerError
+      ? 'Internal Server Error'
+      : (error as any)?.name || ResponseHelper.getErrorName(statusCode);
 
     return reply.status(statusCode).send({
       success: false,
       statusCode,
       error: errorName,
-      code: errorCode,
+      ...(errorCode ? { code: errorCode } : {}),
       message,
     });
   }

@@ -58,9 +58,9 @@ export class CategoryService {
     workspaceId: string,
     params: {
       name?: string;
-      description?: string;
-      color?: string;
-      icon?: string;
+      description?: string | null;
+      color?: string | null;
+      icon?: string | null;
       isActive?: boolean;
     }
   ): Promise<CategoryDTO> {
@@ -86,15 +86,15 @@ export class CategoryService {
     }
 
     if (params.description !== undefined) {
-      category.updateDescription(params.description);
+      category.updateDescription(params.description || undefined);
     }
 
     if (params.color !== undefined) {
-      category.updateColor(params.color);
+      category.updateColor(params.color || undefined);
     }
 
     if (params.icon !== undefined) {
-      category.updateIcon(params.icon);
+      category.updateIcon(params.icon || undefined);
     }
 
     if (params.isActive !== undefined) {
@@ -108,6 +108,9 @@ export class CategoryService {
     await this.categoryRepository.update(category);
 
     // Invalidate cache
+    await this.cacheService.delete(
+      `workspace:${workspaceId}:category:${categoryId}`
+    );
     await this.cacheService.delete(`category:${categoryId}`);
     await this.cacheService.deletePattern(
       `workspace:${workspaceId}:categories*`
@@ -129,10 +132,14 @@ export class CategoryService {
     category.markAsDeleted();
     await this.categoryRepository.delete(
       CategoryId.fromString(categoryId),
-      workspaceId
+      workspaceId,
+      category
     );
 
     // Invalidate cache
+    await this.cacheService.delete(
+      `workspace:${workspaceId}:category:${categoryId}`
+    );
     await this.cacheService.delete(`category:${categoryId}`);
     await this.cacheService.deletePattern(
       `workspace:${workspaceId}:categories*`
@@ -143,7 +150,7 @@ export class CategoryService {
     categoryId: string,
     workspaceId: string
   ): Promise<CategoryDTO | null> {
-    const cacheKey = `category:${categoryId}`;
+    const cacheKey = `workspace:${workspaceId}:category:${categoryId}`;
 
     const category = await this.cacheService.getOrSet(
       cacheKey,

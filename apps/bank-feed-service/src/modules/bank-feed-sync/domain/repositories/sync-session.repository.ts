@@ -10,6 +10,11 @@ import {
 
 export interface ISyncSessionRepository {
   save(session: SyncSession): Promise<void>;
+  expireStaleByConnection(
+    workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
+    cutoff: Date
+  ): Promise<number>;
   findById(
     id: SyncSessionId,
     workspaceId: WorkspaceId

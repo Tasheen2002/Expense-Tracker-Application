@@ -11,8 +11,8 @@ export interface CreateScenarioCommand extends ICommand {
   readonly workspaceId: string;
   readonly name: string;
   readonly createdBy: string;
-  readonly description?: string;
-  readonly assumptions?: Record<string, unknown>;
+  readonly description?: string | null;
+  readonly assumptions?: Record<string, unknown> | null;
 }
 
 export class CreateScenarioHandler implements ICommandHandler<

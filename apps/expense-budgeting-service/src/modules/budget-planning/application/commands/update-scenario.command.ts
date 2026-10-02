@@ -11,8 +11,8 @@ export interface UpdateScenarioCommand extends ICommand {
   readonly workspaceId: string;
   readonly userId: string;
   readonly name?: string;
-  readonly description?: string;
-  readonly assumptions?: Record<string, unknown>;
+  readonly description?: string | null;
+  readonly assumptions?: Record<string, unknown> | null;
 }
 
 export class UpdateScenarioHandler implements ICommandHandler<

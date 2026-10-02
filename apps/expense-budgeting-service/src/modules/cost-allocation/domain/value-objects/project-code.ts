@@ -14,8 +14,8 @@ export class ProjectCode {
 
     const trimmed = value.trim();
 
-    if (trimmed.length === 0) {
-      throw new InvalidCodeError("Project", "cannot be empty");
+    if (trimmed.length < 2) {
+      throw new InvalidCodeError("Project", "must contain at least 2 characters");
     }
 
     if (trimmed.length > 20) {

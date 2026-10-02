@@ -12,6 +12,8 @@ import { TagController } from "../controllers/tag.controller";
 import { AttachmentController } from "../controllers/attachment.controller";
 import { RecurringExpenseController } from "../controllers/recurring-expense.controller";
 import { ExpenseSplitController } from "../controllers/expense-split.controller";
+import { ExpenseService } from "../../../application/services/expense.service";
+import { registerExpenseOutboxEventRoutes } from "./outbox-event.routes";
 
 export async function registerExpenseLedgerRoutes(
   fastify: FastifyInstance,
@@ -22,20 +24,42 @@ export async function registerExpenseLedgerRoutes(
     attachmentController: AttachmentController;
     recurringExpenseController: RecurringExpenseController;
     expenseSplitController: ExpenseSplitController;
+    expenseService?: ExpenseService;
   },
   _prisma: PrismaClient,
 ) {
   await fastify.register(
     async (instance) => {
-      await expenseRoutes(instance, controllers.expenseController);
-      await categoryRoutes(instance, controllers.categoryController);
-      await tagRoutes(instance, controllers.tagController);
-      await attachmentRoutes(instance, controllers.attachmentController);
-      await recurringExpenseRoutes(
-        instance,
-        controllers.recurringExpenseController,
-      );
-      await expenseSplitRoutes(instance, controllers.expenseSplitController);
+      await instance.register(async (scope) => {
+        await expenseRoutes(scope, controllers.expenseController);
+      });
+      await instance.register(async (scope) => {
+        await categoryRoutes(scope, controllers.categoryController);
+      });
+      await instance.register(async (scope) => {
+        await tagRoutes(scope, controllers.tagController);
+      });
+      await instance.register(async (scope) => {
+        await attachmentRoutes(scope, controllers.attachmentController);
+      });
+      await instance.register(async (scope) => {
+        await recurringExpenseRoutes(
+          scope,
+          controllers.recurringExpenseController,
+        );
+      });
+      await instance.register(async (scope) => {
+        await expenseSplitRoutes(scope, controllers.expenseSplitController);
+      });
+      if (controllers.expenseService) {
+        await instance.register(async (scope) => {
+          await registerExpenseOutboxEventRoutes(
+            scope,
+            controllers.expenseService!,
+            _prisma
+          );
+        });
+      }
     },
     { prefix: "/api/v1" },
   );

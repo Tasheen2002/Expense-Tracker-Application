@@ -8,67 +8,52 @@ import {
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
+import { IEventBus } from '@core/domain/events/domain-event';
 
 export class InventoryTransactionRepositoryImpl
+  extends PrismaRepository<InventoryTransaction>
   implements IInventoryTransactionRepository
 {
-  protected readonly prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor(prisma: PrismaClient, eventBus: IEventBus) {
+    super(prisma, eventBus);
   }
 
   async save(transaction: InventoryTransaction): Promise<void> {
-    await this.prisma.inventoryTransaction.create({
-      data: {
-        id: transaction.id.getValue(),
-        workspaceId: transaction.workspaceId,
-        variantId: transaction.variantId,
-        locationId: transaction.locationId,
-        type: transaction.type,
-        quantity: transaction.quantity,
-        referenceId: transaction.referenceId,
-        referenceType: transaction.referenceType,
-        notes: transaction.notes,
-        createdBy: transaction.createdBy,
-        createdAt: transaction.createdAt,
-      },
+    await this.runInTransaction(async (tx) => {
+      await tx.inventoryTransaction.create({
+        data: {
+          id: transaction.id.getValue(),
+          workspaceId: transaction.workspaceId,
+          variantId: transaction.variantId,
+          locationId: transaction.locationId,
+          type: transaction.type,
+          quantity: transaction.quantity,
+          referenceId: transaction.referenceId,
+          referenceType: transaction.referenceType,
+          notes: transaction.notes,
+          createdBy: transaction.createdBy,
+          createdAt: transaction.createdAt,
+        },
+      });
+      await this.dispatchEvents(transaction, tx);
     });
   }
 
-  async findByWorkspace(
-    workspaceId: string,
+  async findByFilters(
+    filters: { workspaceId: string; variantId?: string; locationId?: string },
     options?: PaginationOptions
   ): Promise<PaginatedResult<InventoryTransaction>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.inventoryTransaction,
-      { where: { workspaceId }, orderBy: { createdAt: 'desc' } },
-      (record) => this.toDomain(record),
-      options
-    );
-  }
-
-  async findByVariant(
-    variantId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransaction>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.inventoryTransaction,
-      { where: { variantId, workspaceId }, orderBy: { createdAt: 'desc' } },
-      (record) => this.toDomain(record),
-      options
-    );
-  }
-
-  async findByLocation(
-    locationId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransaction>> {
-    return PrismaRepositoryHelper.paginate(
-      this.prisma.inventoryTransaction,
-      { where: { locationId, workspaceId }, orderBy: { createdAt: 'desc' } },
+      {
+        where: {
+          workspaceId: filters.workspaceId,
+          ...(filters.variantId !== undefined && { variantId: filters.variantId }),
+          ...(filters.locationId !== undefined && { locationId: filters.locationId }),
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      },
       (record) => this.toDomain(record),
       options
     );

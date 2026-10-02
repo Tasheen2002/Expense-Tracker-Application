@@ -3,6 +3,7 @@
 # ============================================================================
 FROM node:20-alpine AS builder
 RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -25,6 +26,7 @@ RUN pnpm build
 # ============================================================================
 FROM node:20-alpine AS production
 RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -40,8 +42,6 @@ COPY apps/identity-access-service/prisma/ ./apps/identity-access-service/prisma/
 RUN pnpm install --filter @expense-tracker/identity-access-service... --prod
 
 # Copy generated Prisma client from builder (reproducible, no runtime CLI download)
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/apps/identity-access-service/node_modules/.prisma /app/apps/identity-access-service/node_modules/.prisma
 
 WORKDIR /app/apps/identity-access-service

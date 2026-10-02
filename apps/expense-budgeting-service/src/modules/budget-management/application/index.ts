@@ -9,6 +9,7 @@ export * from './commands/delete-allocation.command';
 export * from './commands/create-spending-limit.command';
 export * from './commands/update-spending-limit.command';
 export * from './commands/delete-spending-limit.command';
+export * from './commands/mark-alert-read.command';
 
 export * from './queries/get-budget.query';
 export * from './queries/list-budgets.query';

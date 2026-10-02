@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateSplitHandler,
   DeleteSplitHandler,
@@ -185,7 +185,7 @@ export class ExpenseSplitController {
         workspaceId,
         userId,
         splitType,
-        participants: participants.map((p) => ({
+        participants: participants.map((p: { userId: string; shareAmount?: number; sharePercentage?: number }) => ({
           userId: p.userId,
           shareAmount: p.shareAmount,
           sharePercentage: p.sharePercentage,

@@ -15,5 +15,5 @@ export interface IBudgetPlanRepository {
     status?: PlanStatus,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<BudgetPlan>>;
-  delete(id: PlanId): Promise<void>;
+  delete(id: PlanId, workspaceId: string, plan?: BudgetPlan): Promise<void>;
 }

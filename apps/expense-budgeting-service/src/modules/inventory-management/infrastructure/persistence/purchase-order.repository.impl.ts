@@ -15,6 +15,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { PurchaseOrderNotFoundError, SupplierNotFoundError } from '../../domain/errors/inventory.errors';
 export class PurchaseOrderRepositoryImpl
   extends PrismaRepository<PurchaseOrder>
   implements IPurchaseOrderRepository
@@ -24,34 +25,42 @@ export class PurchaseOrderRepositoryImpl
   }
 
   async save(po: PurchaseOrder): Promise<void> {
-    await this.prisma.purchaseOrder.upsert({
-      where: { id: po.id.getValue() },
-      create: {
-        id: po.id.getValue(),
-        workspaceId: po.workspaceId,
-        supplierId: po.supplierId,
-        status: po.status,
-        orderDate: po.orderDate,
-        expectedDate: po.expectedDate,
-        receivedDate: po.receivedDate,
-        notes: po.notes,
-        totalAmount: po.totalAmount,
-        currency: po.currency,
-        createdBy: po.createdBy,
-        createdAt: po.createdAt,
-        updatedAt: po.updatedAt,
-      },
-      update: {
-        status: po.status,
-        expectedDate: po.expectedDate,
-        receivedDate: po.receivedDate,
-        notes: po.notes,
-        totalAmount: po.totalAmount,
-        updatedAt: po.updatedAt,
-      },
-    });
-
-    await this.dispatchEvents(po);
+    try {
+      await this.runInTransaction(async (tx) => {
+        await tx.purchaseOrder.upsert({
+          where: { id: po.id.getValue(), workspaceId: po.workspaceId },
+          create: {
+            id: po.id.getValue(),
+            workspaceId: po.workspaceId,
+            supplierId: po.supplierId,
+            status: po.status,
+            orderDate: po.orderDate,
+            expectedDate: po.expectedDate,
+            receivedDate: po.receivedDate,
+            notes: po.notes,
+            totalAmount: po.totalAmount,
+            currency: po.currency,
+            createdBy: po.createdBy,
+            createdAt: po.createdAt,
+            updatedAt: po.updatedAt,
+          },
+          update: {
+            status: po.status,
+            expectedDate: po.expectedDate,
+            receivedDate: po.receivedDate,
+            notes: po.notes,
+            totalAmount: po.totalAmount,
+            updatedAt: po.updatedAt,
+          },
+        });
+        await this.dispatchEvents(po, tx);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new SupplierNotFoundError(po.supplierId, po.workspaceId);
+      }
+      throw error;
+    }
   }
 
   async findById(
@@ -71,7 +80,7 @@ export class PurchaseOrderRepositoryImpl
   ): Promise<PaginatedResult<PurchaseOrder>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.purchaseOrder,
-      { where: { workspaceId }, orderBy: { createdAt: 'desc' } },
+      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
@@ -93,15 +102,18 @@ export class PurchaseOrderRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.purchaseOrder,
-      { where, orderBy: { createdAt: 'desc' } },
+      { where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
   }
 
-  async delete(id: PurchaseOrderId, workspaceId: string): Promise<void> {
-    await this.prisma.purchaseOrder.delete({
-      where: { id: id.getValue(), workspaceId },
+  async delete(po: PurchaseOrder): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      await tx.purchaseOrder.delete({
+        where: { id: po.id.getValue(), workspaceId: po.workspaceId },
+      });
+      await this.dispatchEvents(po, tx);
     });
   }
 
@@ -113,9 +125,15 @@ export class PurchaseOrderRepositoryImpl
   }
 
   // Item operations
-  async saveItem(item: PurchaseOrderItem): Promise<void> {
+  async saveItem(item: PurchaseOrderItem, workspaceId: string): Promise<void> {
+    const parent = await this.prisma.purchaseOrder.findFirst({ where: { id: item.purchaseOrderId, workspaceId }, select: { id: true } });
+    if (!parent) throw new PurchaseOrderNotFoundError(item.purchaseOrderId, workspaceId);
     await this.prisma.purchaseOrderItem.upsert({
-      where: { id: item.id.getValue() },
+      where: {
+        id: item.id.getValue(),
+        purchaseOrderId: item.purchaseOrderId,
+        purchaseOrder: { workspaceId },
+      },
       create: {
         id: item.id.getValue(),
         purchaseOrderId: item.purchaseOrderId,
@@ -137,25 +155,25 @@ export class PurchaseOrderRepositoryImpl
     });
   }
 
-  async findItemById(id: PurchaseOrderItemId): Promise<PurchaseOrderItem | null> {
-    const row = await this.prisma.purchaseOrderItem.findUnique({
-      where: { id: id.getValue() },
+  async findItemById(id: PurchaseOrderItemId, workspaceId: string): Promise<PurchaseOrderItem | null> {
+    const row = await this.prisma.purchaseOrderItem.findFirst({
+      where: { id: id.getValue(), purchaseOrder: { workspaceId } },
     });
     if (!row) return null;
     return this.toItemDomain(row);
   }
 
-  async findItemsByPurchaseOrder(purchaseOrderId: string): Promise<PurchaseOrderItem[]> {
+  async findItemsByPurchaseOrder(purchaseOrderId: string, workspaceId: string): Promise<PurchaseOrderItem[]> {
     const rows = await this.prisma.purchaseOrderItem.findMany({
-      where: { purchaseOrderId },
+      where: { purchaseOrderId, purchaseOrder: { workspaceId } },
       orderBy: { createdAt: 'asc' },
     });
     return rows.map((row) => this.toItemDomain(row));
   }
 
-  async deleteItem(id: PurchaseOrderItemId): Promise<void> {
-    await this.prisma.purchaseOrderItem.delete({
-      where: { id: id.getValue() },
+  async deleteItem(id: PurchaseOrderItemId, workspaceId: string): Promise<void> {
+    await this.prisma.purchaseOrderItem.deleteMany({
+      where: { id: id.getValue(), purchaseOrder: { workspaceId } },
     });
   }
 

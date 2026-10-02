@@ -5,6 +5,7 @@ import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListCostCentersQuery extends IQuery {
   readonly workspaceId: string;
+  readonly actorId: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -17,9 +18,10 @@ export class ListCostCentersHandler implements IQueryHandler<ListCostCentersQuer
   async handle(query: ListCostCentersQuery): Promise<PaginatedResult<CostCenterDTO>> {
     return this.allocationManagementService.listCostCenters(
       query.workspaceId,
+      query.actorId,
       {
-        limit: query.limit || 50,
-        offset: query.offset || 0,
+        limit: query.limit ?? 50,
+        offset: query.offset ?? 0,
       }
     );
   }

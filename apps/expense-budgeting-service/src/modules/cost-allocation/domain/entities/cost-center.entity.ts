@@ -1,4 +1,6 @@
 import { CostCenterId } from '../value-objects/cost-center-id';
+import { CostCenterCode } from '../value-objects/cost-center-code';
+import { InvalidAllocationNameError } from '../errors/cost-allocation.errors';
 import {  WorkspaceId  } from '@core/domain/value-objects';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
@@ -90,26 +92,6 @@ export class CostCenterDeactivatedEvent extends DomainEvent {
   }
 }
 
-export class CostCenterDeletedEvent extends DomainEvent {
-  constructor(
-    public readonly costCenterId: string,
-    public readonly workspaceId: string
-  ) {
-    super(costCenterId, 'CostCenter');
-  }
-
-  get eventType(): string {
-    return 'CostCenterDeleted';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      costCenterId: this.costCenterId,
-      workspaceId: this.workspaceId,
-    };
-  }
-}
-
 // ============================================================================
 // Entity
 // ============================================================================
@@ -123,6 +105,7 @@ interface CostCenterProps {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  version: number;
 }
 
 export class CostCenter extends AggregateRoot {
@@ -139,20 +122,21 @@ export class CostCenter extends AggregateRoot {
     const costCenter = new CostCenter({
       id: CostCenterId.create(),
       workspaceId: params.workspaceId,
-      name: params.name,
-      code: params.code,
+      name: CostCenter.validName(params.name),
+      code: CostCenterCode.create(params.code).value,
       description: params.description || null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
+      version: 1,
     });
 
     costCenter.addDomainEvent(
       new CostCenterCreatedEvent(
         costCenter.props.id.getValue(),
         params.workspaceId.getValue(),
-        params.name,
-        params.code
+        costCenter.props.name,
+        costCenter.props.code
       )
     );
 
@@ -168,6 +152,7 @@ export class CostCenter extends AggregateRoot {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
+    version?: number;
   }): CostCenter {
     return new CostCenter({
       id: CostCenterId.fromString(params.id),
@@ -176,8 +161,9 @@ export class CostCenter extends AggregateRoot {
       code: params.code,
       description: params.description,
       isActive: params.isActive,
-      createdAt: params.createdAt,
-      updatedAt: params.updatedAt,
+      createdAt: new Date(params.createdAt),
+      updatedAt: new Date(params.updatedAt),
+      version: params.version ?? 1,
     });
   }
 
@@ -187,30 +173,41 @@ export class CostCenter extends AggregateRoot {
   get code(): string { return this.props.code; }
   get description(): string | null { return this.props.description; }
   get isActive(): boolean { return this.props.isActive; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt); }
+  get version(): number { return this.props.version; }
+  synchronizeVersion(version: number): void { this.props.version = version; }
+
+  private static validName(name: string): string {
+    const normalized = typeof name === 'string' ? name.trim() : '';
+    if (normalized.length < 2 || normalized.length > 100) {
+      throw new InvalidAllocationNameError('Cost center');
+    }
+    return normalized;
+  }
 
   updateDetails(params: {
     name?: string;
     code?: string;
     description?: string | null;
   }): void {
+    const code = params.code === undefined ? undefined : CostCenterCode.create(params.code).value;
+    const name = params.name === undefined ? undefined : CostCenter.validName(params.name);
     const changes: Record<string, unknown> = {};
-    if (params.name !== undefined) {
-      this.props.name = params.name;
-      changes.name = params.name;
+    if (name !== undefined) {
+      this.props.name = name;
+      changes.name = name;
     }
-    if (params.code !== undefined) {
-      this.props.code = params.code;
-      changes.code = params.code;
+    if (code !== undefined) {
+      this.props.code = code;
+      changes.code = this.props.code;
     }
     if (params.description !== undefined) {
       this.props.description = params.description;
       changes.description = params.description;
     }
-    this.props.updatedAt = new Date();
-
     if (Object.keys(changes).length > 0) {
+      this.props.updatedAt = new Date();
       this.addDomainEvent(
         new CostCenterUpdatedEvent(this.props.id.getValue(), changes)
       );
@@ -229,15 +226,6 @@ export class CostCenter extends AggregateRoot {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new CostCenterActivatedEvent(this.props.id.getValue()));
-  }
-
-  markAsDeleted(): void {
-    this.addDomainEvent(
-      new CostCenterDeletedEvent(
-        this.props.id.getValue(),
-        this.props.workspaceId.getValue()
-      )
-    );
   }
 
   static toDTO(costCenter: CostCenter): CostCenterDTO {

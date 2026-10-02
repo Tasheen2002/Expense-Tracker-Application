@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { budgetRoutes } from './budget.routes';
 import { spendingLimitRoutes } from './spending-limit.routes';
 import { BudgetController } from '../controllers/budget.controller';
@@ -10,8 +9,7 @@ export async function registerBudgetRoutes(
   controllers: {
     budgetController: BudgetController;
     spendingLimitController: SpendingLimitController;
-  },
-  _prisma: PrismaClient
+  }
 ) {
   await fastify.register(
     async (instance) => {

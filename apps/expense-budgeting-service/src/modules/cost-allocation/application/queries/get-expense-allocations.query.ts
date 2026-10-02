@@ -5,6 +5,7 @@ import { IQuery, IQueryHandler } from '@core/application/cqrs';
 export interface GetExpenseAllocationsQuery extends IQuery {
   readonly expenseId: string;
   readonly workspaceId: string;
+  readonly actorId: string;
 }
 
 export class GetExpenseAllocationsHandler implements IQueryHandler<GetExpenseAllocationsQuery, ExpenseAllocationDTO[]> {
@@ -15,7 +16,8 @@ export class GetExpenseAllocationsHandler implements IQueryHandler<GetExpenseAll
   async handle(query: GetExpenseAllocationsQuery): Promise<ExpenseAllocationDTO[]> {
     return this.expenseAllocationService.getAllocations(
       query.expenseId,
-      query.workspaceId
+      query.workspaceId,
+      query.actorId,
     );
   }
 }

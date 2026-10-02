@@ -7,6 +7,7 @@ import {
 } from 'fastify';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { DomainError as CoreDomainError } from '@core/domain/domain-error';
 
 /**
  * Base class for domain errors (can be used by all modules)
@@ -47,13 +48,15 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        error.statusCode >= 400 &&
+        error.statusCode < 500
       ) {
         return reply.status(error.statusCode).send({
           success: false,
           statusCode: error.statusCode,
           message: error.message,
           error: error.name,
+          ...(error instanceof CoreDomainError ? { code: error.code } : {}),
         });
       }
 
@@ -80,7 +83,6 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             statusCode: 409,
             error: 'Conflict',
             message: 'Resource already exists',
-            details: error.meta,
           });
         }
 
@@ -134,6 +136,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
         statusCode,
         error: 'Internal Server Error',
         message: isDevelopment ? error.message : 'An unexpected error occurred',
+        ...(error instanceof CoreDomainError ? { code: error.code } : {}),
         ...(isDevelopment && { stack: error.stack }),
       });
     }

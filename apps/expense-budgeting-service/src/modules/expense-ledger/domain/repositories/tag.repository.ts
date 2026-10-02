@@ -21,7 +21,7 @@ export interface ITagRepository {
 
   findByIds(ids: TagId[], workspaceId: string): Promise<Tag[]>;
 
-  delete(id: TagId, workspaceId: string): Promise<void>;
+  delete(id: TagId, workspaceId: string, tag?: Tag): Promise<void>;
 
   exists(id: TagId, workspaceId: string): Promise<boolean>;
 

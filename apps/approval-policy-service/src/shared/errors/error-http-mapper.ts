@@ -18,6 +18,7 @@ export function mapDomainCodeToHttpStatus(code?: string): number {
     // 502 Bad Gateway
     case 'DOWNSTREAM_SERVICE_ERROR':
     case 'BAD_GATEWAY':
+    case 'EXPENSE_SNAPSHOT_MISMATCH':
       return 502;
 
     // 500 Internal Server Error
@@ -43,6 +44,7 @@ export function mapDomainCodeToHttpStatus(code?: string): number {
     case 'UNAUTHORIZED_EXEMPTION_APPROVAL':
     case 'UNAUTHORIZED_WORKFLOW_CANCELLATION':
     case 'UNAUTHORIZED_WORKFLOW_VIEW':
+    case 'UNAUTHORIZED_WORKFLOW_INITIATION':
       return 403;
 
     // 409 Conflict
@@ -51,6 +53,7 @@ export function mapDomainCodeToHttpStatus(code?: string): number {
     case 'APPROVAL_ALREADY_PROCESSED':
     case 'WORKFLOW_ALREADY_COMPLETED':
     case 'WORKFLOW_STEP_MISMATCH':
+    case 'EXPENSE_NOT_SUBMITTED':
     case 'APPROVAL_CHAIN_IN_USE':
     case 'CONCURRENCY_CONFLICT':
     case 'POLICY_ALREADY_ACTIVE':

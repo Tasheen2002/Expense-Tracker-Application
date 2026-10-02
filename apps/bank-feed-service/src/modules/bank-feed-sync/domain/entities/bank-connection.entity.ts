@@ -3,6 +3,7 @@ import { BankConnectionId } from '../value-objects/bank-connection-id';
 import { ConnectionStatus } from '../enums/connection-status.enum';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
+import { BankFeedSyncDomainError } from '../errors/bank-feed-sync.errors';
 
 // ============================================================================
 // Domain Events
@@ -214,19 +215,25 @@ export interface BankConnectionProps {
   accountType: string;
   accountMask?: string;
   currency: string;
-  // TODO: Encrypt accessToken at rest (infrastructure concern — use an encryption service)
   accessToken: string;
   status: ConnectionStatus;
   lastSyncAt?: Date;
   tokenExpiresAt?: Date;
   errorMessage?: string;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export class BankConnection extends AggregateRoot {
-  private constructor(private props: BankConnectionProps) {
+  private constructor(private props: BankConnectionProps, private persisted = false) {
     super();
+    this.props = { ...props,
+      lastSyncAt: props.lastSyncAt ? new Date(props.lastSyncAt) : props.lastSyncAt,
+      tokenExpiresAt: props.tokenExpiresAt ? new Date(props.tokenExpiresAt) : props.tokenExpiresAt,
+      createdAt: props.createdAt ? new Date(props.createdAt) : props.createdAt,
+      updatedAt: props.updatedAt ? new Date(props.updatedAt) : props.updatedAt,
+    };
   }
 
   static create(
@@ -242,6 +249,8 @@ export class BankConnection extends AggregateRoot {
     accountMask?: string,
     tokenExpiresAt?: Date
   ): BankConnection {
+    BankConnection.validateDetails(institutionId, institutionName, accountId, accountName, accountType, currency);
+    BankConnection.validateToken(accessToken, tokenExpiresAt);
     const connection = new BankConnection({
       id: BankConnectionId.create(),
       workspaceId,
@@ -255,7 +264,8 @@ export class BankConnection extends AggregateRoot {
       currency,
       accessToken,
       status: ConnectionStatus.PENDING,
-      tokenExpiresAt,
+      tokenExpiresAt: tokenExpiresAt ? new Date(tokenExpiresAt) : undefined,
+      version: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -275,7 +285,7 @@ export class BankConnection extends AggregateRoot {
   }
 
   static fromPersistence(props: BankConnectionProps): BankConnection {
-    return new BankConnection(props);
+    return new BankConnection(props, true);
   }
 
   // Getters
@@ -324,23 +334,36 @@ export class BankConnection extends AggregateRoot {
   }
 
   get lastSyncAt(): Date | undefined {
-    return this.props.lastSyncAt;
+    return this.props.lastSyncAt ? new Date(this.props.lastSyncAt) : undefined;
   }
 
   get tokenExpiresAt(): Date | undefined {
-    return this.props.tokenExpiresAt;
+    return this.props.tokenExpiresAt ? new Date(this.props.tokenExpiresAt) : undefined;
   }
 
   get errorMessage(): string | undefined {
     return this.props.errorMessage;
   }
 
+  get version(): number {
+    return this.props.version;
+  }
+
+  get isPersisted(): boolean {
+    return this.persisted;
+  }
+
+  markPersisted(version: number): void {
+    this.props.version = version;
+    this.persisted = true;
+  }
+
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt);
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt);
   }
 
   /**
@@ -362,6 +385,9 @@ export class BankConnection extends AggregateRoot {
 
   // Business methods
   activate(): void {
+    if (this.props.status !== ConnectionStatus.PENDING) {
+      throw new BankFeedSyncDomainError('Only pending connections can be activated', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
     this.props.status = ConnectionStatus.CONNECTED;
     this.props.errorMessage = undefined;
     this.props.updatedAt = new Date();
@@ -375,6 +401,9 @@ export class BankConnection extends AggregateRoot {
   }
 
   markAsExpired(): void {
+    if (this.props.status !== ConnectionStatus.CONNECTED) {
+      throw new BankFeedSyncDomainError('Only connected accounts can expire', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
     this.props.status = ConnectionStatus.EXPIRED;
     this.props.updatedAt = new Date();
 
@@ -387,6 +416,7 @@ export class BankConnection extends AggregateRoot {
   }
 
   markAsError(errorMessage: string): void {
+    if (this.props.status === ConnectionStatus.DISCONNECTED || this.props.status === ConnectionStatus.DELETED) return;
     this.props.status = ConnectionStatus.ERROR;
     this.props.errorMessage = errorMessage;
     this.props.updatedAt = new Date();
@@ -401,7 +431,12 @@ export class BankConnection extends AggregateRoot {
   }
 
   disconnect(): void {
+    if (this.props.status === ConnectionStatus.DISCONNECTED) return;
+    if (this.props.status === ConnectionStatus.DELETED) {
+      throw new BankFeedSyncDomainError('Deleted connection cannot be disconnected', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
     this.props.status = ConnectionStatus.DISCONNECTED;
+    this.props.accessToken = '';
     this.props.updatedAt = new Date();
 
     this.addDomainEvent(
@@ -413,6 +448,9 @@ export class BankConnection extends AggregateRoot {
   }
 
   updateLastSync(): void {
+    if (this.props.status !== ConnectionStatus.CONNECTED) {
+      throw new BankFeedSyncDomainError('Inactive connection cannot be synchronized', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
     const syncedAt = new Date();
     this.props.lastSyncAt = syncedAt;
     this.props.updatedAt = syncedAt;
@@ -427,8 +465,12 @@ export class BankConnection extends AggregateRoot {
   }
 
   updateAccessToken(token: string, expiresAt?: Date): void {
+    if (this.props.status === ConnectionStatus.DELETED) {
+      throw new BankFeedSyncDomainError('Deleted connection cannot update its token', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
+    BankConnection.validateToken(token, expiresAt);
     this.props.accessToken = token;
-    this.props.tokenExpiresAt = expiresAt;
+    this.props.tokenExpiresAt = expiresAt ? new Date(expiresAt) : undefined;
     this.props.status = ConnectionStatus.CONNECTED;
     this.props.errorMessage = undefined;
     this.props.updatedAt = new Date();
@@ -450,16 +492,70 @@ export class BankConnection extends AggregateRoot {
   isActive(): boolean {
     return (
       this.props.status === ConnectionStatus.CONNECTED && !this.isExpired()
+      && this.props.accessToken.length > 0
     );
   }
 
   markAsDeleted(): void {
+    if (this.props.status === ConnectionStatus.DELETED) return;
+    this.props.status = ConnectionStatus.DELETED;
+    this.props.accessToken = '';
+    this.props.tokenExpiresAt = undefined;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new BankConnectionDeletedEvent(
         this.id.getValue(),
         this.workspaceId.getValue()
       )
     );
+  }
+
+  reconnect(details: {
+    userId: UserId;
+    institutionName: string;
+    accountName: string;
+    accountType: string;
+    currency: string;
+    accessToken: string;
+    accountMask?: string;
+    tokenExpiresAt?: Date;
+  }): void {
+    if (this.props.status !== ConnectionStatus.DISCONNECTED && this.props.status !== ConnectionStatus.DELETED) {
+      throw new BankFeedSyncDomainError('Only disconnected or deleted connections can reconnect', 'INVALID_CONNECTION_TRANSITION', 409);
+    }
+    BankConnection.validateDetails(this.props.institutionId, details.institutionName, this.props.accountId,
+      details.accountName, details.accountType, details.currency);
+    BankConnection.validateToken(details.accessToken, details.tokenExpiresAt);
+    this.props.userId = details.userId;
+    this.props.institutionName = details.institutionName;
+    this.props.accountName = details.accountName;
+    this.props.accountType = details.accountType;
+    this.props.currency = details.currency;
+    this.props.accountMask = details.accountMask;
+    this.props.accessToken = details.accessToken;
+    this.props.tokenExpiresAt = details.tokenExpiresAt ? new Date(details.tokenExpiresAt) : undefined;
+    this.props.status = ConnectionStatus.CONNECTED;
+    this.props.errorMessage = undefined;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new BankConnectionActivatedEvent(this.id.getValue(), this.workspaceId.getValue())
+    );
+  }
+
+  private static validateDetails(
+    institutionId: string, institutionName: string, accountId: string,
+    accountName: string, accountType: string, currency: string
+  ): void {
+    if ([institutionId, institutionName, accountId, accountName, accountType].some((value) => !value.trim()) ||
+        !/^[A-Z]{3}$/.test(currency)) {
+      throw new BankFeedSyncDomainError('Invalid bank connection details', 'INVALID_CONNECTION_DETAILS', 422);
+    }
+  }
+
+  private static validateToken(token: string, expiresAt?: Date): void {
+    if (!token.trim() || (expiresAt && (Number.isNaN(expiresAt.getTime()) || expiresAt <= new Date()))) {
+      throw new BankFeedSyncDomainError('Valid, unexpired bank token is required', 'INVALID_BANK_TOKEN', 422);
+    }
   }
 
   static toDTO(connection: BankConnection): BankConnectionDTO {

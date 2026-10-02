@@ -16,16 +16,18 @@ export const MAX_EXPENSE_AMOUNT = 999999999.99;
 export const CATEGORY_NAME_MIN_LENGTH = 1;
 export const CATEGORY_NAME_MAX_LENGTH = 100;
 export const CATEGORY_DESCRIPTION_MAX_LENGTH = 500;
-export const CATEGORY_COLOR_REGEX = /^#[0-9A-F]{6}$/i;
+export const CATEGORY_ICON_MAX_LENGTH = 50;
+export const CATEGORY_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/i;
 
 // Tag validation
 export const TAG_NAME_MIN_LENGTH = 1;
 export const TAG_NAME_MAX_LENGTH = 50;
-export const TAG_COLOR_REGEX = /^#[0-9A-F]{6}$/i;
+export const TAG_COLOR_REGEX = /^#[0-9a-fA-F]{6}$/i;
 
 // Attachment validation
 export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MB
 export const MIN_ATTACHMENT_SIZE = 1; // 1 byte
+export const MIME_TYPE_MAX_LENGTH = 100;
 export const ALLOWED_ATTACHMENT_MIME_TYPES = [
   'image/jpeg',
   'image/jpg',

@@ -1,6 +1,38 @@
 import { InventoryTransactionId } from '../value-objects/inventory-transaction-id.vo';
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
+import { AggregateRoot } from '@core/domain/aggregate-root';
+import { DomainEvent } from '@core/domain/events/domain-event';
 import { TransactionType } from '../enums/transaction-type';
-import { InvalidQuantityError } from '../errors/inventory.errors';
+import { InvalidQuantityError, InvalidInventoryDataError } from '../errors/inventory.errors';
+import { MAX_QUANTITY, NOTES_MAX_LENGTH, VARIANT_ID_MAX_LENGTH } from '../constants/inventory.constants';
+
+export class InventoryTransactionRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly workspaceId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly transactionType: TransactionType,
+    public readonly quantity: number,
+    public readonly referenceId: string | null
+  ) {
+    super(transactionId, 'InventoryTransaction');
+  }
+
+  get eventType(): string { return 'inventory_transaction.recorded'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      workspaceId: this.workspaceId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+      transactionType: this.transactionType,
+      quantity: this.quantity,
+      referenceId: this.referenceId,
+    };
+  }
+}
 
 export interface InventoryTransactionProps {
   id: InventoryTransactionId;
@@ -42,14 +74,27 @@ export interface InventoryTransactionDTO {
   createdAt: string;
 }
 
-export class InventoryTransaction {
+export class InventoryTransaction extends AggregateRoot {
   private constructor(private props: InventoryTransactionProps) {
+    super();
   }
 
   static create(data: CreateInventoryTransactionData): InventoryTransaction {
-    if (data.quantity <= 0) {
-      throw new InvalidQuantityError('Transaction quantity must be greater than zero');
+    if (!UuidId.isValid(data.workspaceId) || !UuidId.isValid(data.locationId) || !UuidId.isValid(data.createdBy) ||
+      (data.referenceId !== undefined && !UuidId.isValid(data.referenceId))) {
+      throw new InvalidInventoryDataError('Invalid inventory transaction UUID');
     }
+    const minimum = data.type === TransactionType.ADJUSTMENT ? 0 : 1;
+    if (!Number.isSafeInteger(data.quantity) || data.quantity < minimum || data.quantity > MAX_QUANTITY) {
+      throw new InvalidQuantityError('Transaction quantity is outside the allowed range');
+    }
+    if (!Object.values(TransactionType).includes(data.type)) throw new InvalidInventoryDataError('Invalid transaction type');
+    if (data.type === TransactionType.TRANSFER) {
+      throw new InvalidInventoryDataError('Transfer requires source and destination locations');
+    }
+    if (!data.variantId?.trim() || data.variantId.length > VARIANT_ID_MAX_LENGTH) throw new InvalidInventoryDataError('Invalid variant ID');
+    if (data.notes && data.notes.length > NOTES_MAX_LENGTH) throw new InvalidInventoryDataError('Transaction notes are too long');
+    if (data.referenceType && data.referenceType.length > 50) throw new InvalidInventoryDataError('Reference type is too long');
 
     const transaction = new InventoryTransaction({
       id: InventoryTransactionId.create(),
@@ -65,11 +110,16 @@ export class InventoryTransaction {
       createdAt: new Date(),
     });
 
+    transaction.addDomainEvent(new InventoryTransactionRecordedEvent(
+      transaction.id.getValue(), transaction.workspaceId, transaction.variantId,
+      transaction.locationId, transaction.type, transaction.quantity, transaction.referenceId
+    ));
+
     return transaction;
   }
 
   static fromPersistence(props: InventoryTransactionProps): InventoryTransaction {
-    return new InventoryTransaction(props);
+    return new InventoryTransaction({ ...props, createdAt: new Date(props.createdAt) });
   }
 
   get id(): InventoryTransactionId { return this.props.id; }
@@ -82,7 +132,7 @@ export class InventoryTransaction {
   get referenceType(): string | null { return this.props.referenceType; }
   get notes(): string | null { return this.props.notes; }
   get createdBy(): string { return this.props.createdBy; }
-  get createdAt(): Date { return this.props.createdAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
 
   static toDTO(tx: InventoryTransaction): InventoryTransactionDTO {
     return {

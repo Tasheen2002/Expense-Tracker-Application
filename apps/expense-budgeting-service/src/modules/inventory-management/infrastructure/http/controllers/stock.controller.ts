@@ -1,12 +1,13 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { AdjustStockHandler } from '../../../application/commands/adjust-stock.command';
+import { UpdateStockSettingsHandler } from '../../../application/commands/update-stock-settings.command';
 import { GetStockHandler } from '../../../application/queries/get-stock.query';
 import { ListTransactionsHandler } from '../../../application/queries/list-transactions.query';
-import { TransactionType } from '../../../domain/enums/transaction-type';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   AdjustStockInput,
+  UpdateStockSettingsInput,
   ListStockQuery,
   ListTransactionsQuery,
 } from '../validation/inventory.schema';
@@ -14,6 +15,7 @@ import {
 export class StockController {
   constructor(
     private readonly adjustStockHandler: AdjustStockHandler,
+    private readonly updateStockSettingsHandler: UpdateStockSettingsHandler,
     private readonly getStockHandler: GetStockHandler,
     private readonly listTransactionsHandler: ListTransactionsHandler
   ) {}
@@ -33,7 +35,7 @@ export class StockController {
         variantId: request.body.variantId,
         locationId: request.body.locationId,
         quantity: request.body.quantity,
-        type: request.body.type as TransactionType,
+        type: request.body.type,
         notes: request.body.notes,
         referenceId: request.body.referenceId,
         referenceType: request.body.referenceType,
@@ -43,6 +45,31 @@ export class StockController {
         reply,
         result,
         'Stock adjusted successfully',
+        result.data
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async updateStockSettings(
+    request: AuthenticatedRequest<{
+      Params: { workspaceId: string; stockId: string };
+      Body: UpdateStockSettingsInput;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const result = await this.updateStockSettingsHandler.handle({
+        workspaceId: request.params.workspaceId,
+        stockId: request.params.stockId,
+        reorderLevel: request.body.reorderLevel,
+        reorderQuantity: request.body.reorderQuantity,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        'Stock settings updated successfully',
         result.data
       );
     } catch (error: unknown) {

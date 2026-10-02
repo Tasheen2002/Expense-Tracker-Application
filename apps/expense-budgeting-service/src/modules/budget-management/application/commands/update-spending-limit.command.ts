@@ -10,7 +10,6 @@ import {
 export interface UpdateSpendingLimitCommand extends ICommand {
   readonly limitId: string;
   readonly workspaceId: string;
-  readonly userId?: string;
   readonly limitAmount?: number | string;
 }
 

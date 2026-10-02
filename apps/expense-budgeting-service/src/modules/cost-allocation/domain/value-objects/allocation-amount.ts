@@ -1,13 +1,19 @@
-import { Decimal } from "@prisma/client/runtime/library";
+import Decimal from 'decimal.js';
 import { InvalidAllocationAmountError } from "../errors/cost-allocation.errors";
 
 export class AllocationAmount {
   private constructor(private readonly value: Decimal) {}
 
   static create(amount: number | string | Decimal): AllocationAmount {
-    const decimalAmount = new Decimal(amount);
+    let decimalAmount: Decimal;
+    try {
+      decimalAmount = new Decimal(amount);
+    } catch {
+      throw new InvalidAllocationAmountError(Number(amount), 'Amount must be a valid decimal number');
+    }
 
-    if (decimalAmount.lessThanOrEqualTo(0)) {
+    if (!decimalAmount.isFinite() || decimalAmount.lessThanOrEqualTo(0) ||
+        decimalAmount.decimalPlaces() > 2 || decimalAmount.greaterThan('9999999999.99')) {
       throw new InvalidAllocationAmountError(decimalAmount.toNumber());
     }
 
@@ -23,6 +29,6 @@ export class AllocationAmount {
   }
 
   add(other: AllocationAmount): AllocationAmount {
-    return new AllocationAmount(this.value.add(other.value));
+    return AllocationAmount.create(this.value.add(other.value));
   }
 }

@@ -1,13 +1,16 @@
 export class DomainValidationError extends Error {
+  public readonly statusCode: number = 400;
   public readonly code: string;
   public readonly field?: string;
+  public readonly name: string;
 
   constructor(message: string, code: string, field?: string) {
     super(message);
 
     this.code = code;
     this.field = field;
-    Object.setPrototypeOf(this, DomainValidationError.prototype);
+    this.name = this.constructor.name;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 

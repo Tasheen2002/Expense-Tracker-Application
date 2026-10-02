@@ -105,7 +105,20 @@ export const settlementResponseSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const createSplitResponseSchema = z.object({
+  splitId: z.string().uuid(),
+});
+
 // ==================== ENVELOPE JSON SCHEMAS ====================
+
+export const createSplitResponseEnvelopeJsonSchema = toJsonSchema(
+  z.object({
+    success: z.boolean(),
+    statusCode: z.number(),
+    message: z.string(),
+    data: createSplitResponseSchema,
+  })
+);
 
 export const splitEnvelopeJsonSchema = toJsonSchema(
   z.object({

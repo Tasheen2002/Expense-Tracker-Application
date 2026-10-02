@@ -10,6 +10,11 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import {
+  LocationAlreadyExistsError,
+  LocationInUseError,
+  LocationNotFoundError,
+} from '../../domain/errors/inventory.errors';
 
 export class LocationRepositoryImpl
   extends PrismaRepository<Location>
@@ -20,28 +25,40 @@ export class LocationRepositoryImpl
   }
 
   async save(location: Location): Promise<void> {
-    await this.prisma.location.upsert({
-      where: { id: location.id.getValue() },
-      create: {
-        id: location.id.getValue(),
-        workspaceId: location.workspaceId,
-        name: location.name,
-        type: location.type,
-        address: location.address,
-        isActive: location.isActive,
-        createdAt: location.createdAt,
-        updatedAt: location.updatedAt,
-      },
-      update: {
-        name: location.name,
-        type: location.type,
-        address: location.address,
-        isActive: location.isActive,
-        updatedAt: location.updatedAt,
-      },
-    });
-
-    await this.dispatchEvents(location);
+    try {
+      await this.runInTransaction(async (tx) => {
+        await tx.location.upsert({
+          where: { id: location.id.getValue(), workspaceId: location.workspaceId },
+          create: {
+            id: location.id.getValue(),
+            workspaceId: location.workspaceId,
+            name: location.name,
+            type: location.type,
+            address: location.address,
+            isActive: location.isActive,
+            createdAt: location.createdAt,
+            updatedAt: location.updatedAt,
+          },
+          update: {
+            name: location.name,
+            type: location.type,
+            address: location.address,
+            isActive: location.isActive,
+            updatedAt: location.updatedAt,
+          },
+        });
+        await this.dispatchEvents(location, tx);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const target = error.meta?.target;
+        const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
+        if (fields.some((field) => field === 'name' || field.includes('location_workspace_name'))) {
+          throw new LocationAlreadyExistsError(location.name, location.workspaceId);
+        }
+      }
+      throw error;
+    }
   }
 
   async findById(id: LocationId, workspaceId: string): Promise<Location | null> {
@@ -58,16 +75,29 @@ export class LocationRepositoryImpl
   ): Promise<PaginatedResult<Location>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.location,
-      { where: { workspaceId }, orderBy: { createdAt: 'desc' } },
+      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
   }
 
-  async delete(id: LocationId, workspaceId: string): Promise<void> {
-    await this.prisma.location.delete({
-      where: { id: id.getValue(), workspaceId },
-    });
+  async delete(location: Location): Promise<void> {
+    try {
+      await this.runInTransaction(async (tx) => {
+        await tx.location.delete({
+          where: { id: location.id.getValue(), workspaceId: location.workspaceId },
+        });
+        await this.dispatchEvents(location, tx);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new LocationNotFoundError(location.id.getValue(), location.workspaceId);
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new LocationInUseError(location.id.getValue());
+      }
+      throw error;
+    }
   }
 
   async exists(id: LocationId, workspaceId: string): Promise<boolean> {

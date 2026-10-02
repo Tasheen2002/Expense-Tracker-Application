@@ -14,8 +14,8 @@ export class CostCenterCode {
 
     const trimmed = value.trim();
 
-    if (trimmed.length === 0) {
-      throw new InvalidCodeError("Cost Center", "cannot be empty");
+    if (trimmed.length < 2) {
+      throw new InvalidCodeError("Cost Center", "must contain at least 2 characters");
     }
 
     if (trimmed.length > 20) {

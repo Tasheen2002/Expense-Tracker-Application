@@ -7,9 +7,9 @@ export class CostAllocationDomainError extends DomainError {
 }
 
 export class InvalidAllocationAmountError extends CostAllocationDomainError {
-  constructor(amount: number) {
+  constructor(amount: number, reason = 'Amount must be greater than 0 and fit two decimal places') {
     super(
-      `Invalid allocation amount: ${amount}. Amount must be greater than 0.`,
+      `Invalid allocation amount: ${amount}. ${reason}.`,
       "INVALID_ALLOCATION_AMOUNT",
       400,
     );
@@ -80,32 +80,16 @@ export class ExpenseNotFoundError extends CostAllocationDomainError {
   }
 }
 
-export class ExpenseWorkspaceMismatchError extends CostAllocationDomainError {
-  constructor(expenseId: string, workspaceId: string) {
-    super(
-      `Expense ${expenseId} does not belong to workspace ${workspaceId}`,
-      "EXPENSE_WORKSPACE_MISMATCH",
-      403,
-    );
-  }
-}
-
 export class InvalidAllocationTargetError extends CostAllocationDomainError {
   constructor(message: string) {
     super(message, "INVALID_ALLOCATION_TARGET", 400);
   }
 }
 
-export class AllocationExceedsExpenseError extends CostAllocationDomainError {
-  constructor(message: string) {
-    super(message, "ALLOCATION_EXCEEDS_EXPENSE", 400);
-  }
-}
-
 export class UnauthorizedAllocationAccessError extends CostAllocationDomainError {
   constructor(action: string) {
     super(
-      `You are not authorized to ${action} allocations for this expense.`,
+      `You are not authorized to ${action} in this workspace.`,
       "UNAUTHORIZED_ALLOCATION_ACCESS",
       403,
     );
@@ -115,5 +99,65 @@ export class UnauthorizedAllocationAccessError extends CostAllocationDomainError
 export class InvalidCodeError extends CostAllocationDomainError {
   constructor(entity: string, reason: string) {
     super(`Invalid ${entity} code: ${reason}`, "INVALID_CODE", 400);
+  }
+}
+
+export class ManagementConcurrencyConflictError extends CostAllocationDomainError {
+  constructor(entity: string, id: string) {
+    super(`${entity} ${id} changed since it was loaded. Reload and retry.`, 'MANAGEMENT_CONCURRENCY_CONFLICT', 409);
+  }
+}
+
+export class InvalidAllocationExpenseIdError extends CostAllocationDomainError {
+  constructor() {
+    super('Allocation expense ID must be a valid UUID.', 'INVALID_ALLOCATION_EXPENSE_ID', 400);
+  }
+}
+
+export class InvalidAllocationPercentageError extends CostAllocationDomainError {
+  constructor() {
+    super('Allocation percentage must be between 0 and 100 with at most two decimal places.', 'INVALID_ALLOCATION_PERCENTAGE', 400);
+  }
+}
+
+export class AllocationPercentageMismatchError extends CostAllocationDomainError {
+  constructor() {
+    super('Allocation amount does not match its percentage of the expense total.', 'ALLOCATION_PERCENTAGE_MISMATCH', 400);
+  }
+}
+
+export class InvalidAllocationNotesError extends CostAllocationDomainError {
+  constructor() {
+    super('Allocation notes cannot exceed 500 characters.', 'INVALID_ALLOCATION_NOTES', 400);
+  }
+}
+
+export class InvalidAllocationNameError extends CostAllocationDomainError {
+  constructor(entity: string) {
+    super(`${entity} name must be 2 to 100 characters after trimming.`, 'INVALID_ALLOCATION_NAME', 400);
+  }
+}
+
+export class InvalidManagementSortError extends CostAllocationDomainError {
+  constructor(field: string) {
+    super(`Unsupported management sort field: ${field}.`, 'INVALID_MANAGEMENT_SORT', 400);
+  }
+}
+
+export class WorkspaceAuthorizationUnavailableError extends CostAllocationDomainError {
+  constructor() {
+    super('Workspace authorization is temporarily unavailable.', 'WORKSPACE_AUTHORIZATION_UNAVAILABLE', 503);
+  }
+}
+
+export class InvalidDepartmentHierarchyError extends CostAllocationDomainError {
+  constructor(reason: string) {
+    super(`Invalid department hierarchy: ${reason}`, "INVALID_DEPARTMENT_HIERARCHY", 400);
+  }
+}
+
+export class InvalidProjectError extends CostAllocationDomainError {
+  constructor(reason: string) {
+    super(`Invalid project: ${reason}`, "INVALID_PROJECT", 400);
   }
 }

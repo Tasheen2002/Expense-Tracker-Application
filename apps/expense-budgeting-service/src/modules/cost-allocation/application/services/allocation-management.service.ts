@@ -7,6 +7,9 @@ import { IProjectRepository } from "../../domain/repositories/project.repository
 import { DepartmentId } from "../../domain/value-objects/department-id";
 import { CostCenterId } from "../../domain/value-objects/cost-center-id";
 import { ProjectId } from "../../domain/value-objects/project-id";
+import { DepartmentCode } from "../../domain/value-objects/department-code";
+import { CostCenterCode } from "../../domain/value-objects/cost-center-code";
+import { ProjectCode } from "../../domain/value-objects/project-code";
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import {
   DepartmentNotFoundError,
@@ -16,6 +19,7 @@ import {
   DuplicateCostCenterCodeError,
   DuplicateProjectCodeError,
   UnauthorizedAllocationAccessError,
+  InvalidDepartmentHierarchyError,
 } from "../../domain/errors/cost-allocation.errors";
 import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
 import {
@@ -55,12 +59,16 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("create department");
     }
 
+    const code = DepartmentCode.create(params.code).value;
     const existing = await this.departmentRepository.findByCode(
-      params.code,
+      code,
       workspaceId,
     );
     if (existing) {
       throw new DuplicateDepartmentCodeError(params.code);
+    }
+    if (params.parentDepartmentId) {
+      await this.validateDepartmentParent(params.parentDepartmentId, workspaceId);
     }
 
     const department = Department.create({
@@ -80,9 +88,11 @@ export class AllocationManagementService {
     return Department.toDTO(department);
   }
 
-  async getDepartment(id: string): Promise<DepartmentDTO> {
+  async getDepartment(id: string, workspaceId: string, actorId: string): Promise<DepartmentDTO> {
+    await this.authorizeRead(actorId, workspaceId);
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!department) {
       throw new DepartmentNotFoundError(id);
@@ -92,8 +102,10 @@ export class AllocationManagementService {
 
   async listDepartments(
     workspaceId: string,
+    actorId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<DepartmentDTO>> {
+    await this.authorizeRead(actorId, workspaceId);
     const result = await this.departmentRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
@@ -129,24 +141,28 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("update department");
     }
 
-    const department = await this.departmentRepository.findById(departmentId);
+    const department = await this.departmentRepository.findById(departmentId, workspaceId);
     if (!department) {
       throw new DepartmentNotFoundError(params.id);
     }
 
-    if (params.code && params.code !== department.code) {
+    const code = params.code === undefined ? undefined : DepartmentCode.create(params.code).value;
+    if (code && code !== department.code) {
       const existing = await this.departmentRepository.findByCode(
-        params.code,
+        code,
         workspaceId,
       );
       if (existing && existing.id.getValue() !== params.id) {
-        throw new DuplicateDepartmentCodeError(params.code);
+        throw new DuplicateDepartmentCodeError(code);
       }
+    }
+    if (params.parentDepartmentId) {
+      await this.validateDepartmentParent(params.parentDepartmentId, workspaceId, params.id);
     }
 
     department.updateDetails({
       name: params.name,
-      code: params.code,
+      code,
       description: params.description,
       managerId: params.managerId
         ? UserId.fromString(params.managerId)
@@ -174,13 +190,14 @@ export class AllocationManagementService {
     }
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!department) {
       throw new DepartmentNotFoundError(id);
     }
 
+    if (!department.isActive) return;
     department.deactivate();
-    department.markAsDeleted();
     await this.departmentRepository.save(department);
   }
 
@@ -194,6 +211,7 @@ export class AllocationManagementService {
     }
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!department) {
       throw new DepartmentNotFoundError(id);
@@ -226,8 +244,9 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("create cost center");
     }
 
+    const code = CostCenterCode.create(params.code).value;
     const existing = await this.costCenterRepository.findByCode(
-      params.code,
+      code,
       workspaceId,
     );
     if (existing) {
@@ -245,9 +264,11 @@ export class AllocationManagementService {
     return CostCenter.toDTO(costCenter);
   }
 
-  async getCostCenter(id: string): Promise<CostCenterDTO> {
+  async getCostCenter(id: string, workspaceId: string, actorId: string): Promise<CostCenterDTO> {
+    await this.authorizeRead(actorId, workspaceId);
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!costCenter) {
       throw new CostCenterNotFoundError(id);
@@ -257,8 +278,10 @@ export class AllocationManagementService {
 
   async listCostCenters(
     workspaceId: string,
+    actorId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<CostCenterDTO>> {
+    await this.authorizeRead(actorId, workspaceId);
     const result = await this.costCenterRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
@@ -292,24 +315,25 @@ export class AllocationManagementService {
     }
     const costCenterId = CostCenterId.fromString(params.id);
 
-    const costCenter = await this.costCenterRepository.findById(costCenterId);
+    const costCenter = await this.costCenterRepository.findById(costCenterId, workspaceId);
     if (!costCenter) {
       throw new CostCenterNotFoundError(params.id);
     }
 
-    if (params.code && params.code !== costCenter.code) {
+    const code = params.code === undefined ? undefined : CostCenterCode.create(params.code).value;
+    if (code && code !== costCenter.code) {
       const existing = await this.costCenterRepository.findByCode(
-        params.code,
+        code,
         workspaceId,
       );
       if (existing && existing.id.getValue() !== params.id) {
-        throw new DuplicateCostCenterCodeError(params.code);
+        throw new DuplicateCostCenterCodeError(code);
       }
     }
 
     costCenter.updateDetails({
       name: params.name,
-      code: params.code,
+      code,
       description: params.description,
     });
 
@@ -327,13 +351,14 @@ export class AllocationManagementService {
     }
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!costCenter) {
       throw new CostCenterNotFoundError(id);
     }
 
+    if (!costCenter.isActive) return;
     costCenter.deactivate();
-    costCenter.markAsDeleted();
     await this.costCenterRepository.save(costCenter);
   }
 
@@ -347,6 +372,7 @@ export class AllocationManagementService {
     }
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!costCenter) {
       throw new CostCenterNotFoundError(id);
@@ -383,8 +409,9 @@ export class AllocationManagementService {
       throw new UnauthorizedAllocationAccessError("create project");
     }
 
+    const code = ProjectCode.create(params.code).value;
     const existing = await this.projectRepository.findByCode(
-      params.code,
+      code,
       workspaceId,
     );
     if (existing) {
@@ -408,9 +435,11 @@ export class AllocationManagementService {
     return Project.toDTO(project);
   }
 
-  async getProject(id: string): Promise<ProjectDTO> {
+  async getProject(id: string, workspaceId: string, actorId: string): Promise<ProjectDTO> {
+    await this.authorizeRead(actorId, workspaceId);
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!project) {
       throw new ProjectNotFoundError(id);
@@ -420,8 +449,10 @@ export class AllocationManagementService {
 
   async listProjects(
     workspaceId: string,
+    actorId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ProjectDTO>> {
+    await this.authorizeRead(actorId, workspaceId);
     const result = await this.projectRepository.findAll(
       WorkspaceId.fromString(workspaceId),
       options,
@@ -459,24 +490,25 @@ export class AllocationManagementService {
     }
     const projectId = ProjectId.fromString(params.id);
 
-    const project = await this.projectRepository.findById(projectId);
+    const project = await this.projectRepository.findById(projectId, workspaceId);
     if (!project) {
       throw new ProjectNotFoundError(params.id);
     }
 
-    if (params.code && params.code !== project.code) {
+    const code = params.code === undefined ? undefined : ProjectCode.create(params.code).value;
+    if (code && code !== project.code) {
       const existing = await this.projectRepository.findByCode(
-        params.code,
+        code,
         workspaceId,
       );
       if (existing && existing.id.getValue() !== params.id) {
-        throw new DuplicateProjectCodeError(params.code);
+        throw new DuplicateProjectCodeError(code);
       }
     }
 
     project.updateDetails({
       name: params.name,
-      code: params.code,
+      code,
       description: params.description,
       startDate: params.startDate ? new Date(params.startDate) : undefined,
       endDate:
@@ -509,13 +541,14 @@ export class AllocationManagementService {
     }
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!project) {
       throw new ProjectNotFoundError(id);
     }
 
+    if (!project.isActive) return;
     project.deactivate();
-    project.markAsDeleted();
     await this.projectRepository.save(project);
   }
 
@@ -529,6 +562,7 @@ export class AllocationManagementService {
     }
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
+      WorkspaceId.fromString(workspaceId),
     );
     if (!project) {
       throw new ProjectNotFoundError(id);
@@ -537,5 +571,33 @@ export class AllocationManagementService {
     project.activate();
     await this.projectRepository.save(project);
     return Project.toDTO(project);
+  }
+
+  private async authorizeRead(actorId: string, workspaceId: string): Promise<void> {
+    if (!(await this.workspaceAccess.isMember(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError('view allocation targets');
+    }
+  }
+
+  private async validateDepartmentParent(
+    parentId: string,
+    workspaceId: WorkspaceId,
+    departmentId?: string,
+  ): Promise<void> {
+    const visited = new Set<string>();
+    let currentId: string | null = parentId;
+    while (currentId) {
+      if (currentId === departmentId || visited.has(currentId)) {
+        throw new InvalidDepartmentHierarchyError('parent would create a cycle');
+      }
+      visited.add(currentId);
+      const parent: Department | null = await this.departmentRepository.findById(
+        DepartmentId.fromString(currentId), workspaceId,
+      );
+      if (!parent || !parent.isActive) {
+        throw new InvalidDepartmentHierarchyError('parent must be active in the same workspace');
+      }
+      currentId = parent.parentDepartmentId?.getValue() ?? null;
+    }
   }
 }

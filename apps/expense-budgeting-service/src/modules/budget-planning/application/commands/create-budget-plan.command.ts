@@ -14,7 +14,7 @@ export interface CreateBudgetPlanCommand extends ICommand {
   readonly startDate: Date;
   readonly endDate: Date;
   readonly createdBy: string;
-  readonly description?: string;
+  readonly description?: string | null;
 }
 
 export class CreateBudgetPlanHandler implements ICommandHandler<

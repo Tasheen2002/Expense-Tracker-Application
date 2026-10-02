@@ -19,7 +19,7 @@ import { SessionService, ISessionService } from './modules/identity-workspace/ap
 
 import { RegisterUserHandler } from './modules/identity-workspace/application/commands/register-user.command';
 import { UpdateProfileHandler } from './modules/identity-workspace/application/commands/update-profile.command';
-import { LoginUserHandler } from './modules/identity-workspace/application/queries/login-user.query';
+import { LoginUserHandler } from './modules/identity-workspace/application/commands/login-user.command';
 import { GetUserHandler } from './modules/identity-workspace/application/queries/get-user.query';
 
 import { CreateWorkspaceHandler } from './modules/identity-workspace/application/commands/create-workspace.command';
@@ -118,7 +118,7 @@ export function createCompositionRoot(prisma: PrismaClient): CompositionRoot {
   const changeMemberRoleHandler = new ChangeMemberRoleHandler(workspaceMembershipService, operationService);
 
   // 6. Query Handlers
-  const loginUserHandler = new LoginUserHandler(userManagementService);
+  const loginUserHandler = new LoginUserHandler(userManagementService, sessionService);
   const getUserHandler = new GetUserHandler(userManagementService, operationService);
   const getWorkspaceByIdHandler = new GetWorkspaceByIdHandler(workspaceManagementService, operationService);
   const getUserWorkspacesHandler = new GetUserWorkspacesHandler(workspaceManagementService, operationService);

@@ -8,6 +8,8 @@ import {
 export interface ReceivePurchaseOrderCommand extends ICommand {
   readonly purchaseOrderId: string;
   readonly workspaceId: string;
+  readonly locationId: string;
+  readonly receivedBy: string;
 }
 
 export class ReceivePurchaseOrderHandler
@@ -18,7 +20,9 @@ export class ReceivePurchaseOrderHandler
   async handle(command: ReceivePurchaseOrderCommand): Promise<CommandResult<PurchaseOrderDTO>> {
     const po = await this.poService.receivePurchaseOrder(
       command.purchaseOrderId,
-      command.workspaceId
+      command.workspaceId,
+      command.locationId,
+      command.receivedBy
     );
     return CommandResult.success(po);
   }

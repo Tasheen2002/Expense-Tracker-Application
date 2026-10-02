@@ -51,8 +51,6 @@ describe('Expense Ledger Module - Endpoint Tests', () => {
 
   const testTimestamp = Date.now();
   const testEmail = `expense-test-${testTimestamp}@example.com`;
-  const testPassword = 'SecurePassword123!';
-  const testWorkspaceName = `Expense Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
     app = await createServer();
@@ -63,9 +61,9 @@ describe('Expense Ledger Module - Endpoint Tests', () => {
 
     app.addHook('onRequest', async (request: any) => {
       if (request.headers.authorization) {
-        request.headers['x-user-id'] = testUserId;
-        request.headers['x-workspace-id'] = testWorkspaceId;
-        request.headers['x-user-email'] = testEmail;
+        request.headers['x-user-id'] = request.headers['x-user-id'] || testUserId;
+        request.headers['x-workspace-id'] = request.headers['x-workspace-id'] || testWorkspaceId;
+        request.headers['x-user-email'] = request.headers['x-user-email'] || testEmail;
       }
     });
 
@@ -610,7 +608,6 @@ describe('Expense Ledger Module - Endpoint Tests', () => {
           },
         });
 
-        const body = JSON.parse(response.body);
         console.log('Expense Statistics:', response.statusCode);
 
         // API may require currency param or have other requirements
@@ -651,19 +648,20 @@ describe('Expense Ledger Module - Endpoint Tests', () => {
 
     describe('POST /api/v1/:workspaceId/expenses/:expenseId/approve', () => {
       it('✅ should approve submitted expense', async () => {
+        const approverId = '123e4567-e89b-12d3-a456-426614174999';
         const response = await app.inject({
           method: 'POST',
           url: `/api/v1/workspaces/${testWorkspaceId}/expenses/${testExpenseId}/approve`,
           headers: {
             authorization: `Bearer ${authToken}`,
+            'x-user-id': approverId,
           },
         });
 
         const body = JSON.parse(response.body);
-        console.log('Approve Expense:', response.statusCode, body.message);
-
-        // May succeed or fail depending on permissions/state
-        expect([200, 400, 403]).toContain(response.statusCode);
+        expect(response.statusCode).toBe(200);
+        expect(body.success).toBe(true);
+        expect(body.data.status).toBe('APPROVED');
       });
     });
 

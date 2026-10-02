@@ -15,6 +15,7 @@ export interface SpendingLimitFilters {
 }
 
 export interface ISpendingLimitRepository {
+  create(limit: SpendingLimit): Promise<void>;
   save(limit: SpendingLimit): Promise<void>;
   findById(
     id: SpendingLimitId,

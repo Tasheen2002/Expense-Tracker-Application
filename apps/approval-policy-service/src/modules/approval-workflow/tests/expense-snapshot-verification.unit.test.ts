@@ -7,6 +7,11 @@ import { IExpenseSnapshotService, ExpenseSnapshot } from '../../../shared/ports/
 import { ApprovalChain } from '../domain/entities/approval-chain.entity';
 import { AUTO_APPROVAL_THRESHOLD } from '../domain/constants/approval-workflow.constants';
 import { HttpExpenseSnapshotAdapter } from '../../../shared/infrastructure/expense/http-expense-snapshot.adapter';
+import {
+  ExpenseSnapshotMismatchError,
+  UnauthorizedWorkflowInitiationError,
+  ExpenseNotSubmittedError,
+} from '../domain/errors/approval-workflow.errors';
 
 describe('Authoritative Expense Facts Verification (P1 Fraud Prevention)', () => {
   let mockWorkflowRepo: IExpenseWorkflowRepository;
@@ -165,7 +170,7 @@ describe('Authoritative Expense Facts Verification (P1 Fraud Prevention)', () =>
         workspaceId,
         userId: requesterId,
       })
-    ).rejects.toThrow(/belongs to workspace/);
+    ).rejects.toBeInstanceOf(UnauthorizedWorkflowInitiationError);
   });
 
   it('should reject initiation if expense snapshot has mismatched expenseId', async () => {
@@ -194,7 +199,7 @@ describe('Authoritative Expense Facts Verification (P1 Fraud Prevention)', () =>
         workspaceId,
         userId: requesterId,
       })
-    ).rejects.toThrow(/Expense ID mismatch/);
+    ).rejects.toBeInstanceOf(ExpenseSnapshotMismatchError);
   });
 
   it('should reject initiation if caller does not own the expense', async () => {
@@ -223,7 +228,7 @@ describe('Authoritative Expense Facts Verification (P1 Fraud Prevention)', () =>
         workspaceId,
         userId: requesterId,
       })
-    ).rejects.toThrow(/not authorized to initiate workflow for expense .* owned by user/);
+    ).rejects.toBeInstanceOf(UnauthorizedWorkflowInitiationError);
   });
 
   it('should reject initiation if expense is not in SUBMITTED state (e.g. DRAFT, APPROVED, REJECTED)', async () => {
@@ -255,7 +260,7 @@ describe('Authoritative Expense Facts Verification (P1 Fraud Prevention)', () =>
           workspaceId,
           userId: requesterId,
         })
-      ).rejects.toThrow(/Only SUBMITTED expenses are eligible for approval/);
+      ).rejects.toBeInstanceOf(ExpenseNotSubmittedError);
     }
   });
 });
@@ -511,4 +516,3 @@ describe('HttpExpenseSnapshotAdapter (P1 Downstream Auth & Robustness)', () => {
     ).rejects.toThrow(/empty or invalid response body/);
   });
 });
-

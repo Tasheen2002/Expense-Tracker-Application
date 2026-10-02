@@ -60,8 +60,13 @@ describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency in Approva
     const TOTAL_EVENTS = 12;
     const BATCH_SIZE = 4;
 
-    // Seed 12 pending events via admin with earlier createdAt so claimPending prioritizes them
-    const baseTime = Date.now() - 3600_000;
+    // claimPending scans the global queue, so place fixtures before any existing pending row.
+    const oldestEvent = await prismaAdmin.outboxEvent.findFirst({
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+    const baseTime = Math.min(Date.now(), oldestEvent?.createdAt.getTime() ?? Date.now())
+      - (TOTAL_EVENTS + 1) * 1000;
     for (let i = 0; i < TOTAL_EVENTS; i++) {
       await prismaAdmin.outboxEvent.create({
         data: {
@@ -88,6 +93,14 @@ describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency in Approva
 
     const totalClaimed = idsWorker1.length + idsWorker2.length + idsWorker3.length;
     expect(totalClaimed).toBe(TOTAL_EVENTS);
+
+    const fixtureRows = await prismaAdmin.outboxEvent.findMany({
+      where: { aggregateType: TEST_AGGREGATE_TYPE },
+      select: { id: true },
+    });
+    expect(new Set([...idsWorker1, ...idsWorker2, ...idsWorker3])).toEqual(
+      new Set(fixtureRows.map((row) => row.id))
+    );
 
     // Assert disjoint sets (no event claimed by more than 1 worker)
     const setWorker1 = new Set(idsWorker1);
@@ -122,7 +135,12 @@ describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency in Approva
   });
 
   it('atomically fences out stale worker updates when another worker reclaimed the lease', async () => {
-    // Seed 1 event with earlier timestamp to ensure deterministic priority
+    // Seed before existing pending rows; otherwise a global claim may select another aggregate.
+    const oldestEvent = await prismaAdmin.outboxEvent.findFirst({
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+    const fixtureTime = Math.min(Date.now(), oldestEvent?.createdAt.getTime() ?? Date.now()) - 1000;
     const event = await prismaAdmin.outboxEvent.create({
       data: {
         aggregateType: TEST_AGGREGATE_TYPE,
@@ -130,13 +148,14 @@ describe('PrismaOutboxEventRepository — Real PostgreSQL Concurrency in Approva
         eventType: 'approval.chain.created',
         payload: {},
         status: 'PENDING',
-        createdAt: new Date(Date.now() - 7200_000),
+        createdAt: new Date(fixtureTime),
       },
     });
 
     // Worker 1 claims event
-    const [claimedByW1] = await repoWorker1.claimPending(1, 100); // 100ms lease
+    const [claimedByW1] = await repoWorker1.claimPending(1, 60_000);
     expect(claimedByW1).toBeDefined();
+    expect(claimedByW1.id).toBe(event.id);
     expect(claimedByW1.leaseToken).toBeDefined();
 
     // Expire Worker 1's lease manually in database to simulate timeout

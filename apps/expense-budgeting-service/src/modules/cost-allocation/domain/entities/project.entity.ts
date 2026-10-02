@@ -1,4 +1,7 @@
 import { ProjectId } from '../value-objects/project-id';
+import { ProjectCode } from '../value-objects/project-code';
+import { InvalidAllocationNameError, InvalidProjectError } from '../errors/cost-allocation.errors';
+import Decimal from 'decimal.js';
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
@@ -96,26 +99,6 @@ export class ProjectDeactivatedEvent extends DomainEvent {
   }
 }
 
-export class ProjectDeletedEvent extends DomainEvent {
-  constructor(
-    public readonly projectId: string,
-    public readonly workspaceId: string
-  ) {
-    super(projectId, 'Project');
-  }
-
-  get eventType(): string {
-    return 'ProjectDeleted';
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      projectId: this.projectId,
-      workspaceId: this.workspaceId,
-    };
-  }
-}
-
 // ============================================================================
 // Entity
 // ============================================================================
@@ -133,6 +116,7 @@ interface ProjectProps {
   budget: number | null;
   createdAt: Date;
   updatedAt: Date;
+  version: number;
 }
 
 export class Project extends AggregateRoot {
@@ -150,28 +134,30 @@ export class Project extends AggregateRoot {
     managerId?: UserId | null;
     budget?: number | null;
   }): Project {
+    Project.validateDetails(params.startDate, params.endDate ?? null, params.budget ?? null);
     const project = new Project({
       id: ProjectId.create(),
       workspaceId: params.workspaceId,
-      name: params.name,
-      code: params.code,
+      name: Project.validName(params.name),
+      code: ProjectCode.create(params.code).value,
       description: params.description || null,
-      startDate: params.startDate,
-      endDate: params.endDate || null,
+      startDate: new Date(params.startDate),
+      endDate: params.endDate ? new Date(params.endDate) : null,
       managerId: params.managerId || null,
       isActive: true,
       budget: params.budget ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      version: 1,
     });
 
     project.addDomainEvent(
       new ProjectCreatedEvent(
         project.props.id.getValue(),
         params.workspaceId.getValue(),
-        params.name,
-        params.code,
-        params.startDate
+        project.props.name,
+        project.props.code,
+        new Date(params.startDate)
       )
     );
 
@@ -191,6 +177,7 @@ export class Project extends AggregateRoot {
     budget: number | null;
     createdAt: Date;
     updatedAt: Date;
+    version?: number;
   }): Project {
     return new Project({
       id: ProjectId.fromString(params.id),
@@ -198,13 +185,14 @@ export class Project extends AggregateRoot {
       name: params.name,
       code: params.code,
       description: params.description,
-      startDate: params.startDate,
-      endDate: params.endDate,
+      startDate: new Date(params.startDate),
+      endDate: params.endDate ? new Date(params.endDate) : null,
       managerId: params.managerId ? UserId.fromString(params.managerId) : null,
       isActive: params.isActive,
       budget: params.budget,
-      createdAt: params.createdAt,
-      updatedAt: params.updatedAt,
+      createdAt: new Date(params.createdAt),
+      updatedAt: new Date(params.updatedAt),
+      version: params.version ?? 1,
     });
   }
 
@@ -213,13 +201,23 @@ export class Project extends AggregateRoot {
   get name(): string { return this.props.name; }
   get code(): string { return this.props.code; }
   get description(): string | null { return this.props.description; }
-  get startDate(): Date { return this.props.startDate; }
-  get endDate(): Date | null { return this.props.endDate; }
+  get startDate(): Date { return new Date(this.props.startDate); }
+  get endDate(): Date | null { return this.props.endDate ? new Date(this.props.endDate) : null; }
   get managerId(): UserId | null { return this.props.managerId; }
   get isActive(): boolean { return this.props.isActive; }
   get budget(): number | null { return this.props.budget; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt); }
+  get version(): number { return this.props.version; }
+  synchronizeVersion(version: number): void { this.props.version = version; }
+
+  private static validName(name: string): string {
+    const normalized = typeof name === 'string' ? name.trim() : '';
+    if (normalized.length < 2 || normalized.length > 100) {
+      throw new InvalidAllocationNameError('Project');
+    }
+    return normalized;
+  }
 
   updateDetails(params: {
     name?: string;
@@ -230,25 +228,32 @@ export class Project extends AggregateRoot {
     managerId?: UserId | null;
     budget?: number | null;
   }): void {
+    const code = params.code === undefined ? undefined : ProjectCode.create(params.code).value;
+    const name = params.name === undefined ? undefined : Project.validName(params.name);
+    Project.validateDetails(
+      params.startDate ?? this.props.startDate,
+      params.endDate === undefined ? this.props.endDate : params.endDate,
+      params.budget === undefined ? this.props.budget : params.budget,
+    );
     const changes: Record<string, unknown> = {};
-    if (params.name !== undefined) {
-      this.props.name = params.name;
-      changes.name = params.name;
+    if (name !== undefined) {
+      this.props.name = name;
+      changes.name = name;
     }
-    if (params.code !== undefined) {
-      this.props.code = params.code;
-      changes.code = params.code;
+    if (code !== undefined) {
+      this.props.code = code;
+      changes.code = this.props.code;
     }
     if (params.description !== undefined) {
       this.props.description = params.description;
       changes.description = params.description;
     }
     if (params.startDate !== undefined) {
-      this.props.startDate = params.startDate;
+      this.props.startDate = new Date(params.startDate);
       changes.startDate = params.startDate.toISOString();
     }
     if (params.endDate !== undefined) {
-      this.props.endDate = params.endDate;
+      this.props.endDate = params.endDate ? new Date(params.endDate) : null;
       changes.endDate = params.endDate?.toISOString() ?? null;
     }
     if (params.managerId !== undefined) {
@@ -259,10 +264,22 @@ export class Project extends AggregateRoot {
       this.props.budget = params.budget;
       changes.budget = params.budget ?? null;
     }
-    this.props.updatedAt = new Date();
-
     if (Object.keys(changes).length > 0) {
+      this.props.updatedAt = new Date();
       this.addDomainEvent(new ProjectUpdatedEvent(this.props.id.getValue(), changes));
+    }
+  }
+
+  private static validateDetails(startDate: Date, endDate: Date | null, budget: number | null): void {
+    if (!Number.isFinite(startDate.getTime()) || (endDate && !Number.isFinite(endDate.getTime()))) {
+      throw new InvalidProjectError('dates must be valid');
+    }
+    if (endDate && endDate.getTime() < startDate.getTime()) {
+      throw new InvalidProjectError('end date must not precede start date');
+    }
+    if (budget !== null && (!Number.isFinite(budget) || new Decimal(budget).lessThan(0) ||
+        new Decimal(budget).decimalPlaces() > 2 || new Decimal(budget).greaterThan('9999999999.99'))) {
+      throw new InvalidProjectError('budget must be a nonnegative amount with at most two decimal places');
     }
   }
 
@@ -278,15 +295,6 @@ export class Project extends AggregateRoot {
     this.props.isActive = true;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new ProjectActivatedEvent(this.props.id.getValue()));
-  }
-
-  markAsDeleted(): void {
-    this.addDomainEvent(
-      new ProjectDeletedEvent(
-        this.props.id.getValue(),
-        this.props.workspaceId.getValue()
-      )
-    );
   }
 
   static toDTO(project: Project): ProjectDTO {

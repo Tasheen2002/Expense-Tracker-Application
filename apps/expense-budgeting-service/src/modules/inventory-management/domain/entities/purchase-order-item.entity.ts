@@ -1,4 +1,7 @@
 import { PurchaseOrderItemId } from '../value-objects/purchase-order-item-id.vo';
+import { UuidId } from '@core/domain/value-objects/uuid-id.base';
+import Decimal from 'decimal.js';
+import { MAX_QUANTITY, MAX_UNIT_PRICE, VARIANT_ID_MAX_LENGTH, VARIANT_NAME_MAX_LENGTH } from '../constants/inventory.constants';
 import {
   InvalidInventoryDataError,
   InvalidQuantityError,
@@ -40,19 +43,29 @@ export interface PurchaseOrderItemDTO {
 export class PurchaseOrderItem {
   private constructor(private props: PurchaseOrderItemProps) {}
 
+  private static validateQuantity(quantity: number): void {
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
+      throw new InvalidQuantityError('Quantity must be a positive whole number within the allowed range');
+    }
+  }
+
+  private static validatePrice(price: number): void {
+    if (!Number.isFinite(price) || price < 0 || price > MAX_UNIT_PRICE || new Decimal(price).decimalPlaces() > 2) {
+      throw new InvalidInventoryDataError('Unit price must be a nonnegative amount with at most two decimal places');
+    }
+  }
+
   static create(data: CreatePurchaseOrderItemData): PurchaseOrderItem {
-    if (!data.variantId || data.variantId.trim().length === 0) {
+    if (!UuidId.isValid(data.purchaseOrderId)) throw new InvalidInventoryDataError('Invalid purchase order ID');
+    if (!data.variantId?.trim() || data.variantId.trim().length > VARIANT_ID_MAX_LENGTH) {
       throw new InvalidInventoryDataError('Variant ID is required');
     }
-    if (!data.variantName || data.variantName.trim().length === 0) {
+    if (!data.variantName?.trim() || data.variantName.trim().length > VARIANT_NAME_MAX_LENGTH) {
       throw new InvalidInventoryDataError('Variant name is required');
     }
-    if (data.quantity <= 0) {
-      throw new InvalidQuantityError('Quantity must be greater than zero');
-    }
-    if (data.unitPrice < 0) {
-      throw new InvalidInventoryDataError('Unit price cannot be negative');
-    }
+    PurchaseOrderItem.validateQuantity(data.quantity);
+    PurchaseOrderItem.validatePrice(data.unitPrice);
+    if (new Decimal(data.unitPrice).times(data.quantity).greaterThan(MAX_UNIT_PRICE)) throw new InvalidInventoryDataError('Line total exceeds the allowed amount');
 
     const now = new Date();
     return new PurchaseOrderItem({
@@ -69,35 +82,11 @@ export class PurchaseOrderItem {
   }
 
   static fromPersistence(props: PurchaseOrderItemProps): PurchaseOrderItem {
-    return new PurchaseOrderItem(props);
-  }
-
-  updateQuantity(quantity: number): void {
-    if (quantity <= 0) {
-      throw new InvalidQuantityError('Quantity must be greater than zero');
-    }
-    this.props.quantity = quantity;
-    this.props.updatedAt = new Date();
-  }
-
-  updateUnitPrice(unitPrice: number): void {
-    if (unitPrice < 0) {
-      throw new InvalidInventoryDataError('Unit price cannot be negative');
-    }
-    this.props.unitPrice = unitPrice;
-    this.props.updatedAt = new Date();
-  }
-
-  recordReceivedQuantity(quantity: number): void {
-    if (quantity < 0) {
-      throw new InvalidQuantityError('Received quantity cannot be negative');
-    }
-    this.props.receivedQuantity = quantity;
-    this.props.updatedAt = new Date();
+    return new PurchaseOrderItem({ ...props, createdAt: new Date(props.createdAt), updatedAt: new Date(props.updatedAt) });
   }
 
   getLineTotal(): number {
-    return this.props.unitPrice * this.props.quantity;
+    return new Decimal(this.props.unitPrice).times(this.props.quantity).toNumber();
   }
 
   get id(): PurchaseOrderItemId { return this.props.id; }
@@ -107,8 +96,8 @@ export class PurchaseOrderItem {
   get quantity(): number { return this.props.quantity; }
   get unitPrice(): number { return this.props.unitPrice; }
   get receivedQuantity(): number { return this.props.receivedQuantity; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt); }
 
   static toDTO(item: PurchaseOrderItem): PurchaseOrderItemDTO {
     return {

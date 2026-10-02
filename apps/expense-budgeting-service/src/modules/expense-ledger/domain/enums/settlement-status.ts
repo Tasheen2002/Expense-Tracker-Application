@@ -3,3 +3,8 @@ export enum SettlementStatus {
   PARTIAL = "PARTIAL",
   SETTLED = "SETTLED",
 }
+
+export function isValidSettlementStatus(value: string): value is SettlementStatus {
+  return Object.values(SettlementStatus).includes(value as SettlementStatus);
+}
+

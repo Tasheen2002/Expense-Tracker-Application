@@ -1,6 +1,13 @@
 import { CategoryId } from '../value-objects/category-id';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import { EXPENSE_EVENTS } from '@shared/events/expense-events';
+import {
+  CATEGORY_NAME_MAX_LENGTH,
+  CATEGORY_DESCRIPTION_MAX_LENGTH,
+  CATEGORY_ICON_MAX_LENGTH,
+  CATEGORY_COLOR_REGEX,
+} from '../constants/expense.constants';
 import {
   CategoryNameRequiredError,
   CategoryNameTooLongError,
@@ -29,7 +36,7 @@ export class CategoryCreatedEvent extends DomainEvent {
   ) {
     super(categoryId, 'Category');
   }
-  get eventType(): string { return 'category.created'; }
+  get eventType(): string { return EXPENSE_EVENTS.CATEGORY_CREATED; }
   getPayload(): Record<string, unknown> {
     return { categoryId: this.categoryId, workspaceId: this.workspaceId, name: this.name };
   }
@@ -43,19 +50,22 @@ export class CategoryUpdatedEvent extends DomainEvent {
   ) {
     super(categoryId, 'Category');
   }
-  get eventType(): string { return 'category.updated'; }
+  get eventType(): string { return EXPENSE_EVENTS.CATEGORY_UPDATED; }
   getPayload(): Record<string, unknown> {
     return { categoryId: this.categoryId, workspaceId: this.workspaceId, field: this.field };
   }
 }
 
 export class CategoryDeletedEvent extends DomainEvent {
-  constructor(public readonly categoryId: string) {
+  constructor(
+    public readonly categoryId: string,
+    public readonly workspaceId: string
+  ) {
     super(categoryId, 'Category');
   }
-  get eventType(): string { return 'category.deleted'; }
+  get eventType(): string { return EXPENSE_EVENTS.CATEGORY_DELETED; }
   getPayload(): Record<string, unknown> {
-    return { categoryId: this.categoryId };
+    return { categoryId: this.categoryId, workspaceId: this.workspaceId };
   }
 }
 
@@ -110,29 +120,26 @@ export class Category extends AggregateRoot {
     if (!name || name.trim().length === 0) {
       throw new CategoryNameRequiredError();
     }
-    if (name.length > 100) {
-      throw new CategoryNameTooLongError(100);
+    if (name.length > CATEGORY_NAME_MAX_LENGTH) {
+      throw new CategoryNameTooLongError(CATEGORY_NAME_MAX_LENGTH);
     }
   }
 
   private static validateDescription(description?: string): void {
-    if (description && description.length > 500) {
-      throw new CategoryDescriptionTooLongError(500);
+    if (description && description.length > CATEGORY_DESCRIPTION_MAX_LENGTH) {
+      throw new CategoryDescriptionTooLongError(CATEGORY_DESCRIPTION_MAX_LENGTH);
     }
   }
 
   private static validateColor(color?: string): void {
-    if (color) {
-      const hexColorRegex = /^#[0-9A-F]{6}$/i;
-      if (!hexColorRegex.test(color)) {
-        throw new InvalidHexColorError(color);
-      }
+    if (color && !CATEGORY_COLOR_REGEX.test(color)) {
+      throw new InvalidHexColorError(color);
     }
   }
 
   private static validateIcon(icon?: string): void {
-    if (icon && icon.length > 50) {
-      throw new IconNameTooLongError(50);
+    if (icon && icon.length > CATEGORY_ICON_MAX_LENGTH) {
+      throw new IconNameTooLongError(CATEGORY_ICON_MAX_LENGTH);
     }
   }
 
@@ -166,11 +173,11 @@ export class Category extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
   }
 
   // Business logic methods
@@ -181,23 +188,29 @@ export class Category extends AggregateRoot {
     this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'name'));
   }
 
-  updateDescription(description?: string): void {
-    Category.validateDescription(description);
-    this.props.description = description;
+  updateDescription(description?: string | null): void {
+    if (description) {
+      Category.validateDescription(description);
+    }
+    this.props.description = description || undefined;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'description'));
   }
 
-  updateColor(color?: string): void {
-    Category.validateColor(color);
-    this.props.color = color;
+  updateColor(color?: string | null): void {
+    if (color) {
+      Category.validateColor(color);
+    }
+    this.props.color = color || undefined;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'color'));
   }
 
-  updateIcon(icon?: string): void {
-    Category.validateIcon(icon);
-    this.props.icon = icon;
+  updateIcon(icon?: string | null): void {
+    if (icon) {
+      Category.validateIcon(icon);
+    }
+    this.props.icon = icon || undefined;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.id.getValue(), this.workspaceId, 'icon'));
   }
@@ -215,7 +228,7 @@ export class Category extends AggregateRoot {
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new CategoryDeletedEvent(this.id.getValue()));
+    this.addDomainEvent(new CategoryDeletedEvent(this.id.getValue(), this.workspaceId));
   }
 
   static toDTO(category: Category): CategoryDTO {

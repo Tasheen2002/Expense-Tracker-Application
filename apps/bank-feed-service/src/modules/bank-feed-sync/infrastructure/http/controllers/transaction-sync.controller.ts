@@ -129,9 +129,9 @@ export class TransactionSyncController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Sync initiated successfully',
+        'Sync completed successfully',
         result.data ? { sessionId: result.data.id } : undefined,
-        202
+        200
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

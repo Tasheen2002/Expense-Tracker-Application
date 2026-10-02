@@ -10,6 +10,10 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { managementOrderBy } from './management-order';
+import { isWorkspaceCodeConflict } from './management-constraint';
+import { DuplicateProjectCodeError, ManagementConcurrencyConflictError } from '../../domain/errors/cost-allocation.errors';
+import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
 export class ProjectRepositoryImpl
   extends PrismaRepository<Project>
@@ -20,43 +24,64 @@ export class ProjectRepositoryImpl
   }
 
   async save(project: Project): Promise<void> {
-    await this.prisma.project.upsert({
-      where: {
-        id: project.id.getValue(),
-      },
-      create: {
-        id: project.id.getValue(),
-        workspaceId: project.workspaceId.getValue(),
-        name: project.name,
-        code: project.code,
-        description: project.description,
-        startDate: project.startDate,
-        endDate: project.endDate,
-        managerId: project.managerId?.getValue() || null,
-        budget: project.budget,
-        isActive: project.isActive,
-        createdAt: project.createdAt,
-        updatedAt: project.updatedAt,
-      },
-      update: {
-        name: project.name,
-        code: project.code,
-        description: project.description,
-        startDate: project.startDate,
-        endDate: project.endDate,
-        managerId: project.managerId?.getValue() || null,
-        budget: project.budget,
-        isActive: project.isActive,
-        updatedAt: project.updatedAt,
-      },
-    });
+    try {
+      await this.runInTransaction(async (tx) => {
+        const id = project.id.getValue();
+        const workspaceId = project.workspaceId.getValue();
+        const existing = await tx.project.findUnique({ where: { id }, select: { id: true } });
+        if (!existing) {
+          await tx.project.create({
+            data: {
+              id,
+              workspaceId,
+              name: project.name,
+              code: project.code,
+              description: project.description,
+              startDate: project.startDate,
+              endDate: project.endDate,
+              managerId: project.managerId?.getValue() || null,
+              budget: project.budget,
+              isActive: project.isActive,
+              createdAt: project.createdAt,
+              updatedAt: project.updatedAt,
+              version: project.version,
+            },
+          });
+        } else {
+          const updated = await tx.project.updateMany({
+            where: { id, workspaceId, version: project.version },
+            data: {
+              name: project.name,
+              code: project.code,
+              description: project.description,
+              startDate: project.startDate,
+              endDate: project.endDate,
+              managerId: project.managerId?.getValue() || null,
+              budget: project.budget,
+              isActive: project.isActive,
+              updatedAt: project.updatedAt,
+              version: { increment: 1 },
+            },
+          });
+          if (updated.count !== 1) {
+            throw new ManagementConcurrencyConflictError('Project', id);
+          }
+          const previousVersion = project.version;
+          project.synchronizeVersion(previousVersion + 1);
+          PrismaUnitOfWork.addRollbackHook(() => project.synchronizeVersion(previousVersion));
+        }
 
-    await this.dispatchEvents(project);
+        await this.dispatchEvents(project, tx);
+      });
+    } catch (error) {
+      if (isWorkspaceCodeConflict(error)) throw new DuplicateProjectCodeError(project.code);
+      throw error;
+    }
   }
 
-  async findById(id: ProjectId): Promise<Project | null> {
+  async findById(id: ProjectId, workspaceId: WorkspaceId): Promise<Project | null> {
     const data = await this.prisma.project.findUnique({
-      where: { id: id.getValue() },
+      where: { id_workspaceId: { id: id.getValue(), workspaceId: workspaceId.getValue() } },
     });
 
     if (!data) return null;
@@ -74,6 +99,7 @@ export class ProjectRepositoryImpl
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      version: data.version,
     });
   }
 
@@ -84,7 +110,7 @@ export class ProjectRepositoryImpl
     const data = await this.prisma.project.findFirst({
       where: {
         workspaceId: workspaceId.getValue(),
-        code: code,
+        code: { equals: code, mode: 'insensitive' },
       },
     });
 
@@ -103,6 +129,7 @@ export class ProjectRepositoryImpl
       isActive: data.isActive,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
+      version: data.version,
     });
   }
 
@@ -116,7 +143,7 @@ export class ProjectRepositoryImpl
 
     return PrismaRepositoryHelper.paginate(
       this.prisma.project,
-      { where },
+      { where, orderBy: managementOrderBy(options, 'project') },
       (p) =>
         Project.fromPersistence({
           id: p.id,
@@ -131,17 +158,10 @@ export class ProjectRepositoryImpl
           isActive: p.isActive,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
+          version: p.version,
         }),
       options,
     );
   }
 
-  async delete(id: ProjectId, workspaceId: WorkspaceId): Promise<void> {
-    await this.prisma.project.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId: workspaceId.getValue(),
-      },
-    });
-  }
 }

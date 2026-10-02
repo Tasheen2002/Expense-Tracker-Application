@@ -59,6 +59,27 @@ export class WorkflowAlreadyExistsError extends ApprovalWorkflowDomainError {
   }
 }
 
+export class ExpenseSnapshotMismatchError extends ApprovalWorkflowDomainError {
+  readonly code = 'EXPENSE_SNAPSHOT_MISMATCH';
+  constructor(expenseId: string) {
+    super(`Expense service returned inconsistent facts for expense ${expenseId}`);
+  }
+}
+
+export class UnauthorizedWorkflowInitiationError extends ApprovalWorkflowDomainError {
+  readonly code = 'UNAUTHORIZED_WORKFLOW_INITIATION';
+  constructor(expenseId: string) {
+    super(`Not authorized to initiate a workflow for expense ${expenseId}`);
+  }
+}
+
+export class ExpenseNotSubmittedError extends ApprovalWorkflowDomainError {
+  readonly code = 'EXPENSE_NOT_SUBMITTED';
+  constructor(expenseId: string, status: string | undefined) {
+    super(`Cannot initiate approval workflow for expense ${expenseId} in state '${status}'. Only SUBMITTED expenses are eligible for approval.`);
+  }
+}
+
 export class NoMatchingApprovalChainError extends ApprovalWorkflowDomainError {
   readonly code = 'NO_MATCHING_APPROVAL_CHAIN';
   constructor(workspaceId: string, amount: number) {

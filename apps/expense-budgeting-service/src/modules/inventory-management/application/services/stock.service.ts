@@ -6,9 +6,13 @@ import { InventoryTransaction, InventoryTransactionDTO } from '../../domain/enti
 import { StockId } from '../../domain/value-objects/stock-id.vo';
 import { LocationId } from '../../domain/value-objects/location-id.vo';
 import { TransactionType } from '../../domain/enums/transaction-type';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
+import { IInventoryWriteLock } from '../ports/inventory-write-lock.port';
 import {
   StockNotFoundError,
   LocationNotFoundError,
+  LocationInactiveError,
+  InvalidInventoryDataError,
 } from '../../domain/errors/inventory.errors';
 import {
   PaginatedResult,
@@ -19,7 +23,9 @@ export class StockService {
   constructor(
     private readonly stockRepository: IStockRepository,
     private readonly transactionRepository: IInventoryTransactionRepository,
-    private readonly locationRepository: ILocationRepository
+    private readonly locationRepository: ILocationRepository,
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly writeLock: IInventoryWriteLock
   ) {}
 
   async adjustStock(params: {
@@ -33,67 +39,70 @@ export class StockService {
     referenceType?: string;
     createdBy: string;
   }): Promise<{ stock: StockDTO; transaction: InventoryTransactionDTO }> {
-    // Verify location exists
-    const locationExists = await this.locationRepository.exists(
-      LocationId.fromString(params.locationId),
-      params.workspaceId
-    );
-    if (!locationExists) {
-      throw new LocationNotFoundError(params.locationId, params.workspaceId);
-    }
+    return this.unitOfWork.execute(async () => {
+      await this.writeLock.acquire(params.workspaceId);
+      const location = await this.locationRepository.findById(
+        LocationId.fromString(params.locationId),
+        params.workspaceId
+      );
+      if (!location) {
+        throw new LocationNotFoundError(params.locationId, params.workspaceId);
+      }
+      if (!location.isActive) {
+        throw new LocationInactiveError(params.locationId);
+      }
 
-    // Find or create stock record
-    let stock = await this.stockRepository.findByVariantAndLocation(
-      params.variantId,
-      params.locationId,
-      params.workspaceId
-    );
+      let stock = await this.stockRepository.findByVariantAndLocation(
+        params.variantId,
+        params.locationId,
+        params.workspaceId
+      );
+      if (!stock) {
+        stock = Stock.create({
+          workspaceId: params.workspaceId,
+          variantId: params.variantId,
+          locationId: params.locationId,
+        });
+      }
 
-    if (!stock) {
-      stock = Stock.create({
+      switch (params.type) {
+        case TransactionType.IN:
+          stock.addQuantity(params.quantity);
+          break;
+        case TransactionType.OUT:
+          stock.removeQuantity(params.quantity);
+          break;
+        case TransactionType.ADJUSTMENT:
+          stock.adjustQuantity(params.quantity);
+          break;
+        case TransactionType.TRANSFER:
+          throw new InvalidInventoryDataError(
+            'Transfer requires a destination location and an atomic two-location operation'
+          );
+        default:
+          throw new InvalidInventoryDataError('Invalid stock transaction type');
+      }
+
+      const transaction = InventoryTransaction.create({
         workspaceId: params.workspaceId,
         variantId: params.variantId,
         locationId: params.locationId,
+        type: params.type,
+        quantity: params.quantity,
+        referenceId: params.referenceId,
+        referenceType: params.referenceType,
+        notes: params.notes,
+        createdBy: params.createdBy,
       });
-    }
 
-    // Apply stock change based on transaction type
-    switch (params.type) {
-      case TransactionType.IN:
-        stock.addQuantity(params.quantity, params.type);
-        break;
-      case TransactionType.OUT:
-        stock.removeQuantity(params.quantity, params.type);
-        break;
-      case TransactionType.ADJUSTMENT:
-        stock.adjustQuantity(params.quantity);
-        break;
-      case TransactionType.TRANSFER:
-        stock.removeQuantity(params.quantity, params.type);
-        break;
-    }
+      await this.stockRepository.save(stock);
+      await this.transactionRepository.save(transaction);
 
-    await this.stockRepository.save(stock);
-
-    // Record the transaction
-    const transaction = InventoryTransaction.create({
-      workspaceId: params.workspaceId,
-      variantId: params.variantId,
-      locationId: params.locationId,
-      type: params.type,
-      quantity: params.quantity,
-      referenceId: params.referenceId,
-      referenceType: params.referenceType,
-      notes: params.notes,
-      createdBy: params.createdBy,
+      return {
+        stock: Stock.toDTO(stock),
+        transaction: InventoryTransaction.toDTO(transaction),
+      };
     });
-
-    await this.transactionRepository.save(transaction);
-
-    return {
-      stock: Stock.toDTO(stock),
-      transaction: InventoryTransaction.toDTO(transaction),
-    };
   }
 
   async getStockByVariantAndLocation(
@@ -138,41 +147,11 @@ export class StockService {
     };
   }
 
-  async getTransactionsByWorkspace(
-    workspaceId: string,
+  async getTransactionsByFilters(
+    filters: { workspaceId: string; variantId?: string; locationId?: string },
     options?: PaginationOptions
   ): Promise<PaginatedResult<InventoryTransactionDTO>> {
-    const result = await this.transactionRepository.findByWorkspace(workspaceId, options);
-    return {
-      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-  }
-
-  async getTransactionsByVariant(
-    variantId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransactionDTO>> {
-    const result = await this.transactionRepository.findByVariant(variantId, workspaceId, options);
-    return {
-      items: result.items.map((t) => InventoryTransaction.toDTO(t)),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
-    };
-  }
-
-  async getTransactionsByLocation(
-    locationId: string,
-    workspaceId: string,
-    options?: PaginationOptions
-  ): Promise<PaginatedResult<InventoryTransactionDTO>> {
-    const result = await this.transactionRepository.findByLocation(locationId, workspaceId, options);
+    const result = await this.transactionRepository.findByFilters(filters, options);
     return {
       items: result.items.map((t) => InventoryTransaction.toDTO(t)),
       total: result.total,
@@ -190,22 +169,25 @@ export class StockService {
       reorderQuantity?: number;
     }
   ): Promise<StockDTO> {
-    const stock = await this.stockRepository.findById(
-      StockId.fromString(stockId),
-      workspaceId
-    );
-    if (!stock) {
-      throw new StockNotFoundError(stockId, workspaceId);
-    }
+    return this.unitOfWork.execute(async () => {
+      await this.writeLock.acquire(workspaceId);
+      const stock = await this.stockRepository.findById(
+        StockId.fromString(stockId),
+        workspaceId
+      );
+      if (!stock) {
+        throw new StockNotFoundError(stockId, workspaceId);
+      }
 
-    if (updates.reorderLevel !== undefined) {
-      stock.updateReorderLevel(updates.reorderLevel);
-    }
-    if (updates.reorderQuantity !== undefined) {
-      stock.updateReorderQuantity(updates.reorderQuantity);
-    }
+      if (updates.reorderLevel !== undefined) {
+        stock.updateReorderLevel(updates.reorderLevel);
+      }
+      if (updates.reorderQuantity !== undefined) {
+        stock.updateReorderQuantity(updates.reorderQuantity);
+      }
 
-    await this.stockRepository.save(stock);
-    return Stock.toDTO(stock);
+      await this.stockRepository.save(stock);
+      return Stock.toDTO(stock);
+    });
   }
 }

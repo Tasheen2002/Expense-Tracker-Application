@@ -22,8 +22,10 @@ export interface AuditActionSummary {
 
 export interface IAuditLogRepository {
   save(auditLog: AuditLog): Promise<void>;
+  /** Insert an externally identified event once, including under concurrent delivery. */
+  saveIfAbsent(auditLog: AuditLog): Promise<boolean>;
   saveMany(auditLogs: AuditLog[]): Promise<void>;
-  findById(id: AuditLogId): Promise<AuditLog | null>;
+  findById(id: AuditLogId, workspaceId: string): Promise<AuditLog | null>;
   findByWorkspace(
     workspaceId: string,
     limit?: number,
@@ -43,5 +45,5 @@ export interface IAuditLogRepository {
     startDate: Date,
     endDate: Date
   ): Promise<AuditActionSummary[]>;
-  deleteOlderThan(workspaceId: string, olderThan: Date): Promise<number>;
+  deleteOlderThan(workspaceId: string, olderThan: Date, purgedBy: string, requestedDays: number): Promise<number>;
 }

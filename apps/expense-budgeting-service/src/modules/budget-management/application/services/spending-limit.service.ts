@@ -13,9 +13,15 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
+import { IWorkspaceAccountingLock } from '../ports/workspace-accounting-lock.port';
 
 export class SpendingLimitService {
-  constructor(private readonly limitRepository: ISpendingLimitRepository) {}
+  constructor(
+    private readonly limitRepository: ISpendingLimitRepository,
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly accountingLock?: IWorkspaceAccountingLock
+  ) {}
 
   async createSpendingLimit(params: {
     workspaceId: string;
@@ -34,7 +40,10 @@ export class SpendingLimitService {
       periodType: params.periodType,
     });
 
-    await this.limitRepository.save(limit);
+    await this.unitOfWork.execute(async () => {
+      await this.accountingLock?.acquire(limit.workspaceId);
+      await this.limitRepository.create(limit);
+    });
 
     return SpendingLimit.toDTO(limit);
   }
@@ -46,42 +55,32 @@ export class SpendingLimitService {
       limitAmount?: number | string;
     }
   ): Promise<SpendingLimitDTO> {
-    const limit = await this.limitRepository.findById(
-      SpendingLimitId.fromString(limitId),
-      workspaceId
-    );
-
-    if (!limit) {
-      throw new SpendingLimitNotFoundError(limitId);
-    }
-
-    if (updates.limitAmount !== undefined) {
-      limit.updateLimitAmount(updates.limitAmount);
-    }
-
-    await this.limitRepository.save(limit);
-
-    return SpendingLimit.toDTO(limit);
+    return this.unitOfWork.execute(async () => {
+      await this.accountingLock?.acquire(workspaceId);
+      const limit = await this.limitRepository.findById(
+        SpendingLimitId.fromString(limitId), workspaceId
+      );
+      if (!limit) throw new SpendingLimitNotFoundError(limitId);
+      if (updates.limitAmount !== undefined) limit.updateLimitAmount(updates.limitAmount);
+      await this.limitRepository.save(limit);
+      return SpendingLimit.toDTO(limit);
+    });
   }
 
   async deleteSpendingLimit(
     limitId: string,
-    workspaceId: string,
-    userId: string
+    workspaceId: string
   ): Promise<void> {
     const limitIdObj = SpendingLimitId.fromString(limitId);
 
-    const limit = await this.limitRepository.findById(limitIdObj, workspaceId);
-    if (!limit) {
-      throw new SpendingLimitNotFoundError(limitId);
-    }
-
-    void userId;
-
-    // Emit the deleted domain event before removing the record
-    limit.markAsDeleted();
-
-    await this.limitRepository.delete(limitIdObj, workspaceId);
+    await this.unitOfWork.execute(async () => {
+      await this.accountingLock?.acquire(workspaceId);
+      const limit = await this.limitRepository.findById(limitIdObj, workspaceId);
+      if (!limit) throw new SpendingLimitNotFoundError(limitId);
+      limit.markAsDeleted();
+      await this.limitRepository.save(limit);
+      await this.limitRepository.delete(limitIdObj, workspaceId);
+    });
   }
 
   async getSpendingLimitById(
@@ -132,44 +131,4 @@ export class SpendingLimitService {
     );
   }
 
-  // Validation method for checking if expense would violate limits
-  async validateExpenseAgainstLimits(
-    workspaceId: string,
-    userId: string,
-    categoryId: string | undefined,
-    amount: number,
-    currency: string,
-    currentSpending: number = 0
-  ): Promise<{ valid: boolean; violatedLimits: SpendingLimit[] }> {
-    const applicableLimits = await this.getApplicableLimits(
-      workspaceId,
-      userId,
-      categoryId
-    );
-
-    const violatedLimits: SpendingLimit[] = [];
-
-    for (const limit of applicableLimits) {
-      // Only check limits with matching currency
-      if (limit.currency !== currency) {
-        continue;
-      }
-
-      // Check if limit applies to this expense
-      if (limit.appliesTo(userId, categoryId)) {
-        // Here you would need to query current spending for the period
-        // and compare against the limit
-        // This is a simplified version - you'd need to integrate with expense queries
-        const limitAmount = Number(limit.limitAmount);
-        if (amount + currentSpending > limitAmount) {
-          violatedLimits.push(limit);
-        }
-      }
-    }
-
-    return {
-      valid: violatedLimits.length === 0,
-      violatedLimits,
-    };
-  }
 }

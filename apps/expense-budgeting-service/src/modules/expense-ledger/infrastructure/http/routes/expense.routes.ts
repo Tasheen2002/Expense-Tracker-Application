@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ExpenseController } from '../controllers/expense.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
 import {
@@ -30,6 +30,8 @@ import {
   expenseEnvelopeJsonSchema,
   paginatedExpensesEnvelopeJsonSchema,
   expenseStatisticsEnvelopeJsonSchema,
+  expenseStatisticsQuerySchema,
+  expenseStatisticsQueryJsonSchema,
 } from '../validation/expense.schema';
 import { noContentResponse } from '@shared/http/response-schemas';
 
@@ -50,7 +52,7 @@ export async function expenseRoutes(
     );
   };
 
-  fastify.addHook('onRequest', async (request, reply) => {
+  fastify.addHook('preHandler', async (request, reply) => {
     if (request.method !== 'GET') {
       await writeRateLimiter(request, reply);
     }
@@ -134,7 +136,7 @@ export async function expenseRoutes(
     {
       onRequest: [fastify.authenticate],
       preHandler: [
-        validateQuery(paginationQuerySchema),
+        validateQuery(expenseStatisticsQuerySchema),
         workspaceAuth,
       ],
       schema: {
@@ -142,7 +144,7 @@ export async function expenseRoutes(
         description: 'Get expense statistics',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
-        querystring: paginationQueryJsonSchema,
+        querystring: expenseStatisticsQueryJsonSchema,
         response: {
           200: expenseStatisticsEnvelopeJsonSchema,
         },

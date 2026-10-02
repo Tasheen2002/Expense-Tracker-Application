@@ -1,5 +1,6 @@
 export * from './commands/activate-budget-plan.command';
 export * from './commands/add-forecast-item.command';
+export * from './commands/archive-budget-plan.command';
 export * from './commands/create-budget-plan.command';
 export * from './commands/create-forecast.command';
 export * from './commands/create-scenario.command';

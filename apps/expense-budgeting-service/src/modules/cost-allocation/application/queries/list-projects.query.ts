@@ -5,6 +5,7 @@ import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface ListProjectsQuery extends IQuery {
   readonly workspaceId: string;
+  readonly actorId: string;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -17,9 +18,10 @@ export class ListProjectsHandler implements IQueryHandler<ListProjectsQuery, Pag
   async handle(query: ListProjectsQuery): Promise<PaginatedResult<ProjectDTO>> {
     return this.allocationManagementService.listProjects(
       query.workspaceId,
+      query.actorId,
       {
-        limit: query.limit || 50,
-        offset: query.offset || 0,
+        limit: query.limit ?? 50,
+        offset: query.offset ?? 0,
       }
     );
   }

@@ -7,9 +7,9 @@ import {
 
 describe('Stock Entity', () => {
   const validData = {
-    workspaceId: 'workspace-123',
+    workspaceId: '123e4567-e89b-42d3-a456-426614174000',
     variantId: 'variant-123',
-    locationId: 'location-123',
+    locationId: '123e4567-e89b-42d3-a456-426614174002',
   };
 
   describe('create', () => {
@@ -84,12 +84,28 @@ describe('Stock Entity', () => {
       expect(stock.reservedQuantity).toBe(2);
     });
 
-    it('should not go below zero', () => {
+    it('rejects releasing more than was reserved', () => {
       const stock = Stock.create({ ...validData, quantity: 10 });
       stock.reserve(3);
-      stock.releaseReservation(10); // releasing more than reserved
-      expect(stock.reservedQuantity).toBe(0);
+      expect(() => stock.releaseReservation(10)).toThrow(InvalidQuantityError);
+      expect(stock.reservedQuantity).toBe(3);
     });
+  });
+
+  it('rejects fractional, non-finite, and overflowing quantities', () => {
+    expect(() => Stock.create({ ...validData, quantity: NaN })).toThrow(InvalidQuantityError);
+    const stock = Stock.create({ ...validData, quantity: 999999 });
+    expect(() => stock.addQuantity(1)).toThrow(InvalidQuantityError);
+    expect(() => stock.removeQuantity(0.5)).toThrow(InvalidQuantityError);
+  });
+
+  it('does not adjust below reserved stock or allow mutation through timestamps', () => {
+    const stock = Stock.create({ ...validData, quantity: 10 });
+    stock.reserve(7);
+    expect(() => stock.adjustQuantity(6)).toThrow(InsufficientStockError);
+    const createdAt = stock.createdAt.getTime();
+    stock.createdAt.setTime(0);
+    expect(stock.createdAt.getTime()).toBe(createdAt);
   });
 
   describe('adjustQuantity', () => {

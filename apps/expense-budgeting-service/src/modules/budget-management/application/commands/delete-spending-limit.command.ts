@@ -9,7 +9,6 @@ import {
 export interface DeleteSpendingLimitCommand extends ICommand {
   readonly limitId: string;
   readonly workspaceId: string;
-  readonly userId: string;
 }
 
 export class DeleteSpendingLimitHandler implements ICommandHandler<
@@ -23,8 +22,7 @@ export class DeleteSpendingLimitHandler implements ICommandHandler<
   ): Promise<CommandResult<void>> {
     await this.limitService.deleteSpendingLimit(
       command.limitId,
-      command.workspaceId,
-      command.userId
+      command.workspaceId
     );
     return CommandResult.success(undefined);
   }

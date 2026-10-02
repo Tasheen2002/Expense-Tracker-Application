@@ -31,6 +31,11 @@ export class ResponseHelper {
     if (statusCode === 403) return 'Forbidden';
     if (statusCode === 410) return 'Gone';
     if (statusCode === 400) return 'Bad Request';
+    if (statusCode === 422) return 'Unprocessable Entity';
+    if (statusCode === 429) return 'Too Many Requests';
+    if (statusCode === 502) return 'Bad Gateway';
+    if (statusCode === 503) return 'Service Unavailable';
+    if (statusCode === 504) return 'Gateway Timeout';
     return 'Internal Server Error';
   }
 
@@ -176,14 +181,18 @@ export class ResponseHelper {
     }
 
     // Extract statusCode from domain errors
-    const statusCode =
+    const rawStatus =
       error && typeof error === 'object' && 'statusCode' in error
-        ? (error as { statusCode: number }).statusCode
+        ? error.statusCode
         : 500;
+    const statusCode = typeof rawStatus === 'number' && Number.isInteger(rawStatus) && rawStatus >= 400 && rawStatus < 600
+      ? rawStatus : 500;
+    const exposeDetails = statusCode < 500 || process.env.NODE_ENV === 'development';
+    if (statusCode >= 500) reply.log.error({ err: error }, 'Request failed');
 
     // Extract error message
     const message =
-      error instanceof Error ? error.message : 'Internal server error';
+      exposeDetails && error instanceof Error ? error.message : 'An unexpected error occurred';
 
     // Extract error code/name for response
     const errorCode =
@@ -197,7 +206,7 @@ export class ResponseHelper {
       success: false,
       statusCode,
       error: errorName,
-      code: errorCode,
+      code: exposeDetails ? errorCode : undefined,
       message,
     });
   }

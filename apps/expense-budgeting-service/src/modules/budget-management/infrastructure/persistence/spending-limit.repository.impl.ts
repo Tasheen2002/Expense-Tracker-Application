@@ -13,6 +13,8 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { InvalidBudgetDataError } from '../../domain/errors/budget.errors';
+import { SpendingLimitNotFoundError } from '../../domain/errors/budget.errors';
 
 export class SpendingLimitRepositoryImpl
   extends PrismaRepository<SpendingLimit>
@@ -22,30 +24,57 @@ export class SpendingLimitRepositoryImpl
     super(prisma, eventBus);
   }
 
-  async save(limit: SpendingLimit): Promise<void> {
-    await this.prisma.spendingLimit.upsert({
-      where: { id: limit.id.getValue() },
-      create: {
-        id: limit.id.getValue(),
-        workspaceId: limit.workspaceId,
-        userId: limit.userId,
-        categoryId: limit.categoryId,
-        limitAmount: limit.limitAmount,
-        currency: limit.currency,
-        periodType: limit.periodType,
-        isActive: limit.active,
-        createdAt: limit.createdAt,
-        updatedAt: limit.updatedAt,
-      },
-      update: {
-        limitAmount: limit.limitAmount,
-        periodType: limit.periodType,
-        isActive: limit.active,
-        updatedAt: limit.updatedAt,
-      },
-    });
+  private async withMissingLimit(limitId: string, write: () => Promise<void>): Promise<void> {
+    try {
+      await write();
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new SpendingLimitNotFoundError(limitId);
+      }
+      throw error;
+    }
+  }
 
-    await this.dispatchEvents(limit);
+  async create(limit: SpendingLimit): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      if (limit.categoryId) {
+        const category = await tx.category.findFirst({
+          where: { id: limit.categoryId, workspaceId: limit.workspaceId },
+          select: { id: true },
+        });
+        if (!category) throw new InvalidBudgetDataError('Category does not belong to this workspace');
+      }
+      await tx.spendingLimit.create({
+        data: {
+          id: limit.id.getValue(),
+          workspaceId: limit.workspaceId,
+          userId: limit.userId,
+          categoryId: limit.categoryId,
+          limitAmount: limit.limitAmount,
+          currency: limit.currency,
+          periodType: limit.periodType,
+          isActive: limit.active,
+          createdAt: limit.createdAt,
+          updatedAt: limit.updatedAt,
+        },
+      });
+      await this.dispatchEvents(limit, tx);
+    });
+  }
+
+  async save(limit: SpendingLimit): Promise<void> {
+    await this.withMissingLimit(limit.id.getValue(), () => this.runInTransaction(async (tx) => {
+      await tx.spendingLimit.update({
+        where: { id: limit.id.getValue(), workspaceId: limit.workspaceId },
+        data: {
+          limitAmount: limit.limitAmount,
+          periodType: limit.periodType,
+          isActive: limit.active,
+          updatedAt: limit.updatedAt,
+        },
+      });
+      await this.dispatchEvents(limit, tx);
+    }));
   }
 
   async findById(
@@ -185,7 +214,6 @@ export class SpendingLimitRepositoryImpl
     const rows = await this.prisma.spendingLimit.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: 100,
     });
 
     return rows.map((row) => this.toDomain(row));
@@ -195,11 +223,13 @@ export class SpendingLimitRepositoryImpl
     // Domain events for deletion are dispatched by the service layer:
     // the service calls limit.markAsDeleted() + limitRepository.save(limit)
     // before invoking this method, so events are already dispatched via save().
-    await this.prisma.spendingLimit.delete({
+    await this.withMissingLimit(id.getValue(), async () => {
+      await this.prisma.spendingLimit.delete({
       where: {
         id: id.getValue(),
         workspaceId,
       },
+      });
     });
   }
 

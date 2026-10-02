@@ -8,14 +8,16 @@ import {
 
 export interface IDepartmentRepository {
   save(department: Department): Promise<void>;
-  findById(id: DepartmentId): Promise<Department | null>;
+  /** Includes inactive departments so they can be reactivated. */
+  findById(id: DepartmentId, workspaceId: WorkspaceId): Promise<Department | null>;
+  /** Codes remain reserved while a department is inactive. */
   findByCode(
     code: string,
     workspaceId: WorkspaceId,
   ): Promise<Department | null>;
+  /** Includes active and inactive departments in a deterministic order. */
   findAll(
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Department>>;
-  delete(id: DepartmentId, workspaceId: WorkspaceId): Promise<void>;
 }

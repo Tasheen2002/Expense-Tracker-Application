@@ -1,6 +1,20 @@
 import { z } from 'zod';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { toJsonSchema } from './validator';
+import Decimal from 'decimal.js';
+import { MAX_BUDGET_AMOUNT, SUPPORTED_CURRENCIES } from '../../../domain/constants/budget.constants';
+
+const moneySchema = z.union([z.number(), z.string()]).refine((value) => {
+  try {
+    const amount = new Decimal(value);
+    return amount.isFinite() && amount.greaterThan(0) &&
+      amount.lessThanOrEqualTo(MAX_BUDGET_AMOUNT) && amount.decimalPlaces() <= 2;
+  } catch {
+    return false;
+  }
+}, 'Amount must be positive, have at most two decimal places, and fit the supported range');
+const offsetSchema = z.string().regex(/^(0|[1-9]\d*)$/).transform(Number)
+  .pipe(z.number().int().min(0).max(2_147_483_647));
 
 /**
  * Route Params Schemas
@@ -22,17 +36,21 @@ export type SpendingLimitParams = z.infer<typeof spendingLimitParamsSchema>;
 export const createSpendingLimitSchema = z.object({
   userId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),
-  limitAmount: z.union([z.number().positive(), z.string()]),
-  currency: z.string().length(3),
-  periodType: z.nativeEnum(BudgetPeriodType),
-});
+  limitAmount: moneySchema,
+  currency: z.string().length(3).transform((value) => value.toUpperCase())
+    .refine((value) => SUPPORTED_CURRENCIES.includes(value), 'Unsupported currency'),
+  periodType: z.nativeEnum(BudgetPeriodType).refine(
+    (value) => value !== BudgetPeriodType.CUSTOM,
+    'Custom periods require dates and are not supported for spending limits',
+  ),
+}).strict();
 export type CreateSpendingLimitBody = z.infer<typeof createSpendingLimitSchema>;
 
 export const updateSpendingLimitSchema = z
   .object({
-    userId: z.string().uuid().optional(),
-    limitAmount: z.union([z.number().positive(), z.string()]).optional(),
+    limitAmount: moneySchema.optional(),
   })
+  .strict()
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one spending limit field must be provided',
   });
@@ -46,10 +64,10 @@ export const listSpendingLimitsSchema = z.object({
   limit: z
     .string()
     .transform(Number)
-    .pipe(z.number().min(1).max(100))
+    .pipe(z.number().int().min(1).max(100))
     .optional(),
-  offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
-});
+  offset: offsetSchema.optional(),
+}).strict();
 export type ListSpendingLimitsQuery = z.infer<typeof listSpendingLimitsSchema>;
 
 /**

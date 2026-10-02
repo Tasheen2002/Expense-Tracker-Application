@@ -4,6 +4,8 @@ import { IQuery, IQueryHandler } from '@core/application/cqrs';
 
 export interface GetDepartmentQuery extends IQuery {
   readonly id: string;
+  readonly workspaceId: string;
+  readonly actorId: string;
 }
 
 export class GetDepartmentHandler implements IQueryHandler<GetDepartmentQuery, DepartmentDTO> {
@@ -12,6 +14,6 @@ export class GetDepartmentHandler implements IQueryHandler<GetDepartmentQuery, D
   ) {}
 
   async handle(query: GetDepartmentQuery): Promise<DepartmentDTO> {
-    return this.allocationManagementService.getDepartment(query.id);
+    return this.allocationManagementService.getDepartment(query.id, query.workspaceId, query.actorId);
   }
 }

@@ -27,6 +27,6 @@ export interface IExpenseSplitRepository {
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ExpenseSplit>>;
-  delete(id: SplitId, workspaceId: string): Promise<void>;
+  delete(id: SplitId, workspaceId: string, split?: ExpenseSplit): Promise<void>;
   exists(expenseId: ExpenseId, workspaceId: string): Promise<boolean>;
 }

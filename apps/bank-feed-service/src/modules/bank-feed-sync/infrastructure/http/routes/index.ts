@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
+import { CompositionRoot } from '../../../../../composition-root';
 import { bankConnectionRoutes } from './bank-connection.routes';
 import { transactionSyncRoutes } from './transaction-sync.routes';
 import { bankTransactionRoutes } from './bank-transaction.routes';
@@ -9,20 +9,16 @@ import { bankTransactionRoutes } from './bank-transaction.routes';
  */
 export async function registerBankFeedSyncRoutes(
   fastify: FastifyInstance,
-  services: {
-    bankConnectionController: any;
-    transactionSyncController: any;
-    bankTransactionController: any;
-  },
-  _prisma: PrismaClient
+  services: Pick<CompositionRoot,
+    'bankConnectionController' | 'transactionSyncController' | 'bankTransactionController'>
 ) {
   // Wrap in an async plugin function
   await fastify.register(
     async function bankFeedSyncRoutesPlugin(scopes: FastifyInstance) {
       // Register feature-specific routes
-      await bankConnectionRoutes(scopes, services.bankConnectionController);
-      await transactionSyncRoutes(scopes, services.transactionSyncController);
-      await bankTransactionRoutes(scopes, services.bankTransactionController);
+      await scopes.register(async (feature) => bankConnectionRoutes(feature, services.bankConnectionController));
+      await scopes.register(async (feature) => transactionSyncRoutes(feature, services.transactionSyncController));
+      await scopes.register(async (feature) => bankTransactionRoutes(feature, services.bankTransactionController));
     },
     { prefix: '/api/v1' }
   );

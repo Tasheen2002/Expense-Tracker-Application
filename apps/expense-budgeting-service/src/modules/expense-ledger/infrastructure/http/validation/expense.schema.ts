@@ -95,35 +95,71 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseSchema>;
 /**
  * Filter Expenses Query Schema
  */
-export const filterExpensesSchema = z.object({
-  userId: z.string().uuid().optional(),
-  categoryId: z.string().uuid().optional(),
-  status: z.nativeEnum(ExpenseStatus).optional(),
-  paymentMethod: z.nativeEnum(PaymentMethod).optional(),
-  minAmount: z.string().transform(Number).pipe(z.number().min(0)).optional(),
-  maxAmount: z.string().transform(Number).pipe(z.number().min(0)).optional(),
-  startDate: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)))
-    .optional(),
-  endDate: z
-    .string()
-    .refine((val) => !isNaN(Date.parse(val)))
-    .optional(),
-  isReimbursable: z
-    .string()
-    .transform((val) => val === 'true')
-    .pipe(z.boolean())
-    .optional(),
-  currency: z.string().length(3).optional(),
-  searchText: z.string().optional(),
-  page: z.string().transform(Number).pipe(z.number().min(1)).optional(),
-  pageSize: z
-    .string()
-    .transform(Number)
-    .pipe(z.number().min(1).max(100))
-    .optional(),
-});
+export const filterExpensesSchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    categoryId: z.string().uuid().optional(),
+    status: z.nativeEnum(ExpenseStatus).optional(),
+    paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+    minAmount: z.string().transform(Number).pipe(z.number().min(0)).optional(),
+    maxAmount: z.string().transform(Number).pipe(z.number().min(0)).optional(),
+    startDate: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)))
+      .optional(),
+    endDate: z
+      .string()
+      .refine((val) => !isNaN(Date.parse(val)))
+      .optional(),
+    isReimbursable: z
+      .union([
+        z.boolean(),
+        z.enum(['true', 'false']).transform((val) => val === 'true'),
+      ])
+      .optional(),
+    currency: z
+      .string()
+      .length(3, 'Currency must be a 3-letter code')
+      .refine((val) => SUPPORTED_CURRENCIES.includes(val), {
+        message: `Currency must be one of: ${SUPPORTED_CURRENCIES.join(', ')}`,
+      })
+      .optional(),
+    searchText: z.string().optional(),
+    page: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int('Page must be an integer').min(1))
+      .optional(),
+    pageSize: z
+      .string()
+      .transform(Number)
+      .pipe(z.number().int('Page size must be an integer').min(1).max(100))
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.minAmount !== undefined && data.maxAmount !== undefined) {
+        return data.minAmount <= data.maxAmount;
+      }
+      return true;
+    },
+    {
+      message: 'minAmount cannot be greater than maxAmount',
+      path: ['minAmount'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return new Date(data.startDate) <= new Date(data.endDate);
+      }
+      return true;
+    },
+    {
+      message: 'startDate cannot be later than endDate',
+      path: ['startDate'],
+    }
+  );
 
 export type FilterExpensesQuery = z.infer<typeof filterExpensesSchema>;
 
@@ -136,10 +172,26 @@ export const addTagToExpenseSchema = z.object({
 
 export type AddTagToExpenseInput = z.infer<typeof addTagToExpenseSchema>;
 
+/**
+ * Expense Statistics Query Schema
+ */
+export const expenseStatisticsQuerySchema = z.object({
+  userId: z.string().uuid('Invalid user ID format').optional(),
+  currency: z
+    .string({ required_error: 'Currency is required for statistics' })
+    .length(3, 'Currency must be a 3-letter code')
+    .refine((val) => SUPPORTED_CURRENCIES.includes(val), {
+      message: `Currency must be one of: ${SUPPORTED_CURRENCIES.join(', ')}`,
+    }),
+});
+
+export type ExpenseStatisticsQuery = z.infer<typeof expenseStatisticsQuerySchema>;
+
 export const createExpenseBodyJsonSchema = toJsonSchema(createExpenseSchema);
 export const updateExpenseBodyJsonSchema = toJsonSchema(updateExpenseSchema);
 export const filterExpensesQueryJsonSchema = toJsonSchema(filterExpensesSchema);
 export const addTagToExpenseBodyJsonSchema = toJsonSchema(addTagToExpenseSchema);
+export const expenseStatisticsQueryJsonSchema = toJsonSchema(expenseStatisticsQuerySchema);
 
 // ==================== RESPONSE SCHEMAS ====================
 

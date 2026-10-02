@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma } from '../../../../prisma-client';
 import {  WorkspaceId  } from '@core/domain/value-objects';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
@@ -14,6 +14,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { BankFeedSyncDomainError } from '../../domain/errors/bank-feed-sync.errors';
 
 export class PrismaBankTransactionRepository
   extends PrismaRepository<BankTransaction>
@@ -24,29 +25,87 @@ export class PrismaBankTransactionRepository
   }
 
   async save(transaction: BankTransaction): Promise<void> {
-    const data = this.toPersistence(transaction);
-
-    await this.prisma.bankTransaction.upsert({
-      where: { id: transaction.id.getValue() },
-      create: data,
-      update: data,
+    if (transaction.status === TransactionStatus.PENDING) {
+      throw new BankFeedSyncDomainError('Use saveBatch to import pending transactions', 'INVALID_TRANSACTION_WRITE', 422);
+    }
+    await this.prisma.$transaction(async (tx) => {
+      const result = await tx.bankTransaction.updateMany({
+        where: {
+          id: transaction.id.getValue(),
+          workspaceId: transaction.workspaceId.getValue(),
+          status: TransactionStatus.PENDING,
+        },
+        data: {
+          status: transaction.status,
+          expenseId: transaction.expenseId,
+          updatedAt: transaction.updatedAt,
+        },
+      });
+      if (result.count !== 1) {
+        throw new BankFeedSyncDomainError('Transaction was already processed', 'INVALID_TRANSACTION_TRANSITION', 409);
+      }
+      await this.persistOutboxEvents(tx, [transaction]);
     });
-    await this.dispatchEvents(transaction);
+    this.clearPersistedEvents([transaction]);
   }
 
-  async saveBatch(transactions: BankTransaction[]): Promise<void> {
-    const data = transactions.map((t) => this.toPersistence(t));
+  async saveBatch(transactions: BankTransaction[], expectedConnectionVersion: number): Promise<number> {
+    if (transactions.length === 0) return 0;
+    const first = transactions[0];
+    const workspaceId = first.workspaceId.getValue();
+    const connectionId = first.connectionId.getValue();
+    const sessionId = first.sessionId.getValue();
+    if (transactions.some((transaction) =>
+      transaction.workspaceId.getValue() !== workspaceId ||
+      transaction.connectionId.getValue() !== connectionId ||
+      transaction.sessionId.getValue() !== sessionId
+    )) {
+      throw new BankFeedSyncDomainError('A sync batch must belong to one connection', 'INVALID_SYNC_BATCH', 422);
+    }
+    const data = transactions.map((t) => PrismaBankTransactionRepository.toPersistence(t));
 
-    await this.prisma.$transaction(async (tx) => {
+    const insertedIds = await this.prisma.$transaction(async (tx) => {
+      const activeConnection = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM bank_feed_sync.bank_connection
+        WHERE id = ${connectionId} AND workspace_id = ${workspaceId}
+          AND version = ${expectedConnectionVersion}
+          AND status = 'CONNECTED'::bank_feed_sync."ConnectionStatus"
+        FOR UPDATE
+      `;
+      if (activeConnection.length === 0) {
+        throw new BankFeedSyncDomainError('Bank connection is no longer active', 'BANK_CONNECTION_INACTIVE', 409);
+      }
+      const activeSession = await tx.$queryRaw<{ id: string }[]>`
+        SELECT id FROM bank_feed_sync.sync_session
+        WHERE id = ${sessionId} AND workspace_id = ${workspaceId}
+          AND connection_id = ${connectionId}
+          AND status = 'IN_PROGRESS'::bank_feed_sync."SyncStatus"
+        FOR UPDATE
+      `;
+      if (activeSession.length === 0) {
+        throw new BankFeedSyncDomainError('Sync session is no longer active', 'CONCURRENT_SYNC_TRANSITION', 409);
+      }
       await tx.bankTransaction.createMany({
         data,
         skipDuplicates: true,
       });
+      const inserted = await tx.bankTransaction.findMany({
+        where: { id: { in: transactions.map((transaction) => transaction.id.getValue()) } },
+        select: { id: true },
+      });
+      const ids = new Set(inserted.map((row) => row.id));
+      const insertedAggregates = new Map(
+        transactions
+          .filter((transaction) => ids.has(transaction.id.getValue()))
+          .map((transaction) => [transaction.id.getValue(), transaction] as const)
+      );
+      await this.persistOutboxEvents(tx, [...insertedAggregates.values()]);
+      return ids;
     });
-
-    for (const transaction of transactions) {
-      await this.dispatchEvents(transaction);
-    }
+    this.clearPersistedEvents(
+      transactions.filter((transaction) => insertedIds.has(transaction.id.getValue()))
+    );
+    return insertedIds.size;
   }
 
   async findById(
@@ -65,11 +124,13 @@ export class PrismaBankTransactionRepository
 
   async findByExternalId(
     workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
     externalId: string
   ): Promise<BankTransaction | null> {
     const record = await this.prisma.bankTransaction.findFirst({
       where: {
         workspaceId: workspaceId.getValue(),
+        connectionId: connectionId.getValue(),
         externalId,
       },
     });
@@ -79,6 +140,7 @@ export class PrismaBankTransactionRepository
 
   async findByExternalIds(
     workspaceId: WorkspaceId,
+    connectionId: BankConnectionId,
     externalIds: string[]
   ): Promise<Set<string>> {
     if (externalIds.length === 0) return new Set();
@@ -86,6 +148,7 @@ export class PrismaBankTransactionRepository
     const records = await this.prisma.bankTransaction.findMany({
       where: {
         workspaceId: workspaceId.getValue(),
+        connectionId: connectionId.getValue(),
         externalId: { in: externalIds },
       },
       select: { externalId: true },
@@ -182,7 +245,7 @@ export class PrismaBankTransactionRepository
 
   async findPotentialDuplicates(
     workspaceId: WorkspaceId,
-    amount: number,
+    amount: string,
     transactionDate: Date,
     description: string
   ): Promise<BankTransaction[]> {
@@ -196,7 +259,7 @@ export class PrismaBankTransactionRepository
     const records = await this.prisma.bankTransaction.findMany({
       where: {
         workspaceId: workspaceId.getValue(),
-        amount,
+        amount: new Prisma.Decimal(amount),
         description,
         transactionDate: {
           gte: startDate,
@@ -208,7 +271,7 @@ export class PrismaBankTransactionRepository
     return records.map((r) => this.toDomain(r));
   }
 
-  private toPersistence(
+  static toPersistence(
     transaction: BankTransaction
   ): Prisma.BankTransactionUncheckedCreateInput {
     return {
@@ -217,7 +280,7 @@ export class PrismaBankTransactionRepository
       connectionId: transaction.connectionId.getValue(),
       sessionId: transaction.sessionId.getValue(),
       externalId: transaction.externalId,
-      amount: transaction.amount,
+      amount: new Prisma.Decimal(transaction.amount),
       currency: transaction.currency,
       description: transaction.description,
       merchantName: transaction.merchantName,
@@ -241,7 +304,7 @@ export class PrismaBankTransactionRepository
       connectionId: BankConnectionId.fromString(record.connectionId),
       sessionId: SyncSessionId.fromString(record.sessionId),
       externalId: record.externalId,
-      amount: record.amount,
+      amount: record.amount.toString(),
       currency: record.currency,
       description: record.description,
       merchantName: record.merchantName ?? undefined,

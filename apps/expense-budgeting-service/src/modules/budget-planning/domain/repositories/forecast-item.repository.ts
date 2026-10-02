@@ -12,12 +12,15 @@ export interface IForecastItemRepository {
   findById(id: ForecastItemId, workspaceId: string): Promise<ForecastItem | null>;
   findByForecastId(
     forecastId: ForecastId,
+    workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<ForecastItem>>;
-  delete(id: ForecastItemId): Promise<void>;
+  delete(id: ForecastItemId, workspaceId: string): Promise<void>;
   findByCategory(
     forecastId: ForecastId,
     categoryId: CategoryId,
+    workspaceId: string,
   ): Promise<ForecastItem | null>;
-  deleteByForecastId(forecastId: ForecastId): Promise<void>;
+  deleteByForecastId(forecastId: ForecastId, workspaceId: string): Promise<void>;
+  countByForecastId(forecastId: ForecastId, workspaceId: string): Promise<number>;
 }

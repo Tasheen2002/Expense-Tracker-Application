@@ -16,7 +16,7 @@ import { Money } from '../../domain/value-objects/money';
 import { ExpenseDate } from '../../domain/value-objects/expense-date';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 import { PaymentMethod } from '../../domain/enums/payment-method';
-import { CurrencyRequiredError } from '../../domain/errors/expense.errors';
+import { CurrencyRequiredError, ExpenseConcurrencyConflictError } from '../../domain/errors/expense.errors';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
@@ -27,6 +27,11 @@ type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
   include: { category: true; tags: true; attachments: true };
 }>;
 
+interface PrismaPaginationDelegate<T> {
+  findMany: (args: unknown) => Promise<T[]>;
+  count: (args: unknown) => Promise<number>;
+}
+
 export class ExpenseRepositoryImpl
   extends PrismaRepository<Expense>
   implements IExpenseRepository
@@ -36,7 +41,7 @@ export class ExpenseRepositoryImpl
   }
 
   async save(expense: Expense): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
+    await this.runInTransaction(async (tx) => {
       // Create expense
       await tx.expense.create({
         data: {
@@ -53,6 +58,7 @@ export class ExpenseRepositoryImpl
           paymentMethod: expense.paymentMethod,
           isReimbursable: expense.isReimbursable,
           status: expense.status,
+          version: expense.version,
           createdAt: expense.createdAt,
           updatedAt: expense.updatedAt,
         },
@@ -67,33 +73,41 @@ export class ExpenseRepositoryImpl
           })),
         });
       }
-    });
 
-    await this.dispatchEvents(expense);
+      await this.dispatchEvents(expense, tx);
+    });
   }
 
   async update(expense: Expense): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      // Update expense
-      await tx.expense.update({
+    let nextVersion: number | null = null;
+    await this.runInTransaction(async (tx) => {
+      // Optimistic concurrency update: check expected version atomically
+      const updateResult = await tx.expense.updateMany({
         where: {
           id: expense.id.getValue(),
           workspaceId: expense.workspaceId,
+          version: expense.version,
         },
         data: {
           title: expense.title,
-          description: expense.description,
+          description: expense.description ?? null,
           amount: expense.amount.getAmount(),
           currency: expense.amount.getCurrency(),
           expenseDate: expense.expenseDate.getValue(),
-          categoryId: expense.categoryId?.getValue(),
-          merchant: expense.merchant,
+          categoryId: expense.categoryId ? expense.categoryId.getValue() : null,
+          merchant: expense.merchant ?? null,
           paymentMethod: expense.paymentMethod,
           isReimbursable: expense.isReimbursable,
           status: expense.status,
           updatedAt: expense.updatedAt,
+          version: { increment: 1 },
         },
       });
+
+      if (updateResult.count === 0) {
+        throw new ExpenseConcurrencyConflictError(expense.id.getValue());
+      }
+      nextVersion = expense.version + 1;
 
       // Optimize tag updates: only modify changed tags
       const expenseIdValue = expense.id.getValue();
@@ -131,10 +145,14 @@ export class ExpenseRepositoryImpl
           })),
         });
       }
+
+      // Persist outbox events inside transaction; publication runs on commit
+      await this.dispatchEvents(expense, tx);
     });
 
-    // Dispatch domain events after transaction commits
-    await this.dispatchEvents(expense);
+    if (nextVersion !== null) {
+      expense.synchronizeVersion(nextVersion);
+    }
   }
 
   async findById(id: ExpenseId, workspaceId: string): Promise<Expense | null> {
@@ -160,7 +178,7 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as any,
+      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
       {
         where: { workspaceId },
         include: {
@@ -181,7 +199,7 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as any,
+      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
       {
         where: { userId, workspaceId },
         include: {
@@ -202,7 +220,7 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as any,
+      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
       {
         where: {
           categoryId: categoryId.getValue(),
@@ -226,7 +244,7 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as any,
+      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
       {
         where: { status, workspaceId },
         include: {
@@ -305,12 +323,30 @@ export class ExpenseRepositoryImpl
     };
   }
 
-  async delete(id: ExpenseId, workspaceId: string): Promise<void> {
-    await this.prisma.expense.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId,
-      },
+  async delete(id: ExpenseId, workspaceId: string, expense?: Expense): Promise<void> {
+    await this.runInTransaction(async (tx) => {
+      let entityToDispatch = expense;
+      if (!entityToDispatch) {
+        const found = await tx.expense.findFirst({
+          where: { id: id.getValue(), workspaceId },
+          include: { category: true, tags: true, attachments: true },
+        });
+        if (found) {
+          entityToDispatch = this.toDomain(found);
+          entityToDispatch.markAsDeleted();
+        }
+      }
+
+      await tx.expense.delete({
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
+      });
+
+      if (entityToDispatch) {
+        await this.dispatchEvents(entityToDispatch, tx);
+      }
     });
   }
 
@@ -432,6 +468,7 @@ export class ExpenseRepositoryImpl
       paymentMethod: data.paymentMethod as PaymentMethod,
       isReimbursable: data.isReimbursable,
       status: data.status as ExpenseStatus,
+      version: data.version ?? 1,
       tagIds: data.tags
         ? data.tags.map((tag) => TagId.fromString(tag.tagId))
         : [],
@@ -452,10 +489,15 @@ export class ExpenseRepositoryImpl
     currency: string;
     countByStatus: Record<ExpenseStatus, number>;
   }> {
+    // Currency is required to prevent summing different currencies together
+    if (!currency) {
+      throw new CurrencyRequiredError();
+    }
+
     const where: Prisma.ExpenseWhereInput = {
       workspaceId,
+      currency,
       ...(userId && { userId }),
-      ...(currency && { currency }),
     };
 
     const [stats, total] = await Promise.all([
@@ -484,7 +526,7 @@ export class ExpenseRepositoryImpl
 
     return {
       totalAmount: total._sum.amount?.toNumber() || 0,
-      currency: currency || 'USD',
+      currency,
       countByStatus,
     };
   }

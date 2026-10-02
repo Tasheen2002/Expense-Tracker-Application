@@ -1,6 +1,11 @@
 import { TagId } from '../value-objects/tag-id';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import { EXPENSE_EVENTS } from '@shared/events/expense-events';
+import {
+  TAG_NAME_MAX_LENGTH,
+  TAG_COLOR_REGEX,
+} from '../constants/expense.constants';
 import {
   TagNameRequiredError,
   TagNameTooLongError,
@@ -15,7 +20,7 @@ export class TagCreatedEvent extends DomainEvent {
   ) {
     super(tagId, 'Tag');
   }
-  get eventType(): string { return 'tag.created'; }
+  get eventType(): string { return EXPENSE_EVENTS.TAG_CREATED; }
   getPayload(): Record<string, unknown> {
     return { tagId: this.tagId, workspaceId: this.workspaceId, name: this.name };
   }
@@ -29,19 +34,22 @@ export class TagUpdatedEvent extends DomainEvent {
   ) {
     super(tagId, 'Tag');
   }
-  get eventType(): string { return 'tag.updated'; }
+  get eventType(): string { return EXPENSE_EVENTS.TAG_UPDATED; }
   getPayload(): Record<string, unknown> {
     return { tagId: this.tagId, workspaceId: this.workspaceId, field: this.field };
   }
 }
 
 export class TagDeletedEvent extends DomainEvent {
-  constructor(public readonly tagId: string) {
+  constructor(
+    public readonly tagId: string,
+    public readonly workspaceId: string
+  ) {
     super(tagId, 'Tag');
   }
-  get eventType(): string { return 'tag.deleted'; }
+  get eventType(): string { return EXPENSE_EVENTS.TAG_DELETED; }
   getPayload(): Record<string, unknown> {
-    return { tagId: this.tagId };
+    return { tagId: this.tagId, workspaceId: this.workspaceId };
   }
 }
 
@@ -95,17 +103,14 @@ export class Tag extends AggregateRoot {
     if (!name || name.trim().length === 0) {
       throw new TagNameRequiredError();
     }
-    if (name.length > 50) {
-      throw new TagNameTooLongError(50);
+    if (name.length > TAG_NAME_MAX_LENGTH) {
+      throw new TagNameTooLongError(TAG_NAME_MAX_LENGTH);
     }
   }
 
   private static validateColor(color?: string): void {
-    if (color) {
-      const hexColorRegex = /^#[0-9A-F]{6}$/i;
-      if (!hexColorRegex.test(color)) {
-        throw new InvalidHexColorError(color);
-      }
+    if (color && !TAG_COLOR_REGEX.test(color)) {
+      throw new InvalidHexColorError(color);
     }
   }
 
@@ -127,7 +132,7 @@ export class Tag extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   // Business logic methods
@@ -137,14 +142,16 @@ export class Tag extends AggregateRoot {
     this.addDomainEvent(new TagUpdatedEvent(this.id.getValue(), this.workspaceId, 'name'));
   }
 
-  updateColor(color?: string): void {
-    Tag.validateColor(color);
-    this.props.color = color;
+  updateColor(color?: string | null): void {
+    if (color) {
+      Tag.validateColor(color);
+    }
+    this.props.color = color || undefined;
     this.addDomainEvent(new TagUpdatedEvent(this.id.getValue(), this.workspaceId, 'color'));
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new TagDeletedEvent(this.id.getValue()));
+    this.addDomainEvent(new TagDeletedEvent(this.id.getValue(), this.workspaceId));
   }
 
   static toDTO(tag: Tag): TagDTO {

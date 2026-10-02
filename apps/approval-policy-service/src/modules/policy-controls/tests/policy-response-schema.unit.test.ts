@@ -224,7 +224,7 @@ describe('Violation HTTP Response Serialization', () => {
 });
 
 describe('Controller Authentication and Header Extraction Helpers', () => {
-  it('should extract actorId from request.user.userId or request.user.id', async () => {
+  it('should extract actorId from the authenticated userId and reject missing userId', async () => {
     const { getAuthenticatedActorId } = await import(
       '../infrastructure/http/controllers/controller.helper'
     );
@@ -232,9 +232,9 @@ describe('Controller Authentication and Header Extraction Helpers', () => {
     expect(
       getAuthenticatedActorId({ user: { userId: 'user-1' } } as any)
     ).toBe('user-1');
-    expect(
+    expect(() =>
       getAuthenticatedActorId({ user: { id: 'user-2' } } as any)
-    ).toBe('user-2');
+    ).toThrowError(/Authentication required/);
 
     expect(() =>
       getAuthenticatedActorId({} as any)
@@ -257,4 +257,3 @@ describe('Controller Authentication and Header Extraction Helpers', () => {
     expect(extractAuthToken({ headers: {} } as any)).toBeUndefined();
   });
 });
-

@@ -25,12 +25,12 @@ export interface IPurchaseOrderRepository {
     filters: PurchaseOrderFilters,
     options?: PaginationOptions
   ): Promise<PaginatedResult<PurchaseOrder>>;
-  delete(id: PurchaseOrderId, workspaceId: string): Promise<void>;
+  delete(po: PurchaseOrder): Promise<void>;
   exists(id: PurchaseOrderId, workspaceId: string): Promise<boolean>;
 
   // Item operations
-  saveItem(item: PurchaseOrderItem): Promise<void>;
-  findItemById(id: PurchaseOrderItemId): Promise<PurchaseOrderItem | null>;
-  findItemsByPurchaseOrder(purchaseOrderId: string): Promise<PurchaseOrderItem[]>;
-  deleteItem(id: PurchaseOrderItemId): Promise<void>;
+  saveItem(item: PurchaseOrderItem, workspaceId: string): Promise<void>;
+  findItemById(id: PurchaseOrderItemId, workspaceId: string): Promise<PurchaseOrderItem | null>;
+  findItemsByPurchaseOrder(purchaseOrderId: string, workspaceId: string): Promise<PurchaseOrderItem[]>;
+  deleteItem(id: PurchaseOrderItemId, workspaceId: string): Promise<void>;
 }

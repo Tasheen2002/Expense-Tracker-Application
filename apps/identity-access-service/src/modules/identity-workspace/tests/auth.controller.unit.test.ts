@@ -54,13 +54,12 @@ describe('AuthController (Unit)', () => {
       } as unknown as FastifyRequest<any>;
 
       const userDto = { userId: 'u-1', email: 'user@example.com', fullName: 'Test User' };
-      mockLoginUserHandler.handle.mockResolvedValue(userDto);
-      mockSessionService.createSession.mockResolvedValue({ sessionId: 'sess-123' });
+      mockLoginUserHandler.handle.mockResolvedValue({ user: userDto, sessionId: 'sess-123' });
 
       await controller.login(req, mockReply);
 
       expect(mockLoginUserHandler.handle).toHaveBeenCalledWith(req.body);
-      expect(mockSessionService.createSession).toHaveBeenCalledWith('u-1');
+      expect(mockSessionService.createSession).not.toHaveBeenCalled();
       expect(req.server.signToken).toHaveBeenCalledWith({
         userId: 'u-1',
         email: 'user@example.com',

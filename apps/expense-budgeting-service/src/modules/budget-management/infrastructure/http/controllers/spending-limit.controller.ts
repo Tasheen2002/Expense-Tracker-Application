@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateSpendingLimitHandler,
   UpdateSpendingLimitHandler,
@@ -140,12 +140,9 @@ export class SpendingLimitController {
   ) {
     try {
       const { workspaceId, limitId } = request.params;
-      const userId = request.user.userId;
-
       const result = await this.deleteLimitHandler.handle({
         limitId,
         workspaceId,
-        userId,
       });
 
       return ResponseHelper.fromCommand(

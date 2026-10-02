@@ -1,6 +1,7 @@
 import { IExpenseSplitRepository } from '../../domain/repositories/expense-split.repository';
 import { ISplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
 import { IExpenseRepository } from '../../domain/repositories/expense.repository';
+import { IUnitOfWork } from '../ports/unit-of-work.port';
 import { ExpenseSplit, ExpenseSplitDTO } from '../../domain/entities/expense-split.entity';
 import { SplitSettlement, SplitSettlementDTO } from '../../domain/entities/split-settlement.entity';
 import { ExpenseId } from '../../domain/value-objects/expense-id';
@@ -19,12 +20,15 @@ import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
+import { IWorkspaceAuthorizationPort } from '../ports/workspace-authorization.port';
 
 export class ExpenseSplitService {
   constructor(
     private readonly splitRepository: IExpenseSplitRepository,
     private readonly settlementRepository: ISplitSettlementRepository,
-    private readonly expenseRepository?: IExpenseRepository
+    private readonly expenseRepository: IExpenseRepository,
+    private readonly unitOfWork: IUnitOfWork,
+    private readonly workspaceAuth?: IWorkspaceAuthorizationPort
   ) {}
 
   async createSplit(params: {
@@ -50,6 +54,16 @@ export class ExpenseSplitService {
       throw new ExpenseAlreadySplitError(params.expenseId);
     }
 
+    // Verify all participants belong to the workspace when workspaceAuth is configured
+    if (this.workspaceAuth) {
+      for (const participant of params.participants) {
+        await this.workspaceAuth.authorize({
+          userId: participant.userId,
+          workspaceId: params.workspaceId,
+        });
+      }
+    }
+
     const participantsWithMoney = params.participants.map((p) => ({
       userId: p.userId,
       shareAmount: p.shareAmount
@@ -67,21 +81,27 @@ export class ExpenseSplitService {
       participants: participantsWithMoney,
     });
 
-    await this.splitRepository.save(split);
+    const executeSplitCreation = async () => {
+      await this.splitRepository.save(split);
 
-    const settlements: SplitSettlement[] = [];
-    for (const participant of split.participants) {
-      if (participant.userId !== params.userId) {
-        const settlement = SplitSettlement.create({
-          splitId: split.id,
-          fromUserId: participant.userId,
-          toUserId: params.userId,
-          owedAmount: participant.shareAmount,
-        });
-        settlements.push(settlement);
-        await this.settlementRepository.save(settlement);
+      for (const participant of split.participants) {
+        if (
+          participant.userId !== params.userId &&
+          participant.shareAmount.getAmount().isPositive() &&
+          !participant.shareAmount.getAmount().isZero()
+        ) {
+          const settlement = SplitSettlement.create({
+            splitId: split.id,
+            fromUserId: participant.userId,
+            toUserId: params.userId,
+            owedAmount: participant.shareAmount,
+          });
+          await this.settlementRepository.save(settlement);
+        }
       }
-    }
+    };
+
+    await this.unitOfWork.execute(executeSplitCreation);
 
     return ExpenseSplit.toDTO(split);
   }
@@ -156,7 +176,7 @@ export class ExpenseSplitService {
     }
 
     split.markAsDeleted();
-    await this.splitRepository.delete(SplitId.fromString(splitId), workspaceId);
+    await this.splitRepository.delete(SplitId.fromString(splitId), workspaceId, split);
   }
 
   async recordPayment(params: {
@@ -165,44 +185,49 @@ export class ExpenseSplitService {
     userId: string;
     amount: number;
   }): Promise<SplitSettlementDTO> {
-    const settlement = await this.settlementRepository.findById(
-      SettlementId.fromString(params.settlementId),
-      params.workspaceId
-    );
+    let updatedSettlementDTO: SplitSettlementDTO;
 
-    if (!settlement) {
-      throw new SettlementNotFoundError(params.settlementId);
-    }
-
-    if (settlement.fromUserId !== params.userId) {
-      throw new UnauthorizedSplitAccessError(
-        params.settlementId,
-        params.userId
+    await this.unitOfWork.execute(async () => {
+      // Lock and fetch settlement row inside transaction using FOR UPDATE to serialize concurrent payments
+      const settlement = await this.settlementRepository.findByIdForUpdate(
+        SettlementId.fromString(params.settlementId),
+        params.workspaceId
       );
-    }
 
-    const paymentAmount = Money.create(
-      params.amount,
-      settlement.totalOwedAmount.getCurrency()
-    );
-
-    settlement.recordPayment(paymentAmount);
-
-    await this.settlementRepository.save(settlement);
-
-    const split = await this.splitRepository.findById(
-      settlement.splitId,
-      params.workspaceId
-    );
-
-    if (split) {
-      const participant = split.getParticipantByUserId(params.userId);
-      if (participant && settlement.isSettled()) {
-        participant.markAsPaid();
-        await this.splitRepository.save(split);
+      if (!settlement) {
+        throw new SettlementNotFoundError(params.settlementId);
       }
 
-      if (this.expenseRepository) {
+      if (
+        settlement.fromUserId !== params.userId &&
+        settlement.toUserId !== params.userId
+      ) {
+        throw new UnauthorizedSplitAccessError(
+          params.settlementId,
+          params.userId
+        );
+      }
+
+      const paymentAmount = Money.create(
+        params.amount,
+        settlement.totalOwedAmount.getCurrency()
+      );
+
+      settlement.recordPayment(paymentAmount);
+
+      await this.settlementRepository.save(settlement);
+
+      const split = await this.splitRepository.findById(
+        settlement.splitId,
+        params.workspaceId
+      );
+
+      if (split) {
+        if (settlement.isSettled()) {
+          split.markParticipantAsPaid(settlement.fromUserId);
+          await this.splitRepository.save(split);
+        }
+
         const expense = await this.expenseRepository.findById(
           split.expenseId,
           params.workspaceId
@@ -212,9 +237,11 @@ export class ExpenseSplitService {
           await this.expenseRepository.update(expense);
         }
       }
-    }
 
-    return SplitSettlement.toDTO(settlement);
+      updatedSettlementDTO = SplitSettlement.toDTO(settlement);
+    });
+
+    return updatedSettlementDTO!;
   }
 
   async getUserSettlements(

@@ -45,44 +45,37 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, option
    * Never falls back to or bypasses via internal API key.
    */
   fastify.decorate('authenticate', async (request: FastifyRequest) => {
-    try {
-      const authHeader = request.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        const err = new Error('Missing or invalid authorization header') as Error & {
-          statusCode: number;
-        };
-        err.statusCode = 401;
-        throw err;
-      }
-
-      const token = authHeader.substring(7);
-      const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
-
-      if (!payload.sessionId) {
-        const err = new Error('Invalid token: missing session identifier') as Error & {
-          statusCode: number;
-        };
-        err.statusCode = 401;
-        throw err;
-      }
-
-      const isValid = await sessionService.isSessionValid(payload.sessionId);
-      if (!isValid) {
-        const err = new Error('Session has been revoked or expired') as Error & {
-          statusCode: number;
-        };
-        err.statusCode = 401;
-        throw err;
-      }
-
-      request.user = payload;
-    } catch (error: unknown) {
-      const err = new Error(
-        error instanceof Error ? error.message : 'Authentication failed'
-      ) as Error & { statusCode: number };
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      const err = new Error('Missing or invalid authorization header') as Error & {
+        statusCode: number;
+      };
       err.statusCode = 401;
       throw err;
     }
+
+    const token = authHeader.substring(7);
+    const payload = fastify.verifyToken(token);
+
+    if (!payload.sessionId) {
+      const err = new Error('Invalid token: missing session identifier') as Error & {
+        statusCode: number;
+      };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    // Backend failures propagate to the server error handler for sanitization.
+    const isValid = await sessionService.isSessionValid(payload.sessionId);
+    if (!isValid) {
+      const err = new Error('Session has been revoked or expired') as Error & {
+        statusCode: number;
+      };
+      err.statusCode = 401;
+      throw err;
+    }
+
+    request.user = payload;
   });
 
   /**

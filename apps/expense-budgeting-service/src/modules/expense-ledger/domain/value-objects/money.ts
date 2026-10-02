@@ -1,4 +1,4 @@
-import { Decimal } from '@prisma/client/runtime/library';
+import { Decimal } from 'decimal.js';
 import {
   InvalidFormatError,
   ValueOutOfRangeError,
@@ -68,6 +68,10 @@ export class Money {
         ? new Decimal(amount)
         : amount;
 
+    if (decimalAmount.isNaN() || !decimalAmount.isFinite()) {
+      throw new ValueOutOfRangeError('amount', 'Amount must be a finite number');
+    }
+
     if (decimalAmount.isNegative()) {
       throw new ValueOutOfRangeError('amount', 'Amount cannot be negative');
     }
@@ -88,6 +92,10 @@ export class Money {
 
   getAmount(): Decimal {
     return this.amount;
+  }
+
+  toNumber(): number {
+    return this.amount.toNumber();
   }
 
   getCurrency(): string {
@@ -116,7 +124,19 @@ export class Money {
   }
 
   multiply(factor: number): Money {
-    return new Money(this.amount.mul(factor), this.currency);
+    if (typeof factor !== 'number' || !Number.isFinite(factor)) {
+      throw new ValueOutOfRangeError('factor', 'Factor must be a finite number');
+    }
+    const result = this.amount.mul(factor).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    return Money.create(result, this.currency);
+  }
+
+  divide(divisor: number): Money {
+    if (typeof divisor !== 'number' || !Number.isFinite(divisor) || divisor === 0) {
+      throw new ValueOutOfRangeError('divisor', 'Cannot divide by zero or non-finite number');
+    }
+    const result = this.amount.div(divisor).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+    return Money.create(result, this.currency);
   }
 
   equals(other: Money): boolean {

@@ -233,7 +233,7 @@ export class ExemptionController {
       }
 
       const { workspaceId } = request.params;
-      const actorId = (request as any).user ? getAuthenticatedActorId(request) : undefined;
+      const actorId = request.user ? getAuthenticatedActorId(request) : undefined;
       const authToken = extractAuthToken(request);
       const servicePrincipal = request.servicePrincipal;
 

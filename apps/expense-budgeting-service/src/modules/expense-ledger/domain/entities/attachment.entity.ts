@@ -1,5 +1,10 @@
 import { AttachmentId } from '../value-objects/attachment-id';
 import {
+  MAX_ATTACHMENT_SIZE,
+  ALLOWED_ATTACHMENT_MIME_TYPES,
+  MIME_TYPE_MAX_LENGTH,
+} from '../constants/expense.constants';
+import {
   FileNameRequiredError,
   FileNameTooLongError,
   FilePathRequiredError,
@@ -82,10 +87,8 @@ export class Attachment {
     if (fileSize <= 0) {
       throw new FileSizeInvalidError();
     }
-    // Max file size: 10MB
-    const maxFileSize = 10 * 1024 * 1024;
-    if (fileSize > maxFileSize) {
-      throw new FileSizeLimitExceededError(fileSize, maxFileSize);
+    if (fileSize > MAX_ATTACHMENT_SIZE) {
+      throw new FileSizeLimitExceededError(fileSize, MAX_ATTACHMENT_SIZE);
     }
   }
 
@@ -93,26 +96,12 @@ export class Attachment {
     if (!mimeType || mimeType.trim().length === 0) {
       throw new MimeTypeRequiredError();
     }
-    if (mimeType.length > 100) {
-      throw new MimeTypeTooLongError(100);
+    if (mimeType.length > MIME_TYPE_MAX_LENGTH) {
+      throw new MimeTypeTooLongError(MIME_TYPE_MAX_LENGTH);
     }
 
-    // Validate allowed MIME types for receipts and documents
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    ];
-
-    if (!allowedMimeTypes.includes(mimeType)) {
-      throw new InvalidFileTypeError(mimeType, allowedMimeTypes);
+    if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(mimeType)) {
+      throw new InvalidFileTypeError(mimeType, [...ALLOWED_ATTACHMENT_MIME_TYPES]);
     }
   }
 
@@ -180,6 +169,10 @@ export class Attachment {
 
   getFileSizeInMB(): number {
     return Math.round((this.props.fileSize / (1024 * 1024)) * 100) / 100;
+  }
+
+  equals(other: Attachment): boolean {
+    return this.id.equals(other.id);
   }
 
   static toDTO(attachment: Attachment): AttachmentDTO {

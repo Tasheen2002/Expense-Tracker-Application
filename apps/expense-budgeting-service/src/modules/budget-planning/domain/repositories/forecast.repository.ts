@@ -14,8 +14,8 @@ export interface IForecastRepository {
     workspaceId: string,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Forecast>>;
-  delete(id: ForecastId): Promise<void>;
-
-  deleteWithItems(id: ForecastId): Promise<void>;
-  findByName(planId: PlanId, name: string): Promise<Forecast | null>;
+  delete(id: ForecastId, workspaceId: string): Promise<void>;
+  deleteWithItems(id: ForecastId, workspaceId: string): Promise<void>;
+  findByName(planId: PlanId, name: string, workspaceId: string): Promise<Forecast | null>;
+  countByPlanId(planId: PlanId, workspaceId: string): Promise<number>;
 }

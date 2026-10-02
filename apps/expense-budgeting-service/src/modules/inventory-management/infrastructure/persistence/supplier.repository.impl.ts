@@ -9,6 +9,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
+import { SupplierAlreadyExistsError, SupplierInUseError, SupplierNotFoundError } from '../../domain/errors/inventory.errors';
 
 export class SupplierRepositoryImpl
   extends PrismaRepository<Supplier>
@@ -19,30 +20,42 @@ export class SupplierRepositoryImpl
   }
 
   async save(supplier: Supplier): Promise<void> {
-    await this.prisma.supplier.upsert({
-      where: { id: supplier.id.getValue() },
-      create: {
-        id: supplier.id.getValue(),
-        workspaceId: supplier.workspaceId,
-        name: supplier.name,
-        contactEmail: supplier.contactEmail,
-        contactPhone: supplier.contactPhone,
-        address: supplier.address,
-        isActive: supplier.isActive,
-        createdAt: supplier.createdAt,
-        updatedAt: supplier.updatedAt,
-      },
-      update: {
-        name: supplier.name,
-        contactEmail: supplier.contactEmail,
-        contactPhone: supplier.contactPhone,
-        address: supplier.address,
-        isActive: supplier.isActive,
-        updatedAt: supplier.updatedAt,
-      },
-    });
-
-    await this.dispatchEvents(supplier);
+    try {
+      await this.runInTransaction(async (tx) => {
+        await tx.supplier.upsert({
+          where: { id: supplier.id.getValue(), workspaceId: supplier.workspaceId },
+          create: {
+            id: supplier.id.getValue(),
+            workspaceId: supplier.workspaceId,
+            name: supplier.name,
+            contactEmail: supplier.contactEmail,
+            contactPhone: supplier.contactPhone,
+            address: supplier.address,
+            isActive: supplier.isActive,
+            createdAt: supplier.createdAt,
+            updatedAt: supplier.updatedAt,
+          },
+          update: {
+            name: supplier.name,
+            contactEmail: supplier.contactEmail,
+            contactPhone: supplier.contactPhone,
+            address: supplier.address,
+            isActive: supplier.isActive,
+            updatedAt: supplier.updatedAt,
+          },
+        });
+        await this.dispatchEvents(supplier, tx);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const target = error.meta?.target;
+        const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
+        if (fields.some((field) => field === 'name' || field.includes('supplier_workspace_name'))) {
+          throw new SupplierAlreadyExistsError(supplier.name, supplier.workspaceId);
+        }
+      }
+      throw error;
+    }
   }
 
   async findById(id: SupplierId, workspaceId: string): Promise<Supplier | null> {
@@ -59,16 +72,29 @@ export class SupplierRepositoryImpl
   ): Promise<PaginatedResult<Supplier>> {
     return PrismaRepositoryHelper.paginate(
       this.prisma.supplier,
-      { where: { workspaceId }, orderBy: { createdAt: 'desc' } },
+      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
       (record) => this.toDomain(record),
       options
     );
   }
 
-  async delete(id: SupplierId, workspaceId: string): Promise<void> {
-    await this.prisma.supplier.delete({
-      where: { id: id.getValue(), workspaceId },
-    });
+  async delete(supplier: Supplier): Promise<void> {
+    try {
+      await this.runInTransaction(async (tx) => {
+        await tx.supplier.delete({
+          where: { id: supplier.id.getValue(), workspaceId: supplier.workspaceId },
+        });
+        await this.dispatchEvents(supplier, tx);
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        throw new SupplierNotFoundError(supplier.id.getValue(), supplier.workspaceId);
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new SupplierInUseError(supplier.id.getValue());
+      }
+      throw error;
+    }
   }
 
   async exists(id: SupplierId, workspaceId: string): Promise<boolean> {

@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { CreatePurchaseOrderHandler } from '../../../application/commands/create-purchase-order.command';
 import { UpdatePurchaseOrderHandler } from '../../../application/commands/update-purchase-order.command';
 import { DeletePurchaseOrderHandler } from '../../../application/commands/delete-purchase-order.command';
@@ -11,7 +11,6 @@ import { AddPurchaseOrderItemHandler } from '../../../application/commands/add-p
 import { RemovePurchaseOrderItemHandler } from '../../../application/commands/remove-purchase-order-item.command';
 import { GetPurchaseOrderHandler } from '../../../application/queries/get-purchase-order.query';
 import { ListPurchaseOrdersHandler } from '../../../application/queries/list-purchase-orders.query';
-import { PurchaseOrderStatus } from '../../../domain/enums/purchase-order-status';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   CreatePurchaseOrderInput,
@@ -171,6 +170,7 @@ export class PurchaseOrderController {
   async receivePurchaseOrder(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string; purchaseOrderId: string };
+      Body: { locationId: string };
     }>,
     reply: FastifyReply
   ) {
@@ -179,6 +179,8 @@ export class PurchaseOrderController {
       const result = await this.receivePOHandler.handle({
         purchaseOrderId,
         workspaceId,
+        locationId: request.body.locationId,
+        receivedBy: request.user.userId,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -226,7 +228,10 @@ export class PurchaseOrderController {
       const result = await this.addItemHandler.handle({
         purchaseOrderId,
         workspaceId,
-        ...request.body,
+        variantId: request.body.variantId,
+        variantName: request.body.variantName,
+        quantity: request.body.quantity,
+        unitPrice: request.body.unitPrice,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -247,9 +252,10 @@ export class PurchaseOrderController {
     reply: FastifyReply
   ) {
     try {
-      const { workspaceId, itemId } = request.params;
+      const { workspaceId, purchaseOrderId, itemId } = request.params;
       const result = await this.removeItemHandler.handle({
         itemId,
+        purchaseOrderId,
         workspaceId,
       });
       return ResponseHelper.fromCommand(
@@ -294,7 +300,7 @@ export class PurchaseOrderController {
       const { status, supplierId, limit, offset } = request.query;
       const result = await this.listPOsHandler.handle({
         workspaceId,
-        status: status as PurchaseOrderStatus | undefined,
+        status,
         supplierId,
         limit,
         offset,

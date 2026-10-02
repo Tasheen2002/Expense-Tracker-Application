@@ -8,13 +8,14 @@ export class AuditAction {
   }
 
   static create(action: string): AuditAction {
-    if (!action || action.trim().length === 0) {
+    const normalized = action?.trim();
+    if (!normalized) {
       throw new InvalidAuditActionError(action);
     }
-    if (action.length > 100) {
+    if (normalized.length > 100) {
       throw new InvalidAuditActionError(action);
     }
-    return new AuditAction(action.trim());
+    return new AuditAction(normalized);
   }
 
   static fromPersistence(value: string): AuditAction {

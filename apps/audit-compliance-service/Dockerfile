@@ -2,7 +2,8 @@
 # Stage 1: Builder — install deps, generate Prisma, compile TypeScript
 # ============================================================================
 FROM node:20-alpine AS builder
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -17,14 +18,14 @@ COPY apps/audit-compliance-service/ ./apps/audit-compliance-service/
 RUN pnpm install --filter @expense-tracker/audit-compliance-service...
 
 WORKDIR /app/apps/audit-compliance-service
-RUN npx prisma generate
 RUN pnpm build
 
 # ============================================================================
 # Stage 2: Production — minimal runtime image
 # ============================================================================
 FROM node:20-alpine AS production
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9.1.0
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -43,7 +44,7 @@ WORKDIR /app/apps/audit-compliance-service
 
 # Copy compiled output from builder
 COPY --from=builder /app/apps/audit-compliance-service/dist ./dist
-RUN npx prisma generate
+COPY --from=builder /app/apps/audit-compliance-service/node_modules/.prisma/client-audit ./node_modules/.prisma/client-audit
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:' + (process.env.PORT || 3009) + '/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"

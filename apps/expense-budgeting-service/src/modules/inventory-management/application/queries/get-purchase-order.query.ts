@@ -30,7 +30,7 @@ export class GetPurchaseOrderHandler
     }
 
     const items = await this.purchaseOrderService.getItemsByPurchaseOrder(
-      query.purchaseOrderId
+      query.purchaseOrderId, query.workspaceId
     );
 
     return { ...poDTO, items };

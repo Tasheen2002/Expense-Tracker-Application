@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateCategoryHandler,
   UpdateCategoryHandler,
@@ -117,9 +117,9 @@ export class CategoryController {
         categoryId,
         workspaceId,
         name: request.body.name,
-        description: request.body.description ?? undefined,
-        color: request.body.color ?? undefined,
-        icon: request.body.icon ?? undefined,
+        description: request.body.description !== undefined ? request.body.description : undefined,
+        color: request.body.color !== undefined ? request.body.color : undefined,
+        icon: request.body.icon !== undefined ? request.body.icon : undefined,
         isActive: request.body.isActive,
       });
 

@@ -4,12 +4,19 @@ import {
   BUDGET_NAME_MAX_LENGTH,
   BUDGET_DESCRIPTION_MAX_LENGTH,
   MIN_BUDGET_AMOUNT,
+  MIN_ALLOCATION_AMOUNT,
   MAX_BUDGET_AMOUNT,
+  ALLOCATION_DESCRIPTION_MAX_LENGTH,
   SUPPORTED_CURRENCIES,
 } from '../../../domain/constants/budget.constants';
 import { BudgetPeriodType } from '../../../domain/enums/budget-period-type';
 import { BudgetStatus } from '../../../domain/enums/budget-status';
 import { toJsonSchema } from './validator';
+import Decimal from 'decimal.js';
+
+const hasCentPrecision = (amount: number): boolean => new Decimal(amount).decimalPlaces() <= 2;
+const offsetSchema = z.string().regex(/^(0|[1-9]\d*)$/).transform(Number)
+  .pipe(z.number().int().min(0).max(2_147_483_647));
 
 /**
  * Route Params Schemas
@@ -18,6 +25,11 @@ export const workspaceParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
 });
 export type WorkspaceParams = z.infer<typeof workspaceParamsSchema>;
+export const alertParamsSchema = z.object({
+  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  alertId: z.string().uuid('Invalid alert ID format'),
+});
+export type AlertParams = z.infer<typeof alertParamsSchema>;
 
 export const budgetParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
@@ -27,7 +39,7 @@ export type BudgetParams = z.infer<typeof budgetParamsSchema>;
 
 export const allocationParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
-  budgetId: z.string().uuid('Invalid budget ID format').optional(),
+  budgetId: z.string().uuid('Invalid budget ID format'),
   allocationId: z.string().uuid('Invalid allocation ID format'),
 });
 export type AllocationParams = z.infer<typeof allocationParamsSchema>;
@@ -38,6 +50,7 @@ export type AllocationParams = z.infer<typeof allocationParamsSchema>;
 export const createBudgetSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(BUDGET_NAME_MIN_LENGTH, 'Budget name is required')
     .max(
       BUDGET_NAME_MAX_LENGTH,
@@ -56,10 +69,12 @@ export const createBudgetSchema = z.object({
       MIN_BUDGET_AMOUNT,
       `Total amount must be at least ${MIN_BUDGET_AMOUNT}`
     )
-    .max(MAX_BUDGET_AMOUNT, `Total amount cannot exceed ${MAX_BUDGET_AMOUNT}`),
+    .max(MAX_BUDGET_AMOUNT, `Total amount cannot exceed ${MAX_BUDGET_AMOUNT}`)
+    .refine(hasCentPrecision, 'Total amount must have at most two decimal places'),
   currency: z
     .string()
     .length(3, 'Currency must be a 3-letter code')
+    .transform((value) => value.toUpperCase())
     .refine((val) => SUPPORTED_CURRENCIES.includes(val), {
       message: `Currency must be one of: ${SUPPORTED_CURRENCIES.join(', ')}`,
     }),
@@ -68,6 +83,28 @@ export const createBudgetSchema = z.object({
   endDate: z.string().datetime('Invalid end date format').optional(),
   isRecurring: z.boolean().default(false),
   rolloverUnused: z.boolean().default(false),
+}).strict().superRefine((data, context) => {
+  if (data.rolloverUnused && !data.isRecurring) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['rolloverUnused'],
+      message: 'Rollover requires a recurring budget',
+    });
+  }
+  if (data.periodType === BudgetPeriodType.CUSTOM && !data.endDate) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endDate'],
+      message: 'Custom periods require an end date',
+    });
+  }
+  if (data.periodType !== BudgetPeriodType.CUSTOM && data.endDate !== undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['endDate'],
+      message: 'Only custom periods accept an explicit end date',
+    });
+  }
 });
 export type CreateBudgetBody = z.infer<typeof createBudgetSchema>;
 
@@ -75,6 +112,7 @@ export const updateBudgetSchema = z
   .object({
     name: z
       .string()
+      .trim()
       .min(BUDGET_NAME_MIN_LENGTH)
       .max(BUDGET_NAME_MAX_LENGTH)
       .optional(),
@@ -87,17 +125,10 @@ export const updateBudgetSchema = z
       .number()
       .min(MIN_BUDGET_AMOUNT)
       .max(MAX_BUDGET_AMOUNT)
+      .refine(hasCentPrecision, 'Total amount must have at most two decimal places')
       .optional(),
-    currency: z
-      .string()
-      .length(3)
-      .refine((val) => SUPPORTED_CURRENCIES.includes(val))
-      .optional(),
-    startDate: z.string().datetime().optional(),
-    endDate: z.string().datetime().optional(),
-    isRecurring: z.boolean().optional(),
-    rolloverUnused: z.boolean().optional(),
   })
+  .strict()
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one budget field must be provided',
   });
@@ -108,36 +139,39 @@ export const addAllocationSchema = z.object({
   allocatedAmount: z
     .number()
     .min(
-      MIN_BUDGET_AMOUNT,
-      `Allocated amount must be at least ${MIN_BUDGET_AMOUNT}`
+      MIN_ALLOCATION_AMOUNT,
+      `Allocated amount must be at least ${MIN_ALLOCATION_AMOUNT}`
     )
     .max(
       MAX_BUDGET_AMOUNT,
       `Allocated amount cannot exceed ${MAX_BUDGET_AMOUNT}`
-    ),
+    )
+    .refine(hasCentPrecision, 'Allocated amount must have at most two decimal places'),
   description: z
     .string()
     .max(
-      BUDGET_DESCRIPTION_MAX_LENGTH,
-      `Description cannot exceed ${BUDGET_DESCRIPTION_MAX_LENGTH} characters`
+      ALLOCATION_DESCRIPTION_MAX_LENGTH,
+      `Description cannot exceed ${ALLOCATION_DESCRIPTION_MAX_LENGTH} characters`
     )
     .optional(),
-});
+}).strict();
 export type AddAllocationBody = z.infer<typeof addAllocationSchema>;
 
 export const updateAllocationSchema = z
   .object({
     allocatedAmount: z
       .number()
-      .min(MIN_BUDGET_AMOUNT)
+      .min(MIN_ALLOCATION_AMOUNT)
       .max(MAX_BUDGET_AMOUNT)
+      .refine(hasCentPrecision, 'Allocated amount must have at most two decimal places')
       .optional(),
     description: z
       .string()
-      .max(BUDGET_DESCRIPTION_MAX_LENGTH)
+      .max(ALLOCATION_DESCRIPTION_MAX_LENGTH)
       .optional()
       .nullable(),
   })
+  .strict()
   .refine((data) => Object.values(data).some((value) => value !== undefined), {
     message: 'At least one allocation field must be provided',
   });
@@ -155,11 +189,21 @@ export const listBudgetsSchema = z.object({
   limit: z
     .string()
     .transform(Number)
-    .pipe(z.number().min(1).max(100))
+    .pipe(z.number().int().min(1).max(100))
     .optional(),
-  offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
-});
+  offset: offsetSchema.optional(),
+}).strict();
 export type ListBudgetsQuery = z.infer<typeof listBudgetsSchema>;
+
+export const paginationQuerySchema = z.object({
+  limit: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().int().min(1).max(100))
+    .optional(),
+  offset: offsetSchema.optional(),
+}).strict();
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 /**
  * Response DTO Schemas
@@ -216,6 +260,7 @@ export const budgetAlertResponseSchema = z.object({
  * Pre-computed JSON Validation Schemas
  */
 export const workspaceParamsJsonSchema = toJsonSchema(workspaceParamsSchema);
+export const alertParamsJsonSchema = toJsonSchema(alertParamsSchema);
 export const budgetParamsJsonSchema = toJsonSchema(budgetParamsSchema);
 export const allocationParamsJsonSchema = toJsonSchema(allocationParamsSchema);
 export const createBudgetBodyJsonSchema = toJsonSchema(createBudgetSchema);
@@ -289,6 +334,12 @@ export const paginatedAlertsEnvelopeJsonSchema = toJsonSchema(
     }),
   })
 );
+export const budgetAlertEnvelopeJsonSchema = toJsonSchema(z.object({
+  success: z.boolean(),
+  statusCode: z.number(),
+  message: z.string(),
+  data: budgetAlertResponseSchema,
+}));
 
 export const baseResponseEnvelopeJsonSchema = toJsonSchema(
   z.object({
@@ -297,3 +348,5 @@ export const baseResponseEnvelopeJsonSchema = toJsonSchema(
     message: z.string(),
   })
 );
+
+export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);

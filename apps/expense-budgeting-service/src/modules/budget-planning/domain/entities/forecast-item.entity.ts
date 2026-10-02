@@ -1,7 +1,9 @@
 import { ForecastItemId } from '../value-objects/forecast-item-id';
 import { ForecastId } from '../value-objects/forecast-id';
-import {  CategoryId  } from '@core/domain/value-objects';
+import { CategoryId, WorkspaceId } from '@core/domain/value-objects';
 import { ForecastAmount } from '../value-objects/forecast-amount';
+import { ValidationError } from '../errors/budget-planning.errors';
+import { PLANNING_CONSTANTS } from '../constants/planning.constants';
 
 // ============================================================================
 // Entity
@@ -9,6 +11,7 @@ import { ForecastAmount } from '../value-objects/forecast-amount';
 
 export interface ForecastItemDTO {
   id: string;
+  workspaceId: string;
   forecastId: string;
   categoryId: string;
   amount: number;
@@ -19,6 +22,7 @@ export interface ForecastItemDTO {
 
 interface ForecastItemProps {
   id: ForecastItemId;
+  workspaceId: WorkspaceId;
   forecastId: ForecastId;
   categoryId: CategoryId;
   amount: ForecastAmount;
@@ -31,17 +35,29 @@ export class ForecastItem {
   private constructor(private props: ForecastItemProps) {}
 
   static create(params: {
+    workspaceId: WorkspaceId;
     forecastId: ForecastId;
     categoryId: CategoryId;
     amount: ForecastAmount;
     notes?: string | null;
   }): ForecastItem {
+    const trimmedNotes =
+      params.notes !== undefined && params.notes !== null
+        ? params.notes.trim()
+        : null;
+    if (trimmedNotes && trimmedNotes.length > PLANNING_CONSTANTS.NOTES_MAX_LENGTH) {
+      throw new ValidationError(
+        `Notes cannot exceed ${PLANNING_CONSTANTS.NOTES_MAX_LENGTH} characters`
+      );
+    }
+
     return new ForecastItem({
       id: ForecastItemId.create(),
+      workspaceId: params.workspaceId,
       forecastId: params.forecastId,
       categoryId: params.categoryId,
       amount: params.amount,
-      notes: params.notes || null,
+      notes: trimmedNotes || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -49,6 +65,7 @@ export class ForecastItem {
 
   static fromPersistence(params: {
     id: string;
+    workspaceId: string;
     forecastId: string;
     categoryId: string;
     amount: number | string;
@@ -58,32 +75,46 @@ export class ForecastItem {
   }): ForecastItem {
     return new ForecastItem({
       id: ForecastItemId.fromString(params.id),
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
       forecastId: ForecastId.fromString(params.forecastId),
       categoryId: CategoryId.fromString(params.categoryId),
       amount: ForecastAmount.create(params.amount),
       notes: params.notes,
-      createdAt: params.createdAt,
-      updatedAt: params.updatedAt,
+      createdAt: new Date(params.createdAt.getTime()),
+      updatedAt: new Date(params.updatedAt.getTime()),
     });
   }
 
   get id(): ForecastItemId { return this.props.id; }
+  get workspaceId(): WorkspaceId { return this.props.workspaceId; }
   get forecastId(): ForecastId { return this.props.forecastId; }
   get categoryId(): CategoryId { return this.props.categoryId; }
   get amount(): ForecastAmount { return this.props.amount; }
   get notes(): string | null { return this.props.notes; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt.getTime()); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt.getTime()); }
 
   updateDetails(amount?: ForecastAmount, notes?: string | null): void {
+    let validatedNotes = this.props.notes;
+    if (notes !== undefined) {
+      const trimmedNotes = notes !== null ? notes.trim() : null;
+      if (trimmedNotes && trimmedNotes.length > PLANNING_CONSTANTS.NOTES_MAX_LENGTH) {
+        throw new ValidationError(
+          `Notes cannot exceed ${PLANNING_CONSTANTS.NOTES_MAX_LENGTH} characters`
+        );
+      }
+      validatedNotes = trimmedNotes || null;
+    }
+
     if (amount) this.props.amount = amount;
-    if (notes !== undefined) this.props.notes = notes;
+    if (notes !== undefined) this.props.notes = validatedNotes;
     this.props.updatedAt = new Date();
   }
 
   static toDTO(item: ForecastItem): ForecastItemDTO {
     return {
       id: item.props.id.getValue(),
+      workspaceId: item.props.workspaceId.getValue(),
       forecastId: item.props.forecastId.getValue(),
       categoryId: item.props.categoryId.getValue(),
       amount: item.props.amount.toNumber(),

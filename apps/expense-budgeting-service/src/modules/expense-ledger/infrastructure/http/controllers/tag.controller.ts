@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateTagHandler,
   UpdateTagHandler,
@@ -117,7 +117,7 @@ export class TagController {
         tagId,
         workspaceId,
         name: request.body.name,
-        color: request.body.color ?? undefined,
+        color: request.body.color !== undefined ? request.body.color : undefined,
       });
 
       return ResponseHelper.fromCommand(

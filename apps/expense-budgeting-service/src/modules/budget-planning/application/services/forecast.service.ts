@@ -8,8 +8,10 @@ import { ForecastId } from "../../domain/value-objects/forecast-id";
 import { ForecastItemId } from "../../domain/value-objects/forecast-item-id";
 import { ForecastType } from "../../domain/enums/forecast-type.enum";
 import { ForecastItem, ForecastItemDTO } from "../../domain/entities/forecast-item.entity";
-import {  CategoryId  } from '@core/domain/value-objects';
+import { CategoryId, WorkspaceId } from '@core/domain/value-objects';
 import { ForecastAmount } from "../../domain/value-objects/forecast-amount";
+import { PlanStatus } from "../../domain/enums/plan-status.enum";
+import { PLANNING_CONSTANTS } from "../../domain/constants/planning.constants";
 import {
   ForecastNotFoundError,
   DuplicateForecastNameError,
@@ -17,12 +19,16 @@ import {
   ForecastItemNotFoundError,
   BudgetPlanNotFoundError,
   UnauthorizedBudgetPlanAccessError,
+  MaxForecastsExceededError,
+  MaxForecastItemsExceededError,
+  PlanNotModifiableError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
+import { IUnitOfWork } from '@shared/application/ports/unit-of-work.port';
 
 export class ForecastService {
   constructor(
@@ -30,6 +36,7 @@ export class ForecastService {
     private readonly forecastItemRepository: IForecastItemRepository,
     private readonly budgetPlanRepository: IBudgetPlanRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
+    private readonly unitOfWork?: IUnitOfWork,
   ) {}
 
   private async checkPlanAccess(
@@ -40,7 +47,7 @@ export class ForecastService {
   ): Promise<BudgetPlan> {
     const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
     if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.getValue());
+      throw new BudgetPlanNotFoundError(planId.getValue(), workspaceId);
     }
 
     const isCreator = plan.createdBy.getValue() === userId;
@@ -64,28 +71,49 @@ export class ForecastService {
     userId: string;
   }): Promise<ForecastDTO> {
     const planId = PlanId.fromString(params.planId);
+    const plan = await this.checkPlanAccess(
+      params.userId,
+      planId,
+      params.workspaceId,
+      "create forecast",
+    );
 
-    // Check access to the plan before creating forecast
-    const plan = await this.checkPlanAccess(params.userId, planId, params.workspaceId, "create forecast");
+    if (plan.status === PlanStatus.ARCHIVED) {
+      throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'create forecasts in');
+    }
+
+    const forecastCount = await this.forecastRepository.countByPlanId(planId, params.workspaceId);
+    if (forecastCount >= PLANNING_CONSTANTS.MAX_FORECASTS_PER_PLAN) {
+      throw new MaxForecastsExceededError(planId.getValue(), PLANNING_CONSTANTS.MAX_FORECASTS_PER_PLAN);
+    }
 
     const existing = await this.forecastRepository.findByName(
       planId,
       params.name,
+      params.workspaceId,
     );
     if (existing) {
       throw new DuplicateForecastNameError(params.name);
     }
 
     const forecast = Forecast.create({
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
       planId,
       name: params.name,
       type: params.type,
     });
 
-    await this.forecastRepository.save(forecast);
+    const executeCreate = async () => {
+      await this.forecastRepository.save(forecast);
+      plan.recordForecastCreated(forecast.id.getValue(), forecast.name);
+      await this.budgetPlanRepository.save(plan);
+    };
 
-    plan.recordForecastCreated(forecast.id.getValue(), forecast.name);
-    await this.budgetPlanRepository.save(plan);
+    if (this.unitOfWork) {
+      await this.unitOfWork.execute(executeCreate);
+    } else {
+      await executeCreate();
+    }
 
     return Forecast.toDTO(forecast);
   }
@@ -103,7 +131,7 @@ export class ForecastService {
 
     const forecast = await this.forecastRepository.findById(forecastId, params.workspaceId);
     if (!forecast) {
-      throw new ForecastNotFoundError(params.forecastId);
+      throw new ForecastNotFoundError(params.forecastId, params.workspaceId);
     }
 
     // Check access to the parent plan
@@ -114,25 +142,43 @@ export class ForecastService {
       "add forecast item",
     );
 
+    if (plan.status === PlanStatus.ARCHIVED) {
+      throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'add forecast items to');
+    }
+
+    const itemCount = await this.forecastItemRepository.countByForecastId(forecastId, params.workspaceId);
+    if (itemCount >= PLANNING_CONSTANTS.MAX_ITEMS_PER_FORECAST) {
+      throw new MaxForecastItemsExceededError(forecastId.getValue(), PLANNING_CONSTANTS.MAX_ITEMS_PER_FORECAST);
+    }
+
     const existingItem = await this.forecastItemRepository.findByCategory(
       forecastId,
       categoryId,
+      params.workspaceId,
     );
     if (existingItem) {
       throw new DuplicateForecastItemError(params.categoryId);
     }
 
     const item = ForecastItem.create({
+      workspaceId: WorkspaceId.fromString(params.workspaceId),
       forecastId,
       categoryId,
       amount: ForecastAmount.create(params.amount),
       notes: params.notes,
     });
 
-    await this.forecastItemRepository.save(item);
+    const executeAdd = async () => {
+      await this.forecastItemRepository.save(item);
+      plan.recordForecastItemCreated(forecast.id.getValue(), item.id.getValue());
+      await this.budgetPlanRepository.save(plan);
+    };
 
-    plan.recordForecastItemUpdated(forecast.id.getValue(), item.id.getValue());
-    await this.budgetPlanRepository.save(plan);
+    if (this.unitOfWork) {
+      await this.unitOfWork.execute(executeAdd);
+    } else {
+      await executeAdd();
+    }
 
     return ForecastItem.toDTO(item);
   }
@@ -148,7 +194,7 @@ export class ForecastService {
     const item = await this.forecastItemRepository.findById(itemId, params.workspaceId);
 
     if (!item) {
-      throw new ForecastItemNotFoundError(params.itemId);
+      throw new ForecastItemNotFoundError(params.itemId, params.workspaceId);
     }
 
     // Traverse up: Item -> Forecast -> Plan -> Check Access
@@ -157,7 +203,7 @@ export class ForecastService {
       params.workspaceId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.forecastId.getValue());
+      throw new ForecastNotFoundError(item.forecastId.getValue(), params.workspaceId);
 
     const plan = await this.checkPlanAccess(
       params.userId,
@@ -166,16 +212,27 @@ export class ForecastService {
       "update forecast item",
     );
 
+    if (plan.status === PlanStatus.ARCHIVED) {
+      throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'update forecast items in');
+    }
+
     const amount =
       params.amount !== undefined
         ? ForecastAmount.create(params.amount)
         : undefined;
     item.updateDetails(amount, params.notes);
 
-    await this.forecastItemRepository.save(item);
+    const executeUpdate = async () => {
+      await this.forecastItemRepository.save(item);
+      plan.recordForecastItemUpdated(forecast.id.getValue(), item.id.getValue());
+      await this.budgetPlanRepository.save(plan);
+    };
 
-    plan.recordForecastItemUpdated(forecast.id.getValue(), item.id.getValue());
-    await this.budgetPlanRepository.save(plan);
+    if (this.unitOfWork) {
+      await this.unitOfWork.execute(executeUpdate);
+    } else {
+      await executeUpdate();
+    }
 
     return ForecastItem.toDTO(item);
   }
@@ -184,7 +241,7 @@ export class ForecastService {
     const id = ForecastItemId.fromString(itemId);
     const item = await this.forecastItemRepository.findById(id, workspaceId);
     if (!item) {
-      throw new ForecastItemNotFoundError(itemId);
+      throw new ForecastItemNotFoundError(itemId, workspaceId);
     }
 
     const forecast = await this.forecastRepository.findById(
@@ -192,7 +249,7 @@ export class ForecastService {
       workspaceId,
     );
     if (!forecast)
-      throw new ForecastNotFoundError(item.forecastId.getValue());
+      throw new ForecastNotFoundError(item.forecastId.getValue(), workspaceId);
 
     const plan = await this.checkPlanAccess(
       userId,
@@ -201,25 +258,49 @@ export class ForecastService {
       "delete forecast item",
     );
 
-    plan.recordForecastItemDeleted(item.forecastId.getValue(), itemId);
-    await this.budgetPlanRepository.save(plan);
-    await this.forecastItemRepository.delete(id);
+    if (plan.status === PlanStatus.ARCHIVED) {
+      throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'delete forecast items from');
+    }
+
+    const executeDelete = async () => {
+      await this.forecastItemRepository.delete(id, workspaceId);
+      plan.recordForecastItemDeleted(item.forecastId.getValue(), itemId);
+      await this.budgetPlanRepository.save(plan);
+    };
+
+    if (this.unitOfWork) {
+      await this.unitOfWork.execute(executeDelete);
+    } else {
+      await executeDelete();
+    }
   }
 
   async deleteForecast(id: string, workspaceId: string, userId: string): Promise<void> {
     const forecastId = ForecastId.fromString(id);
     const forecast = await this.forecastRepository.findById(forecastId, workspaceId);
     if (!forecast) {
-      throw new ForecastNotFoundError(id);
+      throw new ForecastNotFoundError(id, workspaceId);
     }
 
     const plan = await this.checkPlanAccess(userId, forecast.planId, workspaceId, "delete forecast");
 
-    plan.recordForecastDeleted(forecastId.getValue());
-    await this.budgetPlanRepository.save(plan);
+    if (plan.status === PlanStatus.ARCHIVED) {
+      throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'delete forecasts from');
+    }
 
-    // Use transactional delete to ensure data integrity
-    await this.forecastRepository.deleteWithItems(forecastId);
+    const executeDelete = async () => {
+      // Delete child first in transaction
+      await this.forecastRepository.deleteWithItems(forecastId, workspaceId);
+      // Record and dispatch domain event on aggregate root
+      plan.recordForecastDeleted(forecastId.getValue());
+      await this.budgetPlanRepository.save(plan);
+    };
+
+    if (this.unitOfWork) {
+      await this.unitOfWork.execute(executeDelete);
+    } else {
+      await executeDelete();
+    }
   }
 
   async getForecastById(id: string, workspaceId: string): Promise<ForecastDTO | null> {
@@ -250,10 +331,11 @@ export class ForecastService {
       workspaceId,
     );
     if (!forecast) {
-      throw new ForecastNotFoundError(forecastId);
+      throw new ForecastNotFoundError(forecastId, workspaceId);
     }
     const result = await this.forecastItemRepository.findByForecastId(
       ForecastId.fromString(forecastId),
+      workspaceId,
       options,
     );
     return { ...result, items: result.items.map((item) => ForecastItem.toDTO(item)) };

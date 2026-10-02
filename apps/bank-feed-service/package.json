@@ -5,9 +5,10 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc --noEmit && esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js --external:../node_modules/.prisma/client-bank-feed",
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
+    "tokens:encrypt-existing": "tsx scripts/encrypt-existing-tokens.ts",
     "generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "esbuild": "^0.20.0",
     "prisma": "^5.9.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",

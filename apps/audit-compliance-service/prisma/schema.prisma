@@ -23,9 +23,10 @@ model AuditLog {
   userAgent   String?  @map("user_agent")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  @@index([workspaceId])
-  @@index([entityType, entityId])
-  @@index([createdAt])
+  @@index([workspaceId, createdAt(sort: Desc), id(sort: Desc)], map: "audit_logs_workspace_timeline_idx")
+  @@index([workspaceId, entityType, entityId, createdAt(sort: Desc), id(sort: Desc)], map: "audit_logs_entity_timeline_idx")
+  @@index([workspaceId, userId, createdAt(sort: Desc)], map: "audit_logs_actor_timeline_idx")
+  @@index([workspaceId, action, createdAt(sort: Desc)], map: "audit_logs_action_timeline_idx")
   @@map("audit_logs")
   @@schema("audit_compliance")
 }

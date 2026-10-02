@@ -10,9 +10,9 @@ export interface UpdateCategoryCommand extends ICommand {
   readonly categoryId: string;
   readonly workspaceId: string;
   readonly name?: string;
-  readonly description?: string;
-  readonly color?: string;
-  readonly icon?: string;
+  readonly description?: string | null;
+  readonly color?: string | null;
+  readonly icon?: string | null;
   readonly isActive?: boolean;
 }
 

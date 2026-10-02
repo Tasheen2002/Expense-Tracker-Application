@@ -8,6 +8,15 @@ import { PaymentMethod } from '../enums/payment-method';
 import { ExpenseStatus, canTransitionTo } from '../enums/expense-status';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
+import { EXPENSE_EVENTS } from '@shared/events/expense-events';
+import {
+  EXPENSE_TITLE_MAX_LENGTH,
+  EXPENSE_DESCRIPTION_MAX_LENGTH,
+  EXPENSE_MERCHANT_MAX_LENGTH,
+  MIN_EXPENSE_AMOUNT,
+  MAX_EXPENSE_AMOUNT,
+} from '../constants/expense.constants';
+import { ValueOutOfRangeError } from '@shared/domain/errors/domain-validation.errors';
 import {
   ExpenseTitleRequiredError,
   ExpenseTitleTooLongError,
@@ -15,6 +24,7 @@ import {
   MerchantNameTooLongError,
   InvalidExpenseStatusError,
   NonReimbursableError,
+  ExpenseConcurrencyConflictError,
 } from '../errors/expense.errors';
 
 export interface ExpenseDTO {
@@ -31,6 +41,7 @@ export interface ExpenseDTO {
   paymentMethod: PaymentMethod;
   isReimbursable: boolean;
   status: ExpenseStatus;
+  version: number;
   tagIds: string[];
   attachmentIds: string[];
   createdAt: string;
@@ -53,7 +64,7 @@ export class ExpenseCreatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.created';
+    return EXPENSE_EVENTS.EXPENSE_CREATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -83,7 +94,7 @@ export class ExpenseSubmittedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.submitted';
+    return EXPENSE_EVENTS.EXPENSE_SUBMITTED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -112,7 +123,7 @@ export class ExpenseApprovedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.approved';
+    return EXPENSE_EVENTS.EXPENSE_APPROVED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -140,7 +151,7 @@ export class ExpenseRejectedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.rejected';
+    return EXPENSE_EVENTS.EXPENSE_REJECTED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -168,7 +179,7 @@ export class ExpenseReimbursedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.reimbursed';
+    return EXPENSE_EVENTS.EXPENSE_REIMBURSED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -198,7 +209,7 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.status_changed';
+    return EXPENSE_EVENTS.EXPENSE_STATUS_CHANGED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -217,16 +228,22 @@ export class ExpenseStatusChangedEvent extends DomainEvent {
  * Emitted when an expense is deleted.
  */
 export class ExpenseDeletedEvent extends DomainEvent {
-  constructor(public readonly expenseId: string) {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string
+  ) {
     super(expenseId, 'Expense');
   }
 
   get eventType(): string {
-    return 'expense.deleted';
+    return EXPENSE_EVENTS.EXPENSE_DELETED;
   }
 
   getPayload(): Record<string, unknown> {
-    return { expenseId: this.expenseId };
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+    };
   }
 }
 
@@ -243,7 +260,32 @@ export class AttachmentAddedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.attachment_added';
+    return EXPENSE_EVENTS.ATTACHMENT_ADDED;
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
+      attachmentId: this.attachmentId,
+    };
+  }
+}
+
+/**
+ * Emitted when an attachment is removed from an expense.
+ */
+export class AttachmentRemovedEvent extends DomainEvent {
+  constructor(
+    public readonly expenseId: string,
+    public readonly workspaceId: string,
+    public readonly attachmentId: string
+  ) {
+    super(expenseId, 'Expense');
+  }
+
+  get eventType(): string {
+    return EXPENSE_EVENTS.ATTACHMENT_REMOVED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -268,7 +310,7 @@ export class SettlementRecordedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.settlement_recorded';
+    return EXPENSE_EVENTS.SETTLEMENT_RECORDED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -293,7 +335,7 @@ export class ExpenseUpdatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'expense.updated';
+    return EXPENSE_EVENTS.EXPENSE_UPDATED;
   }
 
   getPayload(): Record<string, unknown> {
@@ -322,6 +364,7 @@ export interface ExpenseProps {
   paymentMethod: PaymentMethod;
   isReimbursable: boolean;
   status: ExpenseStatus;
+  version: number;
   tagIds: TagId[];
   attachmentIds: AttachmentId[];
   createdAt: Date;
@@ -329,6 +372,16 @@ export interface ExpenseProps {
 }
 
 
+
+export type CreateExpenseProps = Omit<
+  ExpenseProps,
+  'id' | 'createdAt' | 'updatedAt' | 'status' | 'tagIds' | 'attachmentIds' | 'version'
+> & {
+  id?: ExpenseId;
+  tagIds?: TagId[];
+  attachmentIds?: AttachmentId[];
+  version?: number;
+};
 
 export class Expense extends AggregateRoot {
   private readonly props: ExpenseProps;
@@ -338,16 +391,19 @@ export class Expense extends AggregateRoot {
     this.props = props;
   }
 
-  static create(
-    props: Omit<ExpenseProps, 'id' | 'createdAt' | 'updatedAt'>
-  ): Expense {
+  static create(props: CreateExpenseProps): Expense {
     this.validateTitle(props.title);
     this.validateDescription(props.description);
     this.validateMerchant(props.merchant);
+    this.validateAmount(props.amount);
 
     const expense = new Expense({
       ...props,
-      id: ExpenseId.create(),
+      tagIds: props.tagIds ? [...props.tagIds] : [],
+      attachmentIds: props.attachmentIds ? [...props.attachmentIds] : [],
+      id: props.id ?? ExpenseId.create(),
+      status: ExpenseStatus.DRAFT,
+      version: props.version ?? 1,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -367,7 +423,12 @@ export class Expense extends AggregateRoot {
   }
 
   static fromPersistence(props: ExpenseProps): Expense {
-    return new Expense(props);
+    return new Expense({
+      ...props,
+      version: props.version ?? 1,
+      tagIds: props.tagIds ? [...props.tagIds] : [],
+      attachmentIds: props.attachmentIds ? [...props.attachmentIds] : [],
+    });
   }
 
   // Validation methods
@@ -375,20 +436,30 @@ export class Expense extends AggregateRoot {
     if (!title || title.trim().length === 0) {
       throw new ExpenseTitleRequiredError();
     }
-    if (title.length > 255) {
-      throw new ExpenseTitleTooLongError(255);
+    if (title.length > EXPENSE_TITLE_MAX_LENGTH) {
+      throw new ExpenseTitleTooLongError(EXPENSE_TITLE_MAX_LENGTH);
     }
   }
 
   private static validateDescription(description?: string): void {
-    if (description && description.length > 5000) {
-      throw new ExpenseDescriptionTooLongError(5000);
+    if (description && description.length > EXPENSE_DESCRIPTION_MAX_LENGTH) {
+      throw new ExpenseDescriptionTooLongError(EXPENSE_DESCRIPTION_MAX_LENGTH);
     }
   }
 
   private static validateMerchant(merchant?: string): void {
-    if (merchant && merchant.length > 255) {
-      throw new MerchantNameTooLongError(255);
+    if (merchant && merchant.length > EXPENSE_MERCHANT_MAX_LENGTH) {
+      throw new MerchantNameTooLongError(EXPENSE_MERCHANT_MAX_LENGTH);
+    }
+  }
+
+  private static validateAmount(amount: Money): void {
+    const value = amount.getAmount().toNumber();
+    if (value < MIN_EXPENSE_AMOUNT || value > MAX_EXPENSE_AMOUNT) {
+      throw new ValueOutOfRangeError(
+        'amount',
+        `Expense amount must be between ${MIN_EXPENSE_AMOUNT} and ${MAX_EXPENSE_AMOUNT}, got ${value}`
+      );
     }
   }
 
@@ -450,11 +521,25 @@ export class Expense extends AggregateRoot {
   }
 
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt.getTime());
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt.getTime());
+  }
+
+  get version(): number {
+    return this.props.version;
+  }
+
+  synchronizeVersion(newVersion: number): void {
+    if (
+      !Number.isInteger(newVersion) ||
+      newVersion !== this.props.version + 1
+    ) {
+      throw new ExpenseConcurrencyConflictError(this.id.getValue());
+    }
+    this.props.version = newVersion;
   }
 
   // Business logic methods
@@ -465,14 +550,17 @@ export class Expense extends AggregateRoot {
     this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['title']));
   }
 
-  updateDescription(description?: string): void {
-    Expense.validateDescription(description);
-    this.props.description = description;
+  updateDescription(description?: string | null): void {
+    if (description) {
+      Expense.validateDescription(description);
+    }
+    this.props.description = description || undefined;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['description']));
   }
 
   updateAmount(amount: Money): void {
+    Expense.validateAmount(amount);
     this.props.amount = amount;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['amount']));
@@ -490,9 +578,11 @@ export class Expense extends AggregateRoot {
     this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['categoryId']));
   }
 
-  updateMerchant(merchant?: string): void {
-    Expense.validateMerchant(merchant);
-    this.props.merchant = merchant;
+  updateMerchant(merchant?: string | null): void {
+    if (merchant) {
+      Expense.validateMerchant(merchant);
+    }
+    this.props.merchant = merchant || undefined;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new ExpenseUpdatedEvent(this.id.getValue(), this.workspaceId, ['merchant']));
   }
@@ -551,6 +641,13 @@ export class Expense extends AggregateRoot {
     if (index !== -1) {
       this.props.attachmentIds.splice(index, 1);
       this.props.updatedAt = new Date();
+      this.addDomainEvent(
+        new AttachmentRemovedEvent(
+          this.id.getValue(),
+          this.workspaceId,
+          attachmentId.getValue()
+        )
+      );
     }
   }
 
@@ -777,7 +874,7 @@ export class Expense extends AggregateRoot {
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new ExpenseDeletedEvent(this.id.getValue()));
+    this.addDomainEvent(new ExpenseDeletedEvent(this.id.getValue(), this.workspaceId));
   }
 
   static toDTO(expense: Expense): ExpenseDTO {
@@ -795,6 +892,7 @@ export class Expense extends AggregateRoot {
       paymentMethod: expense.paymentMethod,
       isReimbursable: expense.isReimbursable,
       status: expense.status,
+      version: expense.version,
       tagIds: expense.tagIds.map((id) => id.getValue()),
       attachmentIds: expense.attachmentIds.map((id) => id.getValue()),
       createdAt: expense.createdAt.toISOString(),

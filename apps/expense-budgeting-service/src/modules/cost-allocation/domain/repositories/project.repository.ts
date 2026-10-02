@@ -8,11 +8,13 @@ import {
 
 export interface IProjectRepository {
   save(project: Project): Promise<void>;
-  findById(id: ProjectId): Promise<Project | null>;
+  /** Includes inactive projects so they can be reactivated. */
+  findById(id: ProjectId, workspaceId: WorkspaceId): Promise<Project | null>;
+  /** Codes remain reserved while a project is inactive. */
   findByCode(code: string, workspaceId: WorkspaceId): Promise<Project | null>;
+  /** Includes active and inactive projects in a deterministic order. */
   findAll(
     workspaceId: WorkspaceId,
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Project>>;
-  delete(id: ProjectId, workspaceId: WorkspaceId): Promise<void>;
 }

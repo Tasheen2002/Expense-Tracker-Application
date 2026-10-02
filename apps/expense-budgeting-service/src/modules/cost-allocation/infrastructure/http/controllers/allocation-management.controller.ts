@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   CreateDepartmentHandler,
@@ -70,9 +70,11 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const { departmentId } = request.params;
+      const { departmentId, workspaceId } = request.params;
       const department = await this.getDepartmentHandler.handle({
         id: departmentId,
+        workspaceId,
+        actorId: request.user.userId,
       });
 
       return ResponseHelper.ok(reply, 'Department retrieved successfully', department);
@@ -93,6 +95,7 @@ export class AllocationManagementController {
       const { limit, offset } = request.query;
       const result = await this.listDepartmentsHandler.handle({
         workspaceId,
+        actorId: request.user.userId,
         limit,
         offset,
       });
@@ -120,9 +123,11 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const { costCenterId } = request.params;
+      const { costCenterId, workspaceId } = request.params;
       const costCenter = await this.getCostCenterHandler.handle({
         id: costCenterId,
+        workspaceId,
+        actorId: request.user.userId,
       });
 
       return ResponseHelper.ok(reply, 'Cost Center retrieved successfully', costCenter);
@@ -143,6 +148,7 @@ export class AllocationManagementController {
       const { limit, offset } = request.query;
       const result = await this.listCostCentersHandler.handle({
         workspaceId,
+        actorId: request.user.userId,
         limit,
         offset,
       });
@@ -170,8 +176,8 @@ export class AllocationManagementController {
     reply: FastifyReply
   ) {
     try {
-      const { projectId } = request.params;
-      const project = await this.getProjectHandler.handle({ id: projectId });
+      const { projectId, workspaceId } = request.params;
+      const project = await this.getProjectHandler.handle({ id: projectId, workspaceId, actorId: request.user.userId });
 
       return ResponseHelper.ok(reply, 'Project retrieved successfully', project);
     } catch (error: unknown) {
@@ -191,6 +197,7 @@ export class AllocationManagementController {
       const { limit, offset } = request.query;
       const result = await this.listProjectsHandler.handle({
         workspaceId,
+        actorId: request.user.userId,
         limit,
         offset,
       });
@@ -265,8 +272,8 @@ export class AllocationManagementController {
         name: request.body.name,
         code: request.body.code,
         description: request.body.description,
-        managerId: request.body.managerId ?? undefined,
-        parentDepartmentId: request.body.parentDepartmentId ?? undefined,
+        managerId: request.body.managerId,
+        parentDepartmentId: request.body.parentDepartmentId,
       });
 
       return ResponseHelper.fromCommand(
@@ -495,9 +502,9 @@ export class AllocationManagementController {
         code: request.body.code,
         description: request.body.description,
         startDate: request.body.startDate,
-        endDate: request.body.endDate ?? undefined,
-        managerId: request.body.managerId ?? undefined,
-        budget: request.body.budget ?? undefined,
+        endDate: request.body.endDate,
+        managerId: request.body.managerId,
+        budget: request.body.budget,
       });
 
       return ResponseHelper.fromCommand(

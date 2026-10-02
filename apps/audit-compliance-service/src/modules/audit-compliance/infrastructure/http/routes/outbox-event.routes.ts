@@ -1,20 +1,31 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { AuditService } from '../../../application/services/audit.service';
+import { AuditEventConflictError } from '../../../domain/errors/audit.errors';
+
+const uuidSchema = z.string().uuid();
+const actorFields = [
+  'submittedBy', 'approvedBy', 'rejectedBy', 'changedBy', 'createdBy',
+  'updatedBy', 'deletedBy', 'triggeredBy', 'recordedBy', 'requestedBy', 'userId',
+] as const;
 
 const OutboxEventPayloadSchema = z.object({
   eventId: z.string().uuid(),
-  eventType: z.string(),
+  eventType: z.string().trim().min(1).max(100),
   aggregateId: z.string().optional(),
-  aggregateType: z.string().optional(),
+  aggregateType: z.string().trim().min(1).max(100).optional(),
   payload: z.record(z.any()).optional().default({}),
-  timestamp: z.string().optional(),
+  timestamp: z.string().datetime({ offset: true }).refine(
+    (value) => !Number.isNaN(Date.parse(value)),
+    'Invalid event timestamp',
+  ).optional(),
 });
 
 export type OutboxEventPayload = z.infer<typeof OutboxEventPayloadSchema>;
 
 export async function registerAuditOutboxEventRoutes(
   fastify: FastifyInstance,
-  prisma: any
+  auditService: AuditService
 ) {
   fastify.post(
     '/event-outbox/events',
@@ -31,72 +42,48 @@ export async function registerAuditOutboxEventRoutes(
       const { eventId, eventType, aggregateId, aggregateType, payload, timestamp } =
         parseResult.data;
 
-      // 1. Idempotency Check: Skip duplicate events
-      const existing = await prisma.auditLog.findUnique({
-        where: { id: eventId },
-      });
-
-      if (existing) {
-        request.log.info({ eventId, eventType }, 'Outbox event already processed (idempotent ignore)');
-        return reply.code(200).send({
-          success: true,
-          duplicate: true,
-          message: 'Event already processed',
-          auditLogId: existing.id,
-        });
+      const workspaceCandidate = payload.workspaceId === undefined && aggregateType?.toLowerCase() === 'workspace'
+        ? aggregateId
+        : payload.workspaceId;
+      const workspaceResult = uuidSchema.safeParse(workspaceCandidate);
+      if (!workspaceResult.success) {
+        return reply.code(400).send({ success: false, error: 'Valid workspaceId is required' });
       }
 
-      // 2. Extract context attributes safely from payload
-      const workspaceId =
-        payload?.workspaceId ||
-        (aggregateType?.toLowerCase() === 'workspace' ? aggregateId : null) ||
-        '00000000-0000-0000-0000-000000000000';
-
-      const userId = payload?.userId || payload?.approvedBy || payload?.rejectedBy || null;
-
-      // Ensure entityId is a valid UUID
-      const entityIdRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const entityId = aggregateId && entityIdRegex.test(aggregateId) ? aggregateId : eventId;
-
+      const actorField = actorFields.find((field) => payload[field] !== undefined && payload[field] !== null);
+      const actorResult = actorField ? uuidSchema.safeParse(payload[actorField]) : null;
+      if (actorResult && !actorResult.success) {
+        return reply.code(400).send({ success: false, error: `Invalid ${actorField}` });
+      }
       try {
-        const auditLog = await prisma.auditLog.create({
-          data: {
-            id: eventId,
-            workspaceId: entityIdRegex.test(workspaceId)
-              ? workspaceId
-              : '00000000-0000-0000-0000-000000000000',
-            userId: userId && entityIdRegex.test(userId) ? userId : null,
-            action: eventType,
-            entityType: aggregateType || 'OutboxEvent',
-            entityId,
-            details: payload as any,
-            metadata: {
-              source: 'outbox-webhook',
-              receivedAt: new Date().toISOString(),
-            },
-            createdAt: timestamp ? new Date(timestamp) : new Date(),
-          },
+        const result = await auditService.recordExternalEvent({
+          eventId, eventType, aggregateId, aggregateType, payload,
+          occurredAt: timestamp ? new Date(timestamp) : undefined,
         });
-
-        request.log.info({ eventId, eventType, auditLogId: auditLog.id }, 'Outbox event successfully audited');
-        return reply.code(201).send({
-          success: true,
-          auditLogId: auditLog.id,
-        });
-      } catch (err: any) {
-        // Handle concurrent race condition for the same eventId
-        if (err.code === 'P2002') {
+        if (result.duplicate) {
+          request.log.info({ eventId, eventType }, 'Outbox event already processed (idempotent ignore)');
           return reply.code(200).send({
             success: true,
             duplicate: true,
-            message: 'Event already processed concurrently',
+            message: 'Event already processed',
+            auditLogId: result.auditLogId,
           });
         }
-        request.log.error(err, 'Failed to process outbox event for auditing');
+        request.log.info({ eventId, eventType, auditLogId: result.auditLogId }, 'Outbox event successfully audited');
+        return reply.code(201).send({
+          success: true,
+          auditLogId: result.auditLogId,
+        });
+      } catch (err: unknown) {
+        if (err instanceof AuditEventConflictError) {
+          request.log.warn({ eventId, eventType }, 'Conflicting outbox event ID');
+          return reply.code(409).send({ success: false, error: 'Event ID conflict' });
+        }
+        request.log.error({ err }, 'Failed to process outbox event for auditing');
         return reply.code(500).send({
           success: false,
           error: 'Failed to record audit log',
-          message: err.message,
+          message: 'An unexpected error occurred',
         });
       }
     }

@@ -28,12 +28,11 @@ export class AuthController {
     request: FastifyRequest<{ Body: LoginUserInput }>,
     reply: FastifyReply
   ): Promise<FastifyReply> {
-    const user = await this.loginUserHandler.handle(request.body);
-    const session = await this.sessionService.createSession(user.userId);
+    const { user, sessionId } = await this.loginUserHandler.handle(request.body);
     const token = await request.server.signToken({
       userId: user.userId,
       email: user.email,
-      sessionId: session.sessionId,
+      sessionId,
     });
     return ResponseHelper.ok(reply, 'Login successful', { user, token });
   }

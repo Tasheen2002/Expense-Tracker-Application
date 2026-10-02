@@ -1,34 +1,28 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { StockController } from '../controllers/stock.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import {
-  createRateLimiter,
-  RateLimitPresets,
-  userKeyGenerator,
-} from '@shared/middleware/rate-limiter.middleware';
 import {
   validateBody,
   validateQuery,
 } from '../validation/validator';
 import {
   adjustStockSchema,
+  updateStockSettingsSchema,
   listStockQuerySchema,
   listTransactionsQuerySchema,
   workspaceParamsJsonSchema,
+  stockParamsJsonSchema,
   adjustStockBodyJsonSchema,
+  updateStockSettingsBodyJsonSchema,
   listStockQueryJsonSchema,
   listTransactionsQueryJsonSchema,
   adjustStockEnvelopeJsonSchema,
+  stockEnvelopeJsonSchema,
   paginatedStockEnvelopeJsonSchema,
   paginatedTransactionsEnvelopeJsonSchema,
 } from '../validation/inventory.schema';
-
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
 
 export async function stockRoutes(
   fastify: FastifyInstance,
@@ -42,13 +36,6 @@ export async function stockRoutes(
     );
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
-
   // Adjust stock
   fastify.post(
     '/workspaces/:workspaceId/stock/adjust',
@@ -61,7 +48,7 @@ export async function stockRoutes(
       ],
       schema: {
         tags: ['Inventory - Stock'],
-        description: 'Adjust stock levels (IN, OUT, TRANSFER, ADJUSTMENT)',
+        description: 'Adjust stock levels (IN, OUT, ADJUSTMENT)',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
         body: adjustStockBodyJsonSchema,
@@ -72,6 +59,28 @@ export async function stockRoutes(
     },
     (request, reply) =>
       controller.adjustStock(request as AuthenticatedRequest, reply)
+  );
+
+  fastify.patch(
+    '/workspaces/:workspaceId/stock/:stockId/settings',
+    {
+      onRequest: [fastify.authenticate],
+      preHandler: [
+        validateBody(updateStockSettingsSchema),
+        workspaceAuth,
+        RolePermissions.MANAGER_LEVEL,
+      ],
+      schema: {
+        tags: ['Inventory - Stock'],
+        description: 'Update reorder level and quantity for an existing stock record',
+        security: [{ bearerAuth: [] }],
+        params: stockParamsJsonSchema,
+        body: updateStockSettingsBodyJsonSchema,
+        response: { 200: stockEnvelopeJsonSchema },
+      },
+    },
+    (request, reply) =>
+      controller.updateStockSettings(request as AuthenticatedRequest, reply)
   );
 
   // Get stock levels

@@ -7,21 +7,27 @@ import { ProjectId } from "../../domain/value-objects/project-id";
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import {
   InvalidTotalAllocationError,
-  InvalidAllocationAmountError,
   InvalidAllocationTargetError,
   ExpenseNotFoundError,
-  ExpenseWorkspaceMismatchError,
   UnauthorizedAllocationAccessError,
 } from "../../domain/errors/cost-allocation.errors";
-import { Decimal } from "@prisma/client/runtime/library";
+import Decimal from 'decimal.js';
 import { IExpenseLookupPort } from "../ports/expense-lookup.port";
 import { IAllocationSummaryPort } from "../ports/allocation-summary.port";
+import { IDepartmentRepository } from "../../domain/repositories/department.repository";
+import { ICostCenterRepository } from "../../domain/repositories/cost-center.repository";
+import { IProjectRepository } from "../../domain/repositories/project.repository";
+import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
 
 export class ExpenseAllocationService {
   constructor(
     private readonly allocationRepository: IExpenseAllocationRepository,
     private readonly expenseLookup: IExpenseLookupPort,
     private readonly allocationSummary: IAllocationSummaryPort,
+    private readonly departmentRepository: IDepartmentRepository,
+    private readonly costCenterRepository: ICostCenterRepository,
+    private readonly projectRepository: IProjectRepository,
+    private readonly workspaceAccess: IWorkspaceAccessPort,
   ) {}
 
   async allocateExpense(params: {
@@ -39,23 +45,17 @@ export class ExpenseAllocationService {
   }): Promise<ExpenseAllocationDTO[]> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
+    if (!(await this.workspaceAccess.isAdminOrOwner(params.createdBy, params.workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("create allocations");
+    }
+
     const expense = await this.expenseLookup.findExpenseForAllocation(
       params.expenseId,
+      params.workspaceId,
     );
 
-    if (!expense) {
+    if (!expense || expense.workspaceId !== params.workspaceId) {
       throw new ExpenseNotFoundError(params.expenseId);
-    }
-
-    if (expense.workspaceId !== params.workspaceId) {
-      throw new ExpenseWorkspaceMismatchError(
-        params.expenseId,
-        params.workspaceId,
-      );
-    }
-
-    if (expense.userId !== params.createdBy) {
-      throw new UnauthorizedAllocationAccessError("create");
     }
 
     const expenseTotal = expense.amount;
@@ -64,24 +64,21 @@ export class ExpenseAllocationService {
     const allocationEntities: ExpenseAllocation[] = [];
 
     for (const alloc of params.allocations) {
-      const amount = new Decimal(alloc.amount);
-
-      if (amount.lessThanOrEqualTo(0)) {
-        throw new InvalidAllocationAmountError(amount.toNumber());
-      }
+      const amount = AllocationAmount.create(alloc.amount);
 
       this.validateAllocationTarget(
         alloc.departmentId,
         alloc.costCenterId,
         alloc.projectId,
       );
+      await this.validateTargetInWorkspace(alloc, params.workspaceId);
 
-      newAllocationTotal = newAllocationTotal.add(amount);
+      newAllocationTotal = newAllocationTotal.add(amount.getValue());
 
       const entity = ExpenseAllocation.create({
         workspaceId,
         expenseId: params.expenseId,
-        amount: AllocationAmount.create(amount),
+        amount,
         percentage: alloc.percentage ?? null,
         departmentId: alloc.departmentId
           ? DepartmentId.fromString(alloc.departmentId)
@@ -95,6 +92,7 @@ export class ExpenseAllocationService {
         notes: alloc.notes,
         createdBy: UserId.fromString(params.createdBy),
       });
+      entity.validatePercentageOf(expenseTotal);
 
       allocationEntities.push(entity);
     }
@@ -135,10 +133,36 @@ export class ExpenseAllocationService {
     }
   }
 
+  private async validateTargetInWorkspace(
+    allocation: { departmentId?: string; costCenterId?: string; projectId?: string },
+    workspaceId: string,
+  ): Promise<void> {
+    const scope = WorkspaceId.fromString(workspaceId);
+    const target = allocation.departmentId
+      ? await this.departmentRepository.findById(DepartmentId.fromString(allocation.departmentId), scope)
+      : allocation.costCenterId
+        ? await this.costCenterRepository.findById(CostCenterId.fromString(allocation.costCenterId), scope)
+        : await this.projectRepository.findById(ProjectId.fromString(allocation.projectId!), scope);
+
+    if (!target || target.workspaceId.getValue() !== workspaceId || !target.isActive) {
+      throw new InvalidAllocationTargetError(
+        "Allocation target does not exist or is inactive in this workspace",
+      );
+    }
+  }
+
   async getAllocations(
     expenseId: string,
     workspaceId: string,
+    actorId: string,
   ): Promise<ExpenseAllocationDTO[]> {
+    if (!(await this.workspaceAccess.isMember(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError('view allocations');
+    }
+    const expense = await this.expenseLookup.findExpenseForAllocation(expenseId, workspaceId);
+    if (!expense || expense.workspaceId !== workspaceId) {
+      throw new ExpenseNotFoundError(expenseId);
+    }
     const allocations = await this.allocationRepository.findByExpenseId(
       expenseId,
       WorkspaceId.fromString(workspaceId),
@@ -151,19 +175,15 @@ export class ExpenseAllocationService {
     workspaceId: string,
     userId: string,
   ): Promise<void> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(userId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError("delete allocations");
+    }
+
     const expense =
-      await this.expenseLookup.findExpenseForAllocation(expenseId);
+      await this.expenseLookup.findExpenseForAllocation(expenseId, workspaceId);
 
-    if (!expense) {
+    if (!expense || expense.workspaceId !== workspaceId) {
       throw new ExpenseNotFoundError(expenseId);
-    }
-
-    if (expense.workspaceId !== workspaceId) {
-      throw new ExpenseWorkspaceMismatchError(expenseId, workspaceId);
-    }
-
-    if (expense.userId !== userId) {
-      throw new UnauthorizedAllocationAccessError("delete");
     }
 
     await this.allocationRepository.deleteByExpenseId(
@@ -172,71 +192,56 @@ export class ExpenseAllocationService {
     );
   }
 
-  async getAllocationSummary(workspaceId: string): Promise<{
+  async getAllocationSummary(workspaceId: string, actorId: string): Promise<{
     totalAllocations: number;
     byDepartment: Array<{
       departmentId: string;
       departmentName: string;
-      total: number;
+      currency: string;
+      total: string;
       count: number;
     }>;
     byCostCenter: Array<{
       costCenterId: string;
       costCenterName: string;
-      total: number;
+      currency: string;
+      total: string;
       count: number;
     }>;
     byProject: Array<{
       projectId: string;
       projectName: string;
-      total: number;
+      currency: string;
+      total: string;
       count: number;
     }>;
   }> {
-    const [
-      departmentAllocations,
-      costCenterAllocations,
-      projectAllocations,
-      totalAllocations,
-    ] = await Promise.all([
-      this.allocationSummary.getByDepartment(workspaceId),
-      this.allocationSummary.getByCostCenter(workspaceId),
-      this.allocationSummary.getByProject(workspaceId),
-      this.allocationSummary.getTotalCount(workspaceId),
-    ]);
-
-    const departmentIds = departmentAllocations.map((a) => a.targetId);
-    const costCenterIds = costCenterAllocations.map((a) => a.targetId);
-    const projectIds = projectAllocations.map((a) => a.targetId);
-
-    const [departments, costCenters, projects] = await Promise.all([
-      this.allocationSummary.getDepartmentNames(departmentIds),
-      this.allocationSummary.getCostCenterNames(costCenterIds),
-      this.allocationSummary.getProjectNames(projectIds),
-    ]);
-
-    const departmentMap = new Map(departments.map((d) => [d.id, d.name]));
-    const costCenterMap = new Map(costCenters.map((c) => [c.id, c.name]));
-    const projectMap = new Map(projects.map((p) => [p.id, p.name]));
+    if (!(await this.workspaceAccess.isMember(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError('view allocation summary');
+    }
+    const summary = await this.allocationSummary.getSnapshot(workspaceId);
 
     return {
-      totalAllocations,
-      byDepartment: departmentAllocations.map((a) => ({
+      totalAllocations: summary.totalAllocations,
+      byDepartment: summary.byDepartment.map((a) => ({
         departmentId: a.targetId,
-        departmentName: departmentMap.get(a.targetId) || "Unknown",
-        total: a.total.toNumber(),
+        departmentName: a.targetName,
+        currency: a.currency,
+        total: a.total.toFixed(2),
         count: a.count,
       })),
-      byCostCenter: costCenterAllocations.map((a) => ({
+      byCostCenter: summary.byCostCenter.map((a) => ({
         costCenterId: a.targetId,
-        costCenterName: costCenterMap.get(a.targetId) || "Unknown",
-        total: a.total.toNumber(),
+        costCenterName: a.targetName,
+        currency: a.currency,
+        total: a.total.toFixed(2),
         count: a.count,
       })),
-      byProject: projectAllocations.map((a) => ({
+      byProject: summary.byProject.map((a) => ({
         projectId: a.targetId,
-        projectName: projectMap.get(a.targetId) || "Unknown",
-        total: a.total.toNumber(),
+        projectName: a.targetName,
+        currency: a.currency,
+        total: a.total.toFixed(2),
         count: a.count,
       })),
     };

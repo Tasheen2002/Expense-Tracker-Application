@@ -13,38 +13,34 @@ import {
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
+import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
+import { AlertNotFoundError } from '../../domain/errors/budget.errors';
 
 export class BudgetAlertRepositoryImpl
   implements IBudgetAlertRepository
 {
   constructor(protected readonly prisma: PrismaClient) {}
 
-  async save(alert: BudgetAlert): Promise<void> {
-    await this.prisma.budgetAlert.upsert({
-      where: { id: alert.id.getValue() },
-      create: {
-        id: alert.id.getValue(),
-        budgetId: alert.budgetId.getValue(),
-        allocationId: alert.allocationId?.getValue() || null,
-        level: alert.level,
-        threshold: alert.threshold,
-        currentSpent: alert.currentSpent,
-        allocatedAmount: alert.allocatedAmount,
-        message: alert.message,
-        isRead: alert.isRead,
-        notifiedAt: alert.notifiedAt,
-        createdAt: alert.createdAt,
-      },
-      update: {
+  protected get client(): PrismaClient | Prisma.TransactionClient {
+    return PrismaUnitOfWork.getClient(this.prisma);
+  }
+
+  async save(alert: BudgetAlert, workspaceId: string): Promise<void> {
+    const result = await this.client.budgetAlert.updateMany({
+      where: { id: alert.id.getValue(), budget: { workspaceId } },
+      data: {
         isRead: alert.isRead,
         notifiedAt: alert.notifiedAt,
       },
     });
+    if (result.count === 0) {
+      throw new AlertNotFoundError(alert.id.getValue());
+    }
   }
 
-  async findById(id: AlertId): Promise<BudgetAlert | null> {
-    const row = await this.prisma.budgetAlert.findUnique({
-      where: { id: id.getValue() },
+  async findById(id: AlertId, workspaceId: string): Promise<BudgetAlert | null> {
+    const row = await this.client.budgetAlert.findFirst({
+      where: { id: id.getValue(), budget: { workspaceId } },
     });
 
     if (!row) return null;
@@ -54,14 +50,16 @@ export class BudgetAlertRepositoryImpl
 
   async findByBudget(
     budgetId: BudgetId,
+    workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {
       budgetId: budgetId.getValue(),
+      budget: { workspaceId },
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budgetAlert,
+      (this.client as PrismaClient).budgetAlert,
       { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
       options
@@ -70,14 +68,16 @@ export class BudgetAlertRepositoryImpl
 
   async findByAllocation(
     allocationId: AllocationId,
+    workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
     const where: Prisma.BudgetAlertWhereInput = {
       allocationId: allocationId.getValue(),
+      budget: { workspaceId },
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budgetAlert,
+      (this.client as PrismaClient).budgetAlert,
       { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
       options
@@ -89,15 +89,10 @@ export class BudgetAlertRepositoryImpl
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>> {
-    const where: Prisma.BudgetAlertWhereInput = {};
+    const where: Prisma.BudgetAlertWhereInput = { budget: { workspaceId } };
 
     if (filters.budgetId) {
       where.budgetId = filters.budgetId;
-    } else {
-      // Filter by workspace if no specific budget
-      where.budget = {
-        workspaceId,
-      };
     }
 
     if (filters.allocationId) {
@@ -113,7 +108,7 @@ export class BudgetAlertRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budgetAlert,
+      (this.client as PrismaClient).budgetAlert,
       { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
       options
@@ -132,22 +127,22 @@ export class BudgetAlertRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budgetAlert,
-      { where, orderBy: [{ level: 'desc' }, { createdAt: 'desc' }] },
+      (this.client as PrismaClient).budgetAlert,
+      { where, orderBy: { createdAt: 'desc' } },
       (record) => this.toDomain(record),
       options
     );
   }
 
-  async delete(id: AlertId): Promise<void> {
-    await this.prisma.budgetAlert.delete({
-      where: { id: id.getValue() },
+  async delete(id: AlertId, workspaceId: string): Promise<void> {
+    await this.client.budgetAlert.deleteMany({
+      where: { id: id.getValue(), budget: { workspaceId } },
     });
   }
 
-  async deleteByBudget(budgetId: BudgetId): Promise<void> {
-    await this.prisma.budgetAlert.deleteMany({
-      where: { budgetId: budgetId.getValue() },
+  async deleteByBudget(budgetId: BudgetId, workspaceId: string): Promise<void> {
+    await (this.client as any).budgetAlert.deleteMany({
+      where: { budgetId: budgetId.getValue(), budget: { workspaceId } },
     });
   }
 

@@ -312,6 +312,26 @@ describe('Approval Workflow Domain Model & Invariants', () => {
       expect(wf.version).toBe(2);
     });
 
+    it.each(['approve', 'reject', 'delegate', 'autoApprove'] as const)(
+      'includes workspace identity in %s step events for audit ingestion',
+      operation => {
+        const wf = ExpenseWorkflow.create(validWorkflowData);
+        wf.start();
+        if (operation === 'approve') wf.approveCurrentStep('Approved');
+        else if (operation === 'reject') wf.rejectCurrentStep('Rejected');
+        else if (operation === 'delegate') wf.delegateCurrentStep(validApprover2);
+        else wf.autoApproveAll();
+        const events = wf.domainEvents.filter(event =>
+          event.eventType === APPROVAL_POLICY_EVENTS.WORKFLOW_STEP_COMPLETED ||
+          event.eventType === APPROVAL_POLICY_EVENTS.WORKFLOW_STEP_DELEGATED
+        );
+        expect(events.length).toBeGreaterThan(0);
+        for (const event of events) {
+          expect(event.getPayload().workspaceId).toBe(validWorkspaceId);
+        }
+      }
+    );
+
     it('should reject out-of-order step approval', () => {
       const wf = ExpenseWorkflow.create(validWorkflowData);
       wf.start();
@@ -826,4 +846,3 @@ describe('Approval Workflow Domain Model & Invariants', () => {
     });
   });
 });
-

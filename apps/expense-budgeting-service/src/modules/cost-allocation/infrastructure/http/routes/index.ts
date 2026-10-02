@@ -1,5 +1,4 @@
 import { FastifyInstance } from 'fastify';
-import { PrismaClient } from '@prisma/client';
 import { allocationManagementRoutes } from './allocation-management.routes';
 import { expenseAllocationRoutes } from './expense-allocation.routes';
 import { AllocationManagementController } from '../controllers/allocation-management.controller';
@@ -10,8 +9,7 @@ export async function registerCostAllocationRoutes(
   controllers: {
     allocationManagementController: AllocationManagementController;
     expenseAllocationController: ExpenseAllocationController;
-  },
-  _prisma: PrismaClient
+  }
 ) {
   await fastify.register(
     async (instance) => {

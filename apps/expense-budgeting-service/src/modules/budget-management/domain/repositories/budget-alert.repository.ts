@@ -16,14 +16,16 @@ export interface BudgetAlertFilters {
 }
 
 export interface IBudgetAlertRepository {
-  save(alert: BudgetAlert): Promise<void>;
-  findById(id: AlertId): Promise<BudgetAlert | null>;
+  save(alert: BudgetAlert, workspaceId: string): Promise<void>;
+  findById(id: AlertId, workspaceId: string): Promise<BudgetAlert | null>;
   findByBudget(
     budgetId: BudgetId,
+    workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>>;
   findByAllocation(
     allocationId: AllocationId,
+    workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>>;
   findByFilters(
@@ -35,6 +37,6 @@ export interface IBudgetAlertRepository {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetAlert>>;
-  delete(id: AlertId): Promise<void>;
-  deleteByBudget(budgetId: BudgetId): Promise<void>;
+  delete(id: AlertId, workspaceId: string): Promise<void>;
+  deleteByBudget(budgetId: BudgetId, workspaceId: string): Promise<void>;
 }

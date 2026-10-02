@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { Expense } from "../domain/entities/expense.entity";
 import { Money } from "../domain/value-objects/money";
 import { ExpenseDate } from "../domain/value-objects/expense-date";
-import { ExpenseStatus } from "../domain/enums/expense-status";
 import { PaymentMethod } from "../domain/enums/payment-method";
 import {  UserId  } from '@core/domain/value-objects';
 import {  WorkspaceId  } from '@core/domain/value-objects';
@@ -17,7 +16,6 @@ describe("Expense Entity", () => {
       expenseDate: ExpenseDate.create(new Date()),
       paymentMethod: PaymentMethod.CASH,
       isReimbursable: false,
-      status: ExpenseStatus.DRAFT,
       tagIds: [],
       attachmentIds: [],
     });
@@ -37,7 +35,6 @@ describe("Expense Entity", () => {
         expenseDate: ExpenseDate.create(new Date()),
         paymentMethod: PaymentMethod.CASH,
         isReimbursable: false,
-        status: ExpenseStatus.DRAFT,
         tagIds: [],
         attachmentIds: [],
       });

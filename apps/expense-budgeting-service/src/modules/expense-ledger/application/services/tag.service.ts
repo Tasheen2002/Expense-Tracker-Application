@@ -44,7 +44,7 @@ export class TagService {
     workspaceId: string,
     params: {
       name?: string;
-      color?: string;
+      color?: string | null;
     }
   ): Promise<TagDTO> {
     const tag = await this.tagRepository.findById(
@@ -69,7 +69,7 @@ export class TagService {
     }
 
     if (params.color !== undefined) {
-      tag.updateColor(params.color);
+      tag.updateColor(params.color || undefined);
     }
 
     await this.tagRepository.update(tag);
@@ -88,7 +88,7 @@ export class TagService {
     }
 
     tag.markAsDeleted();
-    await this.tagRepository.delete(TagId.fromString(tagId), workspaceId);
+    await this.tagRepository.delete(TagId.fromString(tagId), workspaceId, tag);
   }
 
   async getTagById(tagId: string, workspaceId: string): Promise<TagDTO | null> {

@@ -8,7 +8,7 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { validateBody } from '../validation/validator';
+import { validateBody, validateQuery } from '../validation/validator';
 import {
   connectBankBodySchema,
   updateConnectionTokenBodySchema,
@@ -18,6 +18,8 @@ import {
   updateConnectionTokenBodyJsonSchema,
   bankConnectionEnvelopeJsonSchema,
   paginatedConnectionsEnvelopeJsonSchema,
+  paginationQuerySchema,
+  paginationQueryJsonSchema,
 } from '../validation/bank-sync.schema';
 
 const writeRateLimiter = createRateLimiter({
@@ -70,12 +72,13 @@ export async function bankConnectionRoutes(
     '/workspaces/:workspaceId/bank-feed-sync/connections',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [validateQuery(paginationQuerySchema), workspaceAuth],
       schema: {
         tags: ['Bank Connection'],
         description: 'Get all bank connections in a workspace',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
+        querystring: paginationQueryJsonSchema,
         response: {
           200: paginatedConnectionsEnvelopeJsonSchema,
         },

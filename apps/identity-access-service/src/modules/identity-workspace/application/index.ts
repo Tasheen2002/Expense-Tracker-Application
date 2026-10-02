@@ -9,6 +9,7 @@ export * from './commands/create-workspace.command';
 export * from './commands/delete-workspace.command';
 export * from './commands/register-user.command';
 export * from './commands/remove-member.command';
+export * from './commands/login-user.command';
 export * from './commands/update-workspace.command';
 
 // Queries
@@ -21,7 +22,6 @@ export * from './queries/get-user.query';
 export * from './queries/get-workspace-by-id.query';
 export * from './queries/get-workspace-invitations.query';
 export * from './queries/list-workspace-members.query';
-export * from './queries/login-user.query';
 
 // Services
 export * from './services/user-management.service';

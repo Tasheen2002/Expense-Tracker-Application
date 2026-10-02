@@ -16,6 +16,18 @@ export class InvalidAuditResourceError extends DomainError {
   }
 }
 
+export class InvalidAuditIdentityError extends DomainError {
+  constructor(field: 'workspaceId' | 'userId') {
+    super(`${field} must be a valid UUID.`, 'INVALID_AUDIT_IDENTITY', 400);
+  }
+}
+
+export class AuditEventConflictError extends DomainError {
+  constructor(eventId: string) {
+    super(`Event '${eventId}' was already recorded with different content.`, 'AUDIT_EVENT_CONFLICT', 409);
+  }
+}
+
 export class AuditLogNotFoundError extends DomainError {
   constructor(auditLogId: string) {
     super(

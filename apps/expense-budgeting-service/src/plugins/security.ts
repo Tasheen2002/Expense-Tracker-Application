@@ -1,17 +1,9 @@
 import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
-import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 
 const securityPlugin: FastifyPluginAsync = async (fastify) => {
-  await fastify.register(cors, {
-    origin: '*',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'x-user-email', 'x-workspace-id'],
-  });
-
   await fastify.register(helmet, {
     contentSecurityPolicy: {
       directives: {
@@ -35,7 +27,7 @@ const securityPlugin: FastifyPluginAsync = async (fastify) => {
     }),
   });
 
-  fastify.log.info('Security plugins registered (CORS, Helmet, Rate Limit)');
+  fastify.log.info('Security plugins registered (Helmet, Rate Limit)');
 };
 
 export default fp(securityPlugin, {

@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js --alias:@prisma/client=.prisma/client-expense --external:.prisma/client-expense --external:@fastify/* --external:fastify --external:fastify-plugin --external:dotenv --external:bcryptjs --external:jsonwebtoken --external:pino --external:pino-pretty --external:zod --external:zod-to-json-schema --external:decimal.js --external:sanitize-html",
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "generate": "prisma generate",
@@ -35,9 +35,12 @@
     "ky": "^1.2.0",
     "@expense-tracker/core": "workspace:*",
     "@expense-tracker/contracts": "workspace:*",
-    "@expense-tracker/outbox-kit": "workspace:*"
+    "@expense-tracker/outbox-kit": "workspace:*",
+    "@expense-tracker/correlation": "workspace:*",
+    "@expense-tracker/middleware": "workspace:*"
   },
   "devDependencies": {
+    "esbuild": "^0.21.5",
     "@types/bcryptjs": "^3.0.0",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.0",
