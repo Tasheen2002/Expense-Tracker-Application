@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
@@ -55,8 +56,8 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
     app = await createServer();
     prisma = new PrismaClient();
 
-    testUserId = '123e4567-e89b-12d3-a456-426614174001';
-    testWorkspaceId = '123e4567-e89b-12d3-a456-426614174000';
+    testUserId = randomUUID();
+    testWorkspaceId = randomUUID();
     authToken = 'mock-auth-token';
 
     app.addHook('onRequest', async (request: any) => {
@@ -71,14 +72,8 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
   });
 
   afterAll(async () => {
-    // Cleanup
-    if (testTemplateId && authToken) {
-      await app.inject({
-        method: 'DELETE',
-        url: `/api/v1/admin/notification-templates/${testTemplateId}`,
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-    }
+    await prisma.notificationTemplate.deleteMany({ where: { workspaceId: testWorkspaceId } });
+    await prisma.notificationPreference.deleteMany({ where: { userId: testUserId, workspaceId: testWorkspaceId } });
 
     await prisma.$disconnect();
     await app.close();
@@ -113,9 +108,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
           testTemplateId =
             data.data?.template?.id || data.template?.id || data.data?.id;
         }
-
-        // 400 = workspace validation, 201 = created, 500 = server config
-        expect([201, 400, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(201);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -160,11 +153,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
         });
         console.log('Get Template:', res.statusCode);
 
-        if (testTemplateId) {
-          expect([200, 404]).toContain(res.statusCode);
-        } else {
-          expect([200, 400, 404, 500]).toContain(res.statusCode);
-        }
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -187,8 +176,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
           headers: { Authorization: `Bearer ${authToken}` },
         });
         console.log('Get Active Template:', res.statusCode);
-        // 400 = validation issue, 404 = not found, 200 = success
-        expect([200, 400, 404, 500]).toContain(res.statusCode);
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -216,11 +204,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
         });
         console.log('Update Template:', res.statusCode);
 
-        if (testTemplateId) {
-          expect([200, 404]).toContain(res.statusCode);
-        } else {
-          expect([200, 400, 404, 500]).toContain(res.statusCode);
-        }
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -247,11 +231,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
         });
         console.log('Activate Template:', res.statusCode);
 
-        if (testTemplateId) {
-          expect([200, 404]).toContain(res.statusCode);
-        } else {
-          expect([200, 400, 404, 500]).toContain(res.statusCode);
-        }
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -277,11 +257,7 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
         });
         console.log('Deactivate Template:', res.statusCode);
 
-        if (testTemplateId) {
-          expect([200, 404]).toContain(res.statusCode);
-        } else {
-          expect([200, 400, 404, 500]).toContain(res.statusCode);
-        }
+        expect(res.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
