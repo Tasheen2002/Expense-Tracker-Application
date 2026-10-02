@@ -4,6 +4,7 @@ import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 export class NotificationId extends UuidId {
   private constructor(value: string) {
     super(value, "NotificationId");
+    Object.freeze(this);
   }
 
   static create(): NotificationId {
