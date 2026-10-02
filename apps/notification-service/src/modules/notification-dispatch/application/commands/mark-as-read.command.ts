@@ -9,6 +9,7 @@ import {
 export interface MarkAsReadCommand extends ICommand {
   readonly notificationId: string;
   readonly userId: string;
+  readonly workspaceId: string;
 }
 
 export class MarkAsReadHandler implements ICommandHandler<
@@ -20,7 +21,8 @@ export class MarkAsReadHandler implements ICommandHandler<
   async handle(input: MarkAsReadCommand): Promise<CommandResult<NotificationDTO>> {
     const dto = await this.notificationService.markAsRead(
       input.notificationId,
-      input.userId
+      input.userId,
+      input.workspaceId
     );
     return CommandResult.success(dto);
   }
