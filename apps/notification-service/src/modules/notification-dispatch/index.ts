@@ -1,5 +1,5 @@
 // Notification Dispatch Module - Public API
-// Only exposes what other modules and the app container need
+// Exposes the module's public types and HTTP registration.
 
 // Domain Enums (used by other modules, e.g. for NotificationType)
 export * from './domain/enums';
@@ -10,5 +10,5 @@ export * from './domain/errors/notification.errors';
 // Infrastructure — Route Registration
 export { registerNotificationDispatchRoutes } from './infrastructure/http/routes';
 
-// Application — Domain Event Handler (wired up by app container)
+// Application — optional in-process event adapter. Production consumes HTTP outbox events.
 export { NotificationEventHandler } from './application/handlers/notification.handler';
