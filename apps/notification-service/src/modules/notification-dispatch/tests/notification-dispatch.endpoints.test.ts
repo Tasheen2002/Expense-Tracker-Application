@@ -49,8 +49,6 @@ describe('Notification Dispatch Module - Endpoint Tests', () => {
   let testNotificationId: string;
 
   const testEmail = `notification-test-${Date.now()}@example.com`;
-  const testPassword = 'TestPassword123!';
-  const testWorkspaceName = `Notification Test Workspace ${Date.now()}`;
 
   beforeAll(async () => {
     app = await createServer();
