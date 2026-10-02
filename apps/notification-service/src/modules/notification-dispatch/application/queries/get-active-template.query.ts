@@ -1,3 +1,4 @@
+import { TemplateAccess } from '../services/template-access';
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
 import { TemplateService } from '../services/template.service';
@@ -8,6 +9,7 @@ import {
 } from '@core/application/cqrs';
 
 export interface GetActiveTemplateQuery extends IQuery {
+  readonly access: TemplateAccess;
   readonly workspaceId: string | undefined;
   readonly type: NotificationType;
   readonly channel: NotificationChannel;
@@ -25,7 +27,8 @@ export class GetActiveTemplateHandler implements IQueryHandler<
     return this.templateService.getActiveTemplate(
       input.workspaceId,
       input.type,
-      input.channel
+      input.channel,
+      input.access
     );
   }
 }
