@@ -3,6 +3,7 @@ import { Budget } from "../domain/entities/budget.entity";
 import { BudgetPeriodType } from "../domain/enums/budget-period-type";
 import { BudgetStatus } from "../domain/enums/budget-status";
 import { Decimal } from "@prisma/client/runtime/library";
+import { BudgetThresholdExceededEventSchema } from '@expense-tracker/contracts';
 import {
   InvalidAmountError,
   InvalidCurrencyError,
@@ -24,6 +25,15 @@ describe("Budget Entity", () => {
   };
 
   describe("create", () => {
+    it('includes the creator in threshold events for notification routing', () => {
+      const budget = Budget.create(validData);
+      budget.activate();
+      budget.clearDomainEvents();
+      budget.markAsExceeded(1001);
+      const event = budget.domainEvents.find(item => item.eventType === 'budget.threshold_exceeded');
+      expect(event?.getPayload()).toMatchObject({ createdBy: validData.createdBy, workspaceId: validData.workspaceId });
+      expect(BudgetThresholdExceededEventSchema.shape.data.safeParse(event?.getPayload()).success).toBe(true);
+    });
     it("should create a valid budget", () => {
       const budget = Budget.create(validData);
       expect(budget).toBeDefined();
