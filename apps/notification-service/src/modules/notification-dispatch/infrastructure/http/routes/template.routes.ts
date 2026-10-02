@@ -1,14 +1,18 @@
+import { notificationReadRateLimit, notificationWriteRateLimit } from '@shared/http/notification-rate-limits';
+import { WorkspaceId } from '../../../domain/value-objects';
+import { TemplateNotFoundByIdError, TemplateAccessDeniedError } from '../../../domain/errors/notification.errors';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TemplateController } from '../controllers/template.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-import { validateBody, validateQuery } from '../validation/validator';
+import { validateBody, validateQuery, validateParams } from '../validation/validator';
 import {
   createTemplateSchema,
   updateTemplateSchema,
   getActiveTemplateSchema,
   templateParamsJsonSchema,
+  templateParamsSchema,
   createTemplateBodyJsonSchema,
   updateTemplateBodyJsonSchema,
   getActiveTemplateQueryJsonSchema,
@@ -17,49 +21,40 @@ import {
 
 export async function registerTemplateRoutes(
   fastify: FastifyInstance,
-  controller: TemplateController
+  controller: Pick<TemplateController, 'createTemplate' | 'getTemplateById' | 'getActiveTemplate' | 'updateTemplate' | 'activateTemplate' | 'deactivateTemplate'>
 ): Promise<void> {
   const templateWorkspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    const params = request.params as any;
-    const query = request.query as any;
-    const body = request.body as any;
-    const workspaceId = params?.workspaceId || query?.workspaceId || body?.workspaceId;
-
-    if (workspaceId) {
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      if (!UUID_REGEX.test(workspaceId)) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: 'Invalid workspace ID format',
-        });
-      }
-
-      const originalParams = request.params as any;
-      request.params = { ...originalParams, workspaceId };
-      try {
-        await workspaceAuthorizationMiddleware(
-          request as AuthenticatedRequest,
-          reply,
-          request.server.prisma
-        );
-        if (reply.sent) return;
-        await RolePermissions.ADMIN_LEVEL(request, reply);
-      } finally {
-        request.params = originalParams;
-      }
+    const params = request.params as { templateId?: string };
+    let workspaceId: string | undefined;
+    if (params.templateId) {
+      const template = await request.server.prisma.notificationTemplate.findUnique({
+        where: { id: params.templateId }, select: { workspaceId: true },
+      });
+      if (!template) throw new TemplateNotFoundByIdError(params.templateId);
+      workspaceId = template.workspaceId ?? undefined;
+    } else {
+      workspaceId = (request.body as { workspaceId?: string } | undefined)?.workspaceId
+        ?? (request.query as { workspaceId?: string })?.workspaceId;
     }
+    // Global templates have no workspace role model. Fail closed on these public
+    // management routes; delivery still reads global fallback templates internally.
+    if (!workspaceId) throw new TemplateAccessDeniedError();
+    const workspace = WorkspaceId.fromString(workspaceId);
+    const originalParams = request.params;
+    request.params = { ...params, workspaceId: workspace.getValue() };
+    try {
+      await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
+      if (reply.sent) return;
+      await RolePermissions.ADMIN_LEVEL(request, reply);
+    } finally { request.params = originalParams; }
   };
-
   // Create notification template
   fastify.post(
     '/admin/notification-templates',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(createTemplateSchema),
-        templateWorkspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateBody(createTemplateSchema)],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Create a new notification template',
@@ -78,7 +73,8 @@ export async function registerTemplateRoutes(
   fastify.get(
     '/admin/notification-templates/:templateId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateParams(templateParamsSchema)],
       preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
@@ -98,11 +94,9 @@ export async function registerTemplateRoutes(
   fastify.get(
     '/admin/notification-templates/active',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateQuery(getActiveTemplateSchema),
-        templateWorkspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateQuery(getActiveTemplateSchema)],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Get the active template for a specific type and channel',
@@ -121,11 +115,9 @@ export async function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(updateTemplateSchema),
-        templateWorkspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateBody(updateTemplateSchema), validateParams(templateParamsSchema)],
+      preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
         description: 'Update a notification template',
@@ -145,7 +137,8 @@ export async function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId/activate',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(templateParamsSchema)],
       preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
@@ -165,7 +158,8 @@ export async function registerTemplateRoutes(
   fastify.patch(
     '/admin/notification-templates/:templateId/deactivate',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(templateParamsSchema)],
       preHandler: [templateWorkspaceAuth],
       schema: {
         tags: ['Notification Templates'],
@@ -181,4 +175,3 @@ export async function registerTemplateRoutes(
       controller.deactivateTemplate(request as AuthenticatedRequest, reply)
   );
 }
-
