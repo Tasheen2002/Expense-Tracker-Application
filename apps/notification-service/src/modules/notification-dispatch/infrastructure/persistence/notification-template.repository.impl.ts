@@ -1,9 +1,10 @@
 import {
   PrismaClient,
+  Prisma,
   NotificationType as PrismaNotificationType,
   NotificationChannel as PrismaNotificationChannel,
   NotificationTemplate as PrismaNotificationTemplate,
-} from "@prisma/client";
+} from "../../../../prisma-client";
 import { INotificationTemplateRepository } from "../../domain/repositories/notification-template.repository";
 import {
   NotificationTemplate,
@@ -13,9 +14,35 @@ import { TemplateId } from "../../domain/value-objects/template-id";
 import { WorkspaceId } from "../../domain/value-objects";
 import { NotificationType } from "../../domain/enums/notification-type.enum";
 import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
+import { TemplateAlreadyExistsError, TemplateNotFoundByIdError, NotificationConcurrencyError } from '../../domain/errors/notification.errors';
+
+const revisions = new WeakMap<NotificationTemplate, number>();
 
 export class NotificationTemplateRepositoryImpl implements INotificationTemplateRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  async mutate(id: TemplateId, workspaceId: WorkspaceId,
+    mutation: (template: NotificationTemplate) => void): Promise<NotificationTemplate> {
+    const result = await this.prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT id FROM notification_dispatch.notification_templates
+        WHERE id = ${id.getValue()}::uuid AND workspace_id = ${workspaceId.getValue()}::uuid FOR UPDATE`;
+      const record = await tx.notificationTemplate.findFirst({ where: { id: id.getValue(), workspaceId: workspaceId.getValue() } });
+      if (!record) throw new TemplateNotFoundByIdError(id.getValue());
+      const template = this.toDomain(record);
+      mutation(template);
+      if (template.subjectTemplate !== record.subjectTemplate || template.bodyTemplate !== record.bodyTemplate
+        || template.isActive !== record.isActive) {
+        await tx.notificationTemplate.update({ where: { id: record.id }, data: {
+          subjectTemplate: template.subjectTemplate, bodyTemplate: template.bodyTemplate,
+          isActive: template.isActive, updatedAt: template.updatedAt, revision: { increment: 1 },
+        } });
+      }
+      return { template, revision: record.revision + (template.subjectTemplate !== record.subjectTemplate
+        || template.bodyTemplate !== record.bodyTemplate || template.isActive !== record.isActive ? 1 : 0) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+    revisions.set(result.template, result.revision);
+    return result.template;
+  }
 
   async save(template: NotificationTemplate): Promise<void> {
     const id = template.id.getValue();
@@ -28,13 +55,24 @@ export class NotificationTemplateRepositoryImpl implements INotificationTemplate
       subjectTemplate: template.subjectTemplate,
       bodyTemplate: template.bodyTemplate,
       isActive: template.isActive,
+      updatedAt: template.updatedAt,
     };
 
-    await this.prisma.notificationTemplate.upsert({
-      where: { id },
-      update: data,
-      create: { id, ...data },
-    });
+    try {
+      const revision = revisions.get(template);
+      if (revision === undefined) {
+        await this.prisma.notificationTemplate.create({ data: { id, ...data, createdAt: template.createdAt } });
+        revisions.set(template, 0);
+      } else {
+        const result = await this.prisma.notificationTemplate.updateMany({ where: { id, revision,
+          workspaceId: data.workspaceId }, data: { ...data, revision: { increment: 1 } } });
+        if (result.count !== 1) throw new NotificationConcurrencyError();
+        revisions.set(template, revision + 1);
+      }
+    } catch (error: unknown) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new TemplateAlreadyExistsError();
+      throw error;
+    }
   }
 
   async findById(id: TemplateId): Promise<NotificationTemplate | null> {
@@ -54,35 +92,17 @@ export class NotificationTemplateRepositoryImpl implements INotificationTemplate
     const prismaType = type as unknown as PrismaNotificationType;
     const prismaChannel = channel as unknown as PrismaNotificationChannel;
 
-    // First try workspace-specific template
-    if (workspaceId) {
-      const workspaceTemplate =
-        await this.prisma.notificationTemplate.findFirst({
-          where: {
-            workspaceId: workspaceId.getValue(),
-            type: prismaType,
-            channel: prismaChannel,
-            isActive: true,
-          },
-        });
-
-      if (workspaceTemplate) {
-        return this.toDomain(workspaceTemplate);
-      }
-    }
-
-    // Fall back to global template
-    const globalTemplate = await this.prisma.notificationTemplate.findFirst({
+    // One statement gives tenant precedence and global fallback on one snapshot.
+    const template = await this.prisma.notificationTemplate.findFirst({
       where: {
-        workspaceId: null,
+        ...(workspaceId ? { OR: [{ workspaceId: workspaceId.getValue() }, { workspaceId: null }] } : { workspaceId: null }),
         type: prismaType,
         channel: prismaChannel,
         isActive: true,
       },
+      orderBy: { workspaceId: { sort: 'asc', nulls: 'last' } },
     });
-
-    if (!globalTemplate) return null;
-    return this.toDomain(globalTemplate);
+    return template ? this.toDomain(template) : null;
   }
 
   private toDomain(record: PrismaNotificationTemplate): NotificationTemplate {
@@ -101,6 +121,8 @@ export class NotificationTemplateRepositoryImpl implements INotificationTemplate
       updatedAt: record.updatedAt,
     };
 
-    return NotificationTemplate.fromPersistence(props);
+    const template = NotificationTemplate.fromPersistence(props);
+    revisions.set(template, record.revision);
+    return template;
   }
 }
