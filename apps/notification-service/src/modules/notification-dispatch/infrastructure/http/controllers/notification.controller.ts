@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import { ListNotificationsHandler } from '../../../application/queries/list-notifications.query';
 import { GetUnreadCountHandler } from '../../../application/queries/get-unread-count.query';
@@ -10,11 +10,11 @@ import { ListNotificationsQuery } from '../validation/notification.schema';
 
 export class NotificationController {
   constructor(
-    private readonly listNotificationsHandler: ListNotificationsHandler,
-    private readonly getUnreadCountHandler: GetUnreadCountHandler,
-    private readonly getUnreadNotificationsHandler: GetUnreadNotificationsHandler,
-    private readonly markAsReadHandler: MarkAsReadHandler,
-    private readonly markAllAsReadHandler: MarkAllAsReadHandler
+    private readonly listNotificationsHandler: Pick<ListNotificationsHandler, 'handle'>,
+    private readonly getUnreadCountHandler: Pick<GetUnreadCountHandler, 'handle'>,
+    private readonly getUnreadNotificationsHandler: Pick<GetUnreadNotificationsHandler, 'handle'>,
+    private readonly markAsReadHandler: Pick<MarkAsReadHandler, 'handle'>,
+    private readonly markAllAsReadHandler: Pick<MarkAllAsReadHandler, 'handle'>
   ) {}
 
   async getNotifications(
@@ -62,6 +62,7 @@ export class NotificationController {
   async getUnreadNotifications(
     request: AuthenticatedRequest<{
       Params: { workspaceId: string };
+      Querystring: ListNotificationsQuery;
     }>,
     reply: FastifyReply
   ) {
@@ -72,6 +73,8 @@ export class NotificationController {
       const paginatedData = await this.getUnreadNotificationsHandler.handle({
         recipientId: userId,
         workspaceId,
+        limit: request.query.limit,
+        offset: request.query.offset,
       });
       return ResponseHelper.ok(
         reply,
@@ -98,12 +101,13 @@ export class NotificationController {
     reply: FastifyReply
   ) {
     try {
-      const { notificationId } = request.params;
+      const { notificationId, workspaceId } = request.params;
       const userId = request.user.userId;
 
       const result = await this.markAsReadHandler.handle({
         notificationId,
         userId,
+        workspaceId,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -142,4 +146,3 @@ export class NotificationController {
     }
   }
 }
-
