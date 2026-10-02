@@ -2,9 +2,14 @@ import fp from 'fastify-plugin';
 import { FastifyPluginAsync } from 'fastify';
 import { PrismaClient } from '@prisma/client';
 
-const dbPlugin: FastifyPluginAsync = async (fastify) => {
+export interface DbPluginOptions {
+  prisma?: PrismaClient;
+  beforeDatabaseDisconnect?: () => Promise<void>;
+}
+
+const dbPlugin: FastifyPluginAsync<DbPluginOptions> = async (fastify, options) => {
   // Each app owns its pool and can close it without affecting another app.
-  const prisma = new PrismaClient({
+  const prisma = options.prisma ?? new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
   // Decorate Fastify instance with Prisma client
@@ -15,7 +20,11 @@ const dbPlugin: FastifyPluginAsync = async (fastify) => {
 
   // Graceful shutdown
   fastify.addHook('onClose', async () => {
-    await prisma.$disconnect();
+    try {
+      await options.beforeDatabaseDisconnect?.();
+    } finally {
+      await prisma.$disconnect();
+    }
     fastify.log.info('Database connection closed');
   });
 };
