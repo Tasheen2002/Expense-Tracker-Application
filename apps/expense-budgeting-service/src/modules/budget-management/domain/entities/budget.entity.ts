@@ -54,7 +54,8 @@ export class BudgetThresholdExceededEvent extends DomainEvent {
     public readonly threshold: number,
     public readonly currentSpending: number,
     public readonly budgetLimit: number,
-    public readonly currency: string
+    public readonly currency: string,
+    public readonly createdBy: string
   ) {
     super(budgetId, 'Budget');
   }
@@ -71,6 +72,7 @@ export class BudgetThresholdExceededEvent extends DomainEvent {
       currentSpending: this.currentSpending,
       budgetLimit: this.budgetLimit,
       currency: this.currency,
+      createdBy: this.createdBy,
     };
   }
 }
@@ -482,7 +484,8 @@ export class Budget extends AggregateRoot {
         thresholdPercentage,
         currentSpending,
         limitNum,
-        this.currency
+        this.currency,
+        this.createdBy
       )
     );
   }
