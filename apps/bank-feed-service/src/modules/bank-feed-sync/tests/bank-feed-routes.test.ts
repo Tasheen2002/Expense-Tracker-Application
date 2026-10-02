@@ -41,15 +41,16 @@ describe('Bank feed HTTP boundaries', () => {
 
   it('counts each mutation once across feature route groups', async () => {
     vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('INTERNAL_API_KEY', 'review-secret');
     const workspaceId = crypto.randomUUID();
     const userId = crypto.randomUUID();
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => new Response(JSON.stringify({
       data: { userId, workspaceId, role: 'ADMIN' },
     }), { status: 200 })));
-    const app = await buildBankFeedApp({ enableInternalAuth: false, logger: false });
+    const app = await buildBankFeedApp({ logger: false });
     vi.spyOn(app.compositionRoot.bankConnectionController, 'disconnectBank').mockImplementation(async (_request, reply) => reply.code(204).send());
     try {
-      const request = { method: 'POST' as const, headers: { 'x-user-id': userId },
+      const request = { method: 'POST' as const, headers: { 'x-user-id': userId, 'x-internal-api-key': 'review-secret' },
         url: `/api/v1/workspaces/${workspaceId}/bank-feed-sync/connections/${crypto.randomUUID()}/disconnect` };
       for (let i = 0; i < 30; i++) expect((await app.inject(request)).statusCode).toBe(204);
       expect((await app.inject(request)).statusCode).toBe(429);
@@ -58,18 +59,19 @@ describe('Bank feed HTTP boundaries', () => {
 
   it('sanitizes controller and plugin server errors in production', async () => {
     vi.stubEnv('NODE_ENV', 'production');
-    const app = await buildBankFeedApp({ enableInternalAuth: false, logger: false });
+    vi.stubEnv('INTERNAL_API_KEY', 'review-secret');
+    const app = await buildBankFeedApp({ logger: false });
     app.get('/test-controller-error', (_request, reply) => ResponseHelper.error(reply, Object.assign(new Error('private database secret'), { statusCode: 503, code: 'PRIVATE' })));
     app.get('/test-plugin-error', () => { throw Object.assign(new Error('private database secret'), { statusCode: 503 }); });
     app.get('/test-domain-error', (_request, reply) => ResponseHelper.error(reply, Object.assign(new Error('Invalid amount'), { statusCode: 422, code: 'INVALID_AMOUNT' })));
     try {
       for (const url of ['/test-controller-error', '/test-plugin-error']) {
-        const response = await app.inject({ url });
+        const response = await app.inject({ url, headers: { 'x-internal-api-key': 'review-secret' } });
         expect(response.statusCode).toBe(503);
         expect(response.body).not.toContain('private');
         expect(response.body).not.toContain('PRIVATE');
       }
-      expect((await app.inject('/test-domain-error')).json()).toMatchObject({ message: 'Invalid amount', code: 'INVALID_AMOUNT' });
+      expect((await app.inject({ url: '/test-domain-error', headers: { 'x-internal-api-key': 'review-secret' } })).json()).toMatchObject({ message: 'Invalid amount', code: 'INVALID_AMOUNT' });
     } finally { await app.close(); }
   });
 
