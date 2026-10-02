@@ -62,6 +62,7 @@ export class ApprovalWorkflowStartedEvent extends DomainEvent {
 export class ApprovalStepCompletedEvent extends DomainEvent {
   constructor(
     public readonly workflowId: string,
+    public readonly workspaceId: string,
     public readonly stepId: string,
     public readonly approverId: string,
     public readonly stepNumber: number,
@@ -79,6 +80,7 @@ export class ApprovalStepCompletedEvent extends DomainEvent {
     return {
       workflowId: this.workflowId,
       stepId: this.stepId,
+      workspaceId: this.workspaceId,
       approverId: this.approverId,
       stepNumber: this.stepNumber,
       decision: this.decision,
@@ -149,6 +151,7 @@ export class ApprovalWorkflowRejectedEvent extends DomainEvent {
 export class ApprovalStepDelegatedEvent extends DomainEvent {
   constructor(
     public readonly workflowId: string,
+    public readonly workspaceId: string,
     public readonly stepId: string,
     public readonly fromApproverId: string,
     public readonly toApproverId: string
@@ -164,6 +167,7 @@ export class ApprovalStepDelegatedEvent extends DomainEvent {
     return {
       stepId: this.stepId,
       workflowId: this.workflowId,
+      workspaceId: this.workspaceId,
       fromApproverId: this.fromApproverId,
       toApproverId: this.toApproverId,
     };
@@ -503,6 +507,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     this.addDomainEvent(
       new ApprovalStepCompletedEvent(
         this.props.workflowId.getValue(),
+        this.props.workspaceId.getValue(),
         step.id.getValue(),
         deciderId,
         stepNumber,
@@ -564,6 +569,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     this.addDomainEvent(
       new ApprovalStepCompletedEvent(
         this.props.workflowId.getValue(),
+        this.props.workspaceId.getValue(),
         currentStep.id.getValue(),
         rejectedBy,
         currentStep.stepNumber,
@@ -645,6 +651,7 @@ export class ExpenseWorkflow extends AggregateRoot {
     this.addDomainEvent(
       new ApprovalStepDelegatedEvent(
         this.props.workflowId.getValue(),
+        this.props.workspaceId.getValue(),
         step.id.getValue(),
         fromApproverId,
         step.getCurrentApproverId().getValue()
@@ -693,6 +700,7 @@ export class ExpenseWorkflow extends AggregateRoot {
         this.addDomainEvent(
           new ApprovalStepCompletedEvent(
             this.props.workflowId.getValue(),
+            this.props.workspaceId.getValue(),
             step.id.getValue(),
             'System',
             step.stepNumber,
