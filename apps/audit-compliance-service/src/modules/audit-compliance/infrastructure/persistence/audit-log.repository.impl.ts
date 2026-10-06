@@ -27,13 +27,17 @@ export class AuditLogRepositoryImpl
   }
 
   async saveIfAbsent(auditLog: AuditLog): Promise<boolean> {
-    const result = await this.prisma.auditLog.createMany({
+    return this.prisma.$transaction(async tx => {
+    const id = auditLog.id.getValue();
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))::text`;
+    if (await tx.accountAuditLog.findUnique({ where: { id } })) throw new AuditEventConflictError(id);
+    const result = await tx.auditLog.createMany({
       data: [this.toPersistence(auditLog)],
       skipDuplicates: true,
     });
     if (result.count === 1) return true;
 
-    const existing = await this.prisma.auditLog.findUnique({ where: { id: auditLog.id.getValue() } });
+    const existing = await tx.auditLog.findUnique({ where: { id: auditLog.id.getValue() } });
     if (!existing) {
       throw new Error('Audit event could not be verified after a duplicate insert');
     }
@@ -47,6 +51,7 @@ export class AuditLogRepositoryImpl
       (typeof eventTimestamp !== 'string' || existing.createdAt.getTime() === Date.parse(eventTimestamp));
     if (!matches) throw new AuditEventConflictError(auditLog.id.getValue());
     return false;
+    });
   }
 
   async findById(id: AuditLogId, workspaceId: string): Promise<AuditLog | null> {
