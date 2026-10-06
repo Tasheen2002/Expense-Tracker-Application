@@ -33,13 +33,14 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
       if (
         'statusCode' in error &&
         typeof error.statusCode === 'number' &&
-        error.statusCode < 600
+        error.statusCode >= 400 && error.statusCode < 500
       ) {
         return reply.status(error.statusCode).send({
           success: false,
           statusCode: error.statusCode,
           message: error.message,
           error: error.name,
+          code: error.code,
         });
       }
 
@@ -63,7 +64,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
             statusCode: 409,
             error: 'Conflict',
             message: 'Resource already exists',
-            details: error.meta,
+            ...(process.env.NODE_ENV === 'development' && { details: error.meta }),
           });
         }
 
