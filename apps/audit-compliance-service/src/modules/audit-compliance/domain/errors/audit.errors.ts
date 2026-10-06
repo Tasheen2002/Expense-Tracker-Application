@@ -78,6 +78,12 @@ export class InvalidAuditFilterError extends DomainError {
   }
 }
 
+export class InvalidAccountAuditError extends DomainError {
+  constructor(field: string) {
+    super(`Invalid account audit field '${field}'`, 'INVALID_ACCOUNT_AUDIT_DATA', 400);
+  }
+}
+
 export class AuditLogImmutableError extends DomainError {
   constructor(auditLogId: string) {
     super(
