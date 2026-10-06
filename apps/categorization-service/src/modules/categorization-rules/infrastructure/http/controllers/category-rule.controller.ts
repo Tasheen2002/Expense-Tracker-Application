@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   CreateCategoryRuleHandler,
@@ -124,6 +124,7 @@ export class CategoryRuleController {
       const result = await this.getExecutionsByRuleHandler.handle({
         ruleId,
         workspaceId,
+        userId: request.user.userId,
         limit,
         offset,
       });
@@ -198,7 +199,7 @@ export class CategoryRuleController {
         workspaceId,
         userId,
         name: request.body.name,
-        description: request.body.description ?? undefined,
+        description: request.body.description,
         priority: request.body.priority,
         conditionType: request.body.conditionType,
         conditionValue: request.body.conditionValue,
