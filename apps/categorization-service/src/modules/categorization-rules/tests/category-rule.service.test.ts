@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CategoryRuleService } from "../application/services/category-rule.service";
 import { ICategoryRuleRepository } from "../domain/repositories/category-rule.repository";
-import { IWorkspaceAccessPort } from "../domain/ports/workspace-access.port";
+import { IWorkspaceAccessPort } from "../application/ports/workspace-access.port";
 import {  WorkspaceId  } from '@core/domain/value-objects';
 import {  UserId  } from '@core/domain/value-objects';
 import { RuleCondition } from "../domain/value-objects/rule-condition";
@@ -22,13 +22,14 @@ const mockRepository = {
 
 const mockWorkspaceAccess = {
   isAdminOrOwner: vi.fn(),
+  isMember: vi.fn(),
 } as unknown as IWorkspaceAccessPort;
 
 describe("CategoryRuleService Authorization", () => {
   let service: CategoryRuleService;
 
   beforeEach(() => {
-    service = new CategoryRuleService(mockRepository, mockWorkspaceAccess);
+    service = new CategoryRuleService(mockRepository, mockWorkspaceAccess, { ensureCategory: vi.fn() });
     vi.clearAllMocks();
   });
 
@@ -64,8 +65,8 @@ describe("CategoryRuleService Authorization", () => {
       // Assert
       expect(result).toBeDefined();
       expect(mockWorkspaceAccess.isAdminOrOwner).toHaveBeenCalledWith(
-        userIdStr,
-        workspaceIdStr,
+        userId,
+        workspaceId,
       );
       expect(mockRepository.save).toHaveBeenCalled();
     });
@@ -88,7 +89,7 @@ describe("CategoryRuleService Authorization", () => {
   });
 
   describe("deleteRule", () => {
-    it("should allow creator to delete rule", async () => {
+    it("should deny a creator who no longer has administrative access", async () => {
       // Arrange
       const rule = CategoryRule.create({
         workspaceId,
@@ -98,18 +99,11 @@ describe("CategoryRuleService Authorization", () => {
         createdBy: userId,
       });
       vi.mocked(mockRepository.findById).mockResolvedValue(rule);
-      // Access check shouldn't matter if creator, but in my implementation calls checkAccess regardless or checks creator first?
-      // Let's check impl: `const isCreator = ...; const isAdminOrOwner = ...; if (!isCreator && !isAdminOrOwner)`
-      // It awaits checkAccess even if isCreator is true?
-      // Yes, `const isAdminOrOwner = await this.checkAccess(...)`.
-      // Optimization could be short-circuit, but currently it runs both.
       vi.mocked(mockWorkspaceAccess.isAdminOrOwner).mockResolvedValue(false);
 
       // Act
-      await service.deleteRule(rule.id, workspaceIdStr, userIdStr);
-
-      // Assert
-      expect(mockRepository.delete).toHaveBeenCalledWith(rule.id);
+      await expect(service.deleteRule(rule.id, workspaceIdStr, userIdStr)).rejects.toThrow(UnauthorizedRuleAccessError);
+      expect(mockRepository.delete).not.toHaveBeenCalled();
     });
 
     it("should allow admin/owner to delete rule created by others", async () => {
@@ -126,9 +120,7 @@ describe("CategoryRuleService Authorization", () => {
 
       // Act
       await service.deleteRule(rule.id, workspaceIdStr, userIdStr);
-
-      // Assert
-      expect(mockRepository.delete).toHaveBeenCalledWith(rule.id);
+      expect(mockRepository.delete).toHaveBeenCalledWith(rule);
     });
 
     it("should throw Unauthorized if neither creator nor admin", async () => {

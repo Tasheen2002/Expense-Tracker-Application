@@ -30,7 +30,7 @@ vi.mock('@shared/middleware/role-authorization.middleware', () => ({
   hasRole: () => true,
 }));
 
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
 import errorPlugin from '../../../plugins/error';
 import { CategoryRuleController } from '../infrastructure/http/controllers/category-rule.controller';
 import { CategorySuggestionController } from '../infrastructure/http/controllers/category-suggestion.controller';
@@ -41,6 +41,16 @@ import { ruleExecutionRoutes } from '../infrastructure/http/routes/rule-executio
 import {
   CommandResult,
 } from '@core/application/cqrs';
+import { UserId, WorkspaceId } from '@core/domain/value-objects';
+import { CreateSuggestionHandler, AcceptSuggestionHandler, RejectSuggestionHandler, DeleteSuggestionHandler, EvaluateRulesHandler } from '../application/commands';
+import { GetSuggestionByIdHandler, GetSuggestionsByExpenseHandler, GetPendingSuggestionsByWorkspaceHandler, GetSuggestionsByWorkspaceHandler,
+  GetExecutionsByRuleHandler, GetExecutionsByExpenseHandler, GetExecutionsByWorkspaceHandler,
+  GetRuleByIdHandler, GetRulesByWorkspaceHandler, GetActiveRulesByWorkspaceHandler } from '../application/queries';
+import { CategoryRuleService } from '../application/services/category-rule.service';
+import { CategoryRule } from '../domain/entities/category-rule.entity';
+import { RuleCondition } from '../domain/value-objects';
+import { RuleConditionType } from '../domain/enums';
+import { CategoryId } from '@core/domain/value-objects';
 
 // Create domain errors with statusCode for testing
 class CategoryRuleNotFoundError extends Error {
@@ -198,20 +208,18 @@ async function setupTestApp(
 
   // Mock authentication
   app.decorateRequest('user', null);
-  app.decorate('authenticate', async (request: any, reply: any) => {
+  app.decorate('authenticate', async (request: FastifyRequest) => {
     request.user = {
       userId: mockUserId,
       workspaceId: mockWorkspaceId,
       email: 'test@example.com',
-      role: 'ADMIN',
     };
   });
   app.addHook('preHandler', async (request) => {
-    (request as any).user = {
+    request.user = {
       userId: mockUserId,
       workspaceId: mockWorkspaceId,
       email: 'test@example.com',
-      role: 'ADMIN',
     };
   });
 
@@ -246,9 +254,9 @@ async function setupTestApp(
 
   await app.register(
     async (instance) => {
-      await categoryRuleRoutes(instance, ruleController, {} as any);
-      await categorySuggestionRoutes(instance, suggestionController, {} as any);
-      await ruleExecutionRoutes(instance, executionController, {} as any);
+      await categoryRuleRoutes(instance, ruleController);
+      await categorySuggestionRoutes(instance, suggestionController);
+      await ruleExecutionRoutes(instance, executionController);
     },
     { prefix: '/' }
   );
@@ -977,7 +985,7 @@ describe('Category Suggestion Routes', () => {
   describe('GET /:workspaceId/suggestions/expense/:expenseId', () => {
     it('should get suggestions for expense', async () => {
       const mockSuggestions = [createMockSuggestion()];
-      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue(mockSuggestions);
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue({ items: mockSuggestions, total: mockSuggestions.length, limit: 10, offset: 0, hasMore: false });
 
       const response = await app.inject({
         method: 'GET',
@@ -990,7 +998,7 @@ describe('Category Suggestion Routes', () => {
     });
 
     it('should return empty array when no suggestions for expense', async () => {
-      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue([]);
+      suggestionHandlers.getSuggestionsByExpenseHandler.handle.mockResolvedValue({ items: [], total: 0, limit: 10, offset: 0, hasMore: false });
 
       const response = await app.inject({
         method: 'GET',
@@ -1000,7 +1008,7 @@ describe('Category Suggestion Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
-      expect(body.data).toEqual([]);
+      expect(body.data.items).toEqual([]);
     });
 
     it('should return 400 for invalid expenseId format', async () => {
@@ -1018,7 +1026,6 @@ describe('Category Suggestion Routes', () => {
   // ==========================================================================
   describe('PATCH /:workspaceId/suggestions/:suggestionId/accept', () => {
     it('should accept suggestion successfully', async () => {
-      const mockSuggestion = createMockSuggestion(mockSuggestionId, true);
       suggestionHandlers.acceptSuggestionHandler.handle.mockResolvedValue(
         CommandResult.success(undefined)
       );
@@ -1065,7 +1072,6 @@ describe('Category Suggestion Routes', () => {
   // ==========================================================================
   describe('PATCH /:workspaceId/suggestions/:suggestionId/reject', () => {
     it('should reject suggestion successfully', async () => {
-      const mockSuggestion = createMockSuggestion(mockSuggestionId, false);
       suggestionHandlers.rejectSuggestionHandler.handle.mockResolvedValue(
         CommandResult.success(undefined)
       );
@@ -1183,20 +1189,17 @@ describe('Rule Execution Routes', () => {
       const mockRule = createMockRule();
       const mockExecution = createMockExecution();
       const mockResult = {
-        appliedRule: {
-          id: mockRule.id,
-          name: mockRule.name,
-          priority: mockRule.priority,
-        },
+        appliedRule: mockRule.toJSON(),
         suggestedCategoryId: mockCategoryId,
         execution: {
           id: mockExecution.id,
           ruleId: mockExecution.ruleId,
           expenseId: mockExecution.expenseId,
+          workspaceId: mockWorkspaceId,
           appliedCategoryId: mockExecution.appliedCategoryId,
           executedAt: mockExecution.executedAt,
         },
-        suggestion: createMockSuggestion(),
+        suggestion: createMockSuggestion().toJSON(),
       };
       executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
         CommandResult.success(mockResult)
@@ -1211,6 +1214,8 @@ describe('Rule Execution Routes', () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
       expect(body.success).toBe(true);
+      expect(body.data.appliedRule.targetCategoryId).toBe(mockCategoryId);
+      expect(body.data.suggestion.id).toBe(mockSuggestionId);
     });
 
     it('should return 400 for missing expenseId', async () => {
@@ -1274,6 +1279,7 @@ describe('Rule Execution Routes', () => {
         appliedRule: null,
         suggestedCategoryId: null,
         execution: null,
+        suggestion: null,
       };
       executionHandlers.evaluateRulesHandler.handle.mockResolvedValue(
         CommandResult.success(mockResult)
@@ -1299,7 +1305,7 @@ describe('Rule Execution Routes', () => {
   describe('GET /:workspaceId/executions/expense/:expenseId', () => {
     it('should get executions for expense', async () => {
       const mockExecutions = [createMockExecution()];
-      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue(mockExecutions);
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue({ items: mockExecutions, total: mockExecutions.length, limit: 10, offset: 0, hasMore: false });
 
       const response = await app.inject({
         method: 'GET',
@@ -1313,7 +1319,7 @@ describe('Rule Execution Routes', () => {
     });
 
     it('should return empty array when no executions for expense', async () => {
-      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue([]);
+      executionHandlers.getExecutionsByExpenseHandler.handle.mockResolvedValue({ items: [], total: 0, limit: 10, offset: 0, hasMore: false });
 
       const response = await app.inject({
         method: 'GET',
@@ -1322,7 +1328,7 @@ describe('Rule Execution Routes', () => {
 
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
-      expect(body.data).toHaveLength(0);
+      expect(body.data.items).toHaveLength(0);
     });
 
     it('should return 400 for invalid expenseId format', async () => {
@@ -1651,5 +1657,150 @@ describe('Categorization Rules Edge Cases', () => {
 
       expect(response.statusCode).toBe(201);
     }
+  });
+});
+
+// Middleware is mocked above; these tests deliberately run real command handlers
+// to verify the application boundary independently of route membership guards.
+describe('Command authorization through HTTP', () => {
+  let app: FastifyInstance;
+  let ruleHandlers: ReturnType<typeof createMockRuleHandlers>;
+  let suggestionHandlers: ReturnType<typeof createMockSuggestionHandlers>;
+  let executionHandlers: ReturnType<typeof createMockExecutionHandlers>;
+  const access = { isAdminOrOwner: vi.fn(), isMember: vi.fn() };
+  const writes = { getSuggestionById: vi.fn(), createSuggestion: vi.fn(), acceptSuggestion: vi.fn(), rejectSuggestion: vi.fn(), deleteSuggestion: vi.fn(), evaluateAndApplyRules: vi.fn() };
+  const acceptance = { validate: vi.fn().mockResolvedValue({ expenseVersion: 1 }) };
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    ruleHandlers = createMockRuleHandlers(); suggestionHandlers = createMockSuggestionHandlers(); executionHandlers = createMockExecutionHandlers();
+    suggestionHandlers.createSuggestionHandler.handle.mockImplementation(command => new CreateSuggestionHandler(writes, access, { readExpense: vi.fn().mockResolvedValue({ expenseOwnerId: mockUserId, expenseData: { amount: 1 } }), ensureCategory: vi.fn() }).handle(command));
+    suggestionHandlers.acceptSuggestionHandler.handle.mockImplementation(command => new AcceptSuggestionHandler(writes, access, acceptance).handle(command));
+    suggestionHandlers.rejectSuggestionHandler.handle.mockImplementation(command => new RejectSuggestionHandler(writes, access).handle(command));
+    suggestionHandlers.deleteSuggestionHandler.handle.mockImplementation(command => new DeleteSuggestionHandler(writes, access).handle(command));
+    executionHandlers.evaluateRulesHandler.handle.mockImplementation(command => new EvaluateRulesHandler(writes, access, { readExpense: vi.fn().mockResolvedValue({ expenseOwnerId: mockUserId, expenseData: { amount: 1 } }), ensureCategory: vi.fn() }).handle(command));
+    writes.createSuggestion.mockResolvedValue(createMockSuggestion());
+    writes.acceptSuggestion.mockResolvedValue(createMockSuggestion());
+    writes.getSuggestionById.mockResolvedValue(createMockSuggestion());
+    writes.rejectSuggestion.mockResolvedValue(createMockSuggestion());
+    writes.deleteSuggestion.mockResolvedValue(undefined);
+    writes.evaluateAndApplyRules.mockResolvedValue({ appliedRule: null, suggestedCategoryId: null, execution: null, suggestion: null });
+    app = await setupTestApp(ruleHandlers, suggestionHandlers, executionHandlers);
+  });
+  afterEach(async () => { await app.close(); });
+  const endpoints = [
+    { method: 'POST' as const, path: 'suggestions', key: 'createSuggestion' as const, status: 201, payload: { expenseId: mockExpenseId, suggestedCategoryId: mockCategoryId, confidence: 0.9 } },
+    { method: 'PATCH' as const, path: `suggestions/${mockSuggestionId}/accept`, key: 'acceptSuggestion' as const, status: 200 },
+    { method: 'PATCH' as const, path: `suggestions/${mockSuggestionId}/reject`, key: 'rejectSuggestion' as const, status: 200 },
+    { method: 'DELETE' as const, path: `suggestions/${mockSuggestionId}`, key: 'deleteSuggestion' as const, status: 204 },
+    { method: 'POST' as const, path: 'evaluate', key: 'evaluateAndApplyRules' as const, status: 200, payload: { expenseId: mockExpenseId, expenseData: { amount: 1 } } },
+  ];
+  it.each(endpoints)('$key rejects denied actors with the real command handler', async endpoint => {
+    access.isAdminOrOwner.mockResolvedValue(false);
+    const response = await app.inject({ method: endpoint.method, url: `/workspaces/${mockWorkspaceId}/${endpoint.path}`, payload: endpoint.payload });
+    expect(response.statusCode).toBe(403); expect(writes[endpoint.key]).not.toHaveBeenCalled();
+    expect(access.isAdminOrOwner).toHaveBeenCalledTimes(1);
+  });
+  it.each(endpoints)('$key propagates an unavailable authorization dependency', async endpoint => {
+    access.isAdminOrOwner.mockRejectedValue(Object.assign(new Error('Identity unavailable'), { statusCode: 503 }));
+    const response = await app.inject({ method: endpoint.method, url: `/workspaces/${mockWorkspaceId}/${endpoint.path}`, payload: endpoint.payload });
+    expect(response.statusCode).toBe(503); expect(writes[endpoint.key]).not.toHaveBeenCalled();
+  });
+  it.each(endpoints)('$key passes the authenticated actor and checks access exactly once', async endpoint => {
+    access.isAdminOrOwner.mockResolvedValue(true);
+    const response = await app.inject({ method: endpoint.method, url: `/workspaces/${mockWorkspaceId}/${endpoint.path}`, payload: endpoint.payload });
+    expect(response.statusCode).toBe(endpoint.status); expect(writes[endpoint.key]).toHaveBeenCalledTimes(1);
+    expect(access.isAdminOrOwner).toHaveBeenCalledTimes(1);
+    expect(access.isAdminOrOwner).toHaveBeenCalledWith(UserId.fromString(mockUserId), WorkspaceId.fromString(mockWorkspaceId));
+  });
+  it('preserves an explicit null description through the controller', async () => {
+    ruleHandlers.updateRuleHandler.handle.mockResolvedValue(CommandResult.success(createMockRule()));
+    const response = await app.inject({ method: 'PATCH', url: `/workspaces/${mockWorkspaceId}/rules/${mockRuleId}`, payload: { description: null } });
+    expect(response.statusCode).toBe(200);
+    expect(ruleHandlers.updateRuleHandler.handle).toHaveBeenCalledWith(expect.objectContaining({ description: null, userId: mockUserId }));
+  });
+});
+
+// Run real query handlers even though middleware is mocked in this test file.
+describe('Query authorization and pagination through HTTP', () => {
+  let app: FastifyInstance;
+  const access = { isMember: vi.fn(), isAdminOrOwner: vi.fn() };
+  const ruleRepo = { save: vi.fn(), delete: vi.fn(), findById: vi.fn(), findByName: vi.fn(), findIncludingDeleted: vi.fn(), findByWorkspaceId: vi.fn(), findActiveByWorkspaceId: vi.fn() };
+  const suggestionReads = { getSuggestionById: vi.fn(), getSuggestionsByExpenseId: vi.fn(), getSuggestionsByWorkspaceId: vi.fn(), getPendingSuggestionsByWorkspaceId: vi.fn() };
+  const executionReads = { getExecutionsByRuleId: vi.fn(), getExecutionsByExpenseId: vi.fn(), getExecutionsByWorkspaceId: vi.fn() };
+  const page = <T>(items: T[]) => ({ items, total: 75, limit: 10, offset: 50, hasMore: true });
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const rules = createMockRuleHandlers(), suggestions = createMockSuggestionHandlers(), executions = createMockExecutionHandlers();
+    const rule = CategoryRule.create({ workspaceId: WorkspaceId.fromString(mockWorkspaceId), createdBy: UserId.fromString(mockUserId), name: 'Rule',
+      targetCategoryId: CategoryId.fromString(mockCategoryId), condition: RuleCondition.create(RuleConditionType.MERCHANT_EQUALS, 'Shop') });
+    rule.clearDomainEvents();
+    ruleRepo.findById.mockResolvedValue(rule); ruleRepo.findByWorkspaceId.mockResolvedValue(page([rule])); ruleRepo.findActiveByWorkspaceId.mockResolvedValue(page([rule]));
+    const ruleService = new CategoryRuleService(ruleRepo, access, { ensureCategory: vi.fn() });
+    rules.getRuleByIdHandler.handle.mockImplementation(query => new GetRuleByIdHandler(ruleService).handle(query));
+    rules.getRulesByWorkspaceHandler.handle.mockImplementation(query => new GetRulesByWorkspaceHandler(ruleService).handle(query));
+    rules.getActiveRulesByWorkspaceHandler.handle.mockImplementation(query => new GetActiveRulesByWorkspaceHandler(ruleService).handle(query));
+    rules.getExecutionsByRuleHandler.handle.mockImplementation(query => new GetExecutionsByRuleHandler(executionReads, access).handle(query));
+    suggestions.getSuggestionByIdHandler.handle.mockImplementation(query => new GetSuggestionByIdHandler(suggestionReads, access).handle(query));
+    suggestions.getSuggestionsByExpenseHandler.handle.mockImplementation(query => new GetSuggestionsByExpenseHandler(suggestionReads, access).handle(query));
+    suggestions.getSuggestionsByWorkspaceHandler.handle.mockImplementation(query => new GetSuggestionsByWorkspaceHandler(suggestionReads, access).handle(query));
+    suggestions.getPendingSuggestionsByWorkspaceHandler.handle.mockImplementation(query => new GetPendingSuggestionsByWorkspaceHandler(suggestionReads, access).handle(query));
+    executions.getExecutionsByExpenseHandler.handle.mockImplementation(query => new GetExecutionsByExpenseHandler(executionReads, access).handle(query));
+    executions.getExecutionsByWorkspaceHandler.handle.mockImplementation(query => new GetExecutionsByWorkspaceHandler(executionReads, access).handle(query));
+    suggestionReads.getSuggestionById.mockResolvedValue(createMockSuggestion());
+    suggestionReads.getSuggestionsByExpenseId.mockResolvedValue(page([createMockSuggestion()]));
+    suggestionReads.getSuggestionsByWorkspaceId.mockResolvedValue(page([createMockSuggestion()]));
+    suggestionReads.getPendingSuggestionsByWorkspaceId.mockResolvedValue(page([createMockSuggestion()]));
+    for (const read of Object.values(executionReads)) read.mockResolvedValue(page([createMockExecution()]));
+    app = await setupTestApp(rules, suggestions, executions);
+  });
+  afterEach(async () => { await app.close(); });
+  const endpoints = [
+    { path: `rules/${mockRuleId}`, read: ruleRepo.findById },
+    { path: 'rules?limit=10&offset=50', read: ruleRepo.findByWorkspaceId },
+    { path: 'rules?activeOnly=true&limit=10&offset=50', read: ruleRepo.findActiveByWorkspaceId },
+    { path: `rules/${mockRuleId}/executions?limit=10&offset=50`, read: executionReads.getExecutionsByRuleId },
+    { path: `suggestions/${mockSuggestionId}`, read: suggestionReads.getSuggestionById },
+    { path: `suggestions/expense/${mockExpenseId}?limit=10&offset=50`, read: suggestionReads.getSuggestionsByExpenseId },
+    { path: 'suggestions?limit=10&offset=50', read: suggestionReads.getSuggestionsByWorkspaceId },
+    { path: 'suggestions?pendingOnly=true&limit=10&offset=50', read: suggestionReads.getPendingSuggestionsByWorkspaceId },
+    { path: `executions/expense/${mockExpenseId}?limit=10&offset=50`, read: executionReads.getExecutionsByExpenseId },
+    { path: 'executions?limit=10&offset=50', read: executionReads.getExecutionsByWorkspaceId },
+  ];
+  it.each(endpoints)('$path denies non-members before reading', async endpoint => {
+    access.isMember.mockResolvedValue(false);
+    const response = await app.inject({ method: 'GET', url: `/workspaces/${mockWorkspaceId}/${endpoint.path}` });
+    expect(response.statusCode).toBe(403); expect(endpoint.read).not.toHaveBeenCalled();
+    expect(access.isMember).toHaveBeenCalledTimes(1);
+  });
+  it.each(endpoints)('$path propagates unavailable membership verification', async endpoint => {
+    access.isMember.mockRejectedValue(Object.assign(new Error('Identity unavailable'), { statusCode: 503 }));
+    const response = await app.inject({ method: 'GET', url: `/workspaces/${mockWorkspaceId}/${endpoint.path}` });
+    expect(response.statusCode).toBe(503); expect(endpoint.read).not.toHaveBeenCalled();
+  });
+  it.each(endpoints)('$path checks the authenticated actor exactly once and never writes', async endpoint => {
+    access.isMember.mockResolvedValue(true);
+    const response = await app.inject({ method: 'GET', url: `/workspaces/${mockWorkspaceId}/${endpoint.path}` });
+    expect(response.statusCode).toBe(200); expect(endpoint.read).toHaveBeenCalledTimes(1);
+    expect(access.isMember).toHaveBeenCalledTimes(1);
+    expect(access.isMember).toHaveBeenCalledWith(UserId.fromString(mockUserId), WorkspaceId.fromString(mockWorkspaceId));
+    expect(access.isAdminOrOwner).not.toHaveBeenCalled(); expect(ruleRepo.save).not.toHaveBeenCalled(); expect(ruleRepo.delete).not.toHaveBeenCalled();
+  });
+  it.each(['suggestions', 'executions'])('%s expense history forwards pagination and returns its metadata', async kind => {
+    access.isMember.mockResolvedValue(true);
+    const response = await app.inject({ method: 'GET', url: `/workspaces/${mockWorkspaceId}/${kind}/expense/${mockExpenseId}?limit=10&offset=50` });
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.pagination).toEqual({ total: 75, limit: 10, offset: 50, hasMore: true });
+    const read = kind === 'suggestions' ? suggestionReads.getSuggestionsByExpenseId : executionReads.getExecutionsByExpenseId;
+    expect(read).toHaveBeenCalledWith(expect.anything(), WorkspaceId.fromString(mockWorkspaceId), { limit: 10, offset: 50 });
+  });
+  it.each(['suggestions', 'executions'])('%s expense history rejects overflowing offset before authorization', async kind => {
+    const response = await app.inject({ method: 'GET', url: '/workspaces/' + mockWorkspaceId + '/' + kind + '/expense/' + mockExpenseId + '?offset=2147483648' });
+    expect(response.statusCode).toBe(400); expect(access.isMember).not.toHaveBeenCalled();
+  });
+  it.each(['suggestions', 'executions'])('%s expense history rejects invalid pagination before authorization', async kind => {
+    const response = await app.inject({ method: 'GET', url: `/workspaces/${mockWorkspaceId}/${kind}/expense/${mockExpenseId}?limit=101` });
+    expect(response.statusCode).toBe(400); expect(access.isMember).not.toHaveBeenCalled();
   });
 });
