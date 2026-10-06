@@ -176,14 +176,18 @@ export class ResponseHelper {
     }
 
     // Extract statusCode from domain errors
-    const statusCode =
+    const candidateStatus =
       error && typeof error === 'object' && 'statusCode' in error
         ? (error as { statusCode: number }).statusCode
         : 500;
+    const statusCode = Number.isInteger(candidateStatus) && candidateStatus >= 400 && candidateStatus <= 599
+      ? candidateStatus : 500;
 
     // Extract error message
     const message =
-      error instanceof Error ? error.message : 'Internal server error';
+      statusCode >= 500 && process.env.NODE_ENV !== 'development'
+        ? 'Internal server error'
+        : error instanceof Error ? error.message : 'Internal server error';
 
     // Extract error code/name for response
     const errorCode =
@@ -197,7 +201,7 @@ export class ResponseHelper {
       success: false,
       statusCode,
       error: errorName,
-      code: errorCode,
+      code: statusCode < 500 || process.env.NODE_ENV === 'development' ? errorCode : undefined,
       message,
     });
   }
