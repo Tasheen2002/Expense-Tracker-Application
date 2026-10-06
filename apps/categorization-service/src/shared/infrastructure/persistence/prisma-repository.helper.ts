@@ -3,6 +3,12 @@ import {
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 
+export class PaginationValidationError extends Error {
+  readonly statusCode = 400;
+  readonly code = 'INVALID_PAGINATION';
+  constructor() { super('Limit must be an integer from 1 to 100; offset must be an integer from 0 to 2147483647'); }
+}
+
 export class PrismaRepositoryHelper {
   private static readonly MAX_PAGE_SIZE = 100;
   private static readonly DEFAULT_PAGE_SIZE = 50;
@@ -21,9 +27,12 @@ export class PrismaRepositoryHelper {
     mapper: (record: TPrismaModel) => TDomainEntity,
     options?: PaginationOptions
   ): Promise<PaginatedResult<TDomainEntity>> {
-    const requestedLimit = options?.limit || this.DEFAULT_PAGE_SIZE;
-    const limit = Math.min(Math.max(1, requestedLimit), this.MAX_PAGE_SIZE);
-    const offset = Math.max(0, options?.offset || 0);
+    const limit = options?.limit ?? this.DEFAULT_PAGE_SIZE;
+    const offset = options?.offset ?? 0;
+    if (!Number.isInteger(limit) || limit < 1 || limit > this.MAX_PAGE_SIZE ||
+        !Number.isInteger(offset) || offset < 0 || offset > 2147483647) {
+      throw new PaginationValidationError();
+    }
 
     const [rows, total] = await Promise.all([
       model.findMany({
