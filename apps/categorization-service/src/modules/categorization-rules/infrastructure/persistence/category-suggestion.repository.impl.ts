@@ -11,14 +11,14 @@ import {
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
+import { InvalidSuggestionError, SuggestionAlreadyRespondedError, SuggestionNotFoundError } from '../../domain/errors/categorization-rules.errors';
 
 export class PrismaCategorySuggestionRepository
   extends PrismaRepository<CategorySuggestion>
   implements ICategorySuggestionRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  constructor(prisma: PrismaClient) {
+    super(prisma);
   }
 
   async save(suggestion: CategorySuggestion): Promise<void> {
@@ -34,13 +34,28 @@ export class PrismaCategorySuggestionRepository
       respondedAt: suggestion.respondedAt,
     };
 
-    await this.prisma.categorySuggestion.upsert({
-      where: { id: data.id },
-      create: data,
-      update: data,
+    await this.persistWithEvents(suggestion, async tx => {
+      await tx.$queryRaw`SELECT id FROM categorization_rules.category_suggestions WHERE id = ${data.id}::uuid FOR UPDATE`;
+      const existing = await tx.categorySuggestion.findUnique({ where: { id: data.id } });
+      if (!existing) {
+        if (!suggestion.domainEvents.some(event => event.eventType === 'CategorySuggestionCreated')) {
+          throw new SuggestionNotFoundError(data.id);
+        }
+        return tx.categorySuggestion.create({ data });
+      }
+      if (existing.workspaceId !== data.workspaceId || existing.expenseId !== data.expenseId ||
+          existing.suggestedCategoryId !== data.suggestedCategoryId || existing.confidence !== data.confidence ||
+          existing.reason !== data.reason || existing.createdAt.getTime() !== data.createdAt.getTime()) {
+        throw new InvalidSuggestionError('Suggestion ownership and original proposal cannot be changed');
+      }
+      if (existing.isAccepted !== null && (existing.isAccepted !== data.isAccepted ||
+          existing.respondedAt?.getTime() !== data.respondedAt?.getTime() ||
+          suggestion.domainEvents.some(event => event.eventType === 'CategorySuggestionAccepted' || event.eventType === 'CategorySuggestionRejected'))) {
+        throw new SuggestionAlreadyRespondedError(data.id);
+      }
+      return tx.categorySuggestion.update({ where: { id: data.id, workspaceId: data.workspaceId },
+        data: { isAccepted: data.isAccepted, respondedAt: data.respondedAt } });
     });
-
-    await this.dispatchEvents(suggestion);
   }
 
   async findById(id: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestion | null> {
@@ -70,7 +85,7 @@ export class PrismaCategorySuggestionRepository
           expenseId: expenseId.getValue(),
           workspaceId: workspaceId.getValue(),
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       },
       (suggestion) => this.toDomain(suggestion),
       options,
@@ -88,7 +103,7 @@ export class PrismaCategorySuggestionRepository
           workspaceId: workspaceId.getValue(),
           isAccepted: null,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       },
       (suggestion) => this.toDomain(suggestion),
       options,
@@ -103,17 +118,17 @@ export class PrismaCategorySuggestionRepository
       this.prisma.categorySuggestion,
       {
         where: { workspaceId: workspaceId.getValue() },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       },
       (suggestion) => this.toDomain(suggestion),
       options,
     );
   }
 
-  async delete(id: SuggestionId): Promise<void> {
-    await this.prisma.categorySuggestion.delete({
-      where: { id: id.getValue() },
-    });
+  async delete(suggestion: CategorySuggestion): Promise<void> {
+    await this.persistWithEvents(suggestion, tx => tx.categorySuggestion.delete({
+      where: { id: suggestion.id.getValue(), workspaceId: suggestion.workspaceId.getValue() },
+    }));
   }
 
   private toDomain(
