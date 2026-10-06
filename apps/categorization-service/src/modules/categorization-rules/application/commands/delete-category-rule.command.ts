@@ -16,7 +16,7 @@ export class DeleteCategoryRuleHandler implements ICommandHandler<
   DeleteCategoryRuleCommand,
   CommandResult<void>
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'deleteRule'>) {}
 
   async handle(
     command: DeleteCategoryRuleCommand
