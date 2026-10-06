@@ -1,7 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { RuleExecutionController } from '../controllers/rule-execution.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   validateBody,
   validateQuery,
@@ -14,7 +13,6 @@ import {
   evaluateRulesBodyJsonSchema,
   executionQueryJsonSchema,
   evaluationEnvelopeJsonSchema,
-  executionListEnvelopeJsonSchema,
   paginatedExecutionsEnvelopeJsonSchema,
 } from '../validation/categorization-rules.schema';
 import {
@@ -22,36 +20,24 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
 
 export async function ruleExecutionRoutes(
   fastify: FastifyInstance,
-  controller: RuleExecutionController
+  controller: RuleExecutionController,
+  limits = {
+    write: createRateLimiter({ ...RateLimitPresets.writeOperations, keyGenerator: userKeyGenerator }),
+    read: createRateLimiter({ ...RateLimitPresets.readOperations, keyGenerator: userKeyGenerator }),
+  }
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
+  const { write: writeRateLimiter, read: readRateLimiter } = limits;
 
   // Evaluate rules for an expense
   fastify.post(
     '/workspaces/:workspaceId/evaluate',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(evaluateRulesSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Rule Execution'],
@@ -72,17 +58,16 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions/expense/:expenseId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, readRateLimiter],
+      preHandler: [validateQuery(executionQuerySchema)],
       schema: {
         tags: ['Rule Execution'],
         description: 'Get execution history for a specific expense',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
+        querystring: executionQueryJsonSchema,
         response: {
-          200: executionListEnvelopeJsonSchema,
+          200: paginatedExecutionsEnvelopeJsonSchema,
         },
       },
     },
@@ -94,10 +79,9 @@ export async function ruleExecutionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/executions',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, readRateLimiter],
       preHandler: [
         validateQuery(executionQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Rule Execution'],
