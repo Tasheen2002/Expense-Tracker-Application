@@ -16,7 +16,7 @@ export class GetRuleByIdHandler implements IQueryHandler<
   GetRuleByIdQuery,
   CategoryRuleDTO
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'getRuleById'>) {}
 
   async handle(query: GetRuleByIdQuery): Promise<CategoryRuleDTO> {
     return this.ruleService.getRuleById(

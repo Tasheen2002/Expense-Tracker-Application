@@ -1,3 +1,6 @@
+import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
+import { IWorkspaceAccessPort } from '../ports/workspace-access.port';
+import { authorizeWorkspaceRead } from './authorize-workspace-read';
 import { CategorySuggestionService } from '../services/category-suggestion.service';
 import {  ExpenseId  } from '@core/domain/value-objects';
 import {  WorkspaceId  } from '@core/domain/value-objects';
@@ -10,20 +13,24 @@ import {
 export interface GetSuggestionsByExpenseQuery extends IQuery {
   readonly expenseId: string;
   readonly workspaceId: string;
+  readonly userId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetSuggestionsByExpenseHandler implements IQueryHandler<
   GetSuggestionsByExpenseQuery,
-  CategorySuggestionDTO[]
+  PaginatedResult<CategorySuggestionDTO>
 > {
-  constructor(private readonly suggestionService: CategorySuggestionService) {}
+  constructor(private readonly suggestionService: Pick<CategorySuggestionService, 'getSuggestionsByExpenseId'>, private readonly workspaceAccess: IWorkspaceAccessPort) {}
 
-  async handle(query: GetSuggestionsByExpenseQuery): Promise<CategorySuggestionDTO[]> {
-    const result = await this.suggestionService.getSuggestionsByExpenseId(
+  async handle(query: GetSuggestionsByExpenseQuery): Promise<PaginatedResult<CategorySuggestionDTO>> {
+    const workspaceId = WorkspaceId.fromString(query.workspaceId);
+    await authorizeWorkspaceRead(query.userId, workspaceId, this.workspaceAccess);
+    return this.suggestionService.getSuggestionsByExpenseId(
       ExpenseId.fromString(query.expenseId),
-      WorkspaceId.fromString(query.workspaceId)
+      workspaceId,
+      { limit: query.limit, offset: query.offset }
     );
-
-    return result.items;
   }
 }
