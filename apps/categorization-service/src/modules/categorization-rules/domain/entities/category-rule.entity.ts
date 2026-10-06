@@ -1,7 +1,9 @@
+import { freezeDomainEvent } from '../events/freeze-domain-event';
+import { RuleExecutionId } from '../value-objects/rule-execution-id';
 import { RuleId } from '../value-objects/rule-id';
 import { RuleCondition } from '../value-objects/rule-condition';
 import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
-import {  CategoryId  } from '@core/domain/value-objects';
+import {  CategoryId, ExpenseId  } from '@core/domain/value-objects';
 import { InvalidRuleError } from '../errors/categorization-rules.errors';
 import { DomainEvent } from '@core/domain/events/domain-event';
 import { AggregateRoot } from '@core/domain/aggregate-root';
@@ -36,6 +38,7 @@ export class CategoryRuleCreatedEvent extends DomainEvent {
     public readonly createdBy: string
   ) {
     super(ruleId, 'CategoryRule');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -54,8 +57,9 @@ export class CategoryRuleCreatedEvent extends DomainEvent {
 }
 
 export class CategoryRuleActivatedEvent extends DomainEvent {
-  constructor(public readonly ruleId: string) {
+  constructor(public readonly ruleId: string, public readonly workspaceId: string) {
     super(ruleId, 'CategoryRule');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -63,13 +67,14 @@ export class CategoryRuleActivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { ruleId: this.ruleId };
+    return { ruleId: this.ruleId, workspaceId: this.workspaceId };
   }
 }
 
 export class CategoryRuleDeactivatedEvent extends DomainEvent {
-  constructor(public readonly ruleId: string) {
+  constructor(public readonly ruleId: string, public readonly workspaceId: string) {
     super(ruleId, 'CategoryRule');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -77,16 +82,19 @@ export class CategoryRuleDeactivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { ruleId: this.ruleId };
+    return { ruleId: this.ruleId, workspaceId: this.workspaceId };
   }
 }
 
 export class CategoryRuleUpdatedEvent extends DomainEvent {
   constructor(
     public readonly ruleId: string,
-    public readonly updatedFields: string[]
+    public readonly updatedFields: readonly string[],
+    public readonly workspaceId: string
   ) {
     super(ruleId, 'CategoryRule');
+    this.updatedFields = Object.freeze([...updatedFields]);
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -96,14 +104,16 @@ export class CategoryRuleUpdatedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> {
     return {
       ruleId: this.ruleId,
-      updatedFields: this.updatedFields,
+      updatedFields: [...this.updatedFields],
+      workspaceId: this.workspaceId,
     };
   }
 }
 
 export class CategoryRuleDeletedEvent extends DomainEvent {
-  constructor(public readonly ruleId: string) {
+  constructor(public readonly ruleId: string, public readonly workspaceId: string) {
     super(ruleId, 'CategoryRule');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -111,7 +121,7 @@ export class CategoryRuleDeletedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { ruleId: this.ruleId };
+    return { ruleId: this.ruleId, workspaceId: this.workspaceId };
   }
 }
 
@@ -124,6 +134,7 @@ export class RuleExecutedEvent extends DomainEvent {
     public readonly matched: boolean
   ) {
     super(ruleId, 'CategoryRule');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -157,211 +168,170 @@ interface CategoryRuleProps {
   createdBy: UserId;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
+  version?: number;
 }
 
 export class CategoryRule extends AggregateRoot {
-  private constructor(private props: CategoryRuleProps) {
+  private props: CategoryRuleProps;
+
+  private constructor(props: CategoryRuleProps) {
     super();
+    if (!(props.id instanceof RuleId) || !(props.workspaceId instanceof WorkspaceId) ||
+        !(props.targetCategoryId instanceof CategoryId) || !(props.createdBy instanceof UserId) ||
+        !(props.condition instanceof RuleCondition)) {
+      throw new InvalidRuleError('Invalid rule identifiers or condition');
+    }
+    const name = CategoryRule.validateName(props.name);
+    if (!Number.isInteger(props.version ?? 1) || (props.version ?? 1) < 1 || (props.version ?? 1) > 2147483647) {
+      throw new InvalidRuleError('Invalid persisted rule version');
+    }
+    const description = CategoryRule.validateDescription(props.description);
+    CategoryRule.validatePriority(props.priority);
+    if (!(props.createdAt instanceof Date) || !Number.isFinite(props.createdAt.getTime()) ||
+        !(props.updatedAt instanceof Date) || !Number.isFinite(props.updatedAt.getTime()) ||
+        props.updatedAt < props.createdAt || typeof props.isActive !== 'boolean') {
+      throw new InvalidRuleError('Invalid rule timestamps or active state');
+    }
+    if (props.deletedAt != null && (!(props.deletedAt instanceof Date) ||
+        !Number.isFinite(props.deletedAt.getTime()) || props.deletedAt < props.createdAt ||
+        props.deletedAt > props.updatedAt || props.isActive)) {
+      throw new InvalidRuleError('Deleted rules must be inactive and have a valid deletion timestamp');
+    }
+    this.props = { ...props, name, description, createdAt: new Date(props.createdAt),
+      updatedAt: new Date(props.updatedAt), deletedAt: props.deletedAt ? new Date(props.deletedAt) : null };
+  }
+
+  private static validateName(name: string): string {
+    if (typeof name !== 'string' || !name.trim() || name.trim().length > 100) {
+      throw new InvalidRuleError('Rule name must contain 1 to 100 nonblank characters');
+    }
+    return name.trim();
+  }
+
+  private static validateDescription(description: string | null | undefined): string | null {
+    if (description != null && (typeof description !== 'string' || description.trim().length > 500)) {
+      throw new InvalidRuleError('Rule description cannot exceed 500 characters');
+    }
+    return description?.trim() || null;
+  }
+
+  private static validatePriority(priority: number): void {
+    if (!Number.isInteger(priority) || priority < 0 || priority > 2147483647) {
+      throw new InvalidRuleError('Priority must be a non-negative 32-bit integer');
+    }
+  }
+
+  private ensureNotDeleted(): void {
+    if (this.props.deletedAt) throw new InvalidRuleError('Deleted rules cannot be changed or executed');
+  }
+
+  private touch(): void {
+    this.props.updatedAt = new Date(Math.max(Date.now(), this.props.updatedAt.getTime()));
   }
 
   static create(props: {
-    workspaceId: WorkspaceId;
-    name: string;
-    description?: string;
-    priority?: number;
-    condition: RuleCondition;
-    targetCategoryId: CategoryId;
-    createdBy: UserId;
+    workspaceId: WorkspaceId; name: string; description?: string; priority?: number;
+    condition: RuleCondition; targetCategoryId: CategoryId; createdBy: UserId;
   }): CategoryRule {
-    if (!props.name || props.name.trim().length === 0) {
-      throw new InvalidRuleError('Rule name cannot be empty');
-    }
-
-    if (props.name.length > 100) {
-      throw new InvalidRuleError('Rule name cannot exceed 100 characters');
-    }
-
-    if (props.description && props.description.length > 500) {
-      throw new InvalidRuleError(
-        'Rule description cannot exceed 500 characters'
-      );
-    }
-
-    const priority = props.priority ?? 0;
-    if (priority < 0) {
-      throw new InvalidRuleError('Priority cannot be negative');
-    }
-
     const now = new Date();
-    const ruleId = RuleId.create();
-
-    const rule = new CategoryRule({
-      id: ruleId,
-      workspaceId: props.workspaceId,
-      name: props.name.trim(),
-      description: props.description?.trim() || null,
-      priority,
-      isActive: true,
-      condition: props.condition,
-      targetCategoryId: props.targetCategoryId,
-      createdBy: props.createdBy,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    rule.addDomainEvent(
-      new CategoryRuleCreatedEvent(
-        ruleId.getValue(),
-        props.workspaceId.getValue(),
-        props.name.trim(),
-        props.targetCategoryId.getValue(),
-        props.createdBy.getValue()
-      )
-    );
-
-
+    const rule = new CategoryRule({ ...props, id: RuleId.create(), description: props.description ?? null,
+      priority: props.priority === undefined ? 0 : props.priority, isActive: true, createdAt: now, updatedAt: now });
+    rule.addDomainEvent(new CategoryRuleCreatedEvent(rule.id.getValue(), rule.workspaceId.getValue(),
+      rule.name, rule.targetCategoryId.getValue(), rule.createdBy.getValue()));
     return rule;
   }
 
-  static fromPersistence(props: {
-    id: RuleId;
-    workspaceId: WorkspaceId;
-    name: string;
-    description: string | null;
-    priority: number;
-    isActive: boolean;
-    condition: RuleCondition;
-    targetCategoryId: CategoryId;
-    createdBy: UserId;
-    createdAt: Date;
-    updatedAt: Date;
-  }): CategoryRule {
+  static fromPersistence(props: CategoryRuleProps): CategoryRule {
     return new CategoryRule(props);
   }
 
-  // Update methods
-  updateDetails(params: {
-    name?: string;
-    description?: string | null;
-    priority?: number;
-  }): void {
+  updateDetails(params: { name?: string; description?: string | null; priority?: number }): void {
+    this.ensureNotDeleted();
+    // Validate the entire proposal before mutating any field.
+    const name = params.name === undefined ? this.props.name : CategoryRule.validateName(params.name);
+    const description = params.description === undefined ? this.props.description : CategoryRule.validateDescription(params.description);
+    const priority = params.priority === undefined ? this.props.priority : params.priority;
+    CategoryRule.validatePriority(priority);
     const changedFields: string[] = [];
-
-    if (params.name !== undefined) {
-      if (!params.name || params.name.trim().length === 0) {
-        throw new InvalidRuleError('Rule name cannot be empty');
-      }
-      if (params.name.length > 100) {
-        throw new InvalidRuleError('Rule name cannot exceed 100 characters');
-      }
-      this.props.name = params.name.trim();
-      changedFields.push('name');
-    }
-
-    if (params.description !== undefined) {
-      if (params.description && params.description.length > 500) {
-        throw new InvalidRuleError('Rule description cannot exceed 500 characters');
-      }
-      this.props.description = params.description?.trim() || null;
-      changedFields.push('description');
-    }
-
-    if (params.priority !== undefined) {
-      if (params.priority < 0) {
-        throw new InvalidRuleError('Priority cannot be negative');
-      }
-      this.props.priority = params.priority;
-      changedFields.push('priority');
-    }
-
-    this.props.updatedAt = new Date();
-    if (changedFields.length > 0) {
-      this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), changedFields));
-    }
+    if (name !== this.props.name) changedFields.push('name');
+    if (description !== this.props.description) changedFields.push('description');
+    if (priority !== this.props.priority) changedFields.push('priority');
+    if (!changedFields.length) return;
+    Object.assign(this.props, { name, description, priority });
+    this.touch();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.id.getValue(), changedFields, this.workspaceId.getValue()));
   }
 
-  updateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new InvalidRuleError('Rule name cannot be empty');
-    }
-    if (name.length > 100) {
-      throw new InvalidRuleError('Rule name cannot exceed 100 characters');
-    }
-    this.props.name = name.trim();
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['name']));
-  }
-
-  updateDescription(description: string | null): void {
-    if (description && description.length > 500) {
-      throw new InvalidRuleError('Rule description cannot exceed 500 characters');
-    }
-    this.props.description = description?.trim() || null;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['description']));
-  }
-
-  updatePriority(priority: number): void {
-    if (priority < 0) {
-      throw new InvalidRuleError('Priority cannot be negative');
-    }
-    this.props.priority = priority;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['priority']));
-  }
+  updateName(name: string): void { this.updateDetails({ name }); }
+  updateDescription(description: string | null): void { this.updateDetails({ description }); }
+  updatePriority(priority: number): void { this.updateDetails({ priority }); }
 
   updateCondition(condition: RuleCondition): void {
+    this.ensureNotDeleted();
+    if (!(condition instanceof RuleCondition)) throw new InvalidRuleError('Invalid rule condition');
+    if (this.props.condition.equals(condition)) return;
     this.props.condition = condition;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['condition']));
+    this.touch();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.id.getValue(), ['condition'], this.workspaceId.getValue()));
   }
 
   updateTargetCategory(categoryId: CategoryId): void {
+    this.ensureNotDeleted();
+    if (!(categoryId instanceof CategoryId)) throw new InvalidRuleError('Invalid target category');
+    if (this.props.targetCategoryId.equals(categoryId)) return;
     this.props.targetCategoryId = categoryId;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.props.id.getValue(), ['targetCategoryId']));
+    this.touch();
+    this.addDomainEvent(new CategoryRuleUpdatedEvent(this.id.getValue(), ['targetCategoryId'], this.workspaceId.getValue()));
   }
 
   activate(): void {
+    this.ensureNotDeleted();
+    if (this.props.isActive) return;
     this.props.isActive = true;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleActivatedEvent(this.props.id.getValue()));
+    this.touch();
+    this.addDomainEvent(new CategoryRuleActivatedEvent(this.id.getValue(), this.workspaceId.getValue()));
   }
 
   deactivate(): void {
+    this.ensureNotDeleted();
+    if (!this.props.isActive) return;
     this.props.isActive = false;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.props.id.getValue()));
+    this.touch();
+    this.addDomainEvent(new CategoryRuleDeactivatedEvent(this.id.getValue(), this.workspaceId.getValue()));
   }
 
   markAsDeleted(): void {
-    this.addDomainEvent(new CategoryRuleDeletedEvent(this.props.id.getValue()));
+    if (this.props.deletedAt) return;
+    this.touch();
+    this.props.deletedAt = new Date(this.props.updatedAt);
+    this.props.isActive = false;
+    this.addDomainEvent(new CategoryRuleDeletedEvent(this.id.getValue(), this.workspaceId.getValue()));
   }
 
-  matches(expenseData: {
-    merchant?: string;
-    description?: string;
-    amount: number;
-    paymentMethod?: string;
-  }): boolean {
-    if (!this.props.isActive) return false;
-    return this.props.condition.matches(expenseData);
+  matches(expenseData: { merchant?: string; description?: string; amount: number; paymentMethod?: string }): boolean {
+    return this.props.isActive && !this.props.deletedAt && this.props.condition.matches(expenseData);
   }
 
   recordExecution(executionId: string, expenseId: string, matched: boolean): void {
-    this.addDomainEvent(
-      new RuleExecutedEvent(
-        this.props.id.getValue(),
-        this.props.workspaceId.getValue(),
-        expenseId,
-        executionId,
-        matched,
-      )
-    );
+    this.ensureNotDeleted();
+    if (!this.props.isActive) throw new InvalidRuleError('Inactive rules cannot record executions');
+    const execution = RuleExecutionId.fromString(executionId);
+    const expense = ExpenseId.fromString(expenseId);
+    if (typeof matched !== 'boolean') throw new InvalidRuleError('Execution match must be boolean');
+    this.addDomainEvent(new RuleExecutedEvent(this.id.getValue(), this.workspaceId.getValue(),
+      expense.getValue(), execution.getValue(), matched));
   }
 
-  // Getters
   get id(): RuleId { return this.props.id; }
+  get version(): number { return this.props.version ?? 1; }
+  acknowledgePersistence(version: number): void {
+    if (!Number.isInteger(version) || version !== this.version + 1 || version > 2147483647) {
+      throw new InvalidRuleError('Persisted rule version must advance by one');
+    }
+    this.props.version = version;
+  }
+  override get domainEvents(): DomainEvent[] { return [...super.domainEvents]; }
   get workspaceId(): WorkspaceId { return this.props.workspaceId; }
   get name(): string { return this.props.name; }
   get description(): string | null { return this.props.description; }
@@ -370,25 +340,15 @@ export class CategoryRule extends AggregateRoot {
   get condition(): RuleCondition { return this.props.condition; }
   get targetCategoryId(): CategoryId { return this.props.targetCategoryId; }
   get createdBy(): UserId { return this.props.createdBy; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get updatedAt(): Date { return this.props.updatedAt; }
+  get createdAt(): Date { return new Date(this.props.createdAt); }
+  get updatedAt(): Date { return new Date(this.props.updatedAt); }
+  get deletedAt(): Date | null { return this.props.deletedAt ? new Date(this.props.deletedAt) : null; }
 
   static toDTO(rule: CategoryRule): CategoryRuleDTO {
-    return {
-      id: rule.props.id.getValue(),
-      workspaceId: rule.props.workspaceId.getValue(),
-      name: rule.props.name,
-      description: rule.props.description,
-      priority: rule.props.priority,
-      isActive: rule.props.isActive,
-      condition: {
-        type: rule.props.condition.getConditionType(),
-        value: rule.props.condition.getConditionValue(),
-      },
-      targetCategoryId: rule.props.targetCategoryId.getValue(),
-      createdBy: rule.props.createdBy.getValue(),
-      createdAt: rule.props.createdAt.toISOString(),
-      updatedAt: rule.props.updatedAt.toISOString(),
-    };
+    return { id: rule.id.getValue(), workspaceId: rule.workspaceId.getValue(), name: rule.name,
+      description: rule.description, priority: rule.priority, isActive: rule.isActive,
+      condition: { type: rule.condition.getConditionType(), value: rule.condition.getConditionValue() },
+      targetCategoryId: rule.targetCategoryId.getValue(), createdBy: rule.createdBy.getValue(),
+      createdAt: rule.createdAt.toISOString(), updatedAt: rule.updatedAt.toISOString() };
   }
 }

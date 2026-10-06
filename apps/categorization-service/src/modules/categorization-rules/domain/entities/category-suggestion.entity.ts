@@ -1,8 +1,9 @@
+import { freezeDomainEvent } from '../events/freeze-domain-event';
 import { SuggestionId } from '../value-objects/suggestion-id';
 import { ConfidenceScore } from '../value-objects/confidence-score';
-import {  WorkspaceId  } from '@core/domain/value-objects';
+import { WorkspaceId, UserId } from '@core/domain/value-objects';
 import {  ExpenseId, CategoryId  } from '@core/domain/value-objects';
-import { InvalidSuggestionError } from '../errors/categorization-rules.errors';
+import { InvalidSuggestionError, SuggestionAlreadyRespondedError } from '../errors/categorization-rules.errors';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 import { DomainEvent } from '@core/domain/events/domain-event';
 
@@ -28,9 +29,11 @@ export class CategorySuggestionCreatedEvent extends DomainEvent {
     public readonly workspaceId: string,
     public readonly expenseId: string,
     public readonly suggestedCategoryId: string,
-    public readonly confidence: number
+    public readonly confidence: number,
+    public readonly expenseOwnerId: string,
   ) {
     super(suggestionId, 'CategorySuggestion');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -44,6 +47,7 @@ export class CategorySuggestionCreatedEvent extends DomainEvent {
       expenseId: this.expenseId,
       suggestedCategoryId: this.suggestedCategoryId,
       confidence: this.confidence,
+      expenseOwnerId: this.expenseOwnerId,
     };
   }
 }
@@ -52,9 +56,13 @@ export class CategorySuggestionAcceptedEvent extends DomainEvent {
   constructor(
     public readonly suggestionId: string,
     public readonly expenseId: string,
-    public readonly categoryId: string
+    public readonly categoryId: string,
+    public readonly workspaceId: string,
+    public readonly acceptedBy: string,
+    public readonly expenseVersion: number,
   ) {
     super(suggestionId, 'CategorySuggestion');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -66,6 +74,9 @@ export class CategorySuggestionAcceptedEvent extends DomainEvent {
       suggestionId: this.suggestionId,
       expenseId: this.expenseId,
       categoryId: this.categoryId,
+      workspaceId: this.workspaceId,
+      acceptedBy: this.acceptedBy,
+      expenseVersion: this.expenseVersion,
     };
   }
 }
@@ -73,9 +84,11 @@ export class CategorySuggestionAcceptedEvent extends DomainEvent {
 export class CategorySuggestionRejectedEvent extends DomainEvent {
   constructor(
     public readonly suggestionId: string,
-    public readonly expenseId: string
+    public readonly expenseId: string,
+    public readonly workspaceId: string
   ) {
     super(suggestionId, 'CategorySuggestion');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -86,13 +99,15 @@ export class CategorySuggestionRejectedEvent extends DomainEvent {
     return {
       suggestionId: this.suggestionId,
       expenseId: this.expenseId,
+      workspaceId: this.workspaceId,
     };
   }
 }
 
 export class CategorySuggestionDeletedEvent extends DomainEvent {
-  constructor(public readonly suggestionId: string) {
+  constructor(public readonly suggestionId: string, public readonly workspaceId: string) {
     super(suggestionId, 'CategorySuggestion');
+    freezeDomainEvent(this);
   }
 
   get eventType(): string {
@@ -100,7 +115,7 @@ export class CategorySuggestionDeletedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { suggestionId: this.suggestionId };
+    return { suggestionId: this.suggestionId, workspaceId: this.workspaceId };
   }
 }
 
@@ -121,30 +136,46 @@ interface CategorySuggestionProps {
 }
 
 export class CategorySuggestion extends AggregateRoot {
-  private constructor(private props: CategorySuggestionProps) {
+  private props: CategorySuggestionProps;
+  private deleted = false;
+
+  private constructor(props: CategorySuggestionProps) {
     super();
+    if (!(props.id instanceof SuggestionId) || !(props.workspaceId instanceof WorkspaceId) ||
+        !(props.expenseId instanceof ExpenseId) || !(props.suggestedCategoryId instanceof CategoryId) ||
+        !(props.confidence instanceof ConfidenceScore)) {
+      throw new InvalidSuggestionError('Invalid suggestion identifiers or confidence');
+    }
+    if (props.reason != null && (typeof props.reason !== 'string' || props.reason.trim().length > 500)) {
+      throw new InvalidSuggestionError('Suggestion reason cannot exceed 500 characters');
+    }
+    if (!(props.createdAt instanceof Date) || !Number.isFinite(props.createdAt.getTime()) ||
+        ![null, true, false].includes(props.isAccepted) ||
+        ((props.isAccepted === null) !== (props.respondedAt === null)) ||
+        (props.respondedAt !== null && (!(props.respondedAt instanceof Date) ||
+          !Number.isFinite(props.respondedAt.getTime()) || props.respondedAt < props.createdAt))) {
+      throw new InvalidSuggestionError('Invalid suggestion response state or timestamps');
+    }
+    this.props = { ...props, reason: props.reason?.trim() || null,
+      createdAt: new Date(props.createdAt), respondedAt: props.respondedAt ? new Date(props.respondedAt) : null };
   }
 
   static create(props: {
+    expenseOwnerId: UserId;
     workspaceId: WorkspaceId;
     expenseId: ExpenseId;
     suggestedCategoryId: CategoryId;
     confidence: ConfidenceScore;
     reason?: string;
   }): CategorySuggestion {
-    if (props.reason && props.reason.length > 500) {
-      throw new InvalidSuggestionError(
-        'Suggestion reason cannot exceed 500 characters'
-      );
-    }
-
+    if (!(props.expenseOwnerId instanceof UserId)) throw new InvalidSuggestionError('Suggestion creation requires the verified expense owner');
     const suggestion = new CategorySuggestion({
       id: SuggestionId.create(),
       workspaceId: props.workspaceId,
       expenseId: props.expenseId,
       suggestedCategoryId: props.suggestedCategoryId,
       confidence: props.confidence,
-      reason: props.reason?.trim() || null,
+      reason: props.reason ?? null,
       isAccepted: null,
       createdAt: new Date(),
       respondedAt: null,
@@ -156,7 +187,8 @@ export class CategorySuggestion extends AggregateRoot {
         props.workspaceId.getValue(),
         props.expenseId.getValue(),
         props.suggestedCategoryId.getValue(),
-        props.confidence.getValue()
+        props.confidence.getValue(),
+        props.expenseOwnerId.getValue()
       )
     );
 
@@ -178,42 +210,46 @@ export class CategorySuggestion extends AggregateRoot {
   }
 
   // Actions
-  accept(): void {
-    if (this.props.isAccepted !== null) {
-      throw new InvalidSuggestionError(
-        'Suggestion has already been responded to'
-      );
+  accept(acceptedBy: string, expenseVersion: number): void {
+    if (this.deleted) throw new InvalidSuggestionError('Deleted suggestions cannot be responded to');
+    if (this.props.isAccepted !== null) throw new SuggestionAlreadyRespondedError(this.id.getValue());
+    if (!Number.isInteger(expenseVersion) || expenseVersion < 1 || expenseVersion > 2147483647) {
+      throw new InvalidSuggestionError('Acceptance requires a positive expense version');
     }
+    const actor = UserId.fromString(acceptedBy).getValue();
     this.props.isAccepted = true;
-    this.props.respondedAt = new Date();
+    this.props.respondedAt = new Date(Math.max(Date.now(), this.props.createdAt.getTime()));
     this.addDomainEvent(
       new CategorySuggestionAcceptedEvent(
         this.props.id.getValue(),
         this.props.expenseId.getValue(),
-        this.props.suggestedCategoryId.getValue()
+        this.props.suggestedCategoryId.getValue(),
+        this.props.workspaceId.getValue(),
+        actor,
+        expenseVersion,
       )
     );
   }
 
   reject(): void {
-    if (this.props.isAccepted !== null) {
-      throw new InvalidSuggestionError(
-        'Suggestion has already been responded to'
-      );
-    }
+    if (this.deleted) throw new InvalidSuggestionError('Deleted suggestions cannot be responded to');
+    if (this.props.isAccepted !== null) throw new SuggestionAlreadyRespondedError(this.id.getValue());
     this.props.isAccepted = false;
-    this.props.respondedAt = new Date();
+    this.props.respondedAt = new Date(Math.max(Date.now(), this.props.createdAt.getTime()));
     this.addDomainEvent(
       new CategorySuggestionRejectedEvent(
         this.props.id.getValue(),
-        this.props.expenseId.getValue()
+        this.props.expenseId.getValue(),
+        this.props.workspaceId.getValue()
       )
     );
   }
 
   markAsDeleted(): void {
+    if (this.deleted) return;
+    this.deleted = true;
     this.addDomainEvent(
-      new CategorySuggestionDeletedEvent(this.props.id.getValue())
+      new CategorySuggestionDeletedEvent(this.props.id.getValue(), this.workspaceId.getValue())
     );
   }
 
@@ -229,6 +265,7 @@ export class CategorySuggestion extends AggregateRoot {
   }
 
   // Getters
+  override get domainEvents(): DomainEvent[] { return [...super.domainEvents]; }
   get id(): SuggestionId {
     return this.props.id;
   }
@@ -251,10 +288,10 @@ export class CategorySuggestion extends AggregateRoot {
     return this.props.isAccepted;
   }
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt);
   }
   get respondedAt(): Date | null {
-    return this.props.respondedAt;
+    return this.props.respondedAt ? new Date(this.props.respondedAt) : null;
   }
 
   static toDTO(suggestion: CategorySuggestion): CategorySuggestionDTO {
@@ -266,8 +303,8 @@ export class CategorySuggestion extends AggregateRoot {
       confidence: suggestion.props.confidence.getValue(),
       reason: suggestion.props.reason,
       isAccepted: suggestion.props.isAccepted,
-      createdAt: suggestion.props.createdAt,
-      respondedAt: suggestion.props.respondedAt,
+      createdAt: suggestion.createdAt,
+      respondedAt: suggestion.respondedAt,
     };
   }
 }
