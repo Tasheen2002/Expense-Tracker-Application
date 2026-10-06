@@ -8,6 +8,6 @@ export enum RuleConditionType {
   PAYMENT_METHOD_EQUALS = 'PAYMENT_METHOD_EQUALS',
 }
 
-export function isValidRuleConditionType(value: string): value is RuleConditionType {
-  return Object.values(RuleConditionType).includes(value as RuleConditionType)
+export function isValidRuleConditionType(value: unknown): value is RuleConditionType {
+  return typeof value === 'string' && Object.values(RuleConditionType).some(type => type === value);
 }
