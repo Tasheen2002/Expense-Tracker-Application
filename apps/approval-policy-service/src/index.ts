@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { applyEnvironmentFallback } from './environment';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
 const localEnvPath = path.resolve(__dirname, '../.env');
