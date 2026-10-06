@@ -4,11 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildAuditComplianceApp } from './app';
 
 function fakePrisma() {
-  return {
+  const client = {
     auditLog: { createMany: vi.fn().mockResolvedValue({ count: 1 }) },
     $queryRaw: vi.fn().mockResolvedValue([{ '?column?': 1 }]),
     $disconnect: vi.fn().mockResolvedValue(undefined),
+    accountAuditLog: { findUnique: vi.fn().mockResolvedValue(null) },
   };
+  return { ...client, $transaction: vi.fn(async (work: (tx: typeof client) => Promise<unknown>) => work(client)) };
 }
 
 describe('audit application wiring', () => {

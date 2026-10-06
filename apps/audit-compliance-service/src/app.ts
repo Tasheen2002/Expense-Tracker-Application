@@ -50,7 +50,8 @@ export async function buildAuditComplianceApp(options?: AuditAppOptions): Promis
     // 7. Deep Health Check (Postgres ping)
     fastify.get('/health', async (_request, reply) => {
       try {
-        await fastify.prisma.$queryRaw`SELECT 1 FROM audit_compliance.audit_logs LIMIT 1`;
+        await fastify.prisma.$queryRaw`SELECT a.id, account.id FROM audit_compliance.audit_logs a,
+          audit_compliance.account_audit_logs account LIMIT 0`;
         return {
           status: 'ok',
           service: 'audit-compliance-service',
