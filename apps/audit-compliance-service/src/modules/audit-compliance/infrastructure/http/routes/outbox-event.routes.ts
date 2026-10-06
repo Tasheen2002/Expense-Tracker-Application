@@ -2,6 +2,8 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { AuditService } from '../../../application/services/audit.service';
 import { AuditEventConflictError } from '../../../domain/errors/audit.errors';
+import { AccountAuditService } from '../../../application/services/account-audit.service';
+import { accountEventOwner } from '../../../../../../../../packages/contracts/src/account-events';
 
 const uuidSchema = z.string().uuid();
 const actorFields = [
@@ -25,7 +27,8 @@ export type OutboxEventPayload = z.infer<typeof OutboxEventPayloadSchema>;
 
 export async function registerAuditOutboxEventRoutes(
   fastify: FastifyInstance,
-  auditService: AuditService
+  auditService: AuditService,
+  accountAuditService?: AccountAuditService,
 ) {
   fastify.post(
     '/event-outbox/events',
@@ -41,6 +44,21 @@ export async function registerAuditOutboxEventRoutes(
 
       const { eventId, eventType, aggregateId, aggregateType, payload, timestamp } =
         parseResult.data;
+
+      let accountId: string | null;
+      try { accountId = accountEventOwner(parseResult.data); }
+      catch { return reply.code(400).send({ success: false, error: 'Invalid account event scope' }); }
+      if (accountId) {
+        if (!accountAuditService) return reply.code(503).send({ success: false, error: 'Account auditing unavailable' });
+        try {
+          const result = await accountAuditService.record(parseResult.data);
+          return reply.code(result.duplicate ? 200 : 201).send({ success: true, ...result });
+        } catch (err: unknown) {
+          if (err instanceof AuditEventConflictError) return reply.code(409).send({ success: false, error: 'Event ID conflict' });
+          request.log.error({ err }, 'Account auditing failed');
+          return reply.code(500).send({ success: false, error: 'Failed to record account audit log' });
+        }
+      }
 
       const workspaceCandidate = payload.workspaceId === undefined && aggregateType?.toLowerCase() === 'workspace'
         ? aggregateId
