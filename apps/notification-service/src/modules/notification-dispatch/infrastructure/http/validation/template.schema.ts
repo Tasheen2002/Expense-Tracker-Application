@@ -58,11 +58,7 @@ export const updateGlobalPreferencesSchema = z.object({
   push: z.boolean().optional(),
 }).strict();
 
-export const updateTypePreferenceSchema = z.object({
-  email: z.boolean().optional(),
-  inApp: z.boolean().optional(),
-  push: z.boolean().optional(),
-}).strict();
+export const updateTypePreferenceSchema = updateGlobalPreferencesSchema;
 
 export const checkChannelEnabledSchema = z.object({
   type: TemplateTypeSchema,
