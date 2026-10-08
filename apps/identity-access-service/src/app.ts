@@ -3,11 +3,12 @@ import dbPlugin from './plugins/db';
 import authPlugin from './plugins/auth';
 import securityPlugin from './plugins/security';
 import errorPlugin from './plugins/error';
-import rateLimit from '@fastify/rate-limit';
+import rateLimitPlugin from './plugins/rate-limit';
 import { correlationPlugin, internalAuthPlugin } from '@expense-tracker/correlation';
 import { PrismaClient } from './shared/infrastructure/persistence/prisma.client';
 import { createCompositionRoot, CompositionRoot } from './composition-root';
 import { registerIdentityWorkspaceRoutes } from './modules/identity-workspace/infrastructure/http/routes/index';
+import { identityTrustedProxyIPs } from './environment';
 
 export interface IdentityAppOptions {
   /** App owns the client; callback drains background work before disconnect. */
@@ -27,7 +28,9 @@ export async function buildIdentityApp(options?: IdentityAppOptions): Promise<Fa
     if (!process.env.INTERNAL_API_KEY?.trim()) throw new Error('INTERNAL_API_KEY is required in production');
   }
   const isTest = process.env.NODE_ENV === 'test';
+  const trustedProxyIPs = identityTrustedProxyIPs();
   const fastify = Fastify({
+    trustProxy: trustedProxyIPs.length ? trustedProxyIPs : false,
     logger: options?.logger !== undefined ? options.logger : (isTest ? false : { level: 'info' }),
   });
 
@@ -43,10 +46,7 @@ export async function buildIdentityApp(options?: IdentityAppOptions): Promise<Fa
 
     // 3. Security, rate-limit, and database plugins
     await fastify.register(securityPlugin);
-    await fastify.register(rateLimit, {
-      max: 100,
-      timeWindow: '1 minute',
-    });
+    await fastify.register(rateLimitPlugin);
     await fastify.register(dbPlugin, { prisma: options?.prisma, beforeDatabaseDisconnect: options?.beforeDatabaseDisconnect });
 
     // 4. Initialize typed Composition Root using the injected or default factory
@@ -66,7 +66,7 @@ export async function buildIdentityApp(options?: IdentityAppOptions): Promise<Fa
     );
 
     // 7. Deep Health Check (Postgres ping and service schema readiness)
-    fastify.get('/health', async (_request, reply) => {
+    fastify.get('/health', { config: { rateLimit: false } }, async (_request, reply) => {
       try {
         await fastify.prisma.$queryRaw`SELECT 1 FROM identity_workspace.user_account LIMIT 1`;
         return {
