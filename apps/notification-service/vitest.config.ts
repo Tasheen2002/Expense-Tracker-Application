@@ -7,10 +7,16 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
-      '@prisma/client': path.resolve(__dirname, './node_modules/.prisma/client-notification'),
+      '@prisma/client': path.resolve(
+        __dirname,
+        './node_modules/.prisma/client-notification'
+      ),
       '@core': path.resolve(__dirname, '../../packages/core/src'),
       '@packages': path.resolve(__dirname, '../../packages'),
-      '@shared/middleware': path.resolve(__dirname, '../../packages/middleware/src'),
+      '@shared/middleware': path.resolve(
+        __dirname,
+        '../../packages/middleware/src'
+      ),
       '@shared': path.resolve(__dirname, './src/shared'),
     },
   },
@@ -24,6 +30,19 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
     include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      all: true,
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/index.ts',
+        'src/types/**',
+      ],
+      reporter: ['text', 'json-summary'],
+      thresholds: { lines: 90, statements: 90, functions: 90, branches: 90 },
+    },
     exclude: ['**/node_modules/**', '**/dist/**'],
     testTimeout: 30000,
   },
