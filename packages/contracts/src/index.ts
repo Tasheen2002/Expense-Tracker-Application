@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './account-events';
 
 // ============================================================================
 // Base Event Schema
@@ -17,7 +18,9 @@ export type BaseEvent = z.infer<typeof BaseEventSchema>;
 // Identity / Workspace Events
 // ============================================================================
 
-export const UserCreatedEventSchema = BaseEventSchema.extend({
+export const UserCreatedEventSchema = BaseEventSchema.omit({ workspaceId: true }).extend({
+  scope: z.literal('account').default('account'),
+  workspaceId: z.never().optional(),
   eventType: z.union([z.literal('identity.user_created'), z.literal('UserCreated')]),
   data: z.object({
     userId: z.string().uuid(),
@@ -108,9 +111,12 @@ export const BudgetThresholdExceededEventSchema = BaseEventSchema.extend({
   eventType: z.literal('budget.threshold_exceeded'),
   data: z.object({
     budgetId: z.string().uuid(),
+    createdBy: z.string().uuid(),
+    recipientId: z.string().uuid().optional(),
     threshold: z.number(),
-    currentSpent: z.number(),
-    allocatedAmount: z.number(),
+    currentSpending: z.number(),
+    budgetLimit: z.number(),
+    currency: z.string().length(3),
   }),
 });
 export type BudgetThresholdExceededEvent = z.infer<typeof BudgetThresholdExceededEventSchema>;
