@@ -75,6 +75,7 @@ export class NotificationRepositoryImpl
     const result = await this.prisma.$transaction(async tx => {
       // Transaction-scoped lock protects even the first receipt insertion.
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${request.id}, 0))::text`;
+      if (await tx.accountNotificationRequest.findUnique({ where: { id: request.id } })) throw new NotificationRequestConflictError();
       const previous = await this.readRequest(tx, request);
       if (previous !== null) return { notifications: previous, created: false };
       for (const notification of notifications) {
