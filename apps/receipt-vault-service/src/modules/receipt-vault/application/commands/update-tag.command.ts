@@ -9,6 +9,7 @@ import {
 export interface UpdateTagCommand extends ICommand {
   readonly tagId: string;
   readonly workspaceId: string;
+  readonly userId: string;
   readonly name?: string;
   readonly color?: string;
   readonly description?: string;
@@ -25,7 +26,7 @@ export class UpdateTagHandler implements ICommandHandler<
       name: command.name,
       color: command.color,
       description: command.description,
-    });
+    }, command.userId);
     return CommandResult.success(tagDTO);
   }
 }

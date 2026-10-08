@@ -11,6 +11,7 @@ export interface LinkReceiptToExpenseCommand extends ICommand {
   readonly expenseId: string;
   readonly workspaceId: string;
   readonly userId: string;
+  readonly authToken?: string;
 }
 
 export class LinkReceiptToExpenseHandler implements ICommandHandler<
@@ -26,7 +27,8 @@ export class LinkReceiptToExpenseHandler implements ICommandHandler<
       command.receiptId,
       command.expenseId,
       command.workspaceId,
-      command.userId
+      command.userId,
+      command.authToken
     );
     return CommandResult.success(receiptDTO);
   }

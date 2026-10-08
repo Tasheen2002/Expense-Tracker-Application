@@ -8,6 +8,7 @@ import {
 export interface DeleteTagCommand extends ICommand {
   readonly tagId: string;
   readonly workspaceId: string;
+  readonly userId: string;
 }
 
 export class DeleteTagHandler implements ICommandHandler<
@@ -17,7 +18,7 @@ export class DeleteTagHandler implements ICommandHandler<
   constructor(private readonly tagService: TagService) {}
 
   async handle(command: DeleteTagCommand): Promise<CommandResult<void>> {
-    await this.tagService.deleteTag(command.tagId, command.workspaceId);
+    await this.tagService.deleteTag(command.tagId, command.workspaceId, command.userId);
     return CommandResult.success();
   }
 }
