@@ -10,6 +10,41 @@ datasource db {
   schemas  = ["notification_dispatch"]
 }
 
+model AccountNotificationRequest {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  fingerprint String @db.VarChar(64)
+  suppressed Boolean
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  notification AccountNotification?
+  @@unique([id, userId])
+  @@map("account_notification_requests")
+  @@schema("notification_dispatch")
+}
+
+model AccountNotification {
+  id String @id @db.Uuid
+  request AccountNotificationRequest @relation(fields: [id, userId], references: [id, userId], onDelete: Restrict)
+  userId String @map("user_id") @db.Uuid
+  eventType String @map("event_type") @db.VarChar(100)
+  title String @db.VarChar(255)
+  content String
+  readAt DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+  @@unique([id, userId])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("account_notifications")
+  @@schema("notification_dispatch")
+}
+
+model AccountNotificationPreference {
+  userId String @id @map("user_id") @db.Uuid
+  inAppEnabled Boolean @default(true) @map("in_app_enabled")
+  typeSettings Json @default("{}") @map("type_settings")
+  @@map("account_notification_preferences")
+  @@schema("notification_dispatch")
+}
+
 model Notification {
   revision Int @default(0)
   id          String               @id @default(uuid()) @db.Uuid
