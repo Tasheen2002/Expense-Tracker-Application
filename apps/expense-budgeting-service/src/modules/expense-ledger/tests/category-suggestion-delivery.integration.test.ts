@@ -9,13 +9,18 @@ import { registerExpenseOutboxEventRoutes } from '../infrastructure/http/routes/
 
 const url = process.env.CATEGORY_DELIVERY_TEST_DATABASE_URL;
 describe.skipIf(!url)('Category acceptance PostgreSQL delivery', () => {
-  const prisma = new PrismaClient({ datasources: { db: { url } } });
-  const replicaPrisma = new PrismaClient({ datasources: { db: { url } } });
+  let prisma: PrismaClient;
+  let replicaPrisma: PrismaClient;
   const workspaceId = randomUUID(), userId = randomUUID();
   let app: FastifyInstance;
   let replica: FastifyInstance;
   let expenseId: string, categoryId: string;
   beforeAll(async () => {
+    if (!url || !new URL(url).pathname.slice(1).startsWith('codex_test_expense_')) {
+      throw new Error('Dedicated expense test database required');
+    }
+    prisma = new PrismaClient({ datasources: { db: { url } } });
+    replicaPrisma = new PrismaClient({ datasources: { db: { url } } });
     const [{ name }] = await prisma.$queryRaw<Array<{ name: string }>>`SELECT current_database() AS name`;
     if (!name.startsWith('codex_test_expense_')) throw new Error('Dedicated expense test database required');
     app = Fastify();
@@ -36,7 +41,7 @@ describe.skipIf(!url)('Category acceptance PostgreSQL delivery', () => {
     await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS fail_category_outbox ON expense_ledger.outbox_event');
     await prisma.$executeRawUnsafe('DROP FUNCTION IF EXISTS expense_ledger.fail_category_outbox()');
   });
-  afterAll(async () => { await app?.close(); await replica?.close(); await prisma.$disconnect(); await replicaPrisma.$disconnect(); });
+  afterAll(async () => { await app?.close(); await replica?.close(); await prisma?.$disconnect(); await replicaPrisma?.$disconnect(); });
   function event(patch: Record<string, unknown> = {}) {
     return { eventId: randomUUID(), eventType: 'CategorySuggestionAccepted', payload: {
       expenseId, workspaceId, categoryId, acceptedBy: userId, expenseVersion: 1, ...patch,
