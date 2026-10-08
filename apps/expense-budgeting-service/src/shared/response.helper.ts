@@ -7,7 +7,7 @@ import { QueryResult } from '@core/application/query-result';
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -109,7 +109,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: unknown,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
@@ -141,7 +141,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: unknown
   ): FastifyReply {
     if (!result.success) {
       const statusCode = result.statusCode ?? 404;
@@ -170,11 +170,13 @@ export class ResponseHelper {
     // to Fastify's registered global error handler (plugins/error.ts) so that request
     // logging, Prisma constraint mapping (e.g. P2002 -> 409 Conflict), and production
     // 500 message sanitization are applied centrally.
-    if ((reply as any)?.server && typeof (reply as any)?.send === 'function') {
+    if (reply?.server && typeof reply?.send === 'function') {
       const err =
         error instanceof Error
           ? error
-          : new Error(typeof error === 'string' ? error : 'Internal server error');
+          : new Error(
+              typeof error === 'string' ? error : 'Internal server error'
+            );
       return reply.send(err);
     }
 
@@ -200,7 +202,10 @@ export class ResponseHelper {
     // Handle Prisma Client Known Request Errors
     if (
       error instanceof Prisma.PrismaClientKnownRequestError ||
-      (error && typeof error === 'object' && (error as any).name === 'PrismaClientKnownRequestError')
+      (error &&
+        typeof error === 'object' &&
+        ('name' in error ? error.name : undefined) ===
+          'PrismaClientKnownRequestError')
     ) {
       const prismaError = error as Prisma.PrismaClientKnownRequestError;
       if (prismaError.code === 'P2002') {
@@ -234,7 +239,10 @@ export class ResponseHelper {
     // Handle Prisma Client Validation Errors
     if (
       error instanceof Prisma.PrismaClientValidationError ||
-      (error && typeof error === 'object' && (error as any).name === 'PrismaClientValidationError')
+      (error &&
+        typeof error === 'object' &&
+        ('name' in error ? error.name : undefined) ===
+          'PrismaClientValidationError')
     ) {
       return reply.status(400).send({
         success: false,
@@ -249,26 +257,40 @@ export class ResponseHelper {
       error &&
       typeof error === 'object' &&
       'statusCode' in error &&
-      typeof (error as any).statusCode === 'number' &&
-      (error as any).statusCode < 600;
+      typeof error.statusCode === 'number' &&
+      error.statusCode < 600;
 
-    const statusCode = isDomainError ? (error as { statusCode: number }).statusCode : 500;
+    const statusCode = isDomainError
+      ? (error as { statusCode: number }).statusCode
+      : 500;
     const isServerError = statusCode >= 500;
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     // Sanitize unexpected 500 errors to prevent leaking database/query details
-    const rawMessage = error instanceof Error ? error.message : 'Internal server error';
-    const message = isServerError && !isDevelopment ? 'An unexpected error occurred' : rawMessage;
+    const rawMessage =
+      error instanceof Error ? error.message : 'Internal server error';
+    const message =
+      isServerError && !isDevelopment
+        ? 'An unexpected error occurred'
+        : rawMessage;
 
     // Extract error code/name for response
     const errorCode =
-      error && typeof error === 'object' && 'code' in error && typeof (error as any).code === 'string'
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof error.code === 'string'
         ? (error as { code: string }).code
         : undefined;
 
     const errorName = isServerError
       ? 'Internal Server Error'
-      : (error as any)?.name || ResponseHelper.getErrorName(statusCode);
+      : (error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        typeof error.name === 'string'
+          ? error.name
+          : undefined) || ResponseHelper.getErrorName(statusCode);
 
     return reply.status(statusCode).send({
       success: false,
