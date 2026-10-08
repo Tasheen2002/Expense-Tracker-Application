@@ -20,14 +20,19 @@ const compose = ['compose', '-p', 'expense-smoke', '--env-file', '.env.docker-sm
   '-f', 'docker-compose.yml', '-f', 'docker-compose.mailpit.yml', '-f', 'docker-compose.smoke.yml', '-f', images];
 function run(executable, args) {
   const result = spawnSync(executable, args, { stdio: 'inherit', timeout: 600000 });
-  if (result.status !== 0) throw new Error(`${executable} ${args[0]} failed`);
+  if (result.status !== 0) {
+    const reason = result.signal ? `signal ${result.signal}` : result.error?.message || `exit ${result.status}`;
+    throw new Error(`${executable} ${args[0]} failed (${reason})`);
+  }
 }
 try {
   run('docker', [...compose, 'up', '-d', '--wait', 'postgres', 'mailpit']);
   run(process.execPath, ['scripts/prepare-gateway-workflow.cjs']);
   run('docker', [...compose, 'up', '-d', '--no-build', '--pull', 'never', '--wait', '--wait-timeout', '180', ...services]);
   run(process.execPath, ['scripts/gateway-workflow-smoke.cjs']);
-  run(process.execPath, ['--test', 'scripts/outbox-maintenance.integration.test.cjs']);
+  // node:test runs registered tests in a normal process too. Avoid the --test
+  // subprocess wrapper for this native Prisma integration; failures still exit nonzero.
+  run(process.execPath, ['scripts/outbox-maintenance.integration.test.cjs']);
   run(process.execPath, ['scripts/verify-database-backup.cjs']);
 } catch (error) {
   // Collect startup diagnostics before cleanup removes the failed containers.

@@ -16,6 +16,7 @@ test('Approval development runtime loads shared exports without bundling', () =>
 
 test('CI smoke credentials initialize the bank token cipher', () => {
   const writes = new Map();
+  const commands = [];
   runInNewContext(readFileSync(path.join(__dirname, 'ci-backend-workflows.cjs'), 'utf8'), {
     require(name) {
       if (name === 'node:fs') return {
@@ -23,7 +24,10 @@ test('CI smoke credentials initialize the bank token cipher', () => {
         existsSync: () => false,
         unlinkSync: () => {},
       };
-      if (name === 'node:child_process') return { spawnSync: () => ({ status: 0 }) };
+      if (name === 'node:child_process') return { spawnSync: (executable, args) => {
+        commands.push({ executable, args });
+        return { status: 0 };
+      } };
       return require(name);
     },
     process: { env: { GITHUB_ACTIONS: 'true' }, execPath: process.execPath },
@@ -37,6 +41,31 @@ test('CI smoke credentials initialize the bank token cipher', () => {
   });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /cipher-ready/);
+  const integration = commands.find(command => command.args.includes('scripts/outbox-maintenance.integration.test.cjs'));
+  assert.ok(integration, 'CI must execute the recovery integration test');
+  assert.equal(integration.executable, process.execPath);
+  assert.deepEqual(Array.from(integration.args), ['scripts/outbox-maintenance.integration.test.cjs']);
+});
+
+test('CI propagates a native recovery-test crash instead of accepting it as success', () => {
+  const commands = [];
+  assert.throws(() => runInNewContext(readFileSync(path.join(__dirname, 'ci-backend-workflows.cjs'), 'utf8'), {
+    require(name) {
+      if (name === 'node:fs') return { writeFileSync() {}, existsSync: () => false, unlinkSync() {} };
+      if (name === 'node:child_process') return { spawnSync(executable, args) {
+        commands.push({ executable, args });
+        if (args[0] === 'scripts/outbox-maintenance.integration.test.cjs') {
+          return { status: null, signal: 'SIGSEGV' };
+        }
+        return { status: 0 };
+      } };
+      return require(name);
+    },
+    process: { env: { GITHUB_ACTIONS: 'true' }, execPath: process.execPath },
+  }), /outbox-maintenance\.integration\.test\.cjs failed \(signal SIGSEGV\)/);
+  assert.ok(commands.some(command => command.args.includes('logs')), 'Failure diagnostics must run');
+  assert.ok(commands.some(command => command.args.includes('down')), 'CI cleanup must still run');
+  assert.ok(!commands.some(command => command.args.includes('scripts/verify-database-backup.cjs')), 'Do not proceed after a crashed test');
 });
 
 test('Receipt restoration helpers use the running container image without pulling', () => {
