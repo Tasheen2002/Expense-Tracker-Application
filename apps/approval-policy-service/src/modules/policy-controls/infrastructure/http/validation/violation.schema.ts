@@ -1,3 +1,4 @@
+import { paginationQuerySchema } from '@shared/http/validation';
 import { z } from "zod";
 import { toJsonSchema } from "./validator";
 import { ViolationStatus } from "../../../domain/enums/violation-status.enum";
@@ -23,8 +24,7 @@ export const violationQuerySchema = z.object({
   userId: z.string().uuid().optional(),
   expenseId: z.string().uuid().optional(),
   policyId: z.string().uuid().optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
+  ...paginationQuerySchema.shape,
 });
 
 const isoDateTimeRegex =
