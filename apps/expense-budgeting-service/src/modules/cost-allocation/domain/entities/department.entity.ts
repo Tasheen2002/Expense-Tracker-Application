@@ -49,7 +49,8 @@ export class DepartmentCreatedEvent extends DomainEvent {
 export class DepartmentUpdatedEvent extends DomainEvent {
   constructor(
     public readonly departmentId: string,
-    public readonly changes: Record<string, unknown>
+    public readonly changes: Record<string, unknown>,
+    public readonly workspaceId: string
   ) {
     super(departmentId, 'Department');
   }
@@ -61,13 +62,14 @@ export class DepartmentUpdatedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> {
     return {
       departmentId: this.departmentId,
+      workspaceId: this.workspaceId,
       changes: this.changes,
     };
   }
 }
 
 export class DepartmentActivatedEvent extends DomainEvent {
-  constructor(public readonly departmentId: string) {
+  constructor(public readonly departmentId: string, public readonly workspaceId: string) {
     super(departmentId, 'Department');
   }
 
@@ -76,12 +78,12 @@ export class DepartmentActivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { departmentId: this.departmentId };
+    return { departmentId: this.departmentId, workspaceId: this.workspaceId };
   }
 }
 
 export class DepartmentDeactivatedEvent extends DomainEvent {
-  constructor(public readonly departmentId: string) {
+  constructor(public readonly departmentId: string, public readonly workspaceId: string) {
     super(departmentId, 'Department');
   }
 
@@ -90,7 +92,7 @@ export class DepartmentDeactivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { departmentId: this.departmentId };
+    return { departmentId: this.departmentId, workspaceId: this.workspaceId };
   }
 }
 
@@ -238,7 +240,7 @@ export class Department extends AggregateRoot {
     if (Object.keys(changes).length > 0) {
       this.props.updatedAt = new Date();
       this.addDomainEvent(
-        new DepartmentUpdatedEvent(this.props.id.getValue(), changes)
+        new DepartmentUpdatedEvent(this.props.id.getValue(), changes, this.props.workspaceId.getValue())
       );
     }
   }
@@ -247,14 +249,14 @@ export class Department extends AggregateRoot {
     if (!this.props.isActive) return;
     this.props.isActive = false;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new DepartmentDeactivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new DepartmentDeactivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   activate(): void {
     if (this.props.isActive) return;
     this.props.isActive = true;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new DepartmentActivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new DepartmentActivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   static toDTO(department: Department): DepartmentDTO {
