@@ -1,5 +1,5 @@
 import { PrismaClient, Prisma } from '../../../../prisma-client';
-import {  WorkspaceId  } from '@core/domain/value-objects';
+import { WorkspaceId } from '@core/domain/value-objects';
 import { BankTransaction } from '../../domain/entities/bank-transaction.entity';
 import { BankTransactionId } from '../../domain/value-objects/bank-transaction-id';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
@@ -26,7 +26,11 @@ export class PrismaBankTransactionRepository
 
   async save(transaction: BankTransaction): Promise<void> {
     if (transaction.status === TransactionStatus.PENDING) {
-      throw new BankFeedSyncDomainError('Use saveBatch to import pending transactions', 'INVALID_TRANSACTION_WRITE', 422);
+      throw new BankFeedSyncDomainError(
+        'Use saveBatch to import pending transactions',
+        'INVALID_TRANSACTION_WRITE',
+        422
+      );
     }
     await this.prisma.$transaction(async (tx) => {
       const result = await tx.bankTransaction.updateMany({
@@ -42,27 +46,43 @@ export class PrismaBankTransactionRepository
         },
       });
       if (result.count !== 1) {
-        throw new BankFeedSyncDomainError('Transaction was already processed', 'INVALID_TRANSACTION_TRANSITION', 409);
+        throw new BankFeedSyncDomainError(
+          'Transaction was already processed',
+          'INVALID_TRANSACTION_TRANSITION',
+          409
+        );
       }
       await this.persistOutboxEvents(tx, [transaction]);
     });
     this.clearPersistedEvents([transaction]);
   }
 
-  async saveBatch(transactions: BankTransaction[], expectedConnectionVersion: number): Promise<number> {
+  async saveBatch(
+    transactions: BankTransaction[],
+    expectedConnectionVersion: number
+  ): Promise<number> {
     if (transactions.length === 0) return 0;
     const first = transactions[0];
     const workspaceId = first.workspaceId.getValue();
     const connectionId = first.connectionId.getValue();
     const sessionId = first.sessionId.getValue();
-    if (transactions.some((transaction) =>
-      transaction.workspaceId.getValue() !== workspaceId ||
-      transaction.connectionId.getValue() !== connectionId ||
-      transaction.sessionId.getValue() !== sessionId
-    )) {
-      throw new BankFeedSyncDomainError('A sync batch must belong to one connection', 'INVALID_SYNC_BATCH', 422);
+    if (
+      transactions.some(
+        (transaction) =>
+          transaction.workspaceId.getValue() !== workspaceId ||
+          transaction.connectionId.getValue() !== connectionId ||
+          transaction.sessionId.getValue() !== sessionId
+      )
+    ) {
+      throw new BankFeedSyncDomainError(
+        'A sync batch must belong to one connection',
+        'INVALID_SYNC_BATCH',
+        422
+      );
     }
-    const data = transactions.map((t) => PrismaBankTransactionRepository.toPersistence(t));
+    const data = transactions.map((t) =>
+      PrismaBankTransactionRepository.toPersistence(t)
+    );
 
     const insertedIds = await this.prisma.$transaction(async (tx) => {
       const activeConnection = await tx.$queryRaw<{ id: string }[]>`
@@ -73,7 +93,11 @@ export class PrismaBankTransactionRepository
         FOR UPDATE
       `;
       if (activeConnection.length === 0) {
-        throw new BankFeedSyncDomainError('Bank connection is no longer active', 'BANK_CONNECTION_INACTIVE', 409);
+        throw new BankFeedSyncDomainError(
+          'Bank connection is no longer active',
+          'BANK_CONNECTION_INACTIVE',
+          409
+        );
       }
       const activeSession = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM bank_feed_sync.sync_session
@@ -83,27 +107,39 @@ export class PrismaBankTransactionRepository
         FOR UPDATE
       `;
       if (activeSession.length === 0) {
-        throw new BankFeedSyncDomainError('Sync session is no longer active', 'CONCURRENT_SYNC_TRANSITION', 409);
+        throw new BankFeedSyncDomainError(
+          'Sync session is no longer active',
+          'CONCURRENT_SYNC_TRANSITION',
+          409
+        );
       }
       await tx.bankTransaction.createMany({
         data,
         skipDuplicates: true,
       });
       const inserted = await tx.bankTransaction.findMany({
-        where: { id: { in: transactions.map((transaction) => transaction.id.getValue()) } },
+        where: {
+          id: {
+            in: transactions.map((transaction) => transaction.id.getValue()),
+          },
+        },
         select: { id: true },
       });
       const ids = new Set(inserted.map((row) => row.id));
       const insertedAggregates = new Map(
         transactions
           .filter((transaction) => ids.has(transaction.id.getValue()))
-          .map((transaction) => [transaction.id.getValue(), transaction] as const)
+          .map(
+            (transaction) => [transaction.id.getValue(), transaction] as const
+          )
       );
       await this.persistOutboxEvents(tx, [...insertedAggregates.values()]);
       return ids;
     });
     this.clearPersistedEvents(
-      transactions.filter((transaction) => insertedIds.has(transaction.id.getValue()))
+      transactions.filter((transaction) =>
+        insertedIds.has(transaction.id.getValue())
+      )
     );
     return insertedIds.size;
   }
@@ -163,16 +199,24 @@ export class PrismaBankTransactionRepository
     options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankTransaction,
-      {
-        where: {
-          workspaceId: workspaceId.getValue(),
-          connectionId: connectionId.getValue(),
-        },
-        orderBy: {
-          transactionDate: 'desc',
-        },
-      },
+      (page) =>
+        this.prisma.bankTransaction.findMany({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            connectionId: connectionId.getValue(),
+          },
+          orderBy: {
+            transactionDate: 'desc',
+          },
+          ...page,
+        }),
+      () =>
+        this.prisma.bankTransaction.count({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            connectionId: connectionId.getValue(),
+          },
+        }),
       (r) => this.toDomain(r),
       options
     );
@@ -184,16 +228,24 @@ export class PrismaBankTransactionRepository
     options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankTransaction,
-      {
-        where: {
-          workspaceId: workspaceId.getValue(),
-          sessionId: sessionId.getValue(),
-        },
-        orderBy: {
-          transactionDate: 'desc',
-        },
-      },
+      (page) =>
+        this.prisma.bankTransaction.findMany({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            sessionId: sessionId.getValue(),
+          },
+          orderBy: {
+            transactionDate: 'desc',
+          },
+          ...page,
+        }),
+      () =>
+        this.prisma.bankTransaction.count({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            sessionId: sessionId.getValue(),
+          },
+        }),
       (r) => this.toDomain(r),
       options
     );
@@ -205,16 +257,24 @@ export class PrismaBankTransactionRepository
     options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankTransaction,
-      {
-        where: {
-          workspaceId: workspaceId.getValue(),
-          status,
-        },
-        orderBy: {
-          transactionDate: 'desc',
-        },
-      },
+      (page) =>
+        this.prisma.bankTransaction.findMany({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            status,
+          },
+          orderBy: {
+            transactionDate: 'desc',
+          },
+          ...page,
+        }),
+      () =>
+        this.prisma.bankTransaction.count({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            status,
+          },
+        }),
       (r) => this.toDomain(r),
       options
     );
@@ -227,17 +287,26 @@ export class PrismaBankTransactionRepository
     options?: PaginationOptions
   ): Promise<PaginatedResult<BankTransaction>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankTransaction,
-      {
-        where: {
-          workspaceId: workspaceId.getValue(),
-          connectionId: connectionId.getValue(),
-          status,
-        },
-        orderBy: {
-          transactionDate: 'desc',
-        },
-      },
+      (page) =>
+        this.prisma.bankTransaction.findMany({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            connectionId: connectionId.getValue(),
+            status,
+          },
+          orderBy: {
+            transactionDate: 'desc',
+          },
+          ...page,
+        }),
+      () =>
+        this.prisma.bankTransaction.count({
+          where: {
+            workspaceId: workspaceId.getValue(),
+            connectionId: connectionId.getValue(),
+            status,
+          },
+        }),
       (r) => this.toDomain(r),
       options
     );
