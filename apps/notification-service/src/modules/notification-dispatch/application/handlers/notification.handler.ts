@@ -16,6 +16,8 @@ interface ExpenseStatusChangedPayload extends DomainEvent {
 interface BudgetThresholdExceededPayload extends DomainEvent {
   budgetId: string;
   workspaceId: string;
+  createdBy: string;
+  recipientId?: string;
 }
 
 interface ApprovalWorkflowStartedPayload extends DomainEvent {
@@ -36,6 +38,7 @@ export class NotificationEventHandler {
         if (!type) return;
 
         await this.notificationService.send({
+          requestId: event.eventId,
           workspaceId: event.workspaceId,
           recipientId: event.expenseOwnerId,
           type,
@@ -54,9 +57,16 @@ export class NotificationEventHandler {
     {
       eventType: 'budget.threshold_exceeded',
       handle: async (event: BudgetThresholdExceededPayload): Promise<void> => {
-        console.warn(
-          `[Notification] Budget ${event.budgetId} exceeded threshold. Notification skipped (recipient unknown).`,
-        );
+        await this.notificationService.send({
+          requestId: event.eventId,
+          workspaceId: event.workspaceId,
+          recipientId: event.recipientId ?? event.createdBy,
+          type: NotificationType.BUDGET_ALERT,
+          priority: NotificationPriority.HIGH,
+          title: 'Budget Alert',
+          content: 'A budget threshold has been exceeded.',
+          data: { budgetId: event.budgetId },
+        });
       },
     };
 
@@ -65,6 +75,7 @@ export class NotificationEventHandler {
       eventType: 'approval.workflow_started',
       handle: async (event: ApprovalWorkflowStartedPayload): Promise<void> => {
         await this.notificationService.send({
+          requestId: event.eventId,
           workspaceId: event.workspaceId,
           recipientId: event.requesterId,
           type: NotificationType.SYSTEM_ALERT,

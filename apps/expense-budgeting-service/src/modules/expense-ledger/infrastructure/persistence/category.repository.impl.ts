@@ -1,7 +1,7 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { ICategoryRepository } from "../../domain/repositories/category.repository";
-import { Category } from "../../domain/entities/category.entity";
-import { CategoryId } from "../../domain/value-objects/category-id";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { ICategoryRepository } from '../../domain/repositories/category.repository';
+import { Category } from '../../domain/entities/category.entity';
+import { CategoryId } from '../../domain/value-objects/category-id';
 import { IEventBus } from '@core/domain/events/domain-event';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
@@ -61,7 +61,7 @@ export class CategoryRepositoryImpl
 
   async findById(
     id: CategoryId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Category | null> {
     const category = await this.prisma.category.findUnique({
       where: {
@@ -77,7 +77,7 @@ export class CategoryRepositoryImpl
 
   async findByName(
     name: string,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<Category | null> {
     const category = await this.prisma.category.findUnique({
       where: {
@@ -95,38 +95,52 @@ export class CategoryRepositoryImpl
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Category>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.category,
-      {
-        where: { workspaceId },
-        orderBy: { name: "asc" },
-      },
+      (page) =>
+        this.prisma.category.findMany({
+          where: { workspaceId },
+          orderBy: { name: 'asc' },
+          ...page,
+        }),
+      () => this.prisma.category.count({ where: { workspaceId } }),
       (category) => this.toDomain(category),
-      options,
+      options
     );
   }
 
   async findActiveByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Category>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.category,
-      {
-        where: {
-          workspaceId,
-          isActive: true,
-        },
-        orderBy: { name: "asc" },
-      },
+      (page) =>
+        this.prisma.category.findMany({
+          where: {
+            workspaceId,
+            isActive: true,
+          },
+          orderBy: { name: 'asc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.category.count({
+          where: {
+            workspaceId,
+            isActive: true,
+          },
+        }),
       (category) => this.toDomain(category),
-      options,
+      options
     );
   }
 
-  async delete(id: CategoryId, workspaceId: string, category?: Category): Promise<void> {
+  async delete(
+    id: CategoryId,
+    workspaceId: string,
+    category?: Category
+  ): Promise<void> {
     await this.runInTransaction(async (tx) => {
       let entityToDispatch = category;
       if (!entityToDispatch) {

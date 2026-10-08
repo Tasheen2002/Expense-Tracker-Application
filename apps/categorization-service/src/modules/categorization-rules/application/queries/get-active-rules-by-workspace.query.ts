@@ -18,7 +18,7 @@ export class GetActiveRulesByWorkspaceHandler implements IQueryHandler<
   GetActiveRulesByWorkspaceQuery,
   PaginatedResult<CategoryRuleDTO>
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'getActiveRulesByWorkspaceId'>) {}
 
   async handle(query: GetActiveRulesByWorkspaceQuery): Promise<PaginatedResult<CategoryRuleDTO>> {
     return this.ruleService.getActiveRulesByWorkspaceId(

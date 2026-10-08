@@ -1,12 +1,11 @@
 import { FastifyReply } from 'fastify';
-import { ZodError } from 'zod';
 import { CommandResult } from '@core/application/command-result';
 import { QueryResult } from '@core/application/query-result';
 
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -108,7 +107,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: unknown,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
@@ -140,7 +139,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: unknown
   ): FastifyReply {
     if (!result.success) {
       const statusCode = result.statusCode ?? 404;
@@ -165,41 +164,9 @@ export class ResponseHelper {
    * @param error - Error object (preferably a domain error with statusCode)
    */
   static error(reply: FastifyReply, error: unknown): FastifyReply {
-    // Handle ZodError
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: 'Validation failed',
-        error: error.format(),
-      });
-    }
-
-    // Extract statusCode from domain errors
-    const statusCode =
-      error && typeof error === 'object' && 'statusCode' in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
-
-    // Extract error message
-    const message =
-      error instanceof Error ? error.message : 'Internal server error';
-
-    // Extract error code/name for response
-    const errorCode =
-      error && typeof error === 'object' && 'code' in error
-        ? (error as { code: string }).code
-        : undefined;
-
-    const errorName = ResponseHelper.getErrorName(statusCode);
-
-    return reply.status(statusCode).send({
-      success: false,
-      statusCode,
-      error: errorName,
-      code: errorCode,
-      message,
-    });
+    return reply.send(
+      error instanceof Error ? error : new Error('Unknown operation failure')
+    );
   }
 
   /**

@@ -1,10 +1,11 @@
+import { notificationReadRateLimit, notificationWriteRateLimit } from '@shared/http/notification-rate-limits';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { PreferenceController } from '../controllers/preference.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { validateBody, validateQuery } from '../validation/validator';
+import { validateBody, validateQuery, validateParams } from '../validation/validator';
 import {
-  updateGlobalPreferencesSchema,
+  updateGlobalPreferencesSchema, workspaceParamsSchema, preferenceTypeParamsSchema,
   updateTypePreferenceSchema,
   checkChannelEnabledSchema,
   workspaceParamsJsonSchema,
@@ -18,7 +19,7 @@ import {
 
 export async function registerPreferenceRoutes(
   fastify: FastifyInstance,
-  controller: PreferenceController
+  controller: Pick<PreferenceController, 'getPreferences' | 'updateGlobalPreferences' | 'updateTypePreference' | 'checkChannelEnabled'>
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
     await workspaceAuthorizationMiddleware(
@@ -32,7 +33,8 @@ export async function registerPreferenceRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notification-preferences',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification Preferences'],
@@ -52,11 +54,9 @@ export async function registerPreferenceRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notification-preferences',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(updateGlobalPreferencesSchema),
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema), validateBody(updateGlobalPreferencesSchema)],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification Preferences'],
         description: 'Update global notification preferences',
@@ -76,11 +76,9 @@ export async function registerPreferenceRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notification-preferences/:type',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateBody(updateTypePreferenceSchema),
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(preferenceTypeParamsSchema), validateBody(updateTypePreferenceSchema)],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification Preferences'],
         description: 'Update notification preferences for a specific notification type',
@@ -100,11 +98,9 @@ export async function registerPreferenceRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notification-preferences/check',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateQuery(checkChannelEnabledSchema),
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema), validateQuery(checkChannelEnabledSchema)],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification Preferences'],
         description: 'Check if a specific channel is enabled for a notification type',
@@ -120,4 +116,3 @@ export async function registerPreferenceRoutes(
       controller.checkChannelEnabled(request as AuthenticatedRequest, reply)
   );
 }
-

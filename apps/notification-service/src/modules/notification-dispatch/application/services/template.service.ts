@@ -1,11 +1,13 @@
-import { INotificationTemplateRepository } from "../../domain/repositories/notification-template.repository";
-import { NotificationTemplate, NotificationTemplateDTO } from "../../domain/entities/notification-template.entity";
-import { NotificationType } from "../../domain/enums/notification-type.enum";
-import { NotificationChannel } from "../../domain/enums/notification-channel.enum";
-import { TemplateId } from "../../domain/value-objects/template-id";
-import { WorkspaceId } from "../../domain/value-objects";
-import { TemplateNotFoundByIdError } from "../../domain/errors/notification.errors";
-import sanitizeHtml from "sanitize-html";
+import { INotificationTemplateRepository } from '../../domain/repositories/notification-template.repository';
+import { NotificationTemplate, NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
+import { NotificationType } from '../../domain/enums/notification-type.enum';
+import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
+import { TemplateId } from '../../domain/value-objects/template-id';
+import { TemplateNotFoundByIdError } from '../../domain/errors/notification.errors';
+import { validateEnum, validateText } from '../../domain/entities/entity-validation';
+import { TEMPLATE_NAME_MAX_LENGTH, TEMPLATE_SUBJECT_MAX_LENGTH, TEMPLATE_BODY_MAX_LENGTH } from '../../domain/constants';
+import { TemplateAccess, requireTemplateAccess } from './template-access';
+import sanitizeHtml from 'sanitize-html';
 
 export interface CreateTemplateParams {
   workspaceId?: string;
@@ -15,122 +17,72 @@ export interface CreateTemplateParams {
   subjectTemplate: string;
   bodyTemplate: string;
 }
-
-export interface UpdateTemplateParams {
-  subjectTemplate?: string;
-  bodyTemplate?: string;
-}
+export interface UpdateTemplateParams { subjectTemplate?: string; bodyTemplate?: string; }
 
 export class TemplateService {
-  constructor(
-    private readonly templateRepository: INotificationTemplateRepository,
-  ) {}
+  constructor(private readonly templateRepository: INotificationTemplateRepository) {}
 
-  async createTemplate(
-    params: CreateTemplateParams,
-  ): Promise<NotificationTemplateDTO> {
-    const workspaceId = params.workspaceId
-      ? WorkspaceId.fromString(params.workspaceId)
-      : undefined;
-
-    // SECURITY: Sanitize HTML content to prevent XSS
-    const sanitizedSubject = sanitizeHtml(params.subjectTemplate, {
-      allowedTags: [], // Subject should not have HTML tags
-      allowedAttributes: {},
+  private sanitizeSubject(value: string): string {
+    return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} });
+  }
+  private sanitizeBody(value: string): string {
+    return sanitizeHtml(value, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+      allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, img: ['src', 'alt', 'width', 'height'] },
     });
+  }
 
-    const sanitizedBody = sanitizeHtml(params.bodyTemplate, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
-      allowedAttributes: {
-        ...sanitizeHtml.defaults.allowedAttributes,
-        img: ["src", "alt", "width", "height"],
-      },
-    });
-
-    const template = NotificationTemplate.create({
-      workspaceId,
-      name: params.name,
-      type: params.type,
-      channel: params.channel,
-      subjectTemplate: sanitizedSubject,
-      bodyTemplate: sanitizedBody,
-    });
-
+  async createTemplate(params: CreateTemplateParams, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    const workspaceId = requireTemplateAccess(access, params.workspaceId);
+    validateText('name', params.name, TEMPLATE_NAME_MAX_LENGTH);
+    validateText('subjectTemplate', params.subjectTemplate, TEMPLATE_SUBJECT_MAX_LENGTH);
+    validateText('bodyTemplate', params.bodyTemplate, TEMPLATE_BODY_MAX_LENGTH);
+    const template = NotificationTemplate.create({ ...params, workspaceId,
+      subjectTemplate: this.sanitizeSubject(params.subjectTemplate), bodyTemplate: this.sanitizeBody(params.bodyTemplate) });
     await this.templateRepository.save(template);
     return NotificationTemplate.toDTO(template);
   }
 
-  async getTemplateById(id: string): Promise<NotificationTemplateDTO> {
-    const templateId = TemplateId.fromString(id);
-    const template = await this.templateRepository.findById(templateId);
-
-    if (!template) {
-      throw new TemplateNotFoundByIdError(id);
-    }
-
+  async getTemplateById(id: string, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    const workspaceId = requireTemplateAccess(access, access?.workspaceId);
+    const template = await this.templateRepository.findById(TemplateId.fromString(id));
+    if (!template || !template.workspaceId?.equals(workspaceId)) throw new TemplateNotFoundByIdError(id);
     return NotificationTemplate.toDTO(template);
   }
 
-  async getActiveTemplate(
-    workspaceId: string | undefined,
-    type: NotificationType,
-    channel: NotificationChannel,
-  ): Promise<NotificationTemplateDTO | null> {
-    const wsId = workspaceId ? WorkspaceId.fromString(workspaceId) : undefined;
-    const template = await this.templateRepository.findActiveTemplate(wsId, type, channel);
+  async getActiveTemplate(workspace: string | undefined, type: NotificationType, channel: NotificationChannel,
+    access: TemplateAccess): Promise<NotificationTemplateDTO | null> {
+    const workspaceId = requireTemplateAccess(access, workspace);
+    validateEnum('type', type, Object.values(NotificationType));
+    validateEnum('channel', channel, Object.values(NotificationChannel));
+    // Global fallback is readable through an authorized workspace, but cannot be edited through it.
+    const template = await this.templateRepository.findActiveTemplate(workspaceId, type, channel);
     return template ? NotificationTemplate.toDTO(template) : null;
   }
 
-  async updateTemplate(
-    id: string,
-    params: UpdateTemplateParams,
-  ): Promise<NotificationTemplateDTO> {
-    const template = await this._getTemplateEntity(id);
-
-    // SECURITY: Sanitize HTML content to prevent XSS
-    if (params.subjectTemplate !== undefined) {
-      const sanitizedSubject = sanitizeHtml(params.subjectTemplate, {
-        allowedTags: [], // Subject should not have HTML tags
-        allowedAttributes: {},
-      });
-      template.updateTemplates(sanitizedSubject, template.bodyTemplate);
-    }
-
-    if (params.bodyTemplate !== undefined) {
-      const sanitizedBody = sanitizeHtml(params.bodyTemplate, {
-        allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
-        allowedAttributes: {
-          ...sanitizeHtml.defaults.allowedAttributes,
-          img: ["src", "alt", "width", "height"],
-        },
-      });
-      template.updateTemplates(template.subjectTemplate, sanitizedBody);
-    }
-
-    await this.templateRepository.save(template);
+  async updateTemplate(id: string, params: UpdateTemplateParams, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    const workspaceId = requireTemplateAccess(access, access?.workspaceId);
+    if (params.subjectTemplate !== undefined) validateText('subjectTemplate', params.subjectTemplate, TEMPLATE_SUBJECT_MAX_LENGTH);
+    if (params.bodyTemplate !== undefined) validateText('bodyTemplate', params.bodyTemplate, TEMPLATE_BODY_MAX_LENGTH);
+    const subject = params.subjectTemplate === undefined ? undefined : this.sanitizeSubject(params.subjectTemplate);
+    const body = params.bodyTemplate === undefined ? undefined : this.sanitizeBody(params.bodyTemplate);
+    const template = await this.templateRepository.mutate(TemplateId.fromString(id), workspaceId, entity => {
+      entity.updateTemplates(subject ?? entity.subjectTemplate, body ?? entity.bodyTemplate);
+    });
     return NotificationTemplate.toDTO(template);
   }
 
-  async activateTemplate(id: string): Promise<NotificationTemplateDTO> {
-    const template = await this._getTemplateEntity(id);
-    template.activate();
-    await this.templateRepository.save(template);
-    return NotificationTemplate.toDTO(template);
+  async activateTemplate(id: string, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    return this.setActive(id, true, access);
   }
-
-  async deactivateTemplate(id: string): Promise<NotificationTemplateDTO> {
-    const template = await this._getTemplateEntity(id);
-    template.deactivate();
-    await this.templateRepository.save(template);
-    return NotificationTemplate.toDTO(template);
+  async deactivateTemplate(id: string, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    return this.setActive(id, false, access);
   }
-
-  private async _getTemplateEntity(id: string): Promise<NotificationTemplate> {
-    const templateId = TemplateId.fromString(id);
-    const template = await this.templateRepository.findById(templateId);
-    if (!template) {
-      throw new TemplateNotFoundByIdError(id);
-    }
-    return template;
+  private async setActive(id: string, active: boolean, access: TemplateAccess): Promise<NotificationTemplateDTO> {
+    const workspaceId = requireTemplateAccess(access, access?.workspaceId);
+    const template = await this.templateRepository.mutate(TemplateId.fromString(id), workspaceId, entity => {
+      if (active) entity.activate(); else entity.deactivate();
+    });
+    return NotificationTemplate.toDTO(template);
   }
 }

@@ -8,14 +8,23 @@ import { ListAuditLogsHandler } from './modules/audit-compliance/application/que
 import { GetEntityAuditHistoryHandler } from './modules/audit-compliance/application/queries/get-entity-audit-history.query';
 import { GetAuditSummaryHandler } from './modules/audit-compliance/application/queries/get-audit-summary.query';
 import { AuditLogController } from './modules/audit-compliance/infrastructure/http/controllers/audit-log.controller';
+import { AccountAuditService } from './modules/audit-compliance/application/services/account-audit.service';
+import { AccountAuditLogRepositoryImpl } from './modules/audit-compliance/infrastructure/persistence/account-audit-log.repository.impl';
+import { AccountAuditController } from './modules/audit-compliance/infrastructure/http/controllers/account-audit.controller';
+import { ListAccountAuditLogsHandler } from './modules/audit-compliance/application/queries/list-account-audit-logs.query';
 
 export interface AuditCompositionRoot {
   readonly auditService: AuditService;
+  readonly accountAuditService: AccountAuditService;
   readonly auditLogController: AuditLogController;
+  readonly accountAuditController: AccountAuditController;
 }
 
-export function createCompositionRoot(prisma: PrismaClient): AuditCompositionRoot {
-  if (!prisma) throw new Error('Audit composition root requires a Prisma client');
+export function createCompositionRoot(
+  prisma: PrismaClient
+): AuditCompositionRoot {
+  if (!prisma)
+    throw new Error('Audit composition root requires a Prisma client');
 
   const repository = new AuditLogRepositoryImpl(prisma);
   const auditService = new AuditService(repository);
@@ -25,8 +34,18 @@ export function createCompositionRoot(prisma: PrismaClient): AuditCompositionRoo
     new GetAuditLogHandler(auditService),
     new ListAuditLogsHandler(auditService),
     new GetEntityAuditHistoryHandler(auditService),
-    new GetAuditSummaryHandler(auditService),
+    new GetAuditSummaryHandler(auditService)
   );
 
-  return Object.freeze({ auditService, auditLogController });
+  const accountRepository = new AccountAuditLogRepositoryImpl(prisma);
+  const accountAuditService = new AccountAuditService(accountRepository);
+  const accountAuditController = new AccountAuditController(
+    new ListAccountAuditLogsHandler(accountRepository)
+  );
+  return Object.freeze({
+    auditService,
+    auditLogController,
+    accountAuditService,
+    accountAuditController,
+  });
 }

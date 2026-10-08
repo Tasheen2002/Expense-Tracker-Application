@@ -49,6 +49,12 @@ export class SuggestionNotFoundError extends CategorizationRuleDomainError {
 }
 
 // Conflict Errors (409)
+export class RuleWriteConflictError extends CategorizationRuleDomainError {
+  constructor() {
+    super('Rule changed or was deleted; reload it before retrying', 'RULE_WRITE_CONFLICT', 409);
+  }
+}
+
 export class DuplicateRuleNameError extends CategorizationRuleDomainError {
   constructor(name: string) {
     super(
@@ -94,7 +100,31 @@ export class InvalidRuleError extends CategorizationRuleDomainError {
   }
 }
 
+export class InvalidRuleExecutionError extends CategorizationRuleDomainError {
+  constructor(message: string) {
+    super(message, 'INVALID_RULE_EXECUTION', 400);
+  }
+}
+
+export class RuleEvaluationConflictError extends CategorizationRuleDomainError {
+  constructor(message: string) {
+    super(message, 'RULE_EVALUATION_CONFLICT', 409);
+  }
+}
+
 // Authorization Errors (403)
+export class UnauthorizedCategorizationReadError extends CategorizationRuleDomainError {
+  constructor() {
+    super('Workspace membership is required to read categorization records', 'UNAUTHORIZED_CATEGORIZATION_READ', 403);
+  }
+}
+
+export class UnauthorizedCategorizationAccessError extends CategorizationRuleDomainError {
+  constructor() {
+    super('Workspace administrator access is required for categorization writes', 'UNAUTHORIZED_CATEGORIZATION_ACCESS', 403);
+  }
+}
+
 export class UnauthorizedRuleAccessError extends CategorizationRuleDomainError {
   constructor(action: string) {
     super(

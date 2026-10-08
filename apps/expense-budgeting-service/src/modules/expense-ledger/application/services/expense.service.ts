@@ -20,6 +20,7 @@ import {
   UnauthorizedExpenseAccessError,
   InvalidExpenseStatusError,
   TagNotFoundError,
+  ExpenseConcurrencyConflictError,
 } from '../../domain/errors/expense.errors';
 
 export class ExpenseService {
@@ -29,6 +30,20 @@ export class ExpenseService {
     private readonly approvedExpensePolicy?: IApprovedExpensePolicy,
     private readonly unitOfWork?: IUnitOfWork
   ) {}
+
+  /** Called only by the authenticated, transactional categorization event consumer. */
+  async applyCategorySuggestion(expenseId: string, workspaceId: string, categoryId: string, expectedVersion: number): Promise<ExpenseDTO> {
+    const expense = await this.expenseRepository.findById(ExpenseId.fromString(expenseId), workspaceId);
+    if (!expense) throw new ExpenseNotFoundError(expenseId, workspaceId);
+    if (expense.version !== expectedVersion) throw new ExpenseConcurrencyConflictError(expenseId);
+    if (!expense.canBeEdited()) throw new InvalidExpenseStatusError(expenseId, expense.status, 'categorize');
+    const category = CategoryId.fromString(categoryId);
+    if (!expense.categoryId?.equals(category)) {
+      expense.updateCategory(category);
+      await this.expenseRepository.update(expense);
+    }
+    return Expense.toDTO(expense);
+  }
 
   async createExpense(params: {
     id?: string;

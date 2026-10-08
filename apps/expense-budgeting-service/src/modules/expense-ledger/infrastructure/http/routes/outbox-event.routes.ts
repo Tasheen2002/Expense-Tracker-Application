@@ -137,9 +137,17 @@ export async function registerExpenseOutboxEventRoutes(
       const isWorkflowCompleted = SUPPORTED_COMPLETED_EVENTS.has(normalizedType);
       const isWorkflowRejected = SUPPORTED_REJECTED_EVENTS.has(normalizedType);
       const isWorkflowCancelled = SUPPORTED_CANCELLED_EVENTS.has(normalizedType);
+      const isCategoryAcceptance = normalizedType === 'categorysuggestionaccepted';
+      const categoryAcceptance = isCategoryAcceptance ? z.object({
+        expenseId: z.string().uuid(), workspaceId: z.string().uuid(), categoryId: z.string().uuid(),
+        acceptedBy: z.string().uuid(), expenseVersion: z.number().int().positive(),
+      }).safeParse(payload) : null;
+      if (categoryAcceptance && !categoryAcceptance.success) {
+        return reply.code(400).send({ success: false, error: 'INVALID_PAYLOAD', message: 'Category acceptance requires scoped identifiers, actor and expense version' });
+      }
 
       const isKnownWorkflowEvent =
-        isWorkflowCompleted || isWorkflowRejected || isWorkflowCancelled;
+        isWorkflowCompleted || isWorkflowRejected || isWorkflowCancelled || isCategoryAcceptance;
 
       if (!isKnownWorkflowEvent) {
         return reply.code(400).send({
@@ -180,6 +188,10 @@ export async function registerExpenseOutboxEventRoutes(
       try {
         const result = await uow.execute<ProcessingResult>(async () => {
           const client = PrismaUnitOfWork.getClient(prisma);
+          if (isCategoryAcceptance) {
+            // Serialize duplicate deliveries before either can mutate the expense.
+            await client.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${eventId}, 0))`;
+          }
 
           // 2. Idempotency Check: check if event was already processed
           const existing = await client.processedEvent.findUnique({
@@ -202,7 +214,15 @@ export async function registerExpenseOutboxEventRoutes(
           }
 
           // 3. Synchronize Expense aggregate state based on Approval Policy events
-          if (isWorkflowCompleted) {
+          if (categoryAcceptance?.success) {
+            const accepted = categoryAcceptance.data;
+            await client.$queryRaw`SELECT id FROM expense_ledger.expenses WHERE id = ${accepted.expenseId}::uuid AND workspace_id = ${accepted.workspaceId}::uuid FOR UPDATE`;
+            // Keep category deletion/deactivation from racing its assignment.
+            await client.$queryRaw`SELECT id FROM expense_ledger.categories WHERE id = ${accepted.categoryId}::uuid AND workspace_id = ${accepted.workspaceId}::uuid FOR SHARE`;
+            const category = await client.category.findFirst({ where: { id: accepted.categoryId, workspaceId: accepted.workspaceId, isActive: true } });
+            if (!category) return { statusCode: 404, body: { success: false, error: 'CATEGORY_NOT_FOUND' } };
+            await expenseService.applyCategorySuggestion(accepted.expenseId, accepted.workspaceId, accepted.categoryId, accepted.expenseVersion);
+          } else if (isWorkflowCompleted) {
             const finalApproverId =
               payload?.finalApproverId ||
               payload?.approverId ||
@@ -401,6 +421,9 @@ export async function registerExpenseOutboxEventRoutes(
           err,
           `Failed to process outbox event ${eventType} in expense service`
         );
+        if (isCategoryAcceptance && err instanceof Error && 'statusCode' in err && typeof err.statusCode === 'number' && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ success: false, error: err.name, message: err.message });
+        }
         return reply.code(500).send({
           success: false,
           error: 'INTERNAL_SERVER_ERROR',

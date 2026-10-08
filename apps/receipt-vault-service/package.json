@@ -5,18 +5,21 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js --alias:@prisma/client=.prisma/client-receipt-vault --external:.prisma/client-receipt-vault --external:@fastify/* --external:fastify --external:fastify-plugin --external:dotenv --external:pino --external:pino-pretty --external:zod",
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "node ../../scripts/lint-backend.cjs receipt-vault-service"
   },
   "dependencies": {
     "@expense-tracker/core": "workspace:*",
     "@expense-tracker/contracts": "workspace:*",
     "@expense-tracker/outbox-kit": "workspace:*",
+    "@expense-tracker/correlation": "workspace:*",
+    "@expense-tracker/middleware": "workspace:*",
     "@fastify/cors": "^8.5.0",
     "@fastify/helmet": "^11.1.1",
     "@prisma/client": "^5.9.1",
@@ -33,6 +36,7 @@
     "@types/node": "^20.11.0",
     "prisma": "^5.9.1",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "esbuild": "^0.21.5"
   }
 }

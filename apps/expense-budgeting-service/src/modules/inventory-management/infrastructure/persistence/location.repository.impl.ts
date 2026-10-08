@@ -28,7 +28,10 @@ export class LocationRepositoryImpl
     try {
       await this.runInTransaction(async (tx) => {
         await tx.location.upsert({
-          where: { id: location.id.getValue(), workspaceId: location.workspaceId },
+          where: {
+            id: location.id.getValue(),
+            workspaceId: location.workspaceId,
+          },
           create: {
             id: location.id.getValue(),
             workspaceId: location.workspaceId,
@@ -50,18 +53,34 @@ export class LocationRepositoryImpl
         await this.dispatchEvents(location, tx);
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         const target = error.meta?.target;
-        const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
-        if (fields.some((field) => field === 'name' || field.includes('location_workspace_name'))) {
-          throw new LocationAlreadyExistsError(location.name, location.workspaceId);
+        const fields = Array.isArray(target)
+          ? target.map(String)
+          : [String(target ?? '')];
+        if (
+          fields.some(
+            (field) =>
+              field === 'name' || field.includes('location_workspace_name')
+          )
+        ) {
+          throw new LocationAlreadyExistsError(
+            location.name,
+            location.workspaceId
+          );
         }
       }
       throw error;
     }
   }
 
-  async findById(id: LocationId, workspaceId: string): Promise<Location | null> {
+  async findById(
+    id: LocationId,
+    workspaceId: string
+  ): Promise<Location | null> {
     const row = await this.prisma.location.findFirst({
       where: { id: id.getValue(), workspaceId },
     });
@@ -74,8 +93,13 @@ export class LocationRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Location>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.location,
-      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.location.findMany({
+          where: { workspaceId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.location.count({ where: { workspaceId } }),
       (record) => this.toDomain(record),
       options
     );
@@ -85,15 +109,27 @@ export class LocationRepositoryImpl
     try {
       await this.runInTransaction(async (tx) => {
         await tx.location.delete({
-          where: { id: location.id.getValue(), workspaceId: location.workspaceId },
+          where: {
+            id: location.id.getValue(),
+            workspaceId: location.workspaceId,
+          },
         });
         await this.dispatchEvents(location, tx);
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new LocationNotFoundError(location.id.getValue(), location.workspaceId);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new LocationNotFoundError(
+          location.id.getValue(),
+          location.workspaceId
+        );
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
         throw new LocationInUseError(location.id.getValue());
       }
       throw error;

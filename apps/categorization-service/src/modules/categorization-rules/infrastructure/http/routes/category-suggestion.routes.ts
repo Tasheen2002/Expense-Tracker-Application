@@ -1,7 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { CategorySuggestionController } from '../controllers/category-suggestion.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   validateBody,
   validateQuery,
@@ -9,6 +8,8 @@ import {
 import {
   createSuggestionSchema,
   suggestionQuerySchema,
+  executionQuerySchema,
+  executionQueryJsonSchema,
   workspaceParamsJsonSchema,
   suggestionParamsJsonSchema,
   expenseParamsJsonSchema,
@@ -16,7 +17,6 @@ import {
   suggestionQueryJsonSchema,
   suggestionEnvelopeJsonSchema,
   paginatedSuggestionsEnvelopeJsonSchema,
-  suggestionListEnvelopeJsonSchema,
   baseResponseEnvelopeJsonSchema,
 } from '../validation/categorization-rules.schema';
 import {
@@ -24,36 +24,24 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
 
 export async function categorySuggestionRoutes(
   fastify: FastifyInstance,
-  controller: CategorySuggestionController
+  controller: CategorySuggestionController,
+  limits = {
+    write: createRateLimiter({ ...RateLimitPresets.writeOperations, keyGenerator: userKeyGenerator }),
+    read: createRateLimiter({ ...RateLimitPresets.readOperations, keyGenerator: userKeyGenerator }),
+  }
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
+  const { write: writeRateLimiter, read: readRateLimiter } = limits;
 
   // Create category suggestion
   fastify.post(
     '/workspaces/:workspaceId/suggestions',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(createSuggestionSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -74,10 +62,9 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, readRateLimiter],
       preHandler: [
         validateQuery(suggestionQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
@@ -98,10 +85,7 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions/:suggestionId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, readRateLimiter],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
         description: 'Get a specific category suggestion',
@@ -120,17 +104,16 @@ export async function categorySuggestionRoutes(
   fastify.get(
     '/workspaces/:workspaceId/suggestions/expense/:expenseId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, readRateLimiter],
+      preHandler: [validateQuery(executionQuerySchema)],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
         description: 'Get category suggestions for a specific expense',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
+        querystring: executionQueryJsonSchema,
         response: {
-          200: suggestionListEnvelopeJsonSchema,
+          200: paginatedSuggestionsEnvelopeJsonSchema,
         },
       },
     },
@@ -142,11 +125,7 @@ export async function categorySuggestionRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/suggestions/:suggestionId/accept',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
         description: 'Accept a category suggestion',
@@ -165,11 +144,7 @@ export async function categorySuggestionRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/suggestions/:suggestionId/reject',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
         description: 'Reject a category suggestion',
@@ -188,11 +163,7 @@ export async function categorySuggestionRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/suggestions/:suggestionId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Categorization Rules - Suggestions'],
         description: 'Delete a category suggestion',

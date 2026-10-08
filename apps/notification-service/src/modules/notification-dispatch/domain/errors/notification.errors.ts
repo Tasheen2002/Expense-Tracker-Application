@@ -4,10 +4,10 @@ import { DomainError } from '@core/domain/domain-error';
 export class NotificationDomainError extends DomainError {
   constructor(
     message: string,
-    public readonly code: string,
+    code: string,
     statusCode: number = 400
   ) {
-    super(message, statusCode);
+    super(message, code, statusCode);
   }
 }
 
@@ -51,6 +51,32 @@ export class NotificationPreferenceNotFoundError extends NotificationDomainError
   }
 }
 
+export class NotificationRequestConflictError extends NotificationDomainError {
+  constructor() { super('Request ID has already been used for different notification input', 'NOTIFICATION_REQUEST_CONFLICT', 409); }
+}
+
+export class NotificationConcurrencyError extends NotificationDomainError {
+  constructor() { super('Notification aggregate changed since it was loaded; reload before saving', 'NOTIFICATION_CONCURRENT_UPDATE', 409); }
+}
+
+export class NotificationPreferenceAlreadyExistsError extends NotificationDomainError {
+  constructor() { super('Preferences already exist for this recipient and workspace', 'NOTIFICATION_PREFERENCE_ALREADY_EXISTS', 409); }
+}
+
+export class TemplateAccessDeniedError extends NotificationDomainError {
+  constructor() { super('Workspace administrator access is required; global template management is unavailable', 'TEMPLATE_ACCESS_DENIED', 403); }
+}
+
+export class TemplateAlreadyExistsError extends NotificationDomainError {
+  constructor() { super('A template already exists for this workspace, type and channel', 'TEMPLATE_ALREADY_EXISTS', 409); }
+}
+
+export class PreferenceNotFoundByIdError extends NotificationDomainError {
+  constructor(id: string) {
+    super(`Notification preferences with ID '${id}' not found`, 'PREFERENCE_NOT_FOUND', 404);
+  }
+}
+
 export class NotificationSendFailedError extends NotificationDomainError {
   constructor(channel: string, reason: string) {
     super(
@@ -68,6 +94,12 @@ export class InvalidNotificationDataError extends NotificationDomainError {
       'INVALID_NOTIFICATION_DATA',
       400
     );
+  }
+}
+
+export class InvalidNotificationStateError extends NotificationDomainError {
+  constructor(state: string, action: string) {
+    super(`Cannot ${action} notification in ${state} state`, 'INVALID_NOTIFICATION_STATE', 409);
   }
 }
 

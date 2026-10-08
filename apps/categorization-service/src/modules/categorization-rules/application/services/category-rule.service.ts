@@ -10,19 +10,29 @@ import {
   UnauthorizedRuleAccessError,
 } from "../../domain/errors/categorization-rules.errors";
 import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interface';
-import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
+import { IWorkspaceAccessPort } from "../ports/workspace-access.port";
+import { ICategorizationReferencePort } from '../ports/categorization-reference.port';
 
 export class CategoryRuleService {
   constructor(
     private readonly ruleRepository: ICategoryRuleRepository,
     private readonly workspaceAccess: IWorkspaceAccessPort,
+    private readonly references: Pick<ICategorizationReferencePort, 'ensureCategory'>,
   ) {}
 
   private async checkAccess(
     userId: UserId,
     workspaceId: WorkspaceId,
   ): Promise<boolean> {
-    return this.workspaceAccess.isAdminOrOwner(userId.getValue(), workspaceId.getValue());
+    return this.workspaceAccess.isAdminOrOwner(userId, workspaceId);
+  }
+
+  private async requireWriteAccess(workspaceId: string, userId: string, action: string): Promise<WorkspaceId> {
+    const workspace = WorkspaceId.fromString(workspaceId);
+    if (!await this.checkAccess(UserId.fromString(userId), workspace)) {
+      throw new UnauthorizedRuleAccessError(action);
+    }
+    return workspace;
   }
 
   async createRule(params: {
@@ -42,6 +52,7 @@ export class CategoryRuleService {
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("create");
     }
+    await this.references.ensureCategory({ workspaceId: params.workspaceId.getValue(), categoryId: params.targetCategoryId.getValue(), userId: params.createdBy.getValue() });
 
     // Check for duplicate name
     const existingRule = await this.ruleRepository.findByName(
@@ -63,7 +74,7 @@ export class CategoryRuleService {
       createdBy: params.createdBy,
     });
 
-    await this.ruleRepository.save(rule);
+    if (rule.domainEvents.length > 0) await this.ruleRepository.save(rule);
     return CategoryRule.toDTO(rule);
   }
 
@@ -77,25 +88,19 @@ export class CategoryRuleService {
     condition?: RuleCondition;
     targetCategoryId?: CategoryId;
   }): Promise<CategoryRuleDTO> {
+    const authorizedWorkspace = await this.requireWriteAccess(params.workspaceId, params.userId, 'update');
     const rule = await this.ruleRepository.findById(
       params.ruleId,
-      WorkspaceId.fromString(params.workspaceId),
+      authorizedWorkspace,
     );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(params.ruleId.getValue());
     }
-
-    const userIdVO = UserId.fromString(params.userId);
-    const isCreator = rule.createdBy.equals(userIdVO);
-    const isAdminOrOwner = await this.checkAccess(
-      userIdVO,
-      rule.workspaceId,
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedRuleAccessError("update");
+    if (params.targetCategoryId && !params.targetCategoryId.equals(rule.targetCategoryId)) {
+      await this.references.ensureCategory({ workspaceId: authorizedWorkspace.getValue(), categoryId: params.targetCategoryId.getValue(), userId: params.userId });
     }
+
 
     // Check for duplicate name if name is being changed
     if (params.name && params.name !== rule.name) {
@@ -109,17 +114,7 @@ export class CategoryRuleService {
       }
     }
 
-    if (params.name) {
-      rule.updateName(params.name);
-    }
-
-    if (params.description !== undefined) {
-      rule.updateDescription(params.description);
-    }
-
-    if (params.priority !== undefined) {
-      rule.updatePriority(params.priority);
-    }
+    rule.updateDetails({ name: params.name, description: params.description, priority: params.priority });
 
     if (params.condition) {
       rule.updateCondition(params.condition);
@@ -129,103 +124,71 @@ export class CategoryRuleService {
       rule.updateTargetCategory(params.targetCategoryId);
     }
 
-    await this.ruleRepository.save(rule);
+    if (rule.domainEvents.length > 0) await this.ruleRepository.save(rule);
     return CategoryRule.toDTO(rule);
   }
 
   async deleteRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<void> {
+    const authorizedWorkspace = await this.requireWriteAccess(workspaceId, userId, 'delete');
     const rule = await this.ruleRepository.findById(
       ruleId,
-      WorkspaceId.fromString(workspaceId),
+      authorizedWorkspace,
     );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.createdBy.equals(userIdVO);
-    const isAdminOrOwner = await this.checkAccess(
-      userIdVO,
-      rule.workspaceId,
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedRuleAccessError("delete");
-    }
 
     rule.markAsDeleted();
-    await this.ruleRepository.delete(ruleId);
+    await this.ruleRepository.delete(rule);
   }
 
   async activateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
+    const authorizedWorkspace = await this.requireWriteAccess(workspaceId, userId, 'activate');
     const rule = await this.ruleRepository.findById(
       ruleId,
-      WorkspaceId.fromString(workspaceId),
+      authorizedWorkspace,
     );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.createdBy.equals(userIdVO);
-    const isAdminOrOwner = await this.checkAccess(
-      userIdVO,
-      rule.workspaceId,
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedRuleAccessError("activate");
-    }
 
     rule.activate();
-    await this.ruleRepository.save(rule);
+    if (rule.domainEvents.length > 0) await this.ruleRepository.save(rule);
     return CategoryRule.toDTO(rule);
   }
 
   async deactivateRule(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
+    const authorizedWorkspace = await this.requireWriteAccess(workspaceId, userId, 'deactivate');
     const rule = await this.ruleRepository.findById(
       ruleId,
-      WorkspaceId.fromString(workspaceId),
+      authorizedWorkspace,
     );
 
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
     }
 
-    const userIdVO = UserId.fromString(userId);
-    const isCreator = rule.createdBy.equals(userIdVO);
-    const isAdminOrOwner = await this.checkAccess(
-      userIdVO,
-      rule.workspaceId,
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedRuleAccessError("deactivate");
-    }
 
     rule.deactivate();
-    await this.ruleRepository.save(rule);
+    if (rule.domainEvents.length > 0) await this.ruleRepository.save(rule);
     return CategoryRule.toDTO(rule);
   }
 
   async getRuleById(ruleId: RuleId, workspaceId: string, userId: string): Promise<CategoryRuleDTO> {
+    const workspace = WorkspaceId.fromString(workspaceId);
+    if (!await this.workspaceAccess.isMember(UserId.fromString(userId), workspace)) {
+      throw new UnauthorizedRuleAccessError('view');
+    }
     const rule = await this.ruleRepository.findById(
       ruleId,
-      WorkspaceId.fromString(workspaceId),
+      workspace,
     );
     if (!rule) {
       throw new CategoryRuleNotFoundError(ruleId.getValue());
-    }
-
-    const userIdVO = UserId.fromString(userId);
-    const hasAccess = await this.checkAccess(
-      userIdVO,
-      rule.workspaceId,
-    );
-    if (!hasAccess) {
-      throw new UnauthorizedRuleAccessError("view");
     }
 
     return CategoryRule.toDTO(rule);
@@ -236,7 +199,7 @@ export class CategoryRuleService {
     userId: string,
     options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<CategoryRuleDTO>> {
-    const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
+    const hasAccess = await this.workspaceAccess.isMember(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }
@@ -255,7 +218,7 @@ export class CategoryRuleService {
     userId: string,
     options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<CategoryRuleDTO>> {
-    const hasAccess = await this.checkAccess(UserId.fromString(userId), workspaceId);
+    const hasAccess = await this.workspaceAccess.isMember(UserId.fromString(userId), workspaceId);
     if (!hasAccess) {
       throw new UnauthorizedRuleAccessError("list");
     }

@@ -4,7 +4,6 @@ import { RuleId } from '../../domain/value-objects/rule-id';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
 import {  CategoryId  } from '@core/domain/value-objects';
 import {
-  RuleConditionType,
   isValidRuleConditionType,
 } from '../../domain/enums/rule-condition-type';
 import { InvalidRuleConditionError } from '../../domain/errors/categorization-rules.errors';
@@ -30,20 +29,25 @@ export class UpdateCategoryRuleHandler implements ICommandHandler<
   UpdateCategoryRuleCommand,
   CommandResult<CategoryRuleDTO>
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'updateRule'>) {}
 
   async handle(
     command: UpdateCategoryRuleCommand
   ): Promise<CommandResult<CategoryRuleDTO>> {
     let condition: RuleCondition | undefined;
-    if (command.conditionType && command.conditionValue) {
+    const hasType = command.conditionType !== undefined;
+    const hasValue = command.conditionValue !== undefined;
+    if (hasType !== hasValue) {
+      throw new InvalidRuleConditionError('Condition type and value must be provided together');
+    }
+    if (command.conditionType !== undefined && command.conditionValue !== undefined) {
       if (!isValidRuleConditionType(command.conditionType)) {
         throw new InvalidRuleConditionError(
           `Invalid condition type: ${command.conditionType}`
         );
       }
       condition = RuleCondition.create(
-        command.conditionType as RuleConditionType,
+        command.conditionType,
         command.conditionValue
       );
     }
@@ -56,7 +60,7 @@ export class UpdateCategoryRuleHandler implements ICommandHandler<
       description: command.description,
       priority: command.priority,
       condition,
-      targetCategoryId: command.targetCategoryId
+      targetCategoryId: command.targetCategoryId !== undefined
         ? CategoryId.fromString(command.targetCategoryId)
         : undefined,
     });

@@ -17,7 +17,7 @@ export class DeactivateCategoryRuleHandler implements ICommandHandler<
   DeactivateCategoryRuleCommand,
   CommandResult<CategoryRuleDTO>
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'deactivateRule'>) {}
 
   async handle(
     command: DeactivateCategoryRuleCommand

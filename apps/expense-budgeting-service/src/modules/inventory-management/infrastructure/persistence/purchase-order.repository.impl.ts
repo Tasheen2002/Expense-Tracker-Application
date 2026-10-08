@@ -15,7 +15,10 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
-import { PurchaseOrderNotFoundError, SupplierNotFoundError } from '../../domain/errors/inventory.errors';
+import {
+  PurchaseOrderNotFoundError,
+  SupplierNotFoundError,
+} from '../../domain/errors/inventory.errors';
 export class PurchaseOrderRepositoryImpl
   extends PrismaRepository<PurchaseOrder>
   implements IPurchaseOrderRepository
@@ -56,7 +59,10 @@ export class PurchaseOrderRepositoryImpl
         await this.dispatchEvents(po, tx);
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
         throw new SupplierNotFoundError(po.supplierId, po.workspaceId);
       }
       throw error;
@@ -79,8 +85,13 @@ export class PurchaseOrderRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<PurchaseOrder>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.purchaseOrder,
-      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.purchaseOrder.findMany({
+          where: { workspaceId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.purchaseOrder.count({ where: { workspaceId } }),
       (record) => this.toDomain(record),
       options
     );
@@ -101,8 +112,13 @@ export class PurchaseOrderRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.purchaseOrder,
-      { where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.purchaseOrder.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.purchaseOrder.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -126,8 +142,12 @@ export class PurchaseOrderRepositoryImpl
 
   // Item operations
   async saveItem(item: PurchaseOrderItem, workspaceId: string): Promise<void> {
-    const parent = await this.prisma.purchaseOrder.findFirst({ where: { id: item.purchaseOrderId, workspaceId }, select: { id: true } });
-    if (!parent) throw new PurchaseOrderNotFoundError(item.purchaseOrderId, workspaceId);
+    const parent = await this.prisma.purchaseOrder.findFirst({
+      where: { id: item.purchaseOrderId, workspaceId },
+      select: { id: true },
+    });
+    if (!parent)
+      throw new PurchaseOrderNotFoundError(item.purchaseOrderId, workspaceId);
     await this.prisma.purchaseOrderItem.upsert({
       where: {
         id: item.id.getValue(),
@@ -155,7 +175,10 @@ export class PurchaseOrderRepositoryImpl
     });
   }
 
-  async findItemById(id: PurchaseOrderItemId, workspaceId: string): Promise<PurchaseOrderItem | null> {
+  async findItemById(
+    id: PurchaseOrderItemId,
+    workspaceId: string
+  ): Promise<PurchaseOrderItem | null> {
     const row = await this.prisma.purchaseOrderItem.findFirst({
       where: { id: id.getValue(), purchaseOrder: { workspaceId } },
     });
@@ -163,7 +186,10 @@ export class PurchaseOrderRepositoryImpl
     return this.toItemDomain(row);
   }
 
-  async findItemsByPurchaseOrder(purchaseOrderId: string, workspaceId: string): Promise<PurchaseOrderItem[]> {
+  async findItemsByPurchaseOrder(
+    purchaseOrderId: string,
+    workspaceId: string
+  ): Promise<PurchaseOrderItem[]> {
     const rows = await this.prisma.purchaseOrderItem.findMany({
       where: { purchaseOrderId, purchaseOrder: { workspaceId } },
       orderBy: { createdAt: 'asc' },
@@ -171,7 +197,10 @@ export class PurchaseOrderRepositoryImpl
     return rows.map((row) => this.toItemDomain(row));
   }
 
-  async deleteItem(id: PurchaseOrderItemId, workspaceId: string): Promise<void> {
+  async deleteItem(
+    id: PurchaseOrderItemId,
+    workspaceId: string
+  ): Promise<void> {
     await this.prisma.purchaseOrderItem.deleteMany({
       where: { id: id.getValue(), purchaseOrder: { workspaceId } },
     });

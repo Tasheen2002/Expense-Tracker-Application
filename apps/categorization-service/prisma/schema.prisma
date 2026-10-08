@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["categorization_rules", "identity_workspace"]
+  schemas  = ["categorization_rules"]
 }
 
 model CategoryRule {
@@ -16,6 +16,7 @@ model CategoryRule {
   name             String            @db.VarChar(100)
   description      String?           @db.VarChar(500)
   priority         Int               @default(0)
+  version          Int               @default(1)
   isActive         Boolean           @default(true) @map("is_active")
   conditionType    RuleConditionType @map("condition_type")
   conditionValue   String            @map("condition_value") @db.VarChar(255)
@@ -23,7 +24,13 @@ model CategoryRule {
   createdBy        String            @map("created_by") @db.Uuid
   createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt        DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  executions       RuleExecution[]
 
+  @@unique([workspaceId, name])
+  @@unique([id, workspaceId])
+  @@index([workspaceId, deletedAt, priority(sort: Desc), createdAt])
+  @@index([workspaceId, deletedAt, isActive, priority(sort: Desc), createdAt])
   @@map("category_rules")
   @@schema("categorization_rules")
 }
@@ -35,7 +42,11 @@ model RuleExecution {
   workspaceId       String   @map("workspace_id") @db.Uuid
   appliedCategoryId String   @map("applied_category_id") @db.Uuid
   executedAt        DateTime @default(now()) @map("executed_at") @db.Timestamptz(6)
+  rule              CategoryRule @relation(fields: [ruleId, workspaceId], references: [id, workspaceId], onDelete: Restrict, onUpdate: Restrict)
 
+  @@index([workspaceId, executedAt(sort: Desc)])
+  @@index([workspaceId, expenseId, executedAt(sort: Desc)])
+  @@index([ruleId, executedAt(sort: Desc)])
   @@map("rule_executions")
   @@schema("categorization_rules")
 }
@@ -51,6 +62,9 @@ model CategorySuggestion {
   createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   respondedAt         DateTime? @map("responded_at") @db.Timestamptz(6)
 
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, expenseId, createdAt(sort: Desc)])
+  @@index([workspaceId, isAccepted, createdAt(sort: Desc)])
   @@map("category_suggestions")
   @@schema("categorization_rules")
 }
@@ -66,6 +80,10 @@ model OutboxEvent {
   processedAt   DateTime?         @map("processed_at")
   retryCount    Int               @default(0) @map("retry_count")
   error         String?
+  deliveredTo   String[]          @default([]) @map("delivered_to")
+  leaseExpiresAt DateTime?        @map("lease_expires_at")
+  leaseToken    String?           @map("lease_token")
+  nextAttemptAt DateTime          @default(now()) @map("next_attempt_at")
 
   @@index([status, createdAt])
   @@index([aggregateId])
@@ -93,17 +111,4 @@ enum RuleConditionType {
   PAYMENT_METHOD_EQUALS
 
   @@schema("categorization_rules")
-}
-
-model WorkspaceMembership {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  workspaceId String   @map("workspace_id")
-  role        String
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@unique([userId, workspaceId])
-  @@map("workspace_membership")
-  @@schema("identity_workspace")
 }

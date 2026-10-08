@@ -2,11 +2,12 @@ import { InvalidConfidenceScoreError } from "../errors/categorization-rules.erro
 
 export class ConfidenceScore {
   private constructor(private readonly value: number) {
-    if (value < 0 || value > 1) {
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
       throw new InvalidConfidenceScoreError(
         `Confidence score must be between 0 and 1, got ${value}`,
       );
     }
+    Object.freeze(this);
   }
 
   static create(value: number): ConfidenceScore {
@@ -47,8 +48,8 @@ export class ConfidenceScore {
     return "Low";
   }
 
-  equals(other: ConfidenceScore): boolean {
-    return Math.abs(this.value - other.value) < 0.001;
+  equals(other: ConfidenceScore | null | undefined): boolean {
+    return other instanceof ConfidenceScore && this.value === other.value;
   }
 
   toString(): string {

@@ -763,7 +763,7 @@ describe('Policy Controls Domain Model & Invariants', () => {
       expect(violation.resolvedAt).toBeDefined();
       expect(violation.resolutionNotes).toBeDefined();
 
-      viration_reopen: {
+      {
         violation.clearDomainEvents();
         violation.reopen('Updated violation details', 150);
 

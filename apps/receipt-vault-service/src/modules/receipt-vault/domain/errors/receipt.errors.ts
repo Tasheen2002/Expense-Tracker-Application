@@ -9,7 +9,7 @@ export class ReceiptVaultError extends DomainError {
     public readonly code: string,
     statusCode: number = 400
   ) {
-    super(message, statusCode);
+    super(message, code, statusCode);
   }
 }
 
@@ -150,7 +150,7 @@ export class FileSizeExceededError extends ReceiptVaultError {
  * Invalid MIME type error
  */
 export class InvalidMimeTypeError extends ReceiptVaultError {
-  constructor(mimeType: string, allowedTypes: string[]) {
+  constructor(mimeType: string, allowedTypes: readonly string[]) {
     super(
       `MIME type "${mimeType}" is not allowed. Allowed types: ${allowedTypes.join(', ')}`,
       'INVALID_MIME_TYPE',
@@ -191,6 +191,24 @@ export class ReceiptValidationError extends ReceiptVaultError {
 export class DeletedReceiptError extends ReceiptVaultError {
   constructor(receiptId: string) {
     super(`Receipt ${receiptId} has been deleted`, 'DELETED_RECEIPT', 410);
+  }
+}
+
+export class ReceiptWriteConflictError extends ReceiptVaultError {
+  constructor(receiptId: string) {
+    super(`Receipt ${receiptId} changed or was deleted; reload before retrying`, 'RECEIPT_WRITE_CONFLICT', 409);
+  }
+}
+
+export class ReceiptMetadataWriteConflictError extends ReceiptVaultError {
+  constructor(id: string) {
+    super(`Receipt metadata ${id} changed or was deleted; reload before retrying`, 'RECEIPT_METADATA_WRITE_CONFLICT', 409);
+  }
+}
+
+export class ReceiptTagWriteConflictError extends ReceiptVaultError {
+  constructor(id: string) {
+    super(`Receipt tag ${id} changed or was deleted; reload before retrying`, 'RECEIPT_TAG_WRITE_CONFLICT', 409);
   }
 }
 

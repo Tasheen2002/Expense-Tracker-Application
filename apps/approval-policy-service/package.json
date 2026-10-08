@@ -2,17 +2,17 @@
   "name": "@expense-tracker/approval-policy-service",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --external:@prisma/client --external:.prisma/* --external:fastify --external:fastify-plugin --external:dotenv --external:@fastify/* && prisma generate",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js --external:@prisma/client --external:.prisma/* --external:fastify --external:fastify-plugin --external:dotenv --external:@fastify/* && prisma generate",
     "type-check": "tsc --noEmit",
     "generate": "prisma generate",
     "prisma:generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "node ../../scripts/lint-backend.cjs approval-policy-service"
   },
   "dependencies": {
     "@expense-tracker/contracts": "workspace:*",

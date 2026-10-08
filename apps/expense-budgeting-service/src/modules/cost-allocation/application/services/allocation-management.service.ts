@@ -50,14 +50,7 @@ export class AllocationManagementService {
   }): Promise<DepartmentDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("create department");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'create department');
 
     const code = DepartmentCode.create(params.code).value;
     const existing = await this.departmentRepository.findByCode(
@@ -132,14 +125,7 @@ export class AllocationManagementService {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
     const departmentId = DepartmentId.fromString(params.id);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("update department");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'update department');
 
     const department = await this.departmentRepository.findById(departmentId, workspaceId);
     if (!department) {
@@ -185,9 +171,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<void> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("delete department");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'delete department');
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -206,9 +190,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<DepartmentDTO> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("activate department");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'activate department');
     const department = await this.departmentRepository.findById(
       DepartmentId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -235,14 +217,7 @@ export class AllocationManagementService {
   }): Promise<CostCenterDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("create cost center");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'create cost center');
 
     const code = CostCenterCode.create(params.code).value;
     const existing = await this.costCenterRepository.findByCode(
@@ -305,14 +280,7 @@ export class AllocationManagementService {
   }): Promise<CostCenterDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("update cost center");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'update cost center');
     const costCenterId = CostCenterId.fromString(params.id);
 
     const costCenter = await this.costCenterRepository.findById(costCenterId, workspaceId);
@@ -346,9 +314,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<void> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("delete cost center");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'delete cost center');
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -367,9 +333,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<CostCenterDTO> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("activate cost center");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'activate cost center');
     const costCenter = await this.costCenterRepository.findById(
       CostCenterId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -400,14 +364,7 @@ export class AllocationManagementService {
   }): Promise<ProjectDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("create project");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'create project');
 
     const code = ProjectCode.create(params.code).value;
     const existing = await this.projectRepository.findByCode(
@@ -480,14 +437,7 @@ export class AllocationManagementService {
   }): Promise<ProjectDTO> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
 
-    if (
-      !(await this.workspaceAccess.isAdminOrOwner(
-        params.actorId,
-        params.workspaceId,
-      ))
-    ) {
-      throw new UnauthorizedAllocationAccessError("update project");
-    }
+    await this.authorizeWrite(params.actorId, params.workspaceId, 'update project');
     const projectId = ProjectId.fromString(params.id);
 
     const project = await this.projectRepository.findById(projectId, workspaceId);
@@ -536,9 +486,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<void> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("delete project");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'delete project');
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -557,9 +505,7 @@ export class AllocationManagementService {
     workspaceId: string,
     actorId: string,
   ): Promise<ProjectDTO> {
-    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
-      throw new UnauthorizedAllocationAccessError("activate project");
-    }
+    await this.authorizeWrite(actorId, workspaceId, 'activate project');
     const project = await this.projectRepository.findById(
       ProjectId.fromString(id),
       WorkspaceId.fromString(workspaceId),
@@ -571,6 +517,12 @@ export class AllocationManagementService {
     project.activate();
     await this.projectRepository.save(project);
     return Project.toDTO(project);
+  }
+
+  private async authorizeWrite(actorId: string, workspaceId: string, action: string): Promise<void> {
+    if (!(await this.workspaceAccess.isAdminOrOwner(actorId, workspaceId))) {
+      throw new UnauthorizedAllocationAccessError(action);
+    }
   }
 
   private async authorizeRead(actorId: string, workspaceId: string): Promise<void> {

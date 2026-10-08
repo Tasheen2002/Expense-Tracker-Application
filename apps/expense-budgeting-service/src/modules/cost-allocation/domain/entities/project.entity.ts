@@ -54,7 +54,8 @@ export class ProjectCreatedEvent extends DomainEvent {
 export class ProjectUpdatedEvent extends DomainEvent {
   constructor(
     public readonly projectId: string,
-    public readonly changes: Record<string, unknown>
+    public readonly changes: Record<string, unknown>,
+    public readonly workspaceId: string
   ) {
     super(projectId, 'Project');
   }
@@ -66,13 +67,14 @@ export class ProjectUpdatedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> {
     return {
       projectId: this.projectId,
+      workspaceId: this.workspaceId,
       changes: this.changes,
     };
   }
 }
 
 export class ProjectActivatedEvent extends DomainEvent {
-  constructor(public readonly projectId: string) {
+  constructor(public readonly projectId: string, public readonly workspaceId: string) {
     super(projectId, 'Project');
   }
 
@@ -81,12 +83,12 @@ export class ProjectActivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { projectId: this.projectId };
+    return { projectId: this.projectId, workspaceId: this.workspaceId };
   }
 }
 
 export class ProjectDeactivatedEvent extends DomainEvent {
-  constructor(public readonly projectId: string) {
+  constructor(public readonly projectId: string, public readonly workspaceId: string) {
     super(projectId, 'Project');
   }
 
@@ -95,7 +97,7 @@ export class ProjectDeactivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { projectId: this.projectId };
+    return { projectId: this.projectId, workspaceId: this.workspaceId };
   }
 }
 
@@ -266,7 +268,7 @@ export class Project extends AggregateRoot {
     }
     if (Object.keys(changes).length > 0) {
       this.props.updatedAt = new Date();
-      this.addDomainEvent(new ProjectUpdatedEvent(this.props.id.getValue(), changes));
+      this.addDomainEvent(new ProjectUpdatedEvent(this.props.id.getValue(), changes, this.props.workspaceId.getValue()));
     }
   }
 
@@ -287,14 +289,14 @@ export class Project extends AggregateRoot {
     if (!this.props.isActive) return;
     this.props.isActive = false;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new ProjectDeactivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new ProjectDeactivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   activate(): void {
     if (this.props.isActive) return;
     this.props.isActive = true;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new ProjectActivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new ProjectActivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   static toDTO(project: Project): ProjectDTO {

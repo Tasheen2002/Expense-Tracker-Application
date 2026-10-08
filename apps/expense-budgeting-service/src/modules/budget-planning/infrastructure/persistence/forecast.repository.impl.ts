@@ -1,14 +1,14 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { Forecast } from "../../domain/entities/forecast.entity";
-import { IForecastRepository } from "../../domain/repositories/forecast.repository";
-import { ForecastId } from "../../domain/value-objects/forecast-id";
-import { PlanId } from "../../domain/value-objects/plan-id";
-import { ForecastType } from "../../domain/enums/forecast-type.enum";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Forecast } from '../../domain/entities/forecast.entity';
+import { IForecastRepository } from '../../domain/repositories/forecast.repository';
+import { ForecastId } from '../../domain/value-objects/forecast-id';
+import { PlanId } from '../../domain/value-objects/plan-id';
+import { ForecastType } from '../../domain/enums/forecast-type.enum';
 import {
   BudgetPlanNotFoundError,
   ForecastNotFoundError,
   ValidationError,
-} from "../../domain/errors/budget-planning.errors";
+} from '../../domain/errors/budget-planning.errors';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -16,9 +16,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
-export class ForecastRepositoryImpl
-  implements IForecastRepository
-{
+export class ForecastRepositoryImpl implements IForecastRepository {
   protected readonly prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
@@ -50,10 +48,14 @@ export class ForecastRepositoryImpl
 
     if (existing) {
       if (existing.workspaceId !== wsId) {
-        throw new ValidationError("Cannot update forecast belonging to another workspace");
+        throw new ValidationError(
+          'Cannot update forecast belonging to another workspace'
+        );
       }
       if (existing.planId !== planId) {
-        throw new ValidationError("Cannot reassign forecast to a different budget plan");
+        throw new ValidationError(
+          'Cannot reassign forecast to a different budget plan'
+        );
       }
 
       const updateResult = await this.client.forecast.updateMany({
@@ -85,7 +87,10 @@ export class ForecastRepositoryImpl
     }
   }
 
-  async findById(id: ForecastId, workspaceId: string): Promise<Forecast | null> {
+  async findById(
+    id: ForecastId,
+    workspaceId: string
+  ): Promise<Forecast | null> {
     const raw = await this.client.forecast.findFirst({
       where: { id: id.getValue(), workspaceId },
     });
@@ -107,7 +112,7 @@ export class ForecastRepositoryImpl
   async findByPlanId(
     planId: PlanId,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Forecast>> {
     const where: Prisma.ForecastWhereInput = {
       planId: planId.getValue(),
@@ -115,8 +120,13 @@ export class ForecastRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.client.forecast,
-      { where, orderBy: { createdAt: "desc" } },
+      (page) =>
+        this.client.forecast.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.client.forecast.count({ where }),
       (raw) =>
         Forecast.fromPersistence({
           id: raw.id,
@@ -128,13 +138,15 @@ export class ForecastRepositoryImpl
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
         }),
-      options,
+      options
     );
   }
 
   async delete(id: ForecastId, workspaceId: string): Promise<void> {
     if (!workspaceId || workspaceId.trim() === '') {
-      throw new ValidationError('Workspace ID is required for deleting a forecast');
+      throw new ValidationError(
+        'Workspace ID is required for deleting a forecast'
+      );
     }
 
     const result = await this.client.forecast.deleteMany({
@@ -147,7 +159,9 @@ export class ForecastRepositoryImpl
 
   async deleteWithItems(id: ForecastId, workspaceId: string): Promise<void> {
     if (!workspaceId || workspaceId.trim() === '') {
-      throw new ValidationError('Workspace ID is required for deleting a forecast');
+      throw new ValidationError(
+        'Workspace ID is required for deleting a forecast'
+      );
     }
     const client = this.client;
     const forecastIdStr = id.getValue();
@@ -177,7 +191,11 @@ export class ForecastRepositoryImpl
     }
   }
 
-  async findByName(planId: PlanId, name: string, workspaceId: string): Promise<Forecast | null> {
+  async findByName(
+    planId: PlanId,
+    name: string,
+    workspaceId: string
+  ): Promise<Forecast | null> {
     const raw = await this.client.forecast.findFirst({
       where: {
         planId: planId.getValue(),

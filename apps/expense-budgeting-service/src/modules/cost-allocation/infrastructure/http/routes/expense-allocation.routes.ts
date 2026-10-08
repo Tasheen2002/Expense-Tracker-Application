@@ -18,14 +18,13 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
-
 export async function expenseAllocationRoutes(
   fastify: FastifyInstance,
-  controller: ExpenseAllocationController
+  controller: ExpenseAllocationController,
+  writeRateLimiter = createRateLimiter({
+    ...RateLimitPresets.writeOperations,
+    keyGenerator: userKeyGenerator,
+  })
 ) {
   // Allocate expense to departments/cost centers/projects
   fastify.post(

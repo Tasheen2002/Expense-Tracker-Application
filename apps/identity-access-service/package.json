@@ -2,11 +2,10 @@
   "name": "@expense-tracker/identity-access-service",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js --external:@prisma/client --external:bcryptjs --external:fastify --external:fastify-plugin --external:jsonwebtoken --external:pino --external:pino-pretty --external:uuid --external:zod --external:dotenv --external:@fastify/* && prisma generate",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.mjs --external:@prisma/client --external:bcryptjs --external:fastify --external:fastify-plugin --external:jsonwebtoken --external:pino --external:pino-pretty --external:uuid --external:zod --external:dotenv --external:@fastify/* && prisma generate",
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -14,7 +13,8 @@
     "generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "node ../../scripts/lint-backend.cjs identity-access-service"
   },
   "dependencies": {
     "@expense-tracker/core": "workspace:*",

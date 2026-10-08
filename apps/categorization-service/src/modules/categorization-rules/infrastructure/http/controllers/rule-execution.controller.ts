@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   EvaluateRulesHandler,
@@ -23,7 +23,7 @@ export class RuleExecutionController {
   // ==================== READS / QUERIES ====================
 
   async getExecutionsByExpense(
-    request: AuthenticatedRequest<{ Params: ExpenseParams }>,
+    request: AuthenticatedRequest<{ Params: ExpenseParams; Querystring: ExecutionQuery }>,
     reply: FastifyReply
   ) {
     try {
@@ -31,10 +31,16 @@ export class RuleExecutionController {
 
       const executions = await this.getExecutionsByExpenseHandler.handle({
         workspaceId,
+        userId: request.user.userId,
         expenseId,
+        limit: request.query.limit,
+        offset: request.query.offset,
       });
 
-      return ResponseHelper.ok(reply, 'Executions retrieved successfully', executions);
+      return ResponseHelper.ok(reply, 'Executions retrieved successfully', {
+        items: executions.items,
+        pagination: { total: executions.total, limit: executions.limit, offset: executions.offset, hasMore: executions.hasMore },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -53,6 +59,7 @@ export class RuleExecutionController {
 
       const result = await this.getExecutionsByWorkspaceHandler.handle({
         workspaceId,
+        userId: request.user.userId,
         limit,
         offset,
       });
@@ -89,6 +96,7 @@ export class RuleExecutionController {
 
       const result = await this.evaluateRulesHandler.handle({
         workspaceId,
+        userId: request.user.userId,
         expenseId: request.body.expenseId,
         expenseData: request.body.expenseData,
       });

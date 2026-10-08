@@ -4,11 +4,11 @@ import {
 } from '../../../../shared/ports/workspace-authorization.port';
 import {
   OperationService as SharedOperationService,
-  AccessRequirement,
+  type AccessRequirement,
 } from '../../../../shared/services/operation.service';
 import { UnauthorizedWorkflowViewError } from '../../domain/errors/approval-workflow.errors';
 
-export { AccessRequirement };
+export type { AccessRequirement };
 
 /**
  * OperationService enforces authenticated actor authorization at the application boundary,
@@ -73,4 +73,3 @@ export class OperationService extends SharedOperationService {
     throw new UnauthorizedWorkflowViewError(actorId, workflow.expenseId);
   }
 }
-

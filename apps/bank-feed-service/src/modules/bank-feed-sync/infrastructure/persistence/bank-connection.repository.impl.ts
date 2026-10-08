@@ -1,10 +1,13 @@
 import { PrismaClient, Prisma } from '../../../../prisma-client';
-import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
+import { WorkspaceId, UserId } from '@core/domain/value-objects';
 import { BankConnection } from '../../domain/entities/bank-connection.entity';
 import { BankConnectionId } from '../../domain/value-objects/bank-connection-id';
 import { IBankConnectionRepository } from '../../domain/repositories/bank-connection.repository';
 import { ConnectionStatus } from '../../domain/enums/connection-status.enum';
-import { BankConnectionAlreadyExistsError, BankFeedSyncDomainError } from '../../domain/errors/bank-feed-sync.errors';
+import {
+  BankConnectionAlreadyExistsError,
+  BankFeedSyncDomainError,
+} from '../../domain/errors/bank-feed-sync.errors';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -22,12 +25,16 @@ export class PrismaBankConnectionRepository
 
   constructor(prisma: PrismaClient, eventBus: IEventBus) {
     super(prisma, eventBus);
-    this.tokenCipher = new BankTokenCipher(process.env.BANK_FEED_TOKEN_ENCRYPTION_KEY);
+    this.tokenCipher = new BankTokenCipher(
+      process.env.BANK_FEED_TOKEN_ENCRYPTION_KEY
+    );
   }
 
   async save(connection: BankConnection): Promise<void> {
     const data = this.toPersistence(connection);
-    const nextVersion = connection.isPersisted ? connection.version + 1 : connection.version;
+    const nextVersion = connection.isPersisted
+      ? connection.version + 1
+      : connection.version;
 
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -38,7 +45,11 @@ export class PrismaBankConnectionRepository
             data: { ...mutable, version: { increment: 1 } },
           });
           if (result.count !== 1) {
-            throw new BankFeedSyncDomainError('Bank connection changed concurrently', 'CONCURRENT_CONNECTION_MODIFICATION', 409);
+            throw new BankFeedSyncDomainError(
+              'Bank connection changed concurrently',
+              'CONCURRENT_CONNECTION_MODIFICATION',
+              409
+            );
           }
         } else {
           await tx.bankConnection.create({ data });
@@ -48,8 +59,14 @@ export class PrismaBankConnectionRepository
       this.clearPersistedEvents([connection]);
       connection.markPersisted(nextVersion);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new BankConnectionAlreadyExistsError(connection.institutionId, connection.accountId);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new BankConnectionAlreadyExistsError(
+          connection.institutionId,
+          connection.accountId
+        );
       }
       throw error;
     }
@@ -64,7 +81,11 @@ export class PrismaBankConnectionRepository
           status: ConnectionStatus.CONNECTED,
           version: connection.version,
         },
-        data: { lastSyncAt: connection.lastSyncAt, updatedAt: connection.updatedAt, version: { increment: 1 } },
+        data: {
+          lastSyncAt: connection.lastSyncAt,
+          updatedAt: connection.updatedAt,
+          version: { increment: 1 },
+        },
       });
       if (result.count) await this.persistOutboxEvents(tx, [connection]);
       return result.count > 0;
@@ -83,7 +104,12 @@ export class PrismaBankConnectionRepository
           status: ConnectionStatus.CONNECTED,
           version: connection.version,
         },
-        data: { status: ConnectionStatus.ERROR, errorMessage: connection.errorMessage, updatedAt: connection.updatedAt, version: { increment: 1 } },
+        data: {
+          status: ConnectionStatus.ERROR,
+          errorMessage: connection.errorMessage,
+          updatedAt: connection.updatedAt,
+          version: { increment: 1 },
+        },
       });
       if (result.count) await this.persistOutboxEvents(tx, [connection]);
       return result.count > 0;
@@ -134,8 +160,13 @@ export class PrismaBankConnectionRepository
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankConnection,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.bankConnection.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.bankConnection.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -153,8 +184,13 @@ export class PrismaBankConnectionRepository
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.bankConnection,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.bankConnection.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.bankConnection.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -203,7 +239,11 @@ export class PrismaBankConnectionRepository
       accountType: record.accountType,
       accountMask: record.accountMask ?? undefined,
       currency: record.currency,
-      accessToken: this.tokenCipher.decrypt(record.accessToken, record.id, record.workspaceId),
+      accessToken: this.tokenCipher.decrypt(
+        record.accessToken,
+        record.id,
+        record.workspaceId
+      ),
       status: record.status as ConnectionStatus,
       lastSyncAt: record.lastSyncAt ?? undefined,
       tokenExpiresAt: record.tokenExpiresAt ?? undefined,

@@ -4,3 +4,4 @@ export * from './get-receipt.query';
 export * from './get-receipts-by-expense.query';
 export * from './list-receipts.query';
 export * from './list-tags.query';
+export * from './download-receipt.query';

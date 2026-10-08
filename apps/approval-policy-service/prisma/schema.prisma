@@ -26,6 +26,7 @@ model ApprovalChain {
   updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   workflows        ExpenseWorkflow[]
 
+  @@unique([workspaceId, id])
   @@index([workspaceId])
   @@index([isActive])
   @@map("approval_chains")
@@ -45,7 +46,7 @@ model ExpenseWorkflow {
   updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   completedAt       DateTime?      @map("completed_at") @db.Timestamptz(6)
   steps             ApprovalStep[]
-  chain             ApprovalChain  @relation(fields: [chainId], references: [id])
+  chain             ApprovalChain  @relation(fields: [workspaceId, chainId], references: [workspaceId, id])
 
   @@index([expenseId])
   @@index([workspaceId])
@@ -95,6 +96,7 @@ model ExpensePolicy {
   violations    PolicyViolation[]
 
   @@unique([workspaceId, name])
+  @@unique([workspaceId, id])
   @@index([workspaceId])
   @@index([isActive])
   @@index([policyType])
@@ -123,7 +125,7 @@ model PolicyViolation {
   overriddenBy     String?           @map("overridden_by") @db.Uuid
   overrideReason   String?           @map("override_reason")
   updatedAt        DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  policy           ExpensePolicy     @relation(fields: [policyId], references: [id])
+  policy           ExpensePolicy     @relation(fields: [workspaceId, policyId], references: [workspaceId, id])
 
   @@index([workspaceId])
   @@index([policyId])
@@ -154,7 +156,7 @@ model PolicyExemption {
   validUntil      DateTime        @map("valid_until") @db.Timestamptz(6)
   scope           Json?
   updatedAt       DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  policy          ExpensePolicy   @relation(fields: [policyId], references: [id])
+  policy          ExpensePolicy   @relation(fields: [workspaceId, policyId], references: [workspaceId, id])
 
   @@index([workspaceId])
   @@index([policyId])

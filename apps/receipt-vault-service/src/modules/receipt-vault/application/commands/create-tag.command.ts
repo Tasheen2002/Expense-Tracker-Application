@@ -8,6 +8,7 @@ import {
 
 export interface CreateTagCommand extends ICommand {
   readonly workspaceId: string;
+  readonly userId: string;
   readonly name: string;
   readonly color?: string;
   readonly description?: string;

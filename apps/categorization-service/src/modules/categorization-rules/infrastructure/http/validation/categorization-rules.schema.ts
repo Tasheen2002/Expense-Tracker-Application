@@ -35,27 +35,27 @@ export const conditionTypeSchema = z.enum([
 ]);
 
 export const createRuleSchema = z.object({
-  name: z.string().min(1).max(100),
+  name: z.string().trim().min(1).max(100),
   description: z.string().max(500).optional(),
-  priority: z.number().int().min(0).optional(),
+  priority: z.number().int().min(0).max(2147483647).optional(),
   conditionType: conditionTypeSchema,
-  conditionValue: z.string().min(1).max(255),
+  conditionValue: z.string().trim().min(1).max(255),
   targetCategoryId: z.string().uuid(),
 });
 
 export const updateRuleSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z.string().trim().min(1).max(100).optional(),
   description: z.string().max(500).nullable().optional(),
-  priority: z.number().int().min(0).optional(),
+  priority: z.number().int().min(0).max(2147483647).optional(),
   conditionType: conditionTypeSchema.optional(),
-  conditionValue: z.string().min(1).max(255).optional(),
+  conditionValue: z.string().trim().min(1).max(255).optional(),
   targetCategoryId: z.string().uuid().optional(),
 });
 
 export const ruleQuerySchema = z.object({
   activeOnly: z.enum(['true', 'false']).optional().transform(v => v === 'true'),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
-  offset: z.coerce.number().int().min(0).optional().default(0),
+  offset: z.coerce.number().int().min(0).max(2147483647).optional().default(0),
 });
 
 // ==================== SUGGESTION SCHEMAS ====================
@@ -70,7 +70,7 @@ export const createSuggestionSchema = z.object({
 export const suggestionQuerySchema = z.object({
   pendingOnly: z.enum(['true', 'false']).optional().transform(v => v === 'true'),
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
-  offset: z.coerce.number().int().min(0).optional().default(0),
+  offset: z.coerce.number().int().min(0).max(2147483647).optional().default(0),
 });
 
 // ==================== EXECUTION SCHEMAS ====================
@@ -87,7 +87,7 @@ export const evaluateRulesSchema = z.object({
 
 export const executionQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(10),
-  offset: z.coerce.number().int().min(0).optional().default(0),
+  offset: z.coerce.number().int().min(0).max(2147483647).optional().default(0),
 });
 
 // ==================== RESPONSE SCHEMAS ====================
@@ -125,18 +125,16 @@ export const ruleExecutionResponseSchema = z.object({
   id: z.string().uuid(),
   ruleId: z.string().uuid(),
   expenseId: z.string().uuid(),
+  workspaceId: z.string().uuid(),
   appliedCategoryId: z.string().uuid(),
   executedAt: z.coerce.string(),
 });
 
 export const ruleEvaluationResponseSchema = z.object({
-  appliedRule: z.object({
-    id: z.string().uuid(),
-    name: z.string(),
-    priority: z.number().int(),
-  }).nullable(),
+  appliedRule: categoryRuleResponseSchema.nullable(),
   suggestedCategoryId: z.string().uuid().nullable(),
   execution: ruleExecutionResponseSchema.nullable(),
+  suggestion: categorySuggestionResponseSchema.nullable(),
 });
 
 // ==================== INFERRED TYPES ====================
@@ -165,6 +163,15 @@ export const expenseParamsJsonSchema = toJsonSchema(expenseParamsSchema);
 
 export const createRuleBodyJsonSchema = toJsonSchema(createRuleSchema);
 export const updateRuleBodyJsonSchema = toJsonSchema(updateRuleSchema);
+// A constrained nullable string becomes anyOf in the generated schema. AJV
+// tries the string branch first and coerces null to ''. Use a type union so
+// valid null values survive Fastify validation and reach the command unchanged.
+if ('properties' in updateRuleBodyJsonSchema &&
+    typeof updateRuleBodyJsonSchema.properties === 'object' && updateRuleBodyJsonSchema.properties !== null) {
+  Object.assign(updateRuleBodyJsonSchema.properties, {
+    description: { type: ['string', 'null'], maxLength: 500 },
+  });
+}
 export const ruleQueryJsonSchema = toJsonSchema(ruleQuerySchema);
 
 export const createSuggestionBodyJsonSchema = toJsonSchema(createSuggestionSchema);

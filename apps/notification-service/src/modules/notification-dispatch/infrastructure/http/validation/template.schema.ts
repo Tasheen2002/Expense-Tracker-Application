@@ -1,54 +1,54 @@
 import { z } from 'zod';
 import { toJsonSchema } from './validator';
+import { NotificationType, NotificationChannel } from '../../../domain/enums';
+import { domainIdSchema, nonblankText } from './common.schema';
+import {
+  TEMPLATE_NAME_MIN_LENGTH, TEMPLATE_NAME_MAX_LENGTH,
+  TEMPLATE_SUBJECT_MIN_LENGTH, TEMPLATE_SUBJECT_MAX_LENGTH,
+  TEMPLATE_BODY_MIN_LENGTH, TEMPLATE_BODY_MAX_LENGTH,
+} from '../../../domain/constants';
 
 // ==================== COMMON ENUMS ====================
 
-export const TemplateTypeSchema = z.enum([
-  'EXPENSE_APPROVED',
-  'EXPENSE_REJECTED',
-  'APPROVAL_REQUIRED',
-  'BUDGET_ALERT',
-  'INVITATION',
-  'SYSTEM_ALERT',
-]);
+export const TemplateTypeSchema = z.nativeEnum(NotificationType);
 
-export const TemplateChannelSchema = z.enum(['EMAIL', 'IN_APP', 'PUSH']);
+export const TemplateChannelSchema = z.nativeEnum(NotificationChannel);
 
 // ==================== COMMON SCHEMAS ====================
 
 export const workspaceParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
-});
+  workspaceId: domainIdSchema,
+}).strict();
 
 export const templateParamsSchema = z.object({
-  templateId: z.string().uuid('Invalid template ID format'),
-});
+  templateId: domainIdSchema,
+}).strict();
 
 export const preferenceTypeParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
+  workspaceId: domainIdSchema,
   type: TemplateTypeSchema,
-});
+}).strict();
 
 
 export const createTemplateSchema = z.object({
-  workspaceId: z.string().uuid().optional(),
-  name: z.string().min(1).max(100),
+  workspaceId: domainIdSchema.optional(),
+  name: nonblankText(TEMPLATE_NAME_MIN_LENGTH, TEMPLATE_NAME_MAX_LENGTH),
   type: TemplateTypeSchema,
   channel: TemplateChannelSchema,
-  subjectTemplate: z.string().min(1).max(255),
-  bodyTemplate: z.string().min(1),
-});
+  subjectTemplate: nonblankText(TEMPLATE_SUBJECT_MIN_LENGTH, TEMPLATE_SUBJECT_MAX_LENGTH),
+  bodyTemplate: nonblankText(TEMPLATE_BODY_MIN_LENGTH, TEMPLATE_BODY_MAX_LENGTH),
+}).strict();
 
 export const updateTemplateSchema = z.object({
-  subjectTemplate: z.string().max(255).optional(),
-  bodyTemplate: z.string().optional(),
-});
+  subjectTemplate: nonblankText(TEMPLATE_SUBJECT_MIN_LENGTH, TEMPLATE_SUBJECT_MAX_LENGTH).optional(),
+  bodyTemplate: nonblankText(TEMPLATE_BODY_MIN_LENGTH, TEMPLATE_BODY_MAX_LENGTH).optional(),
+}).strict();
 
 export const getActiveTemplateSchema = z.object({
-  workspaceId: z.string().uuid().optional(),
+  workspaceId: domainIdSchema.optional(),
   type: TemplateTypeSchema,
   channel: TemplateChannelSchema,
-});
+}).strict();
 
 // ==================== PREFERENCE SCHEMAS ====================
 
@@ -56,18 +56,14 @@ export const updateGlobalPreferencesSchema = z.object({
   email: z.boolean().optional(),
   inApp: z.boolean().optional(),
   push: z.boolean().optional(),
-});
+}).strict();
 
-export const updateTypePreferenceSchema = z.object({
-  email: z.boolean().optional(),
-  inApp: z.boolean().optional(),
-  push: z.boolean().optional(),
-});
+export const updateTypePreferenceSchema = updateGlobalPreferencesSchema;
 
 export const checkChannelEnabledSchema = z.object({
   type: TemplateTypeSchema,
   channel: z.enum(['email', 'inApp', 'push']),
-});
+}).strict();
 
 // Inferred input & query types
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
@@ -80,7 +76,8 @@ export type CheckChannelEnabledQuery = z.infer<typeof checkChannelEnabledSchema>
 // ==================== RESPONSE ENVELOPES ====================
 
 export const notificationPreferenceResponseSchema = z.object({
-  id: z.string().uuid(),
+  typeSettings: z.record(z.object({ email: z.boolean().optional(), inApp: z.boolean().optional(), push: z.boolean().optional() })),
+  id: z.string().uuid().nullable(),
   userId: z.string().uuid(),
   workspaceId: z.string().uuid(),
   emailEnabled: z.boolean(),
@@ -141,4 +138,3 @@ export const checkChannelEnabledQueryJsonSchema = toJsonSchema(checkChannelEnabl
 export const notificationPreferenceEnvelopeJsonSchema = toJsonSchema(notificationPreferenceEnvelopeSchema);
 export const checkChannelEnabledEnvelopeJsonSchema = toJsonSchema(checkChannelEnabledEnvelopeSchema);
 export const notificationTemplateEnvelopeJsonSchema = toJsonSchema(notificationTemplateEnvelopeSchema);
-

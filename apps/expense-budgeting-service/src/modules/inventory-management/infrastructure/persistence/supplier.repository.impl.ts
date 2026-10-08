@@ -9,7 +9,11 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { IEventBus } from '@core/domain/events/domain-event';
-import { SupplierAlreadyExistsError, SupplierInUseError, SupplierNotFoundError } from '../../domain/errors/inventory.errors';
+import {
+  SupplierAlreadyExistsError,
+  SupplierInUseError,
+  SupplierNotFoundError,
+} from '../../domain/errors/inventory.errors';
 
 export class SupplierRepositoryImpl
   extends PrismaRepository<Supplier>
@@ -23,7 +27,10 @@ export class SupplierRepositoryImpl
     try {
       await this.runInTransaction(async (tx) => {
         await tx.supplier.upsert({
-          where: { id: supplier.id.getValue(), workspaceId: supplier.workspaceId },
+          where: {
+            id: supplier.id.getValue(),
+            workspaceId: supplier.workspaceId,
+          },
           create: {
             id: supplier.id.getValue(),
             workspaceId: supplier.workspaceId,
@@ -47,18 +54,34 @@ export class SupplierRepositoryImpl
         await this.dispatchEvents(supplier, tx);
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         const target = error.meta?.target;
-        const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
-        if (fields.some((field) => field === 'name' || field.includes('supplier_workspace_name'))) {
-          throw new SupplierAlreadyExistsError(supplier.name, supplier.workspaceId);
+        const fields = Array.isArray(target)
+          ? target.map(String)
+          : [String(target ?? '')];
+        if (
+          fields.some(
+            (field) =>
+              field === 'name' || field.includes('supplier_workspace_name')
+          )
+        ) {
+          throw new SupplierAlreadyExistsError(
+            supplier.name,
+            supplier.workspaceId
+          );
         }
       }
       throw error;
     }
   }
 
-  async findById(id: SupplierId, workspaceId: string): Promise<Supplier | null> {
+  async findById(
+    id: SupplierId,
+    workspaceId: string
+  ): Promise<Supplier | null> {
     const row = await this.prisma.supplier.findFirst({
       where: { id: id.getValue(), workspaceId },
     });
@@ -71,8 +94,13 @@ export class SupplierRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Supplier>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.supplier,
-      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.supplier.findMany({
+          where: { workspaceId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.supplier.count({ where: { workspaceId } }),
       (record) => this.toDomain(record),
       options
     );
@@ -82,15 +110,27 @@ export class SupplierRepositoryImpl
     try {
       await this.runInTransaction(async (tx) => {
         await tx.supplier.delete({
-          where: { id: supplier.id.getValue(), workspaceId: supplier.workspaceId },
+          where: {
+            id: supplier.id.getValue(),
+            workspaceId: supplier.workspaceId,
+          },
         });
         await this.dispatchEvents(supplier, tx);
       });
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-        throw new SupplierNotFoundError(supplier.id.getValue(), supplier.workspaceId);
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new SupplierNotFoundError(
+          supplier.id.getValue(),
+          supplier.workspaceId
+        );
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
         throw new SupplierInUseError(supplier.id.getValue());
       }
       throw error;

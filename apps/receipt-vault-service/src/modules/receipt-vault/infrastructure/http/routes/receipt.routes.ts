@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { ReceiptController } from '../controllers/receipt.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -8,6 +8,7 @@ import {
 } from '@shared/middleware/rate-limiter.middleware';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
 import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
+import { MAX_FILE_SIZE } from '../../../domain/constants/receipt.constants';
 import {
   validateBody,
   validateQuery,
@@ -35,6 +36,8 @@ import {
   receiptEnvelopeJsonSchema,
   receiptListEnvelopeJsonSchema,
   receiptStatsEnvelopeJsonSchema,
+  receiptPaginationQuerySchema,
+  receiptPaginationQueryJsonSchema,
 } from '../validation/receipt.schema';
 import {
   addMetadataSchema,
@@ -65,18 +68,19 @@ export async function receiptRoutes(
     );
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
+
+  // Upload receipt
+  fastify.get('/workspaces/:workspaceId/receipts/:receiptId/download', {
+    onRequest: [fastify.authenticate], preHandler: [workspaceAuth],
+    schema: { params: receiptParamsJsonSchema },
+  }, (request, reply) => controller.downloadReceipt(request as AuthenticatedRequest, reply));
 
   // Upload receipt
   fastify.post(
-    '/:workspaceId/receipts/upload',
+    '/workspaces/:workspaceId/receipts/upload',
     {
-      onRequest: [fastify.authenticate],
+      bodyLimit: Math.ceil(MAX_FILE_SIZE / 3) * 4 + 4096,
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(uploadReceiptSchema),
         workspaceAuth,
@@ -98,7 +102,7 @@ export async function receiptRoutes(
 
   // Get receipt by ID
   fastify.get(
-    '/:workspaceId/receipts/:receiptId',
+    '/workspaces/:workspaceId/receipts/:receiptId',
     {
       onRequest: [fastify.authenticate],
       preHandler: [workspaceAuth],
@@ -118,7 +122,7 @@ export async function receiptRoutes(
 
   // List receipts
   fastify.get(
-    '/:workspaceId/receipts',
+    '/workspaces/:workspaceId/receipts',
     {
       onRequest: [fastify.authenticate],
       preHandler: [
@@ -142,15 +146,16 @@ export async function receiptRoutes(
 
   // Get receipts by expense
   fastify.get(
-    '/:workspaceId/expenses/:expenseId/receipts',
+    '/workspaces/:workspaceId/expenses/:expenseId/receipts',
     {
       onRequest: [fastify.authenticate],
-      preHandler: [workspaceAuth],
+      preHandler: [validateQuery(receiptPaginationQuerySchema), workspaceAuth],
       schema: {
         tags: ['Receipt'],
         description: 'Get all receipts linked to an expense',
         security: [{ bearerAuth: [] }],
         params: expenseParamsJsonSchema,
+        querystring: receiptPaginationQueryJsonSchema,
         response: {
           200: receiptListEnvelopeJsonSchema,
         },
@@ -162,9 +167,9 @@ export async function receiptRoutes(
 
   // Link receipt to expense
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/link-expense',
+    '/workspaces/:workspaceId/receipts/:receiptId/link-expense',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(linkToExpenseSchema),
         workspaceAuth,
@@ -186,9 +191,9 @@ export async function receiptRoutes(
 
   // Unlink receipt from expense
   fastify.delete(
-    '/:workspaceId/receipts/:receiptId/unlink-expense',
+    '/workspaces/:workspaceId/receipts/:receiptId/unlink-expense',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
@@ -204,18 +209,18 @@ export async function receiptRoutes(
       controller.unlinkFromExpense(request as AuthenticatedRequest, reply)
   );
 
-  // Process receipt (OCR/AI extraction)
+  // Record OCR results supplied by the caller
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/process',
+    '/workspaces/:workspaceId/receipts/:receiptId/process',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(processReceiptSchema),
         workspaceAuth,
       ],
       schema: {
         tags: ['Receipt'],
-        description: 'Process receipt to extract metadata',
+        description: 'Record OCR results for a receipt (does not perform extraction)',
         security: [{ bearerAuth: [] }],
         params: receiptParamsJsonSchema,
         body: processReceiptBodyJsonSchema,
@@ -230,9 +235,9 @@ export async function receiptRoutes(
 
   // Verify receipt
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/verify',
+    '/workspaces/:workspaceId/receipts/:receiptId/verify',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,
@@ -253,9 +258,9 @@ export async function receiptRoutes(
 
   // Reject receipt
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/reject',
+    '/workspaces/:workspaceId/receipts/:receiptId/reject',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(rejectReceiptSchema),
         workspaceAuth,
@@ -278,9 +283,9 @@ export async function receiptRoutes(
 
   // Delete receipt
   fastify.delete(
-    '/:workspaceId/receipts/:receiptId',
+    '/workspaces/:workspaceId/receipts/:receiptId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateQuery(deleteReceiptQuerySchema),
         workspaceAuth,
@@ -302,9 +307,9 @@ export async function receiptRoutes(
 
   // Add metadata
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/metadata',
+    '/workspaces/:workspaceId/receipts/:receiptId/metadata',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(addMetadataSchema),
         workspaceAuth,
@@ -326,9 +331,9 @@ export async function receiptRoutes(
 
   // Update metadata (PATCH - partial update)
   fastify.patch(
-    '/:workspaceId/receipts/:receiptId/metadata',
+    '/workspaces/:workspaceId/receipts/:receiptId/metadata',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(updateMetadataSchema),
         workspaceAuth,
@@ -350,7 +355,7 @@ export async function receiptRoutes(
 
   // Get metadata
   fastify.get(
-    '/:workspaceId/receipts/:receiptId/metadata',
+    '/workspaces/:workspaceId/receipts/:receiptId/metadata',
     {
       onRequest: [fastify.authenticate],
       preHandler: [workspaceAuth],
@@ -370,9 +375,9 @@ export async function receiptRoutes(
 
   // Add tag to receipt
   fastify.post(
-    '/:workspaceId/receipts/:receiptId/tags',
+    '/workspaces/:workspaceId/receipts/:receiptId/tags',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(addTagToReceiptSchema),
         workspaceAuth,
@@ -394,9 +399,9 @@ export async function receiptRoutes(
 
   // Remove tag from receipt
   fastify.delete(
-    '/:workspaceId/receipts/:receiptId/tags/:tagId',
+    '/workspaces/:workspaceId/receipts/:receiptId/tags/:tagId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Receipt'],
@@ -414,7 +419,7 @@ export async function receiptRoutes(
 
   // Get receipt statistics
   fastify.get(
-    '/:workspaceId/receipts/stats',
+    '/workspaces/:workspaceId/receipts/stats',
     {
       onRequest: [fastify.authenticate],
       preHandler: [workspaceAuth],

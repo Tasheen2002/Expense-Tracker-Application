@@ -198,6 +198,7 @@ export const expenseStatisticsQueryJsonSchema = toJsonSchema(expenseStatisticsQu
 export const expenseResponseSchema = z.object({
   expenseId: z.string().uuid(),
   workspaceId: z.string().uuid(),
+  userId: z.string().uuid(),
   title: z.string(),
   description: z.string().nullable().optional(),
   amount: z.string(),
@@ -210,6 +211,8 @@ export const expenseResponseSchema = z.object({
   isReimbursable: z.boolean(),
   receiptUrl: z.string().nullable().optional(),
   tagIds: z.array(z.string().uuid()).optional(),
+  attachmentIds: z.array(z.string().uuid()),
+  version: z.number().int().nonnegative(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -271,11 +274,5 @@ export const expenseStatisticsEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const baseResponseEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema } from '@shared/http/validation';
 

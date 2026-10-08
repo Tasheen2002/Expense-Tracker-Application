@@ -10,6 +10,21 @@ datasource db {
   schemas  = ["audit_compliance"]
 }
 
+// Account lifecycle records are deliberately outside all workspace queries.
+model AccountAuditLog {
+  id String @id @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  eventType String @map("event_type") @db.VarChar(100)
+  entityType String @map("entity_type") @db.VarChar(100)
+  entityId String @map("entity_id") @db.Uuid
+  details Json
+  fingerprint String @db.VarChar(64)
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("account_audit_logs")
+  @@schema("audit_compliance")
+}
+
 model AuditLog {
   id          String   @id @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid

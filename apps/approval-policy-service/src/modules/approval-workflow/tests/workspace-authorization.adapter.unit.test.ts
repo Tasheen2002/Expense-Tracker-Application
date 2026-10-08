@@ -46,6 +46,27 @@ describe('HttpWorkspaceAuthorizationAdapter', () => {
     });
   });
 
+  it.each(['owner', 'admin'])('accepts Identity lowercase %s for ADMIN access', async role => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: { userId: 'user-1', workspaceId: 'ws-1', role },
+    })));
+    const result = await new HttpWorkspaceAuthorizationAdapter().authorize({
+      userId: 'user-1', workspaceId: 'ws-1', requiredRole: 'ADMIN',
+    });
+    expect(result.role).toBe(role.toUpperCase());
+  });
+
+  it.each([['admin', 'OWNER'], ['member', 'ADMIN'], ['unknown', 'MEMBER']])(
+    'rejects role %s for %s access', async (role, requiredRole) => {
+      globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+        data: { userId: 'user-1', workspaceId: 'ws-1', role },
+      })));
+      await expect(new HttpWorkspaceAuthorizationAdapter().authorize({
+        userId: 'user-1', workspaceId: 'ws-1', requiredRole,
+      })).rejects.toThrow(UnauthorizedWorkspaceAccessError);
+    }
+  );
+
   it('should throw UnauthorizedWorkspaceAccessError if identity service returns 403 or 401', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,

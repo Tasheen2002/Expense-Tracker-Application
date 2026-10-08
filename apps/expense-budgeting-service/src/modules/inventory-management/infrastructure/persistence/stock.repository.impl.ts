@@ -72,8 +72,13 @@ export class StockRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Stock>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.stock,
-      { where: { locationId, workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.stock.findMany({
+          where: { locationId, workspaceId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.stock.count({ where: { locationId, workspaceId } }),
       (record) => this.toDomain(record),
       options
     );
@@ -84,8 +89,13 @@ export class StockRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Stock>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.stock,
-      { where: { workspaceId }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] },
+      (page) =>
+        this.prisma.stock.findMany({
+          where: { workspaceId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.stock.count({ where: { workspaceId } }),
       (record) => this.toDomain(record),
       options
     );

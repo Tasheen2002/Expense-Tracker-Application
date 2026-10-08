@@ -2,6 +2,7 @@ import { RuleExecutionId } from '../value-objects/rule-execution-id';
 import { RuleId } from '../value-objects/rule-id';
 import {  WorkspaceId  } from '@core/domain/value-objects';
 import {  ExpenseId, CategoryId  } from '@core/domain/value-objects';
+import { InvalidRuleExecutionError } from '../errors/categorization-rules.errors';
 
 export interface RuleExecutionDTO {
   id: string;
@@ -26,7 +27,17 @@ interface RuleExecutionProps {
 }
 
 export class RuleExecution {
-  private constructor(private props: RuleExecutionProps) {}
+  private readonly props: Readonly<RuleExecutionProps>;
+
+  private constructor(props: RuleExecutionProps) {
+    if (!(props.id instanceof RuleExecutionId) || !(props.ruleId instanceof RuleId) ||
+        !(props.workspaceId instanceof WorkspaceId) || !(props.expenseId instanceof ExpenseId) ||
+        !(props.appliedCategoryId instanceof CategoryId) || !(props.executedAt instanceof Date) ||
+        !Number.isFinite(props.executedAt.getTime())) {
+      throw new InvalidRuleExecutionError('Invalid execution identifiers or timestamp');
+    }
+    this.props = Object.freeze({ ...props, executedAt: new Date(props.executedAt) });
+  }
 
   static create(params: {
     ruleId: RuleId;
@@ -72,7 +83,7 @@ export class RuleExecution {
     return this.props.appliedCategoryId;
   }
   get executedAt(): Date {
-    return this.props.executedAt;
+    return new Date(this.props.executedAt);
   }
 
   static toDTO(execution: RuleExecution): RuleExecutionDTO {
@@ -82,7 +93,7 @@ export class RuleExecution {
       expenseId: execution.props.expenseId.getValue(),
       workspaceId: execution.props.workspaceId.getValue(),
       appliedCategoryId: execution.props.appliedCategoryId.getValue(),
-      executedAt: execution.props.executedAt,
+      executedAt: execution.executedAt,
     };
   }
 }

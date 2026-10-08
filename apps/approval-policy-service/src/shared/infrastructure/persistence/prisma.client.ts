@@ -1,8 +1,8 @@
 import { createRequire } from 'module';
 import type { PrismaClient as IPrismaClient, Prisma as IPrisma } from '@prisma/client';
 
-const require = createRequire(import.meta.url);
-const clientModule = require('.prisma/client-approval');
+const loadPrisma = createRequire(__filename);
+const clientModule = loadPrisma('.prisma/client-approval');
 
 export const PrismaClient: typeof IPrismaClient = clientModule.PrismaClient;
 export type PrismaClient = IPrismaClient;

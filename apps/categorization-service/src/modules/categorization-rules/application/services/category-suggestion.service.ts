@@ -1,7 +1,7 @@
 import { ICategorySuggestionRepository } from '../../domain/repositories/category-suggestion.repository'
 import { CategorySuggestion, CategorySuggestionDTO } from '../../domain/entities/category-suggestion.entity'
 import { SuggestionId } from '../../domain/value-objects/suggestion-id'
-import {  WorkspaceId  } from '@core/domain/value-objects'
+import { WorkspaceId, UserId } from '@core/domain/value-objects'
 import {  ExpenseId, CategoryId  } from '@core/domain/value-objects'
 import { ConfidenceScore } from '../../domain/value-objects/confidence-score'
 import { SuggestionNotFoundError } from '../../domain/errors/categorization-rules.errors'
@@ -13,6 +13,7 @@ export class CategorySuggestionService {
   ) {}
 
   async createSuggestion(params: {
+    expenseOwnerId: UserId
     workspaceId: WorkspaceId
     expenseId: ExpenseId
     suggestedCategoryId: CategoryId
@@ -20,6 +21,7 @@ export class CategorySuggestionService {
     reason?: string
   }): Promise<CategorySuggestionDTO> {
     const suggestion = CategorySuggestion.create({
+      expenseOwnerId: params.expenseOwnerId,
       workspaceId: params.workspaceId,
       expenseId: params.expenseId,
       suggestedCategoryId: params.suggestedCategoryId,
@@ -31,14 +33,14 @@ export class CategorySuggestionService {
     return CategorySuggestion.toDTO(suggestion)
   }
 
-  async acceptSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId): Promise<CategorySuggestionDTO> {
+  async acceptSuggestion(suggestionId: SuggestionId, workspaceId: WorkspaceId, acceptedBy: string, expenseVersion: number): Promise<CategorySuggestionDTO> {
     const suggestion = await this.suggestionRepository.findById(suggestionId, workspaceId)
 
     if (!suggestion) {
       throw new SuggestionNotFoundError(suggestionId.getValue())
     }
 
-    suggestion.accept()
+    suggestion.accept(acceptedBy, expenseVersion)
     await this.suggestionRepository.save(suggestion)
     return CategorySuggestion.toDTO(suggestion)
   }
@@ -67,9 +69,10 @@ export class CategorySuggestionService {
 
   async getSuggestionsByExpenseId(
     expenseId: ExpenseId,
-    workspaceId: WorkspaceId
+    workspaceId: WorkspaceId,
+    options?: { limit?: number; offset?: number },
   ): Promise<PaginatedResult<CategorySuggestionDTO>> {
-    const result = await this.suggestionRepository.findByExpenseId(expenseId, workspaceId)
+    const result = await this.suggestionRepository.findByExpenseId(expenseId, workspaceId, options)
     return {
       items: result.items.map(CategorySuggestion.toDTO),
       total: result.total,
@@ -115,6 +118,6 @@ export class CategorySuggestionService {
     }
 
     suggestion.markAsDeleted()
-    await this.suggestionRepository.delete(suggestionId)
+    await this.suggestionRepository.delete(suggestion)
   }
 }

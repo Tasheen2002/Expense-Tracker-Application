@@ -1,17 +1,23 @@
-import { IPolicyRepository } from "../../domain/repositories/policy.repository";
-import { IViolationRepository } from "../../domain/repositories/violation.repository";
-import { IExemptionRepository } from "../../domain/repositories/exemption.repository";
-import { ExpensePolicy } from "../../domain/entities/expense-policy.entity";
-import type { PolicyExemption } from "../../domain/entities/policy-exemption.entity";
-import { PolicyViolation } from "../../domain/entities/policy-violation.entity";
-import { PolicyType } from "../../domain/enums/policy-type.enum";
-import { ViolationSeverity } from "../../domain/enums/violation-severity.enum";
-import { PolicyEvaluationError } from "../../domain/errors/policy-controls.errors";
+import { IPolicyRepository } from '../../domain/repositories/policy.repository';
+import { IViolationRepository } from '../../domain/repositories/violation.repository';
+import { IExemptionRepository } from '../../domain/repositories/exemption.repository';
+import { ExpensePolicy } from '../../domain/entities/expense-policy.entity';
+import type { PolicyExemption } from '../../domain/entities/policy-exemption.entity';
+import { PolicyViolation } from '../../domain/entities/policy-violation.entity';
+import { PolicyType } from '../../domain/enums/policy-type.enum';
+import { ViolationSeverity } from '../../domain/enums/violation-severity.enum';
+import { PolicyEvaluationError } from '../../domain/errors/policy-controls.errors';
 import { WorkspaceId, UserId, ExpenseId } from '@core/domain/value-objects';
 import { createHash } from 'crypto';
 
-export function generateDeterministicViolationId(workspaceId: string, expenseId: string, policyId: string): string {
-  const hash = createHash('sha256').update(`${workspaceId}:${expenseId}:${policyId}`).digest('hex');
+export function generateDeterministicViolationId(
+  workspaceId: string,
+  expenseId: string,
+  policyId: string
+): string {
+  const hash = createHash('sha256')
+    .update(`${workspaceId}:${expenseId}:${policyId}`)
+    .digest('hex');
   return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(13, 16)}-a${hash.substring(17, 20)}-${hash.substring(20, 32)}`;
 }
 
@@ -60,11 +66,16 @@ function validateIanaTimezone(timeZone: string): void {
   try {
     Intl.DateTimeFormat(undefined, { timeZone });
   } catch {
-    throw new PolicyEvaluationError(`Invalid IANA timezone identifier: ${timeZone}`);
+    throw new PolicyEvaluationError(
+      `Invalid IANA timezone identifier: ${timeZone}`
+    );
   }
 }
 
-function getDayAndHourInTimezone(date: Date, timeZone: string = 'UTC'): { day: number; hour: number } {
+function getDayAndHourInTimezone(
+  date: Date,
+  timeZone: string = 'UTC'
+): { day: number; hour: number } {
   if (timeZone && timeZone !== 'UTC') {
     validateIanaTimezone(timeZone);
   }
@@ -78,9 +89,18 @@ function getDayAndHourInTimezone(date: Date, timeZone: string = 'UTC'): { day: n
   const weekdayStr = parts.find((p) => p.type === 'weekday')?.value;
   const hourStr = parts.find((p) => p.type === 'hour')?.value;
   const daysMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
   };
-  const day = weekdayStr && daysMap[weekdayStr] !== undefined ? daysMap[weekdayStr] : date.getUTCDay();
+  const day =
+    weekdayStr && daysMap[weekdayStr] !== undefined
+      ? daysMap[weekdayStr]
+      : date.getUTCDay();
   const hour = hourStr ? parseInt(hourStr, 10) : date.getUTCHours();
   return { day, hour };
 }
@@ -92,7 +112,7 @@ export class PolicyEvaluationService {
   constructor(
     private readonly policyRepository: IPolicyRepository,
     private readonly violationRepository: IViolationRepository,
-    private readonly exemptionRepository: IExemptionRepository,
+    private readonly exemptionRepository: IExemptionRepository
   ) {}
 
   /**
@@ -105,11 +125,13 @@ export class PolicyEvaluationService {
   }> {
     const wsId = WorkspaceId.fromString(context.workspaceId);
     const userId = UserId.fromString(context.userId);
-    const activePolicies = await this.policyRepository.findAllActiveByWorkspace(wsId);
+    const activePolicies =
+      await this.policyRepository.findAllActiveByWorkspace(wsId);
 
     // Sort by priority (higher priority first), with deterministic tie-breaker by createdAt DESC
     const sortedPolicies = [...activePolicies].sort(
-      (a, b) => b.priority - a.priority || b.createdAt.getTime() - a.createdAt.getTime()
+      (a, b) =>
+        b.priority - a.priority || b.createdAt.getTime() - a.createdAt.getTime()
     );
 
     const applicablePolicies = sortedPolicies.filter((p) =>
@@ -124,7 +146,7 @@ export class PolicyEvaluationService {
     const map = await this.exemptionRepository.findActiveForUserPolicies(
       wsId,
       userId,
-      applicablePolicies.map((p) => p.id),
+      applicablePolicies.map((p) => p.id)
     );
     for (const [k, v] of map.entries()) {
       exemptionMap.set(k, v);
@@ -163,7 +185,10 @@ export class PolicyEvaluationService {
 
         // [P2] Critical severity blocks the expense; assign only while blockedByPolicy is undefined
         // to ensure the highest-priority critical policy is retained.
-        if (policy.severity === ViolationSeverity.CRITICAL && !blockedByPolicy) {
+        if (
+          policy.severity === ViolationSeverity.CRITICAL &&
+          !blockedByPolicy
+        ) {
           blockedByPolicy = policy;
         }
       }
@@ -180,16 +205,13 @@ export class PolicyEvaluationService {
    * Evaluate an expense against all active policies in the workspace
    */
   async evaluateExpense(
-    context: ExpenseContext,
+    context: ExpenseContext
   ): Promise<PolicyEvaluationResult> {
     const wsId = WorkspaceId.fromString(context.workspaceId);
     const expId = ExpenseId.fromString(context.expenseId);
 
-    const {
-      evaluatedViolations,
-      approvalRequiredPolicyIds,
-      blockedByPolicy,
-    } = await this.evaluateRules(context);
+    const { evaluatedViolations, approvalRequiredPolicyIds, blockedByPolicy } =
+      await this.evaluateRules(context);
 
     const violations: PolicyViolation[] = evaluatedViolations.map((item) => {
       const violationId = generateDeterministicViolationId(
@@ -231,7 +253,7 @@ export class PolicyEvaluationService {
    */
   private async evaluatePolicy(
     policy: ExpensePolicy,
-    context: ExpenseContext,
+    context: ExpenseContext
   ): Promise<{ details: string; requiresApproval?: boolean } | null> {
     const config = policy.configuration;
     const policyType = policy.policyType;
@@ -241,7 +263,11 @@ export class PolicyEvaluationService {
         if (config.threshold) {
           const policyCurrency = config.currency?.toUpperCase();
           const expenseCurrency = context.currency?.toUpperCase();
-          if (policyCurrency && expenseCurrency && policyCurrency !== expenseCurrency) {
+          if (
+            policyCurrency &&
+            expenseCurrency &&
+            policyCurrency !== expenseCurrency
+          ) {
             // [P1] Currency mismatch fail-safe: cannot silently pass without exchange rate conversion
             return {
               details: `Cannot evaluate spending limit policy "${policy.name}": currency mismatch between policy currency (${policyCurrency}) and expense currency (${expenseCurrency}) requires currency conversion`,
@@ -255,7 +281,7 @@ export class PolicyEvaluationService {
         }
         break;
 
-      case PolicyType.RECEIPT_REQUIRED:
+      case PolicyType.RECEIPT_REQUIRED: {
         const receiptThreshold = config.requirementThreshold ?? 0;
         if (context.amount > receiptThreshold && !context.hasReceipt) {
           return {
@@ -263,8 +289,9 @@ export class PolicyEvaluationService {
           };
         }
         break;
+      }
 
-      case PolicyType.DESCRIPTION_REQUIRED:
+      case PolicyType.DESCRIPTION_REQUIRED: {
         const descThreshold = config.requirementThreshold ?? 0;
         if (context.amount > descThreshold && !context.description?.trim()) {
           return {
@@ -272,6 +299,7 @@ export class PolicyEvaluationService {
           };
         }
         break;
+      }
 
       case PolicyType.CATEGORY_RESTRICTION:
         if (config.restrictedCategoryIds?.length && context.categoryId) {
@@ -299,7 +327,7 @@ export class PolicyEvaluationService {
         if (config.blacklistedMerchants?.length && context.merchant) {
           const merchantLower = context.merchant.toLowerCase();
           const isBlacklisted = config.blacklistedMerchants.some((m) =>
-            merchantLower.includes(m.toLowerCase()),
+            merchantLower.includes(m.toLowerCase())
           );
           if (isBlacklisted) {
             return {
@@ -309,19 +337,22 @@ export class PolicyEvaluationService {
         }
         break;
 
-      case PolicyType.TIME_RESTRICTION:
+      case PolicyType.TIME_RESTRICTION: {
         const timezone = context.timezone || 'UTC';
-        const { day: expenseDay, hour: expenseHour } = getDayAndHourInTimezone(context.expenseDate, timezone);
+        const { day: expenseDay, hour: expenseHour } = getDayAndHourInTimezone(
+          context.expenseDate,
+          timezone
+        );
 
         if (config.blockedDays?.includes(expenseDay)) {
           const dayNames = [
-            "Sunday",
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
+            'Sunday',
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
           ];
           return {
             details: `Expenses are not allowed on ${dayNames[expenseDay]}`,
@@ -334,8 +365,10 @@ export class PolicyEvaluationService {
         ) {
           const inBlockedWindow =
             config.blockedHoursStart <= config.blockedHoursEnd
-              ? expenseHour >= config.blockedHoursStart && expenseHour <= config.blockedHoursEnd
-              : expenseHour >= config.blockedHoursStart || expenseHour <= config.blockedHoursEnd;
+              ? expenseHour >= config.blockedHoursStart &&
+                expenseHour <= config.blockedHoursEnd
+              : expenseHour >= config.blockedHoursStart ||
+                expenseHour <= config.blockedHoursEnd;
 
           if (inBlockedWindow) {
             return {
@@ -344,6 +377,7 @@ export class PolicyEvaluationService {
           }
         }
         break;
+      }
 
       case PolicyType.DAILY_LIMIT:
       case PolicyType.WEEKLY_LIMIT:
@@ -356,7 +390,11 @@ export class PolicyEvaluationService {
         const threshold = config.threshold ?? config.requirementThreshold ?? 0;
         const policyCurrency = config.currency?.toUpperCase();
         const expenseCurrency = context.currency?.toUpperCase();
-        if (policyCurrency && expenseCurrency && policyCurrency !== expenseCurrency) {
+        if (
+          policyCurrency &&
+          expenseCurrency &&
+          policyCurrency !== expenseCurrency
+        ) {
           return {
             details: `Cannot evaluate approval-required policy "${policy.name}": currency mismatch between policy currency (${policyCurrency}) and expense currency (${expenseCurrency}) requires currency conversion`,
             requiresApproval: true,
@@ -379,10 +417,8 @@ export class PolicyEvaluationService {
    * Check if an expense would pass policy checks (dry run without saving violations)
    */
   async checkExpense(context: ExpenseContext): Promise<CheckExpenseResult> {
-    const {
-      evaluatedViolations,
-      approvalRequiredPolicyIds,
-    } = await this.evaluateRules(context);
+    const { evaluatedViolations, approvalRequiredPolicyIds } =
+      await this.evaluateRules(context);
 
     const potentialViolations = evaluatedViolations.map((item) => ({
       policyName: item.policy.name,

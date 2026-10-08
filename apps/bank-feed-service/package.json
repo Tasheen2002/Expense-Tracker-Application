@@ -12,7 +12,8 @@
     "generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "node ../../scripts/lint-backend.cjs bank-feed-service"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",

@@ -7,8 +7,8 @@ export function expenseWebhookRoutes(auditServiceUrl: string, notificationServic
   const routes = Object.fromEntries(
     Object.values(EXPENSE_EVENTS).map((eventType) => [eventType, [audit]])
   );
-  routes[EXPENSE_EVENTS.EXPENSE_APPROVED] = [audit, notification];
-  routes[EXPENSE_EVENTS.EXPENSE_REJECTED] = [audit, notification];
+  // approve/reject also emit a status change carrying the verified expense owner.
+  // Use that event for notifications; decision events remain audit records.
   routes[EXPENSE_EVENTS.EXPENSE_STATUS_CHANGED] = [audit, notification];
   return routes;
 }

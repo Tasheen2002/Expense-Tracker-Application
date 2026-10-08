@@ -24,6 +24,43 @@ const successfulProject = Project.create({ workspaceId, name: 'Finance launch', 
 ids.push(successfulDepartment.id.getValue(), successfulCenter.id.getValue(), successfulProject.id.getValue());
 
 describe('management repository outbox atomicity', () => {
+  it('persists workspace ownership for every management lifecycle event', async () => {
+    const bus = new InMemoryEventBus();
+    const cases = [
+      () => {
+        const entity = Department.create({ workspaceId, name: 'Scoped department', code: 'SCOPEDEP' });
+        const repository = new DepartmentRepositoryImpl(prisma, bus);
+        return { entity, save: () => repository.save(entity) };
+      },
+      () => {
+        const entity = CostCenter.create({ workspaceId, name: 'Scoped center', code: 'SCOPECEN' });
+        const repository = new CostCenterRepositoryImpl(prisma, bus);
+        return { entity, save: () => repository.save(entity) };
+      },
+      () => {
+        const entity = Project.create({ workspaceId, name: 'Scoped project', code: 'SCOPEPRJ', startDate: new Date() });
+        const repository = new ProjectRepositoryImpl(prisma, bus);
+        return { entity, save: () => repository.save(entity) };
+      },
+    ];
+    for (const make of cases) {
+      const { entity, save } = make();
+      const id = entity.id.getValue();
+      ids.push(id);
+      await save();
+      entity.updateDetails({ name: 'Changed scoped name' });
+      await save();
+      entity.deactivate();
+      await save();
+      entity.activate();
+      await save();
+      const rows = await prisma.outboxEvent.findMany({ where: { aggregateId: id } });
+      expect(rows).toHaveLength(4);
+      for (const row of rows) {
+        expect(row.payload).toMatchObject({ workspaceId: workspaceId.getValue() });
+      }
+    }
+  });
   afterAll(async () => {
     await prisma.outboxEvent.deleteMany({ where: { aggregateId: { in: ids } } });
     await prisma.department.deleteMany({ where: { id: { in: ids } } });

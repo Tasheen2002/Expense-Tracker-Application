@@ -6,7 +6,7 @@ import { QueryResult } from '@core/application/query-result';
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -108,7 +108,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: unknown,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
@@ -140,7 +140,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: unknown
   ): FastifyReply {
     if (!result.success) {
       const statusCode = result.statusCode ?? 404;
@@ -176,14 +176,18 @@ export class ResponseHelper {
     }
 
     // Extract statusCode from domain errors
-    const statusCode =
+    const candidateStatus =
       error && typeof error === 'object' && 'statusCode' in error
         ? (error as { statusCode: number }).statusCode
         : 500;
+    const statusCode = Number.isInteger(candidateStatus) && candidateStatus >= 400 && candidateStatus <= 599
+      ? candidateStatus : 500;
 
     // Extract error message
     const message =
-      error instanceof Error ? error.message : 'Internal server error';
+      statusCode >= 500 && process.env.NODE_ENV !== 'development'
+        ? 'Internal server error'
+        : error instanceof Error ? error.message : 'Internal server error';
 
     // Extract error code/name for response
     const errorCode =
@@ -197,7 +201,7 @@ export class ResponseHelper {
       success: false,
       statusCode,
       error: errorName,
-      code: errorCode,
+      code: statusCode < 500 || process.env.NODE_ENV === 'development' ? errorCode : undefined,
       message,
     });
   }

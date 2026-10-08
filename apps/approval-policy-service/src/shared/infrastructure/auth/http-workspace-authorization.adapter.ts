@@ -110,6 +110,8 @@ export class HttpWorkspaceAuthorizationAdapter
     }
 
     const membership = parseResult.data.data;
+    const role = membership.role.trim().toUpperCase();
+    const roles = ['MEMBER', 'MANAGER', 'ADMIN', 'OWNER'];
 
     if (membership.workspaceId !== workspaceId) {
       throw new UnauthorizedWorkspaceAccessError(
@@ -117,12 +119,9 @@ export class HttpWorkspaceAuthorizationAdapter
       );
     }
 
-    if (
-      requiredRole &&
-      membership.role !== requiredRole &&
-      membership.role !== 'OWNER' &&
-      membership.role !== 'ADMIN'
-    ) {
+    const required = requiredRole?.trim().toUpperCase();
+    if (!roles.includes(role) || (required &&
+      (!roles.includes(required) || roles.indexOf(role) < roles.indexOf(required)))) {
       throw new UnauthorizedWorkspaceAccessError(
         `User ${userId} does not have the required role ${requiredRole} in workspace ${workspaceId}`
       );
@@ -131,7 +130,7 @@ export class HttpWorkspaceAuthorizationAdapter
     return {
       userId,
       workspaceId,
-      role: membership.role,
+      role,
     };
   }
 }

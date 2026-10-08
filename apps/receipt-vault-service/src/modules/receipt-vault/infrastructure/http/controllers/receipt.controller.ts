@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   UploadReceiptHandler,
   LinkReceiptToExpenseHandler,
@@ -38,6 +38,7 @@ import type {
 } from '../validation/metadata.schema';
 import type { AddTagToReceiptInput } from '../validation/tag.schema';
 import { ResponseHelper } from '@shared/response.helper';
+import { DownloadReceiptHandler } from '../../../application/queries/download-receipt.query';
 
 export class ReceiptController {
   constructor(
@@ -56,8 +57,18 @@ export class ReceiptController {
     private readonly listReceiptsHandler: ListReceiptsHandler,
     private readonly getReceiptsByExpenseHandler: GetReceiptsByExpenseHandler,
     private readonly getMetadataHandler: GetReceiptMetadataHandler,
-    private readonly getStatsHandler: GetReceiptStatsHandler
+    private readonly getStatsHandler: GetReceiptStatsHandler,
+    private readonly downloadReceiptHandler: DownloadReceiptHandler
   ) {}
+
+  async downloadReceipt(request: AuthenticatedRequest<{ Params: ReceiptParams }>, reply: FastifyReply) {
+    try {
+      const file = await this.downloadReceiptHandler.handle({ ...request.params, userId: request.user.userId });
+      return reply.header('Content-Type', file.mimeType).header('Cache-Control', 'private, no-store')
+        .header('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`)
+        .send(file.bytes);
+    } catch (error) { return ResponseHelper.error(reply, error); }
+  }
 
   async getReceipt(
     request: AuthenticatedRequest<{ Params: ReceiptParams }>,
@@ -113,7 +124,7 @@ export class ReceiptController {
   }
 
   async getReceiptsByExpense(
-    request: AuthenticatedRequest<{ Params: ExpenseParams }>,
+    request: AuthenticatedRequest<{ Params: ExpenseParams; Querystring: Pick<ListReceiptsQuery, 'limit' | 'offset'> }>,
     reply: FastifyReply
   ) {
     const { workspaceId, expenseId } = request.params;
@@ -122,6 +133,8 @@ export class ReceiptController {
       const result = await this.getReceiptsByExpenseHandler.handle({
         expenseId,
         workspaceId,
+        limit: request.query.limit,
+        offset: request.query.offset,
       });
       return ResponseHelper.ok(reply, 'Receipts retrieved successfully', {
         items: result.items,
@@ -178,9 +191,9 @@ export class ReceiptController {
 
     try {
       const result = await this.uploadReceiptHandler.handle({
+        ...request.body,
         workspaceId,
         userId,
-        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -211,6 +224,7 @@ export class ReceiptController {
         expenseId,
         workspaceId,
         userId,
+        authToken: request.headers.authorization,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -368,10 +382,10 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params;
     try {
       const result = await this.addMetadataHandler.handle({
+        ...request.body,
         receiptId,
         workspaceId,
         userId,
-        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -396,10 +410,10 @@ export class ReceiptController {
     const { workspaceId, receiptId } = request.params;
     try {
       const result = await this.updateMetadataHandler.handle({
+        ...request.body,
         receiptId,
         workspaceId,
         userId,
-        ...request.body,
       });
       return ResponseHelper.fromCommand(
         reply,

@@ -53,7 +53,6 @@ export interface IReceiptRepository {
     options?: PaginationOptions,
   ): Promise<PaginatedResult<Receipt>>;
   exists(id: ReceiptId, workspaceId: string): Promise<boolean>;
-  delete(id: ReceiptId, workspaceId: string): Promise<void>;
   countByWorkspace(workspaceId: string): Promise<number>;
   countByStatus(workspaceId: string, status: ReceiptStatus): Promise<number>;
   countByFilters(filters: ReceiptFilters): Promise<number>;

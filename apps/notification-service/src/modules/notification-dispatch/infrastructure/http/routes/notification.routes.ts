@@ -1,21 +1,23 @@
+import { notificationReadRateLimit, notificationWriteRateLimit } from '@shared/http/notification-rate-limits';
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { NotificationController } from '../controllers/notification.controller';
 import { workspaceAuthorizationMiddleware } from '@shared/middleware';
-import { validateQuery } from '../validation/validator';
+import { validateQuery, validateParams } from '../validation/validator';
 import {
-  listNotificationsSchema,
+  listNotificationsSchema, workspaceParamsSchema,
   workspaceParamsJsonSchema,
   listNotificationsQueryJsonSchema,
   notificationListEnvelopeJsonSchema,
   unreadNotificationListEnvelopeJsonSchema,
   markAsReadParamsJsonSchema,
+  markAsReadParamsSchema,
   baseResponseEnvelopeJsonSchema,
 } from '../validation/notification.schema';
 
 export async function registerNotificationRoutes(
   fastify: FastifyInstance,
-  controller: NotificationController
+  controller: Pick<NotificationController, 'getNotifications' | 'getUnreadNotifications' | 'markAsRead' | 'markAllAsRead'>
 ): Promise<void> {
   const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
     await workspaceAuthorizationMiddleware(
@@ -29,11 +31,9 @@ export async function registerNotificationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notifications',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        validateQuery(listNotificationsSchema),
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema), validateQuery(listNotificationsSchema)],
+      preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
         summary: 'Get notifications',
@@ -54,7 +54,8 @@ export async function registerNotificationRoutes(
   fastify.get(
     '/workspaces/:workspaceId/notifications/unread',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationReadRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema), validateQuery(listNotificationsSchema)],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
@@ -62,6 +63,7 @@ export async function registerNotificationRoutes(
         description: 'Retrieve all unread notifications for the authenticated user in a workspace',
         security: [{ bearerAuth: [] }],
         params: workspaceParamsJsonSchema,
+        querystring: listNotificationsQueryJsonSchema,
         response: {
           200: unreadNotificationListEnvelopeJsonSchema,
         },
@@ -75,7 +77,8 @@ export async function registerNotificationRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notifications/:notificationId/read',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(markAsReadParamsSchema)],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
@@ -96,7 +99,8 @@ export async function registerNotificationRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/notifications/read-all',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, notificationWriteRateLimit],
+      preValidation: [validateParams(workspaceParamsSchema)],
       preHandler: [workspaceAuth],
       schema: {
         tags: ['Notification'],
@@ -113,4 +117,3 @@ export async function registerNotificationRoutes(
       controller.markAllAsRead(request as AuthenticatedRequest, reply)
   );
 }
-

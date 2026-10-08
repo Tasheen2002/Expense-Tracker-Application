@@ -35,6 +35,7 @@ import { IWorkspaceAuthorizationService } from '@shared/ports/workspace-authoriz
 import { IExemptionRepository } from '../domain/repositories/exemption.repository';
 import { ViolationId } from '../domain/value-objects';
 import { WorkspaceId, UserId } from '@core/domain/value-objects';
+import { DefaultServiceAuthenticationService } from '@shared/services/service-authentication.service';
 
 describe('Policy Controls Commands Unit Tests', () => {
   const WS_ID = '11111111-1111-4111-8111-111111111111';
@@ -51,7 +52,11 @@ describe('Policy Controls Commands Unit Tests', () => {
   };
 
   const operationService = new OperationService(
-    mockAuthService as unknown as IWorkspaceAuthorizationService
+    mockAuthService as unknown as IWorkspaceAuthorizationService,
+    new DefaultServiceAuthenticationService(undefined, {
+      'cron-worker': 'command-fixture-key',
+      'expense-service': 'command-fixture-key',
+    })
   );
 
   const mockPolicyService = {
@@ -475,6 +480,7 @@ describe('Policy Controls Commands Unit Tests', () => {
       const res = await handler.handle({
         workspaceId: WS_ID,
         servicePrincipal: 'cron-worker',
+        authToken: 'command-fixture-key',
       });
       expect(res.success).toBe(true);
       expect(mockExemptionRepository.expireExpiredBatch).toHaveBeenCalled();
@@ -739,6 +745,7 @@ describe('Policy Controls Commands Unit Tests', () => {
       const res = await handler.handle({
         ...withoutActor,
         servicePrincipal: 'expense-service',
+        authToken: 'command-fixture-key',
       });
       expect(res.success).toBe(true);
       expect(mockViolationService.createViolation).toHaveBeenCalled();
@@ -836,6 +843,7 @@ describe('Policy Controls Commands Unit Tests', () => {
         hasReceipt: true,
         expenseDate: new Date(),
         servicePrincipal: 'expense-service',
+        authToken: 'command-fixture-key',
       });
       expect(res.success).toBe(true);
       expect(res.data?.passed).toBe(true);
@@ -926,6 +934,7 @@ describe('Policy Controls Commands Unit Tests', () => {
         handler.handle({
           ...input,
           servicePrincipal: 'cron-worker',
+          authToken: 'command-fixture-key',
         })
       ).rejects.toThrow(/not authorized to execute mutating expense evaluations/);
     });

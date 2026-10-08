@@ -2,13 +2,13 @@ import {
   PrismaClient,
   Prisma,
   SettlementStatus as PrismaSettlementStatus,
-} from "@prisma/client";
-import { ISplitSettlementRepository } from "../../domain/repositories/split-settlement.repository";
-import { SplitSettlement } from "../../domain/entities/split-settlement.entity";
-import { SettlementId } from "../../domain/value-objects/settlement-id";
-import { SplitId } from "../../domain/value-objects/split-id";
-import { Money } from "../../domain/value-objects/money";
-import { SettlementStatus } from "../../domain/enums/settlement-status";
+} from '@prisma/client';
+import { ISplitSettlementRepository } from '../../domain/repositories/split-settlement.repository';
+import { SplitSettlement } from '../../domain/entities/split-settlement.entity';
+import { SettlementId } from '../../domain/value-objects/settlement-id';
+import { SplitId } from '../../domain/value-objects/split-id';
+import { Money } from '../../domain/value-objects/money';
+import { SettlementStatus } from '../../domain/enums/settlement-status';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -17,9 +17,7 @@ import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prism
 
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
-export class SplitSettlementRepositoryImpl
-  implements ISplitSettlementRepository
-{
+export class SplitSettlementRepositoryImpl implements ISplitSettlementRepository {
   constructor(protected readonly rootPrisma: PrismaClient) {}
 
   protected get prisma(): PrismaClient | Prisma.TransactionClient {
@@ -53,7 +51,7 @@ export class SplitSettlementRepositoryImpl
 
   async findById(
     id: SettlementId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<SplitSettlement | null> {
     const settlement = await this.prisma.splitSettlement.findFirst({
       where: {
@@ -69,13 +67,13 @@ export class SplitSettlementRepositoryImpl
 
   async findByIdForUpdate(
     id: SettlementId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<SplitSettlement | null> {
     const client = this.prisma;
     if (typeof client.$queryRaw !== 'function') {
       throw new Error(
         'findByIdForUpdate requires a Prisma client with $queryRaw support. ' +
-        'FOR UPDATE locking is mandatory for payment safety — unlocked reads are not permitted.'
+          'FOR UPDATE locking is mandatory for payment safety — unlocked reads are not permitted.'
       );
     }
 
@@ -101,19 +99,27 @@ export class SplitSettlementRepositoryImpl
   async findBySplitId(
     splitId: SplitId,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SplitSettlement>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.splitSettlement,
-      {
-        where: {
-          splitId: splitId.getValue(),
-          split: { workspaceId },
-        },
-        orderBy: { createdAt: "desc" },
-      },
+      (page) =>
+        this.prisma.splitSettlement.findMany({
+          where: {
+            splitId: splitId.getValue(),
+            split: { workspaceId },
+          },
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.splitSettlement.count({
+          where: {
+            splitId: splitId.getValue(),
+            split: { workspaceId },
+          },
+        }),
       (settlement) => this.toDomain(settlement),
-      options,
+      options
     );
   }
 
@@ -121,7 +127,7 @@ export class SplitSettlementRepositoryImpl
     userId: string,
     workspaceId: string,
     status?: SettlementStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SplitSettlement>> {
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
@@ -138,7 +144,7 @@ export class SplitSettlementRepositoryImpl
     const [rows, total] = await Promise.all([
       this.prisma.splitSettlement.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
       }),
@@ -157,20 +163,29 @@ export class SplitSettlementRepositoryImpl
   async findPendingForUser(
     userId: string,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<SplitSettlement>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.splitSettlement,
-      {
-        where: {
-          fromUserId: userId,
-          split: { workspaceId },
-          status: { in: ["PENDING", "PARTIAL"] },
-        },
-        orderBy: { createdAt: "desc" },
-      },
+      (page) =>
+        this.prisma.splitSettlement.findMany({
+          where: {
+            fromUserId: userId,
+            split: { workspaceId },
+            status: { in: ['PENDING', 'PARTIAL'] },
+          },
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.splitSettlement.count({
+          where: {
+            fromUserId: userId,
+            split: { workspaceId },
+            status: { in: ['PENDING', 'PARTIAL'] },
+          },
+        }),
       (settlement) => this.toDomain(settlement),
-      options,
+      options
     );
   }
 
@@ -184,7 +199,7 @@ export class SplitSettlementRepositoryImpl
   }
 
   private toDomain(
-    data: Prisma.SplitSettlementGetPayload<{}>,
+    data: Prisma.SplitSettlementGetPayload<{}>
   ): SplitSettlement {
     return SplitSettlement.fromPersistence({
       id: SettlementId.fromString(data.id),
@@ -193,7 +208,7 @@ export class SplitSettlementRepositoryImpl
       toUserId: data.toUserId,
       totalOwedAmount: Money.create(
         Number(data.totalOwedAmount),
-        data.currency,
+        data.currency
       ),
       paidAmount: Money.create(Number(data.paidAmount), data.currency),
       status: data.status as SettlementStatus,

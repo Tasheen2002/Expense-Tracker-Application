@@ -143,20 +143,7 @@ export const auditLogListEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const entityAuditHistoryEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-    data: z.object({
-      items: z.array(auditLogResponseSchema),
-      total: z.number().int(),
-      limit: z.number().int(),
-      offset: z.number().int(),
-      hasMore: z.boolean(),
-    }),
-  })
-);
+export const entityAuditHistoryEnvelopeJsonSchema = auditLogListEnvelopeJsonSchema;
 
 export const auditSummaryEnvelopeJsonSchema = toJsonSchema(
   z.object({

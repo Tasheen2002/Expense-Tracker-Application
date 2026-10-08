@@ -37,14 +37,13 @@ import {
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
 
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
-
 export async function allocationManagementRoutes(
   fastify: FastifyInstance,
-  controller: AllocationManagementController
+  controller: AllocationManagementController,
+  writeRateLimiter = createRateLimiter({
+    ...RateLimitPresets.writeOperations,
+    keyGenerator: userKeyGenerator,
+  })
 ) {
   // ==========================================================================
   // Department Routes

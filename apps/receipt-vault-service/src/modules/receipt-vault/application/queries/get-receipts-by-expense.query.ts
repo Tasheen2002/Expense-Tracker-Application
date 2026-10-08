@@ -9,6 +9,8 @@ import { PaginatedResult } from '@core/domain/interfaces/paginated-result.interf
 export interface GetReceiptsByExpenseQuery extends IQuery {
   readonly expenseId: string;
   readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetReceiptsByExpenseHandler implements IQueryHandler<GetReceiptsByExpenseQuery, PaginatedResult<ReceiptDTO>> {
@@ -18,6 +20,7 @@ export class GetReceiptsByExpenseHandler implements IQueryHandler<GetReceiptsByE
     return this.receiptService.getReceiptsByExpense(
       query.expenseId,
       query.workspaceId,
+      { limit: query.limit, offset: query.offset },
     );
   }
 }

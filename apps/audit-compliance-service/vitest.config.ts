@@ -7,17 +7,40 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   resolve: {
     alias: {
-      '@prisma/client': path.resolve(__dirname, './node_modules/.prisma/client-audit'),
+      '@prisma/client': path.resolve(
+        __dirname,
+        './node_modules/.prisma/client-audit'
+      ),
       '@core': path.resolve(__dirname, '../../packages/core/src'),
       '@packages': path.resolve(__dirname, '../../packages'),
-      '@shared/middleware': path.resolve(__dirname, '../../packages/middleware/src'),
+      '@shared/middleware': path.resolve(
+        __dirname,
+        '../../packages/middleware/src'
+      ),
       '@shared': path.resolve(__dirname, './src/shared'),
     },
   },
   test: {
     globals: true,
     environment: 'node',
+    // Integration files share a database and native Prisma clients. Isolate them
+    // in one fork instead of worker threads; tests still exercise concurrent writes.
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true } },
     include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      all: true,
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.d.ts',
+        'src/index.ts',
+        'src/types/**',
+      ],
+      reporter: ['text', 'json-summary'],
+      thresholds: { lines: 75, statements: 75, functions: 75, branches: 75 },
+    },
     exclude: ['**/node_modules/**', '**/dist/**'],
     testTimeout: 30000,
   },

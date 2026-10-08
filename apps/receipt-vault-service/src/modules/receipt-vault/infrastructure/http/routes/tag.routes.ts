@@ -1,6 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+﻿import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TagController } from '../controllers/tag.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -45,16 +45,10 @@ export async function tagRoutes(
     );
   };
 
-  // Apply write rate limiting to all mutation routes
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
 
   // List all receipt tags for a workspace
   fastify.get(
-    '/:workspaceId/receipt-tags',
+    '/workspaces/:workspaceId/receipt-tags',
     {
       onRequest: [fastify.authenticate],
       preHandler: [
@@ -78,9 +72,9 @@ export async function tagRoutes(
 
   // Create receipt tag
   fastify.post(
-    '/:workspaceId/receipt-tags',
+    '/workspaces/:workspaceId/receipt-tags',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(createTagSchema),
         workspaceAuth,
@@ -103,9 +97,9 @@ export async function tagRoutes(
 
   // Update receipt tag (PATCH - partial update)
   fastify.patch(
-    '/:workspaceId/receipt-tags/:tagId',
+    '/workspaces/:workspaceId/receipt-tags/:tagId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(updateTagSchema),
         workspaceAuth,
@@ -128,9 +122,9 @@ export async function tagRoutes(
 
   // Delete receipt tag
   fastify.delete(
-    '/:workspaceId/receipt-tags/:tagId',
+    '/workspaces/:workspaceId/receipt-tags/:tagId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         workspaceAuth,
         RolePermissions.ADMIN_LEVEL,

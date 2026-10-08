@@ -1,27 +1,31 @@
+import sanitizeHtml from 'sanitize-html';
+import { validateEnum, validateText } from '../../domain/entities/entity-validation';
+import { NOTIFICATION_TITLE_MAX_LENGTH, NOTIFICATION_CONTENT_MAX_LENGTH } from '../../domain/constants';
+import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
 import { INotificationRepository } from '../../domain/repositories/notification.repository';
 import { INotificationTemplateRepository } from '../../domain/repositories/notification-template.repository';
 import { INotificationPreferenceRepository } from '../../domain/repositories/notification-preference.repository';
-import { IRecipientLookup } from '../../domain/repositories/recipient-lookup';
-
 import { Notification, NotificationDTO } from '../../domain/entities/notification.entity';
-import { NotificationPreference } from '../../domain/entities/notification-preference.entity';
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
 import { NotificationPriority } from '../../domain/enums/notification-priority.enum';
 import { NotificationId } from '../../domain/value-objects/notification-id';
 import { UserId, WorkspaceId } from '../../domain/value-objects';
 import {
-  NotificationNotFoundError,
-  UnauthorizedNotificationAccessError,
-  NotificationSendFailedError,
+  InvalidNotificationDataError,
+  NotificationTemplateNotFoundError,
 } from '../../domain/errors/notification.errors';
-import { IChannelProvider } from '../providers/channel-provider.interface';
+
+import { DEFAULT_CHANNELS } from '../../domain/constants';
+import { requestFingerprint } from './request-fingerprint';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
 
 export interface SendNotificationParams {
+  /** Required for durable internal commands; reuse for retries of the same input. */
+  requestId: string;
   workspaceId: string;
   recipientId: string;
   type: NotificationType;
@@ -35,149 +39,78 @@ export class NotificationService {
   constructor(
     private readonly notificationRepository: INotificationRepository,
     private readonly templateRepository: INotificationTemplateRepository,
-    private readonly preferenceRepository: INotificationPreferenceRepository,
-    private readonly recipientLookup: IRecipientLookup,
-    private readonly emailProvider?: IChannelProvider
+    private readonly preferenceRepository: INotificationPreferenceRepository
   ) {}
 
+  /** Trusted internal use case. Public reads derive recipient IDs from authentication. */
   async send(params: SendNotificationParams): Promise<NotificationDTO[]> {
     const workspaceId = WorkspaceId.fromString(params.workspaceId);
     const recipientId = UserId.fromString(params.recipientId);
-    const sentNotifications: Notification[] = [];
-
-    // Get user preferences (or create default)
-    let preferences = await this.preferenceRepository.findByUserAndWorkspace(
-      recipientId,
-      workspaceId
-    );
-    if (!preferences) {
-      preferences = NotificationPreference.create({
-        userId: recipientId,
-        workspaceId: workspaceId,
-      });
-      await this.preferenceRepository.save(preferences);
+    validateEnum('type', params.type, Object.values(NotificationType));
+    if (params.priority !== undefined) validateEnum('priority', params.priority, Object.values(NotificationPriority));
+    if (!params.data || typeof params.data !== 'object' || Array.isArray(params.data)) {
+      throw new InvalidNotificationDataError('data', 'must be an object');
     }
-
-    // Send via each enabled channel
-    const channels: NotificationChannel[] = [
-      NotificationChannel.EMAIL,
-      NotificationChannel.IN_APP,
-    ];
-
-    for (const channel of channels) {
-      const channelKey = this.channelToPreferenceKey(channel);
-      if (!preferences.isChannelEnabledForType(params.type, channelKey)) {
-        continue;
-      }
-
-      // Get template for this channel
-      const template = await this.templateRepository.findActiveTemplate(
-        workspaceId,
-        params.type,
-        channel
-      );
-
-      if (!template) {
-        const useExplicitOrDefault =
-          (params.title && params.content) ||
-          channel === NotificationChannel.IN_APP;
-
-        if (useExplicitOrDefault) {
-          const title = params.title || this.getDefaultTitle(params.type);
-          const content =
-            params.content || this.getDefaultContent(params.type, params.data);
-
-          const notification = Notification.create({
-            workspaceId,
-            recipientId,
-            type: params.type,
-            channel,
-            priority: params.priority,
-            title,
-            content,
-            data: params.data,
-          });
-
-          // Dispatch based on channel
-          try {
-            if (channel === NotificationChannel.EMAIL) {
-              await this.sendEmail(recipientId.getValue(), title, content);
-            }
-            notification.markAsSent();
-          } catch (error) {
-            notification.markAsFailed(
-              error instanceof Error ? error.message : 'Unknown error'
-            );
-          }
-
-          await this.notificationRepository.save(notification);
-          sentNotifications.push(notification);
+    try {
+      const serializedData = JSON.stringify(params.data, (_key, value: unknown) => {
+        if (value === undefined || typeof value === 'function' || typeof value === 'symbol'
+          || typeof value === 'bigint' || (typeof value === 'number' && !Number.isFinite(value))) {
+          throw new Error('Unsupported JSON value');
         }
-        continue;
-      }
-
-      // Render template
-      const title = this.renderTemplate(
-        template.subjectTemplate,
-        params.data
-      );
-      const content = this.renderTemplate(
-        template.bodyTemplate,
-        params.data
-      );
-
-      const notification = Notification.create({
-        workspaceId,
-        recipientId,
-        type: params.type,
-        channel,
-        priority: params.priority,
-        title,
-        content,
-        data: params.data,
+        return value;
       });
-
-      // Dispatch based on channel
-      try {
-        if (channel === NotificationChannel.EMAIL) {
-          await this.sendEmail(recipientId.getValue(), title, content);
-        }
-        notification.markAsSent();
-      } catch (error) {
-        notification.markAsFailed(
-          error instanceof Error ? error.message : 'Unknown error'
-        );
-      }
-
-      await this.notificationRepository.save(notification);
-      sentNotifications.push(notification);
+      // Capture the validated request before any await. A caller retaining the
+      // input object must not change recipient, content or data mid-delivery.
+      params = { ...params, data: JSON.parse(serializedData) as Record<string, unknown> };
+    } catch {
+      throw new InvalidNotificationDataError('data', 'must contain finite, serializable JSON values');
     }
-
-    return sentNotifications.map((n) => Notification.toDTO(n));
+    if (params.title !== undefined) validateText('title', params.title, NOTIFICATION_TITLE_MAX_LENGTH);
+    if (params.content !== undefined) validateText('content', params.content, NOTIFICATION_CONTENT_MAX_LENGTH);
+    const request = {
+      id: NotificationId.fromString(params.requestId).getValue(),
+      workspaceId: workspaceId.getValue(), recipientId: recipientId.getValue(),
+      fingerprint: requestFingerprint({ workspaceId: workspaceId.getValue(), recipientId: recipientId.getValue(),
+        type: params.type, priority: params.priority ?? NotificationPriority.MEDIUM,
+        title: params.title, content: params.content, data: params.data }),
+    };
+    const previous = await this.notificationRepository.findRequest(request);
+    if (previous !== null) return previous.map(Notification.toDTO);
+    let preferences = await this.preferenceRepository.findByUserAndWorkspace(recipientId, workspaceId);
+    // Defaults are a read-only snapshot; sending must not create preference records.
+    preferences ??= NotificationPreference.create({ userId: recipientId, workspaceId });
+    const planned: { notification: Notification; missingEmailTemplate: boolean }[] = [];
+    for (const channel of DEFAULT_CHANNELS) {
+      if (!preferences.isChannelEnabledForType(params.type, this.channelToPreferenceKey(channel))) continue;
+      const template = await this.templateRepository.findActiveTemplate(workspaceId, params.type, channel);
+      const title = template ? this.renderTemplate(template.subjectTemplate, params.data, false)
+        : params.title ?? this.getDefaultTitle(params.type);
+      const rawContent = template ? this.renderTemplate(template.bodyTemplate, params.data, true)
+        : params.content ?? this.getDefaultContent(params.type, params.data);
+      // Sanitize after interpolation too: an escaped value can still contain a
+      // dangerous URL scheme in an attribute placeholder.
+      const content = sanitizeHtml(rawContent, { allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+        allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, img: ['src', 'alt', 'width', 'height'] } });
+      const notification = Notification.create({ workspaceId, recipientId, type: params.type,
+        channel, priority: params.priority, title, content, data: params.data });
+      if (channel === NotificationChannel.IN_APP) notification.markAsSent();
+      planned.push({ notification, missingEmailTemplate: channel === NotificationChannel.EMAIL && !template
+        && (params.title === undefined || params.content === undefined) });
+    }
+    // Validate every channel before persisting anything or calling a provider.
+    for (const item of planned) {
+      if (item.missingEmailTemplate) item.notification.markAsFailed(
+        new NotificationTemplateNotFoundError(params.type, item.notification.channel).message);
+    }
+    const records = await this.notificationRepository.saveRequest(request, planned.map(item => item.notification));
+    return records.map(Notification.toDTO);
   }
 
-  async markAsRead(
-    notificationId: string,
-    userId: string
-  ): Promise<NotificationDTO> {
-    const id = NotificationId.fromString(notificationId);
-    const recipientId = UserId.fromString(userId);
-    const notification = await this.notificationRepository.findById(id);
-
-    if (!notification) {
-      throw new NotificationNotFoundError(notificationId);
-    }
-
-    // Verify the user owns this notification
-    if (!notification.recipientId.equals(recipientId)) {
-      throw new UnauthorizedNotificationAccessError(notificationId, userId);
-    }
-
-    notification.markAsRead();
-    await this.notificationRepository.save(notification);
+  async markAsRead(notificationId: string, userId: string, workspaceId: string): Promise<NotificationDTO> {
+    const notification = await this.notificationRepository.mutate(NotificationId.fromString(notificationId),
+      UserId.fromString(userId), WorkspaceId.fromString(workspaceId), entity => entity.markAsRead());
     return Notification.toDTO(notification);
   }
-
   async markAllAsRead(recipientId: string, workspaceId: string): Promise<void> {
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
@@ -189,6 +122,7 @@ export class NotificationService {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<NotificationDTO>> {
+    this.validatePagination(options);
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
     const result = await this.notificationRepository.findUnreadByRecipient(
@@ -204,6 +138,7 @@ export class NotificationService {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<NotificationDTO>> {
+    this.validatePagination(options);
     const userId = UserId.fromString(recipientId);
     const wsId = WorkspaceId.fromString(workspaceId);
     const result = await this.notificationRepository.findByRecipient(userId, wsId, options);
@@ -220,6 +155,15 @@ export class NotificationService {
   }
 
   // --- Private Helpers ---
+
+  private validatePagination(options?: PaginationOptions): void {
+    if (options?.limit !== undefined && (!Number.isInteger(options.limit) || options.limit < 1 || options.limit > 100)) {
+      throw new InvalidNotificationDataError('limit', 'must be an integer between 1 and 100');
+    }
+    if (options?.offset !== undefined && (!Number.isInteger(options.offset) || options.offset < 0 || options.offset > 2147483647)) {
+      throw new InvalidNotificationDataError('offset', 'must be a nonnegative PostgreSQL integer');
+    }
+  }
 
   private channelToPreferenceKey(
     channel: NotificationChannel
@@ -248,15 +192,18 @@ export class NotificationService {
 
   private renderTemplate(
     template: string,
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
+    html: boolean
   ): string {
     // Simple Mustache-like replacement: {{key}} -> value
     // XSS PROTECTION: Escape all values before inserting
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-      const value = data[key];
-      if (value === undefined) return '';
+      const value = Object.prototype.hasOwnProperty.call(data, key) ? data[key] : undefined;
+      if (value === undefined || value === null || !['string', 'number', 'boolean'].includes(typeof value)) {
+        throw new InvalidNotificationDataError('data', `missing or invalid template variable '${key}'`);
+      }
       // Escape HTML to prevent XSS attacks
-      return this.escapeHtml(String(value));
+      return html ? this.escapeHtml(String(value)) : String(value);
     });
   }
 
@@ -276,6 +223,8 @@ export class NotificationService {
     type: NotificationType,
     data: Record<string, unknown>
   ): string {
+    const escaped = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, this.escapeHtml(String(value))]));
+    data = escaped;
     // Generate basic content based on type
     switch (type) {
       case NotificationType.EXPENSE_APPROVED:
@@ -293,39 +242,4 @@ export class NotificationService {
     }
   }
 
-  private async sendEmail(
-    recipientId: string,
-    subject: string,
-    body: string
-  ): Promise<void> {
-    if (!this.emailProvider) {
-      console.warn(
-        `[EMAIL] No email provider configured. Email not sent to: ${recipientId}`
-      );
-      return;
-    }
-
-    const email = await this.recipientLookup.findEmail(
-      UserId.fromString(recipientId)
-    );
-
-    if (!email) {
-      console.warn(`[EMAIL] User not found: ${recipientId}. Email not sent.`);
-      return;
-    }
-
-    const result = await this.emailProvider.send({
-      recipientId,
-      recipientEmail: email,
-      subject,
-      content: body,
-    });
-
-    if (!result.success) {
-      throw new NotificationSendFailedError(
-        'EMAIL',
-        result.error || 'Failed to send email'
-      );
-    }
-  }
 }

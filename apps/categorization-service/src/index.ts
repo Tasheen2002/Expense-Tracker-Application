@@ -1,69 +1,53 @@
-import 'dotenv/config';
-import Fastify from 'fastify';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 
-import dbPlugin from './plugins/db';
-import authPlugin from './plugins/auth';
-import securityPlugin from './plugins/security';
-import errorPlugin from './plugins/error';
-import { container } from './container';
-import { registerCategorizationRulesRoutes } from './modules/categorization-rules/infrastructure/http/routes';
-import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
+// 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
+const localEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(localEnvPath)) {
+  const localEnvConfig = dotenv.parse(fs.readFileSync(localEnvPath));
+  for (const k in localEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = localEnvConfig[k];
+    }
+  }
+}
 
-const fastify = Fastify({
-  logger: true,
-});
+// 2. Load root .env as fallback for shared config (JWT_SECRET, REDIS_URL, etc.)
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+if (fs.existsSync(rootEnvPath)) {
+  const rootEnvConfig = dotenv.parse(fs.readFileSync(rootEnvPath));
+  for (const k in rootEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = rootEnvConfig[k];
+    }
+  }
+}
 
-const PORT = parseInt(process.env.PORT || '3004', 10);
+import { buildCategorizationApp } from './app';
+import { attachOutboxWorker, createShutdownHandler, readPort } from './runtime';
 
 const start = async () => {
+  let activeApp: Awaited<ReturnType<typeof buildCategorizationApp>> | undefined;
   try {
-    await fastify.register(securityPlugin);
-    await fastify.register(dbPlugin);
-    await fastify.register(authPlugin);
-    await fastify.register(errorPlugin);
+    const PORT = readPort(process.env.PORT);
+    const fastify = await buildCategorizationApp();
+    activeApp = fastify;
 
-    container.register(fastify.prisma);
-
-    const categorizationServices = container.getCategorizationRulesServices();
-    await registerCategorizationRulesRoutes(
-      fastify as any,
-      categorizationServices,
-      categorizationServices.prisma
-    );
-
-    const outboxEventRepository = container.get<any>('outboxEventRepository');
-    
-    const webhookRoutes = {
-      CategoryRuleCreated: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategoryRuleActivated: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategoryRuleDeactivated: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategoryRuleUpdated: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategoryRuleDeleted: ['http://localhost:3009/api/v1/event-outbox/events'],
-      RuleExecuted: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategorySuggestionCreated: ['http://localhost:3009/api/v1/event-outbox/events', 'http://localhost:3008/api/v1/event-outbox/events'],
-      CategorySuggestionAccepted: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategorySuggestionRejected: ['http://localhost:3009/api/v1/event-outbox/events'],
-      CategorySuggestionDeleted: ['http://localhost:3009/api/v1/event-outbox/events'],
-    };
-
-    const publisher = new HttpWebhookPublisher(webhookRoutes);
-    const outboxWorker = new OutboxWorker(outboxEventRepository, publisher, {
-      pollIntervalMs: 5000,
-    });
-    outboxWorker.start();
-
-    fastify.addHook('onClose', async () => {
-      outboxWorker.stop();
-    });
-
-    fastify.get('/health', async () => {
-      return { status: 'ok', service: 'categorization-service', uptime: process.uptime() };
-    });
+    const outboxWorker = attachOutboxWorker(fastify);
 
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    outboxWorker.start();
     console.log(`[Categorization-Service] Running on http://localhost:${PORT}`);
-  } catch (err) {
-    fastify.log.error(err);
+
+    const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+    const shutdown = createShutdownHandler(fastify);
+    for (const signal of signals) {
+      process.once(signal, () => { void shutdown(signal); });
+    }
+  } catch (err: unknown) {
+    await activeApp?.close().catch(closeError => console.error('Startup cleanup failed:', closeError instanceof Error ? closeError.message : 'unknown error'));
+    console.error('[Categorization-Service] Fatal startup error:', err instanceof Error ? err.message : err);
     process.exit(1);
   }
 };

@@ -1,44 +1,38 @@
-import { z } from "zod";
-import { toJsonSchema } from "./validator";
+import { z } from 'zod';
+import Decimal from 'decimal.js';
+import { toJsonSchema } from './validator';
 import {
   MAX_FILE_SIZE,
-  MIN_FILE_SIZE,
   ALLOWED_MIME_TYPES,
   MIN_OCR_CONFIDENCE,
   MAX_OCR_CONFIDENCE,
-} from "../../../domain/constants/receipt.constants";
-import { ReceiptStatus } from "../../../domain/enums/receipt-status";
-import { ReceiptType } from "../../../domain/enums/receipt-type";
-import { StorageProvider } from "../../../domain/enums/storage-provider";
+} from '../../../domain/constants/receipt.constants';
+import { ReceiptStatus } from '../../../domain/enums/receipt-status';
+import { ReceiptType } from '../../../domain/enums/receipt-type';
 
 // Upload Receipt Schema
-export const uploadReceiptSchema = z.object({
-  fileName: z.string().min(1, "File name is required").max(255),
-  originalName: z.string().min(1, "Original name is required").max(255),
-  filePath: z.string().min(1, "File path is required").max(1000),
-  fileSize: z
-    .number()
-    .int()
-    .min(MIN_FILE_SIZE, `File size must be at least ${MIN_FILE_SIZE} bytes`)
-    .max(
-      MAX_FILE_SIZE,
-      `File size cannot exceed ${MAX_FILE_SIZE / 1024 / 1024}MB`,
-    ),
-  mimeType: z.string().refine((val) => ALLOWED_MIME_TYPES.includes(val), {
-    message: `MIME type must be one of: ${ALLOWED_MIME_TYPES.join(", ")}`,
-  }),
-  fileHash: z.string().optional(),
-  receiptType: z.nativeEnum(ReceiptType).optional(),
-  storageProvider: z.nativeEnum(StorageProvider),
-  storageBucket: z.string().optional(),
-  storageKey: z.string().optional(),
-});
+export const uploadReceiptSchema = z
+  .object({
+    originalName: z.string().trim().min(1).max(255),
+    fileContent: z
+      .string()
+      .min(4)
+      .max(Math.ceil(MAX_FILE_SIZE / 3) * 4),
+    mimeType: z
+      .string()
+      .refine(
+        (value) => ALLOWED_MIME_TYPES.includes(value),
+        'Unsupported MIME type'
+      ),
+    receiptType: z.nativeEnum(ReceiptType).optional(),
+  })
+  .strict();
 
 export type UploadReceiptInput = z.infer<typeof uploadReceiptSchema>;
 
 // Link to Expense Schema
 export const linkToExpenseSchema = z.object({
-  expenseId: z.string().uuid("Invalid expense ID format"),
+  expenseId: z.string().uuid('Invalid expense ID format'),
 });
 
 export type LinkToExpenseInput = z.infer<typeof linkToExpenseSchema>;
@@ -50,11 +44,15 @@ export const processReceiptSchema = z.object({
     .number()
     .min(
       MIN_OCR_CONFIDENCE,
-      `OCR confidence must be at least ${MIN_OCR_CONFIDENCE}`,
+      `OCR confidence must be at least ${MIN_OCR_CONFIDENCE}`
     )
     .max(
       MAX_OCR_CONFIDENCE,
-      `OCR confidence cannot exceed ${MAX_OCR_CONFIDENCE}`,
+      `OCR confidence cannot exceed ${MAX_OCR_CONFIDENCE}`
+    )
+    .refine(
+      (value) => new Decimal(value).decimalPlaces() <= 2,
+      'OCR confidence must have at most two decimals'
     )
     .optional(),
 });
@@ -63,72 +61,67 @@ export type ProcessReceiptInput = z.infer<typeof processReceiptSchema>;
 
 // Reject Receipt Schema
 export const rejectReceiptSchema = z.object({
-  reason: z.string().min(1, "Rejection reason is required").max(500).optional(),
+  reason: z.string().min(1, 'Rejection reason is required').max(500).optional(),
 });
 
 export type RejectReceiptInput = z.infer<typeof rejectReceiptSchema>;
 
+const booleanQuerySchema = z
+  .enum(['true', 'false'])
+  .transform((value) => value === 'true');
+const filterDateSchema = z
+  .union([
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(
+        (value) =>
+          Number.isFinite(Date.parse(value)) &&
+          new Date(value).toISOString().slice(0, 10) === value,
+        'Invalid calendar date'
+      ),
+    z.string().datetime({ offset: true }),
+  ])
+  .transform((value) => new Date(value));
+
 // List Receipts Query Schema
-export const listReceiptsQuerySchema = z.object({
-  userId: z.string().uuid().optional(),
-  expenseId: z.string().uuid().optional(),
-  status: z.nativeEnum(ReceiptStatus).optional(),
-  receiptType: z.nativeEnum(ReceiptType).optional(),
-  isLinked: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (val === "true") return true;
-      if (val === "false") return false;
-      return undefined;
-    }),
-  isDeleted: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (val === "true") return true;
-      if (val === "false") return false;
-      return undefined;
-    }),
-  fromDate: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      const parsed = Date.parse(val);
-      return isNaN(parsed) ? undefined : new Date(parsed);
-    }),
-  toDate: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val) return undefined;
-      const parsed = Date.parse(val);
-      return isNaN(parsed) ? undefined : new Date(parsed);
-    }),
-  limit: z.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(100)
-    .optional()
-    .default(50),
-  offset: z.coerce
-    .number()
-    .int()
-    .min(0)
-    .optional()
-    .default(0),
-});
+export const listReceiptsQuerySchema = z
+  .object({
+    userId: z.string().uuid().optional(),
+    expenseId: z.string().uuid().optional(),
+    status: z.nativeEnum(ReceiptStatus).optional(),
+    receiptType: z.nativeEnum(ReceiptType).optional(),
+    isLinked: booleanQuerySchema.optional(),
+    isDeleted: booleanQuerySchema.optional(),
+    fromDate: filterDateSchema.optional(),
+    toDate: filterDateSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+    offset: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(2147483647)
+      .optional()
+      .default(0),
+  })
+  .refine(
+    (value) =>
+      !value.fromDate || !value.toDate || value.fromDate <= value.toDate,
+    { message: 'fromDate must not be after toDate', path: ['toDate'] }
+  );
 
 export type ListReceiptsQuery = z.infer<typeof listReceiptsQuerySchema>;
+export const receiptPaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).max(2147483647).default(0),
+});
+export const receiptPaginationQueryJsonSchema = toJsonSchema(
+  receiptPaginationQuerySchema
+);
 
 // Delete Receipt Query Schema
 export const deleteReceiptQuerySchema = z.object({
-  permanent: z
-    .string()
-    .optional()
-    .transform((val) => val === "true"),
+  permanent: booleanQuerySchema.optional().default('false'),
 });
 
 export type DeleteReceiptQuery = z.infer<typeof deleteReceiptQuerySchema>;
@@ -169,6 +162,7 @@ export const receiptStatsResponseSchema = z.object({
   processed: z.number().int(),
   failed: z.number().int(),
   verified: z.number().int(),
+  rejected: z.number().int(),
 });
 
 // Pre-computed JSON schemas
@@ -176,8 +170,12 @@ export const uploadReceiptBodyJsonSchema = toJsonSchema(uploadReceiptSchema);
 export const linkToExpenseBodyJsonSchema = toJsonSchema(linkToExpenseSchema);
 export const processReceiptBodyJsonSchema = toJsonSchema(processReceiptSchema);
 export const rejectReceiptBodyJsonSchema = toJsonSchema(rejectReceiptSchema);
-export const listReceiptsQueryJsonSchema = toJsonSchema(listReceiptsQuerySchema);
-export const deleteReceiptQueryJsonSchema = toJsonSchema(deleteReceiptQuerySchema);
+export const listReceiptsQueryJsonSchema = toJsonSchema(
+  listReceiptsQuerySchema
+);
+export const deleteReceiptQueryJsonSchema = toJsonSchema(
+  deleteReceiptQuerySchema
+);
 
 // Response envelopes
 export const receiptEnvelopeJsonSchema = toJsonSchema(

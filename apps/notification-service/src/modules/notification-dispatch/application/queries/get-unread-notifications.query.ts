@@ -9,6 +9,8 @@ import {
 export interface GetUnreadNotificationsQuery extends IQuery {
   readonly recipientId: string;
   readonly workspaceId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
 export class GetUnreadNotificationsHandler implements IQueryHandler<
@@ -22,7 +24,8 @@ export class GetUnreadNotificationsHandler implements IQueryHandler<
   ): Promise<PaginatedResult<NotificationDTO>> {
     return this.notificationService.getUnreadNotifications(
       input.recipientId,
-      input.workspaceId
+      input.workspaceId,
+      { limit: input.limit, offset: input.offset }
     );
   }
 }

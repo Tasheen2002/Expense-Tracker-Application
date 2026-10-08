@@ -1,4 +1,8 @@
 import { ReceiptService } from '../services/receipt.service';
+import {
+  ReceiptMetadataInput,
+  ReceiptMetadataCommandFields,
+} from '../receipt-inputs';
 import { ReceiptMetadataDTO } from '../../domain/entities/receipt-metadata.entity';
 import {
   ICommand,
@@ -6,30 +10,15 @@ import {
   CommandResult,
 } from '@core/application/cqrs';
 
-export interface UpdateReceiptMetadataCommand extends ICommand {
+export interface UpdateReceiptMetadataCommand
+  extends ICommand, ReceiptMetadataCommandFields {
   readonly receiptId: string;
   readonly workspaceId: string;
   readonly userId: string;
-  readonly merchantName?: string;
-  readonly merchantAddress?: string;
-  readonly merchantPhone?: string;
-  readonly merchantTaxId?: string;
-  readonly transactionDate?: Date;
-  readonly transactionTime?: string;
-  readonly subtotal?: number | string;
-  readonly taxAmount?: number | string;
-  readonly tipAmount?: number | string;
-  readonly totalAmount?: number | string;
-  readonly currency?: string;
-  readonly paymentMethod?: string;
-  readonly lastFourDigits?: string;
-  readonly invoiceNumber?: string;
-  readonly poNumber?: string;
-  readonly notes?: string;
 }
 
 // Keep DTO alias for backward compatibility with service
-export type UpdateReceiptMetadataDto = UpdateReceiptMetadataCommand;
+export type UpdateReceiptMetadataDto = ReceiptMetadataInput;
 
 export class UpdateReceiptMetadataHandler implements ICommandHandler<
   UpdateReceiptMetadataCommand,

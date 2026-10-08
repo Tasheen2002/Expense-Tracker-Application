@@ -5,13 +5,15 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "type-check": "tsc --noEmit",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.js --alias:@prisma/client=.prisma/client-categorization --external:.prisma/client-categorization --external:@fastify/* --external:fastify --external:fastify-plugin --external:dotenv --external:pino --external:pino-pretty --external:zod --external:zod-to-json-schema",
+    "type-check": "tsc --noEmit -p tsconfig.check.json",
     "prisma:generate": "prisma generate",
     "generate": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "outbox:retry": "tsx scripts/retry-outbox-event.ts",
+    "lint": "node ../../scripts/lint-backend.cjs categorization-service"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
@@ -23,13 +25,16 @@
     "zod-to-json-schema": "^3.25.2",
     "@expense-tracker/core": "workspace:*",
     "@expense-tracker/contracts": "workspace:*",
-    "@expense-tracker/outbox-kit": "workspace:*"
+    "@expense-tracker/outbox-kit": "workspace:*",
+    "@expense-tracker/correlation": "workspace:*",
+    "@expense-tracker/middleware": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "prisma": "^5.9.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "@expense-tracker/typescript-config": "workspace:*"
+    "@expense-tracker/typescript-config": "workspace:*",
+    "esbuild": "^0.21.5"
   }
 }

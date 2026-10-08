@@ -1,167 +1,62 @@
-import 'dotenv/config';
-import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
-import cors from '@fastify/cors';
-import helmet from '@fastify/helmet';
-import { PrismaClient } from '@prisma/client';
-import { container } from './container';
-import { registerReceiptVaultRoutes } from './modules/receipt-vault/infrastructure/http/routes';
-import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import type { FastifyInstance } from 'fastify';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    prisma: PrismaClient;
-    authenticate: (request: FastifyRequest) => Promise<void>;
-  }
-  interface FastifyRequest {
-    user?: {
-      id: string;
-      userId: string;
-      email: string;
-      workspaceId?: string;
-    };
+// 1. Load service-local .env first (DATABASE_URL, PORT — service-specific config)
+const localEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(localEnvPath)) {
+  const localEnvConfig = dotenv.parse(fs.readFileSync(localEnvPath));
+  for (const k in localEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = localEnvConfig[k];
+    }
   }
 }
 
-const createServer = async (): Promise<FastifyInstance> => {
-  const server = Fastify({
-    ajv: {
-      customOptions: {
-        keywords: ['example'],
-      },
-    },
-    logger:
-      process.env.NODE_ENV === 'development'
-        ? {
-            level: process.env.LOG_LEVEL || 'info',
-            transport: {
-              target: 'pino-pretty',
-              options: {
-                translateTime: 'HH:MM:ss Z',
-                ignore: 'pid,hostname',
-                colorize: true,
-              },
-            },
-          }
-        : {
-            level: process.env.LOG_LEVEL || 'info',
-          },
-    schemaErrorFormatter: (errors, dataVar) => {
-      const error = errors[0];
-      let message = `${dataVar}${error.instancePath} ${error.message}`;
-      if (error.params && 'missingProperty' in error.params) {
-        message = `${dataVar} must have required property '${error.params.missingProperty}'`;
-      }
-      return new Error(message);
-    },
-  });
-
-  // Global plugins
-  await server.register(cors, {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  });
-  await server.register(helmet, {
-    contentSecurityPolicy: false,
-  });
-
-  // Prisma Client Initialization
-  const prisma = new PrismaClient({
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['query', 'error', 'warn']
-        : ['error'],
-  });
-
-  // Decorate server with local Prisma Client
-  server.decorate('prisma', prisma);
-  server.log.info('Database client registered');
-
-  // Graceful database disconnection
-  server.addHook('onClose', async () => {
-    await prisma.$disconnect();
-    server.log.info('Database connection closed');
-  });
-
-  // Security Context Authenticator (Gateway Integration)
-  // Consumes validated context headers and strips pre-existing user metadata on req
-  server.decorate('authenticate', async (request: FastifyRequest) => {
-    const userId = request.headers['x-user-id'] as string;
-    const email = request.headers['x-user-email'] as string;
-    const workspaceId = request.headers['x-workspace-id'] as string;
-
-    if (!userId) {
-      const err = new Error('Authentication failed: Missing context headers from Gateway') as any;
-      err.statusCode = 401;
-      throw err;
+// 2. Load root .env as fallback for shared config (JWT_SECRET, REDIS_URL, etc.)
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+if (fs.existsSync(rootEnvPath)) {
+  const rootEnvConfig = dotenv.parse(fs.readFileSync(rootEnvPath));
+  for (const k in rootEnvConfig) {
+    if (!process.env[k]) {
+      process.env[k] = rootEnvConfig[k];
     }
+  }
+}
 
-    request.user = {
-      id: userId,
-      userId,
-      email: email || '',
-      workspaceId,
-    };
-  });
-
-  // Register container dependencies
-  container.register(prisma);
-  server.log.info('✓ DI Container initialized');
-
-  // Register domain routes
-  const receiptController = container.get<any>('receiptController');
-  const tagController = container.get<any>('receiptTagController');
-
-  await registerReceiptVaultRoutes(server, {
-    receiptController,
-    tagController,
-  });
-  server.log.info('✓ Receipt Vault routes registered');
-
-  // Health Check
-  server.get('/health', async () => {
-    return { status: 'ok', service: 'receipt-vault-service', uptime: process.uptime() };
-  });
-
-  // Background Outbox Worker Integration
-  const outboxEventRepository = container.get<any>('outboxEventRepository');
-  
-  // Set up event publisher (HTTP Webhooks downstream to subscribers)
-  const webhookRoutes = {
-    ReceiptUploaded: [process.env.EXPENSE_SERVICE_URL || 'http://localhost:3003/api/v1/receipts/events'],
-    ReceiptProcessed: [process.env.EXPENSE_SERVICE_URL || 'http://localhost:3003/api/v1/receipts/events'],
-    ReceiptLinkedToExpense: [process.env.EXPENSE_SERVICE_URL || 'http://localhost:3003/api/v1/receipts/events'],
-    ReceiptDeleted: [process.env.EXPENSE_SERVICE_URL || 'http://localhost:3003/api/v1/receipts/events'],
-  };
-  const publisher = new HttpWebhookPublisher(webhookRoutes);
-
-  const outboxWorker = new OutboxWorker(outboxEventRepository, publisher, {
-    pollIntervalMs: parseInt(process.env.OUTBOX_POLL_INTERVAL || '5000', 10),
-  });
-
-  server.addHook('onReady', async () => {
-    outboxWorker.start();
-    server.log.info('✓ Outbox Worker background thread started');
-  });
-
-  server.addHook('onClose', async () => {
-    outboxWorker.stop();
-    server.log.info('Outbox Worker background thread stopped');
-  });
-
-  return server;
-};
+const PORT = Number(process.env.PORT || '3007');
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be an integer between 1 and 65535');
 
 const start = async () => {
+  let server: FastifyInstance | undefined;
   try {
-    const server = await createServer();
-    const port = parseInt(process.env.PORT || '3007', 10);
-    const host = '0.0.0.0';
+    const { buildReceiptVaultApp } = await import('./app');
+    const { attachReceiptWorker } = await import('./runtime');
+    server = await buildReceiptVaultApp();
 
-    await server.listen({ port, host });
-    server.log.info(`🚀 Receipt Vault Service running at http://localhost:${port}`);
-  } catch (err) {
-    console.error(err);
-    process.exit(1);
+    const outboxWorker = attachReceiptWorker(server);
+
+    await server.listen({ port: PORT, host: '0.0.0.0' });
+    outboxWorker.start();
+    server.log.info(`🚀 Receipt Vault Service running at http://localhost:${PORT}`);
+
+    let shuttingDown = false;
+    const signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT'];
+    for (const signal of signals) {
+      process.once(signal, () => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        server!.log.info(`Received ${signal}, closing Receipt Vault`);
+        void server!.close().then(() => { process.exitCode = 0; }).catch(error => {
+          server!.log.error({ err: error }, 'Receipt shutdown failed'); process.exitCode = 1;
+        });
+      });
+    }
+  } catch (err: unknown) {
+    await server?.close();
+    console.error('[Receipt-Vault-Service] Fatal startup error:', err instanceof Error ? err.message : 'Unknown startup error');
+    process.exitCode = 1;
   }
 };
 

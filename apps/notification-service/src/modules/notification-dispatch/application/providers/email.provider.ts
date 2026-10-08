@@ -1,64 +1,29 @@
-import { IChannelProvider, SendResult } from "./channel-provider.interface";
+import { IChannelProvider, SendResult } from './channel-provider.interface';
 
 export interface EmailConfig {
   host: string;
   port: number;
   secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
+  auth: { user: string; pass: string; };
   from: string;
 }
 
+/** An adapter supplies real transport; this class never treats logging as delivery. */
+export interface EmailTransport {
+  send(message: { from: string; to: string; subject: string; html: string; idempotencyKey: string }): Promise<SendResult>;
+}
+
 export class EmailProvider implements IChannelProvider {
-  private config: EmailConfig;
+  constructor(private readonly config: EmailConfig, private readonly transport?: EmailTransport) {}
 
-  constructor(config: EmailConfig) {
-    this.config = config;
-  }
-
-  async send(params: {
-    recipientId: string;
-    recipientEmail?: string;
-    subject: string;
-    content: string;
-    data?: Record<string, unknown>;
-  }): Promise<SendResult> {
-    if (!params.recipientEmail) {
-      return {
-        success: false,
-        error: "Recipient email is required for email channel",
-      };
-    }
-
+  async send(params: Parameters<IChannelProvider['send']>[0]): Promise<SendResult> {
+    if (!params.recipientEmail) return { success: false, error: 'Recipient email is required for email channel' };
+    if (!this.transport) return { success: false, error: 'Email transport is not configured' };
     try {
-      // TODO: Integrate with Nodemailer
-      // For now, log the email and return success
-      console.log(`[EMAIL PROVIDER]`);
-      console.log(`  From: ${this.config.from}`);
-      console.log(`  To: ${params.recipientEmail}`);
-      console.log(`  Subject: ${params.subject}`);
-      console.log(`  Content: ${params.content.substring(0, 100)}...`);
-
-      // In production, this would use nodemailer:
-      // const transporter = nodemailer.createTransport(this.config);
-      // const info = await transporter.sendMail({
-      //   from: this.config.from,
-      //   to: params.recipientEmail,
-      //   subject: params.subject,
-      //   html: params.content,
-      // });
-
-      return {
-        success: true,
-        messageId: `mock-email-${Date.now()}`,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to send email",
-      };
+      return await this.transport.send({ from: this.config.from, to: params.recipientEmail,
+        subject: params.subject, html: params.content, idempotencyKey: params.idempotencyKey });
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : 'Email transport failed' };
     }
   }
 }

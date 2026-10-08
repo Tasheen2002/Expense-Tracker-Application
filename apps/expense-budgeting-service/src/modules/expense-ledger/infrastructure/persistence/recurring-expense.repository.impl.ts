@@ -3,15 +3,15 @@ import {
   Prisma,
   RecurrenceFrequency as PrismaRecurrenceFrequency,
   RecurrenceStatus as PrismaRecurrenceStatus,
-} from "@prisma/client";
-import { IRecurringExpenseRepository } from "../../domain/repositories/recurring-expense.repository";
+} from '@prisma/client';
+import { IRecurringExpenseRepository } from '../../domain/repositories/recurring-expense.repository';
 import {
   RecurringExpense,
   ExpenseTemplate,
-} from "../../domain/entities/recurring-expense.entity";
-import { RecurringExpenseId } from "../../domain/value-objects/recurring-expense-id";
-import { RecurrenceFrequency } from "../../domain/enums/recurrence-frequency";
-import { RecurrenceStatus } from "../../domain/enums/recurrence-status";
+} from '../../domain/entities/recurring-expense.entity';
+import { RecurringExpenseId } from '../../domain/value-objects/recurring-expense-id';
+import { RecurrenceFrequency } from '../../domain/enums/recurrence-frequency';
+import { RecurrenceStatus } from '../../domain/enums/recurrence-status';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -38,7 +38,9 @@ interface RecurringExpensePersistenceData {
   updatedAt: Date;
 }
 
-function toPrismaFrequency(freq: RecurrenceFrequency): PrismaRecurrenceFrequency {
+function toPrismaFrequency(
+  freq: RecurrenceFrequency
+): PrismaRecurrenceFrequency {
   switch (freq) {
     case RecurrenceFrequency.DAILY:
       return PrismaRecurrenceFrequency.DAILY;
@@ -94,13 +96,21 @@ function toDomainStatus(status: string): RecurrenceStatus {
 function templateToJson(template: ExpenseTemplate): Prisma.InputJsonObject {
   return {
     title: template.title,
-    ...(template.description !== undefined && { description: template.description }),
+    ...(template.description !== undefined && {
+      description: template.description,
+    }),
     amount: template.amount,
     currency: template.currency,
-    ...(template.categoryId !== undefined && { categoryId: template.categoryId }),
+    ...(template.categoryId !== undefined && {
+      categoryId: template.categoryId,
+    }),
     ...(template.merchant !== undefined && { merchant: template.merchant }),
-    ...(template.paymentMethod !== undefined && { paymentMethod: template.paymentMethod }),
-    ...(template.isReimbursable !== undefined && { isReimbursable: template.isReimbursable }),
+    ...(template.paymentMethod !== undefined && {
+      paymentMethod: template.paymentMethod,
+    }),
+    ...(template.isReimbursable !== undefined && {
+      isReimbursable: template.isReimbursable,
+    }),
     ...(template.tagIds !== undefined && { tagIds: template.tagIds }),
   };
 }
@@ -110,13 +120,21 @@ function jsonToTemplate(raw: unknown): ExpenseTemplate {
     const data = raw as Record<string, unknown>;
     return {
       title: typeof data.title === 'string' ? data.title : '',
-      ...(typeof data.description === 'string' && { description: data.description }),
+      ...(typeof data.description === 'string' && {
+        description: data.description,
+      }),
       amount: typeof data.amount === 'number' ? data.amount : 0,
       currency: typeof data.currency === 'string' ? data.currency : 'USD',
-      ...(typeof data.categoryId === 'string' && { categoryId: data.categoryId }),
+      ...(typeof data.categoryId === 'string' && {
+        categoryId: data.categoryId,
+      }),
       ...(typeof data.merchant === 'string' && { merchant: data.merchant }),
-      ...(typeof data.paymentMethod === 'string' && { paymentMethod: data.paymentMethod }),
-      ...(typeof data.isReimbursable === 'boolean' && { isReimbursable: data.isReimbursable }),
+      ...(typeof data.paymentMethod === 'string' && {
+        paymentMethod: data.paymentMethod,
+      }),
+      ...(typeof data.isReimbursable === 'boolean' && {
+        isReimbursable: data.isReimbursable,
+      }),
       ...(Array.isArray(data.tagIds) && { tagIds: data.tagIds.map(String) }),
     };
   }
@@ -177,7 +195,7 @@ export class PrismaRecurringExpenseRepository
 
   async findById(
     id: RecurringExpenseId,
-    workspaceId: string,
+    workspaceId: string
   ): Promise<RecurringExpense | null> {
     const data = await this.prisma.recurringExpense.findFirst({
       where: {
@@ -193,16 +211,18 @@ export class PrismaRecurringExpenseRepository
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<RecurringExpense>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.recurringExpense,
-      {
-        where: { workspaceId },
-        orderBy: { createdAt: "desc" },
-      },
+      (page) =>
+        this.prisma.recurringExpense.findMany({
+          where: { workspaceId },
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.recurringExpense.count({ where: { workspaceId } }),
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
@@ -281,21 +301,31 @@ export class PrismaRecurringExpenseRepository
 
   async findDueExpenses(
     beforeDate: Date,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<RecurringExpense>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.recurringExpense,
-      {
-        where: {
-          status: toPrismaStatus(RecurrenceStatus.ACTIVE),
-          nextRunDate: {
-            lte: beforeDate,
+      (page) =>
+        this.prisma.recurringExpense.findMany({
+          where: {
+            status: toPrismaStatus(RecurrenceStatus.ACTIVE),
+            nextRunDate: {
+              lte: beforeDate,
+            },
           },
-        },
-        orderBy: { nextRunDate: "asc" },
-      },
+          orderBy: { nextRunDate: 'asc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.recurringExpense.count({
+          where: {
+            status: toPrismaStatus(RecurrenceStatus.ACTIVE),
+            nextRunDate: {
+              lte: beforeDate,
+            },
+          },
+        }),
       (expense) => this.toDomain(expense),
-      options,
+      options
     );
   }
 
@@ -308,9 +338,7 @@ export class PrismaRecurringExpenseRepository
     });
   }
 
-  private toDomain(
-    data: RecurringExpensePersistenceData,
-  ): RecurringExpense {
+  private toDomain(data: RecurringExpensePersistenceData): RecurringExpense {
     return RecurringExpense.fromPersistence({
       id: RecurringExpenseId.fromString(data.id),
       workspaceId: data.workspaceId,

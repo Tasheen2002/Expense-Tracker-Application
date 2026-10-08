@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { NotificationType } from '../../../domain/enums/notification-type.enum';
 import { ResponseHelper } from '@shared/response.helper';
 import { GetPreferencesHandler } from '../../../application/queries/get-preferences.query';
@@ -14,10 +14,10 @@ import {
 
 export class PreferenceController {
   constructor(
-    private readonly getPreferencesHandler: GetPreferencesHandler,
-    private readonly updatePreferencesHandler: UpdatePreferencesHandler,
-    private readonly updateTypePreferenceHandler: UpdateTypePreferenceHandler,
-    private readonly checkChannelEnabledHandler: CheckChannelEnabledHandler
+    private readonly getPreferencesHandler: Pick<GetPreferencesHandler, 'handle'>,
+    private readonly updatePreferencesHandler: Pick<UpdatePreferencesHandler, 'handle'>,
+    private readonly updateTypePreferenceHandler: Pick<UpdateTypePreferenceHandler, 'handle'>,
+    private readonly checkChannelEnabledHandler: Pick<CheckChannelEnabledHandler, 'handle'>
   ) {}
 
   async getPreferences(
@@ -37,7 +37,7 @@ export class PreferenceController {
       // When no preferences exist yet, return safe defaults without persisting.
       // Preferences are created lazily on the first PATCH.
       const data = preferences
-        ?? { emailEnabled: true, inAppEnabled: true, pushEnabled: false };
+        ?? { id: null, userId, workspaceId, emailEnabled: true, inAppEnabled: true, pushEnabled: false, typeSettings: {} };
       return ResponseHelper.ok(
         reply,
         'Preferences retrieved successfully',
@@ -78,7 +78,7 @@ export class PreferenceController {
 
   async updateTypePreference(
     request: AuthenticatedRequest<{
-      Params: { workspaceId: string; type: string };
+      Params: { workspaceId: string; type: NotificationType };
       Body: UpdateTypePreferenceInput;
     }>,
     reply: FastifyReply
@@ -91,7 +91,7 @@ export class PreferenceController {
       const result = await this.updateTypePreferenceHandler.handle({
         userId,
         workspaceId,
-        type: type as NotificationType,
+        type,
         settings,
       });
       return ResponseHelper.fromCommand(
@@ -117,12 +117,10 @@ export class PreferenceController {
       const { type, channel } = request.query;
       const userId = request.user.userId;
 
-      console.log('DEBUG CHECK:', { workspaceId, userId, query: request.query });
-
       const isEnabled = await this.checkChannelEnabledHandler.handle({
         userId,
         workspaceId,
-        type: type as NotificationType,
+        type,
         channel,
       });
       return ResponseHelper.ok(
@@ -131,9 +129,7 @@ export class PreferenceController {
         { type, channel, isEnabled }
       );
     } catch (error: unknown) {
-      console.error('DEBUG checkChannelEnabled error:', error);
       return ResponseHelper.error(reply, error);
     }
   }
 }
-

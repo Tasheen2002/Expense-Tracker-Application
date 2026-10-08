@@ -1,5 +1,5 @@
 import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import { ResponseHelper } from '@shared/response.helper';
 import {
   CreateSuggestionHandler,
@@ -17,6 +17,7 @@ import {
   ExpenseParams,
   CreateSuggestionBody,
   SuggestionQuery,
+  ExecutionQuery,
 } from '../validation/categorization-rules.schema';
 
 export class CategorySuggestionController {
@@ -43,6 +44,7 @@ export class CategorySuggestionController {
       const suggestion = await this.getSuggestionByIdHandler.handle({
         suggestionId,
         workspaceId,
+        userId: request.user.userId,
       });
 
       return ResponseHelper.ok(reply, 'Category suggestion retrieved successfully', suggestion);
@@ -52,7 +54,7 @@ export class CategorySuggestionController {
   }
 
   async getSuggestionsByExpense(
-    request: AuthenticatedRequest<{ Params: ExpenseParams }>,
+    request: AuthenticatedRequest<{ Params: ExpenseParams; Querystring: ExecutionQuery }>,
     reply: FastifyReply
   ) {
     try {
@@ -60,10 +62,16 @@ export class CategorySuggestionController {
 
       const suggestions = await this.getSuggestionsByExpenseHandler.handle({
         workspaceId,
+        userId: request.user.userId,
         expenseId,
+        limit: request.query.limit,
+        offset: request.query.offset,
       });
 
-      return ResponseHelper.ok(reply, 'Category suggestions retrieved successfully', suggestions);
+      return ResponseHelper.ok(reply, 'Category suggestions retrieved successfully', {
+        items: suggestions.items,
+        pagination: { total: suggestions.total, limit: suggestions.limit, offset: suggestions.offset, hasMore: suggestions.hasMore },
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -83,6 +91,7 @@ export class CategorySuggestionController {
       if (pendingOnly === true) {
         const result = await this.getPendingSuggestionsByWorkspaceHandler.handle({
           workspaceId,
+          userId: request.user.userId,
           limit,
           offset,
         });
@@ -102,6 +111,7 @@ export class CategorySuggestionController {
       } else {
         const result = await this.getSuggestionsByWorkspaceHandler.handle({
           workspaceId,
+          userId: request.user.userId,
           limit,
           offset,
         });
@@ -138,6 +148,7 @@ export class CategorySuggestionController {
 
       const result = await this.createSuggestionHandler.handle({
         workspaceId,
+        userId: request.user.userId,
         expenseId: request.body.expenseId,
         suggestedCategoryId: request.body.suggestedCategoryId,
         confidence: request.body.confidence,
@@ -166,6 +177,7 @@ export class CategorySuggestionController {
       const result = await this.acceptSuggestionHandler.handle({
         suggestionId,
         workspaceId,
+        userId: request.user.userId,
       });
 
       return ResponseHelper.fromCommand(
@@ -188,6 +200,7 @@ export class CategorySuggestionController {
       const result = await this.rejectSuggestionHandler.handle({
         suggestionId,
         workspaceId,
+        userId: request.user.userId,
       });
 
       return ResponseHelper.fromCommand(
@@ -210,6 +223,7 @@ export class CategorySuggestionController {
       const result = await this.deleteSuggestionHandler.handle({
         suggestionId,
         workspaceId,
+        userId: request.user.userId,
       });
 
       if (!result.success) {

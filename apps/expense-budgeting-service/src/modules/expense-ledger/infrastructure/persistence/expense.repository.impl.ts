@@ -16,7 +16,10 @@ import { Money } from '../../domain/value-objects/money';
 import { ExpenseDate } from '../../domain/value-objects/expense-date';
 import { ExpenseStatus } from '../../domain/enums/expense-status';
 import { PaymentMethod } from '../../domain/enums/payment-method';
-import { CurrencyRequiredError, ExpenseConcurrencyConflictError } from '../../domain/errors/expense.errors';
+import {
+  CurrencyRequiredError,
+  ExpenseConcurrencyConflictError,
+} from '../../domain/errors/expense.errors';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
 // ... (imports)
@@ -26,11 +29,6 @@ import { IEventBus } from '@core/domain/events/domain-event';
 type ExpenseWithRelations = Prisma.ExpenseGetPayload<{
   include: { category: true; tags: true; attachments: true };
 }>;
-
-interface PrismaPaginationDelegate<T> {
-  findMany: (args: unknown) => Promise<T[]>;
-  count: (args: unknown) => Promise<number>;
-}
 
 export class ExpenseRepositoryImpl
   extends PrismaRepository<Expense>
@@ -178,16 +176,18 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
-      {
-        where: { workspaceId },
-        include: {
-          category: true,
-          tags: true,
-          attachments: true,
-        },
-        orderBy: { expenseDate: 'desc' },
-      },
+      (page) =>
+        this.prisma.expense.findMany({
+          where: { workspaceId },
+          include: {
+            category: true,
+            tags: true,
+            attachments: true,
+          },
+          orderBy: { expenseDate: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.expense.count({ where: { workspaceId } }),
       (expense) => this.toDomain(expense),
       options
     );
@@ -199,16 +199,18 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
-      {
-        where: { userId, workspaceId },
-        include: {
-          category: true,
-          tags: true,
-          attachments: true,
-        },
-        orderBy: { expenseDate: 'desc' },
-      },
+      (page) =>
+        this.prisma.expense.findMany({
+          where: { userId, workspaceId },
+          include: {
+            category: true,
+            tags: true,
+            attachments: true,
+          },
+          orderBy: { expenseDate: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.expense.count({ where: { userId, workspaceId } }),
       (expense) => this.toDomain(expense),
       options
     );
@@ -220,19 +222,27 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
-      {
-        where: {
-          categoryId: categoryId.getValue(),
-          workspaceId,
-        },
-        include: {
-          category: true,
-          tags: true,
-          attachments: true,
-        },
-        orderBy: { expenseDate: 'desc' },
-      },
+      (page) =>
+        this.prisma.expense.findMany({
+          where: {
+            categoryId: categoryId.getValue(),
+            workspaceId,
+          },
+          include: {
+            category: true,
+            tags: true,
+            attachments: true,
+          },
+          orderBy: { expenseDate: 'desc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.expense.count({
+          where: {
+            categoryId: categoryId.getValue(),
+            workspaceId,
+          },
+        }),
       (expense) => this.toDomain(expense),
       options
     );
@@ -244,16 +254,18 @@ export class ExpenseRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Expense>> {
     return PrismaRepositoryHelper.paginate<ExpenseWithRelations, Expense>(
-      this.prisma.expense as unknown as PrismaPaginationDelegate<ExpenseWithRelations>,
-      {
-        where: { status, workspaceId },
-        include: {
-          category: true,
-          tags: true,
-          attachments: true,
-        },
-        orderBy: { expenseDate: 'desc' },
-      },
+      (page) =>
+        this.prisma.expense.findMany({
+          where: { status, workspaceId },
+          include: {
+            category: true,
+            tags: true,
+            attachments: true,
+          },
+          orderBy: { expenseDate: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.expense.count({ where: { status, workspaceId } }),
       (expense) => this.toDomain(expense),
       options
     );
@@ -298,7 +310,6 @@ export class ExpenseRepositoryImpl
     const limit = options?.limit || 50;
     const offset = options?.offset || 0;
 
-
     const [rows, total] = await Promise.all([
       this.prisma.expense.findMany({
         where,
@@ -323,7 +334,11 @@ export class ExpenseRepositoryImpl
     };
   }
 
-  async delete(id: ExpenseId, workspaceId: string, expense?: Expense): Promise<void> {
+  async delete(
+    id: ExpenseId,
+    workspaceId: string,
+    expense?: Expense
+  ): Promise<void> {
     await this.runInTransaction(async (tx) => {
       let entityToDispatch = expense;
       if (!entityToDispatch) {

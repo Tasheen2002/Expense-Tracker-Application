@@ -47,7 +47,8 @@ export class CostCenterCreatedEvent extends DomainEvent {
 export class CostCenterUpdatedEvent extends DomainEvent {
   constructor(
     public readonly costCenterId: string,
-    public readonly changes: Record<string, unknown>
+    public readonly changes: Record<string, unknown>,
+    public readonly workspaceId: string
   ) {
     super(costCenterId, 'CostCenter');
   }
@@ -59,13 +60,14 @@ export class CostCenterUpdatedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> {
     return {
       costCenterId: this.costCenterId,
+      workspaceId: this.workspaceId,
       changes: this.changes,
     };
   }
 }
 
 export class CostCenterActivatedEvent extends DomainEvent {
-  constructor(public readonly costCenterId: string) {
+  constructor(public readonly costCenterId: string, public readonly workspaceId: string) {
     super(costCenterId, 'CostCenter');
   }
 
@@ -74,12 +76,12 @@ export class CostCenterActivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { costCenterId: this.costCenterId };
+    return { costCenterId: this.costCenterId, workspaceId: this.workspaceId };
   }
 }
 
 export class CostCenterDeactivatedEvent extends DomainEvent {
-  constructor(public readonly costCenterId: string) {
+  constructor(public readonly costCenterId: string, public readonly workspaceId: string) {
     super(costCenterId, 'CostCenter');
   }
 
@@ -88,7 +90,7 @@ export class CostCenterDeactivatedEvent extends DomainEvent {
   }
 
   getPayload(): Record<string, unknown> {
-    return { costCenterId: this.costCenterId };
+    return { costCenterId: this.costCenterId, workspaceId: this.workspaceId };
   }
 }
 
@@ -209,7 +211,7 @@ export class CostCenter extends AggregateRoot {
     if (Object.keys(changes).length > 0) {
       this.props.updatedAt = new Date();
       this.addDomainEvent(
-        new CostCenterUpdatedEvent(this.props.id.getValue(), changes)
+        new CostCenterUpdatedEvent(this.props.id.getValue(), changes, this.props.workspaceId.getValue())
       );
     }
   }
@@ -218,14 +220,14 @@ export class CostCenter extends AggregateRoot {
     if (!this.props.isActive) return;
     this.props.isActive = false;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new CostCenterDeactivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new CostCenterDeactivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   activate(): void {
     if (this.props.isActive) return;
     this.props.isActive = true;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new CostCenterActivatedEvent(this.props.id.getValue()));
+    this.addDomainEvent(new CostCenterActivatedEvent(this.props.id.getValue(), this.props.workspaceId.getValue()));
   }
 
   static toDTO(costCenter: CostCenter): CostCenterDTO {

@@ -2,6 +2,7 @@
   "extends": "@expense-tracker/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "../..",
     "types": [
       "node"
     ],

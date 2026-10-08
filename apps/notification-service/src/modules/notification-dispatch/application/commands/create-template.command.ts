@@ -1,3 +1,4 @@
+import { TemplateAccess } from '../services/template-access';
 import { NotificationType } from '../../domain/enums/notification-type.enum';
 import { NotificationChannel } from '../../domain/enums/notification-channel.enum';
 import { NotificationTemplateDTO } from '../../domain/entities/notification-template.entity';
@@ -9,6 +10,7 @@ import {
 } from '@core/application/cqrs';
 
 export interface CreateTemplateCommand extends ICommand {
+  readonly access: TemplateAccess;
   readonly workspaceId: string | undefined;
   readonly name: string;
   readonly type: NotificationType;
@@ -33,7 +35,7 @@ export class CreateTemplateHandler implements ICommandHandler<
       channel: input.channel,
       subjectTemplate: input.subjectTemplate,
       bodyTemplate: input.bodyTemplate,
-    });
+    }, input.access);
     return CommandResult.success(dto);
   }
 }

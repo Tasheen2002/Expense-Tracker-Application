@@ -1,5 +1,5 @@
-import { FastifyReply } from 'fastify';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
+﻿import { FastifyReply } from 'fastify';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   CreateTagHandler,
   UpdateTagHandler,
@@ -61,6 +61,7 @@ export class TagController {
       const result = await this.createTagHandler.handle({
         workspaceId,
         ...request.body,
+        userId: request.user.userId,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -88,6 +89,7 @@ export class TagController {
         tagId,
         workspaceId,
         ...request.body,
+        userId: request.user.userId,
       });
       return ResponseHelper.fromCommand(
         reply,
@@ -109,7 +111,7 @@ export class TagController {
     const { workspaceId, tagId } = request.params;
 
     try {
-      const result = await this.deleteTagHandler.handle({ tagId, workspaceId });
+      const result = await this.deleteTagHandler.handle({ tagId, workspaceId, userId: request.user.userId });
       return ResponseHelper.fromCommand(
         reply,
         result,

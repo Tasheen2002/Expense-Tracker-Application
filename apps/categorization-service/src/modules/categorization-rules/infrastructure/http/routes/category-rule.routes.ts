@@ -1,7 +1,6 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { CategoryRuleController } from '../controllers/category-rule.controller';
-import { AuthenticatedRequest } from '@shared/interfaces/authenticated-request.interface';
-import { workspaceAuthorizationMiddleware } from '@shared/middleware';
+import { AuthenticatedRequest } from '@expense-tracker/middleware';
 import {
   validateBody,
   validateQuery,
@@ -26,36 +25,24 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from '@shared/middleware/rate-limiter.middleware';
-import { RolePermissions } from '@shared/middleware/role-authorization.middleware';
-
-const writeRateLimiter = createRateLimiter({
-  ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
-});
 
 export async function categoryRuleRoutes(
   fastify: FastifyInstance,
-  controller: CategoryRuleController
+  controller: CategoryRuleController,
+  limits = {
+    write: createRateLimiter({ ...RateLimitPresets.writeOperations, keyGenerator: userKeyGenerator }),
+    read: createRateLimiter({ ...RateLimitPresets.readOperations, keyGenerator: userKeyGenerator }),
+  }
 ) {
-  const workspaceAuth = async (request: FastifyRequest, reply: FastifyReply) => {
-    await workspaceAuthorizationMiddleware(request as AuthenticatedRequest, reply, request.server.prisma);
-  };
-
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
-      await writeRateLimiter(request, reply);
-    }
-  });
+  const { write: writeRateLimiter, read: readRateLimiter } = limits;
 
   // Create category rule
   fastify.post(
     '/workspaces/:workspaceId/rules',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(createRuleSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -76,10 +63,9 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, readRateLimiter],
       preHandler: [
         validateQuery(ruleQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -100,10 +86,7 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-      ],
+      onRequest: [fastify.authenticate, readRateLimiter],
       schema: {
         tags: ['Category Rule'],
         description: 'Get category rule by ID',
@@ -122,11 +105,9 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       preHandler: [
         validateBody(updateRuleSchema),
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
       ],
       schema: {
         tags: ['Category Rule'],
@@ -147,11 +128,7 @@ export async function categoryRuleRoutes(
   fastify.delete(
     '/workspaces/:workspaceId/rules/:ruleId',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Category Rule'],
         description: 'Delete category rule',
@@ -173,11 +150,7 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/activate',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Category Rule'],
         description: 'Activate category rule',
@@ -196,11 +169,7 @@ export async function categoryRuleRoutes(
   fastify.patch(
     '/workspaces/:workspaceId/rules/:ruleId/deactivate',
     {
-      onRequest: [fastify.authenticate],
-      preHandler: [
-        workspaceAuth,
-        RolePermissions.ADMIN_LEVEL,
-      ],
+      onRequest: [fastify.authenticate, writeRateLimiter],
       schema: {
         tags: ['Category Rule'],
         description: 'Deactivate category rule',
@@ -219,10 +188,9 @@ export async function categoryRuleRoutes(
   fastify.get(
     '/workspaces/:workspaceId/rules/:ruleId/executions',
     {
-      onRequest: [fastify.authenticate],
+      onRequest: [fastify.authenticate, readRateLimiter],
       preHandler: [
         validateQuery(executionQuerySchema),
-        workspaceAuth,
       ],
       schema: {
         tags: ['Category Rule'],

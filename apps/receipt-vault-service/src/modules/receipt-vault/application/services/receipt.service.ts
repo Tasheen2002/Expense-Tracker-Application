@@ -21,24 +21,32 @@ import {
   ReceiptMissingStorageKeyError,
 } from '../../domain/errors/receipt.errors';
 import { UnauthorizedAccessError } from '../../domain/errors/unauthorized-access.error';
-import { UpdateReceiptMetadataDto } from '../commands/update-receipt-metadata.command';
+import { ReceiptMetadataInput, pagination } from '../receipt-inputs';
 import {
   PaginatedResult,
   PaginationOptions,
 } from '@core/domain/interfaces/paginated-result.interface';
+
+import { createHash } from 'node:crypto';
+import { IExpenseReferencePort } from '../ports/expense-reference.port';
+import { StorageProvider } from '../../domain/enums/storage-provider';
+import { InvalidFileError } from '../../domain/errors/receipt.errors';
+import { MAX_FILE_SIZE } from '../../domain/constants/receipt.constants';
 
 export class ReceiptService {
   constructor(
     private readonly receiptRepository: IReceiptRepository,
     private readonly metadataRepository: IReceiptMetadataRepository,
     private readonly tagRepository: IReceiptTagRepository,
-    private readonly fileStorage: IFileStorageService
+    private readonly fileStorage: IFileStorageService,
+    private readonly expenseReferences?: IExpenseReferencePort
   ) {}
 
   private async _getReceiptEntity(
     receiptId: string,
     workspaceId: string,
-    userId?: string
+    userId?: string,
+    allowDeleted = false
   ): Promise<Receipt> {
     const receipt = await this.receiptRepository.findById(
       ReceiptId.fromString(receiptId),
@@ -49,53 +57,49 @@ export class ReceiptService {
       throw new ReceiptNotFoundError(receiptId, workspaceId);
     }
 
-    if (userId && receipt.userId !== userId) {
+    if (userId !== undefined && receipt.userId !== userId) {
       throw new UnauthorizedAccessError(userId, receiptId);
     }
+    if (receipt.isDeleted() && !allowDeleted) throw new DeletedReceiptError(receiptId);
 
     return receipt;
   }
 
   async uploadReceipt(params: {
-    workspaceId: string;
-    userId: string;
-    fileName: string;
-    originalName: string;
-    filePath: string;
-    fileSize: number;
-    mimeType: string;
-    fileHash?: string;
-    receiptType?: ReceiptType;
-    storageLocation: StorageLocation;
+    workspaceId: string; userId: string; originalName: string; fileContent: string;
+    mimeType: string; receiptType?: ReceiptType;
   }): Promise<ReceiptDTO> {
-    // Check for duplicate by file hash
-    if (params.fileHash) {
-      const existing = await this.receiptRepository.findByFileHash(
-        params.fileHash,
-        params.workspaceId
-      );
-
-      if (existing && !existing.isDeleted()) {
-        throw new DuplicateReceiptError(params.fileHash);
-      }
+    const content = params.fileContent;
+    if (!content || content.length > Math.ceil(MAX_FILE_SIZE / 3) * 4 ||
+        content.length % 4 !== 0 || /[^A-Za-z0-9+/=]/.test(content)) {
+      throw new InvalidFileError('Expected bounded canonical base64 file content');
     }
-
-    const receipt = Receipt.create({
-      workspaceId: params.workspaceId,
-      userId: params.userId,
-      fileName: params.fileName,
-      originalName: params.originalName,
-      filePath: params.filePath,
-      fileSize: params.fileSize,
-      mimeType: params.mimeType,
-      fileHash: params.fileHash,
-      receiptType: params.receiptType,
-      storageLocation: params.storageLocation,
-    });
-
-    await this.receiptRepository.save(receipt);
-
-    return Receipt.toDTO(receipt);
+    const bytes = Buffer.from(content, 'base64');
+    if (bytes.toString('base64') !== content) throw new InvalidFileError('Invalid base64 encoding');
+    const hash = createHash('sha256').update(bytes).digest('hex');
+    const existing = await this.receiptRepository.findByFileHash(hash, params.workspaceId);
+    if (existing) throw new DuplicateReceiptError(hash);
+    const object = await this.fileStorage.upload(bytes, params.originalName, params.mimeType);
+    try {
+      const receipt = Receipt.create({
+        workspaceId: params.workspaceId, userId: params.userId,
+        fileName: object.storageKey, originalName: params.originalName,
+        filePath: object.storageKey, fileSize: bytes.length, mimeType: params.mimeType,
+        fileHash: hash, receiptType: params.receiptType,
+        storageLocation: StorageLocation.create({
+          provider: StorageProvider.LOCAL, bucket: object.storageBucket, key: object.storageKey,
+        }),
+      });
+      await this.receiptRepository.save(receipt);
+      return Receipt.toDTO(receipt);
+    } catch (error) {
+      try { await this.fileStorage.delete(object.storageKey, object.storageBucket); }
+      catch (cleanupError) {
+        // The managed local storage reconciliation job retries orphan cleanup after its grace period.
+        throw Object.assign(new Error('Receipt persistence failed and file cleanup will be retried'), { errors: [error, cleanupError] });
+      }
+      throw error;
+    }
   }
 
   async getReceipt(
@@ -118,7 +122,7 @@ export class ReceiptService {
     workspaceId: string,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ReceiptDTO>> {
-    const result = await this.receiptRepository.findByWorkspace(workspaceId, options);
+    const result = await this.receiptRepository.findByWorkspace(workspaceId, pagination(options));
     return {
       ...result,
       items: result.items.map((r) => Receipt.toDTO(r)),
@@ -133,7 +137,7 @@ export class ReceiptService {
     const result = await this.receiptRepository.findByExpenseId(
       expenseId,
       workspaceId,
-      options
+      pagination(options)
     );
     return {
       ...result,
@@ -149,7 +153,7 @@ export class ReceiptService {
     const result = await this.receiptRepository.findByUserId(
       userId,
       workspaceId,
-      options
+      pagination(options)
     );
     return {
       ...result,
@@ -161,7 +165,7 @@ export class ReceiptService {
     filters: ReceiptFilters,
     options?: PaginationOptions
   ): Promise<PaginatedResult<ReceiptDTO>> {
-    const result = await this.receiptRepository.findByFilters(filters, options);
+    const result = await this.receiptRepository.findByFilters(filters, pagination(options));
     return {
       ...result,
       items: result.items.map((r) => Receipt.toDTO(r)),
@@ -172,10 +176,13 @@ export class ReceiptService {
     receiptId: string,
     expenseId: string,
     workspaceId: string,
-    userId: string
+    userId: string,
+    authToken?: string
   ): Promise<ReceiptDTO> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
+    if (!this.expenseReferences) throw Object.assign(new Error('Expense verification is unavailable'), { statusCode: 503 });
+    await this.expenseReferences.assertInWorkspace(expenseId, workspaceId, userId, authToken);
     if (receipt.isDeleted()) {
       throw new DeletedReceiptError(receiptId);
     }
@@ -210,12 +217,10 @@ export class ReceiptService {
   ): Promise<ReceiptDTO> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
-    if (receipt.isPending()) {
-      receipt.startProcessing();
-      await this.receiptRepository.save(receipt);
-    }
+    Receipt.validateProcessingResult(ocrText, ocrConfidence);
+    if (receipt.isPending() || receipt.canBeReprocessed()) receipt.startProcessing();
 
-    // Simulate OCR processing
+    // Record an externally supplied OCR result; no extraction job is started here.
     receipt.markAsProcessed(ocrText, ocrConfidence);
 
     await this.receiptRepository.save(receipt);
@@ -270,9 +275,10 @@ export class ReceiptService {
   async setThumbnail(
     receiptId: string,
     thumbnailPath: string,
-    workspaceId: string
+    workspaceId: string,
+    userId: string
   ): Promise<ReceiptDTO> {
-    const receipt = await this._getReceiptEntity(receiptId, workspaceId);
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     receipt.setThumbnailPath(thumbnailPath);
 
@@ -287,7 +293,7 @@ export class ReceiptService {
     userId: string,
     permanent: boolean = false
   ): Promise<void> {
-    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId, true);
 
     if (permanent) {
       // Transactional delete of receipt and dependencies
@@ -296,22 +302,7 @@ export class ReceiptService {
         workspaceId
       );
 
-      // Clean up file storage
-      const storageLocation = receipt.storageLocation;
-      const bucket = storageLocation.getBucket() || 'local';
-      const key = storageLocation.getKey();
-
-      if (key) {
-        try {
-          await this.fileStorage.delete(key, bucket);
-        } catch (error) {
-          // Log but don't fail as the DB delete succeeded
-          console.error(
-            `Failed to delete file for receipt ${receiptId}:`,
-            error
-          );
-        }
-      }
+      // The repository atomically queues durable file deletion with the row deletion.
     } else {
       // Soft delete
       receipt.softDelete();
@@ -324,7 +315,7 @@ export class ReceiptService {
     workspaceId: string,
     userId: string
   ): Promise<ReceiptDTO> {
-    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId, true);
 
     receipt.restore();
 
@@ -334,22 +325,16 @@ export class ReceiptService {
   }
 
   // Metadata management
-  async addMetadata(params: {
+  async addMetadata(params: ReceiptMetadataInput & {
     receiptId: string;
     workspaceId: string;
     userId: string;
-    merchantName?: string;
-    merchantAddress?: string;
-    transactionDate?: Date;
-    totalAmount?: number | string;
-    currency?: string;
-    invoiceNumber?: string;
   }): Promise<ReceiptMetadataDTO> {
     const receipt = await this._getReceiptEntity(params.receiptId, params.workspaceId, params.userId);
 
     // Check if metadata already exists
     const existing = await this.metadataRepository.findByReceiptId(
-      receipt.id
+      receipt.id, receipt.workspaceId
     );
     if (existing) {
       throw new ReceiptMetadataAlreadyExistsError(params.receiptId);
@@ -357,7 +342,7 @@ export class ReceiptService {
 
     const metadata = ReceiptMetadata.create(params);
 
-    await this.metadataRepository.save(metadata);
+    await this.metadataRepository.save(metadata, receipt.workspaceId);
 
     return ReceiptMetadata.toDTO(metadata);
   }
@@ -366,64 +351,21 @@ export class ReceiptService {
     receiptId: string,
     workspaceId: string,
     userId: string,
-    updates: UpdateReceiptMetadataDto
+    updates: ReceiptMetadataInput
   ): Promise<ReceiptMetadataDTO> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
 
     const metadata = await this.metadataRepository.findByReceiptId(
-      receipt.id
+      receipt.id, receipt.workspaceId
     );
 
     if (!metadata) {
       throw new ReceiptMetadataNotFoundError(receiptId);
     }
 
-    // Apply updates
-    if (
-      updates.merchantName !== undefined ||
-      updates.merchantAddress !== undefined ||
-      updates.merchantPhone !== undefined ||
-      updates.merchantTaxId !== undefined
-    ) {
-      metadata.updateMerchantInfo({
-        name: updates.merchantName,
-        address: updates.merchantAddress,
-        phone: updates.merchantPhone,
-        taxId: updates.merchantTaxId,
-      });
-    }
+    metadata.updateDetails(updates);
 
-    if (
-      updates.subtotal !== undefined ||
-      updates.taxAmount !== undefined ||
-      updates.tipAmount !== undefined ||
-      updates.totalAmount !== undefined ||
-      updates.currency !== undefined
-    ) {
-      metadata.updateFinancialAmounts({
-        subtotal: updates.subtotal,
-        taxAmount: updates.taxAmount,
-        tipAmount: updates.tipAmount,
-        totalAmount: updates.totalAmount,
-        currency: updates.currency,
-      });
-    }
-
-    if (
-      updates.transactionDate !== undefined ||
-      updates.transactionTime !== undefined
-    ) {
-      metadata.updateTransactionInfo(
-        updates.transactionDate,
-        updates.transactionTime
-      );
-    }
-
-    if (updates.notes !== undefined) {
-      metadata.updateNotes(updates.notes);
-    }
-
-    await this.metadataRepository.save(metadata);
+    await this.metadataRepository.save(metadata, receipt.workspaceId);
 
     return ReceiptMetadata.toDTO(metadata);
   }
@@ -441,7 +383,7 @@ export class ReceiptService {
       return null;
     }
 
-    const metadata = await this.metadataRepository.findByReceiptId(receipt.id);
+    const metadata = await this.metadataRepository.findByReceiptId(receipt.id, receipt.workspaceId);
     if (!metadata) {
       return null;
     }
@@ -460,14 +402,14 @@ export class ReceiptService {
 
     const hasTag = await this.tagRepository.hasTag(
       receipt.id,
-      TagId.fromString(tagId)
+      TagId.fromString(tagId), workspaceId
     );
 
     if (hasTag) {
       return; // Already has this tag
     }
 
-    await this.tagRepository.addTag(receipt.id, TagId.fromString(tagId));
+    await this.tagRepository.addTag(receipt.id, TagId.fromString(tagId), workspaceId);
   }
 
   async removeTag(
@@ -480,7 +422,7 @@ export class ReceiptService {
 
     await this.tagRepository.removeTag(
       receipt.id,
-      TagId.fromString(tagId)
+      TagId.fromString(tagId), workspaceId
     );
   }
 
@@ -490,7 +432,7 @@ export class ReceiptService {
   ): Promise<TagId[]> {
     const receipt = await this._getReceiptEntity(receiptId, workspaceId);
 
-    return await this.tagRepository.findTagsByReceipt(receipt.id);
+    return await this.tagRepository.findTagsByReceipt(receipt.id, workspaceId);
   }
 
   // Statistics
@@ -501,6 +443,7 @@ export class ReceiptService {
     processed: number;
     failed: number;
     verified: number;
+    rejected: number;
   }> {
     const counts = await this.receiptRepository.getStatusCounts(workspaceId);
 
@@ -509,9 +452,20 @@ export class ReceiptService {
     const processed = counts[ReceiptStatus.PROCESSED] || 0;
     const failed = counts[ReceiptStatus.FAILED] || 0;
     const verified = counts[ReceiptStatus.VERIFIED] || 0;
-    const total = pending + processing + processed + failed + verified;
+    const rejected = counts[ReceiptStatus.REJECTED] || 0;
+    const total = pending + processing + processed + failed + verified + rejected;
 
-    return { total, pending, processing, processed, failed, verified };
+    return { total, pending, processing, processed, failed, verified, rejected };
+  }
+
+  async downloadReceipt(receiptId: string, workspaceId: string, userId: string) {
+    const receipt = await this._getReceiptEntity(receiptId, workspaceId, userId);
+    if (receipt.isDeleted()) throw new DeletedReceiptError(receiptId);
+    if (!receipt.storageLocation.isLocal()) throw new InvalidFileError('Unsupported receipt storage provider');
+    const key = receipt.storageLocation.getKey();
+    if (!key) throw new ReceiptMissingStorageKeyError(receiptId);
+    const bytes = await this.fileStorage.download(key, receipt.storageLocation.getBucket() ?? 'local');
+    return { bytes, mimeType: receipt.fileInfo.getMimeType(), originalName: receipt.fileInfo.getOriginalName() };
   }
 
   async getDownloadUrl(
@@ -529,6 +483,7 @@ export class ReceiptService {
       throw new ReceiptMissingStorageKeyError(receiptId);
     }
 
+    if (receipt.storageLocation.isLocal() || !('generateSignedUrl' in this.fileStorage) || typeof this.fileStorage.generateSignedUrl !== 'function') throw new InvalidFileError('Use the authenticated download endpoint for this storage provider');
     return await this.fileStorage.generateSignedUrl(key, bucket);
   }
 }

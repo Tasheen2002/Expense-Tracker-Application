@@ -4,6 +4,7 @@ import { PrismaClient } from '../shared/infrastructure/persistence/prisma.client
 
 export interface DbPluginOptions {
   prisma?: PrismaClient;
+  beforeDatabaseDisconnect?: () => Promise<void>;
 }
 
 const dbPlugin: FastifyPluginAsync<DbPluginOptions> = async (fastify, opts) => {
@@ -20,7 +21,11 @@ const dbPlugin: FastifyPluginAsync<DbPluginOptions> = async (fastify, opts) => {
   fastify.log.info('Database client registered for approval-policy-service');
 
   fastify.addHook('onClose', async () => {
-    await prisma.$disconnect();
+    try {
+      await opts.beforeDatabaseDisconnect?.();
+    } finally {
+      await prisma.$disconnect();
+    }
     fastify.log.info('Database connection closed');
   });
 };

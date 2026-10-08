@@ -1,13 +1,13 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { Scenario } from "../../domain/entities/scenario.entity";
-import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
-import { ScenarioId } from "../../domain/value-objects/scenario-id";
-import { PlanId } from "../../domain/value-objects/plan-id";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Scenario } from '../../domain/entities/scenario.entity';
+import { IScenarioRepository } from '../../domain/repositories/scenario.repository';
+import { ScenarioId } from '../../domain/value-objects/scenario-id';
+import { PlanId } from '../../domain/value-objects/plan-id';
 import {
   BudgetPlanNotFoundError,
   ScenarioNotFoundError,
   ValidationError,
-} from "../../domain/errors/budget-planning.errors";
+} from '../../domain/errors/budget-planning.errors';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -15,9 +15,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
-export class ScenarioRepositoryImpl
-  implements IScenarioRepository
-{
+export class ScenarioRepositoryImpl implements IScenarioRepository {
   protected readonly prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
@@ -47,16 +45,22 @@ export class ScenarioRepositoryImpl
       select: { id: true, workspaceId: true, planId: true },
     });
 
-    const assumptionsValue = (scenario.assumptions
-      ? (scenario.assumptions as Prisma.InputJsonValue)
-      : Prisma.JsonNull) as Prisma.InputJsonValue;
+    const assumptionsValue = (
+      scenario.assumptions
+        ? (scenario.assumptions as Prisma.InputJsonValue)
+        : Prisma.JsonNull
+    ) as Prisma.InputJsonValue;
 
     if (existing) {
       if (existing.workspaceId !== wsId) {
-        throw new ValidationError("Cannot update scenario belonging to another workspace");
+        throw new ValidationError(
+          'Cannot update scenario belonging to another workspace'
+        );
       }
       if (existing.planId !== planId) {
-        throw new ValidationError("Cannot reassign scenario to a different budget plan");
+        throw new ValidationError(
+          'Cannot reassign scenario to a different budget plan'
+        );
       }
 
       const updateResult = await this.client.scenario.updateMany({
@@ -89,7 +93,10 @@ export class ScenarioRepositoryImpl
     }
   }
 
-  async findById(id: ScenarioId, workspaceId: string): Promise<Scenario | null> {
+  async findById(
+    id: ScenarioId,
+    workspaceId: string
+  ): Promise<Scenario | null> {
     const raw = await this.client.scenario.findFirst({
       where: { id: id.getValue(), workspaceId },
     });
@@ -112,7 +119,7 @@ export class ScenarioRepositoryImpl
   async findByPlanId(
     planId: PlanId,
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Scenario>> {
     const where: Prisma.ScenarioWhereInput = {
       planId: planId.getValue(),
@@ -120,8 +127,13 @@ export class ScenarioRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.client.scenario,
-      { where, orderBy: { createdAt: "desc" } },
+      (page) =>
+        this.client.scenario.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.client.scenario.count({ where }),
       (raw) =>
         Scenario.fromPersistence({
           id: raw.id,
@@ -134,13 +146,15 @@ export class ScenarioRepositoryImpl
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
         }),
-      options,
+      options
     );
   }
 
   async delete(id: ScenarioId, workspaceId: string): Promise<void> {
     if (!workspaceId || workspaceId.trim() === '') {
-      throw new ValidationError('Workspace ID is required for deleting a scenario');
+      throw new ValidationError(
+        'Workspace ID is required for deleting a scenario'
+      );
     }
 
     const result = await this.client.scenario.deleteMany({
@@ -151,7 +165,11 @@ export class ScenarioRepositoryImpl
     }
   }
 
-  async findByName(planId: PlanId, name: string, workspaceId: string): Promise<Scenario | null> {
+  async findByName(
+    planId: PlanId,
+    name: string,
+    workspaceId: string
+  ): Promise<Scenario | null> {
     const raw = await this.client.scenario.findFirst({
       where: {
         planId: planId.getValue(),

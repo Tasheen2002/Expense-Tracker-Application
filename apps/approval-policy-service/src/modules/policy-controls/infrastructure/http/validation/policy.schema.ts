@@ -1,3 +1,4 @@
+import { paginationQuerySchema } from '@shared/http/validation';
 import { z } from "zod";
 import { toJsonSchema } from "./validator";
 import {
@@ -40,8 +41,7 @@ export const policyQuerySchema = z.object({
       z.boolean().optional()
     ),
   policyType: z.nativeEnum(PolicyType).optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
+  ...paginationQuerySchema.shape,
 });
 
 /**
@@ -180,14 +180,7 @@ export const policyEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const createPolicyEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-    data: policyResponseSchema,
-  })
-);
+export const createPolicyEnvelopeJsonSchema = policyEnvelopeJsonSchema;
 
 export const policyListEnvelopeJsonSchema = toJsonSchema(
   z.object({
@@ -204,13 +197,7 @@ export const policyListEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const policyActionSuccessResponseJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema as policyActionSuccessResponseJsonSchema } from '@shared/http/validation';
 
 export const evaluateExpenseSchema = z.object({
   expenseId: z.string().uuid("Invalid expense ID format"),

@@ -11,6 +11,7 @@ export interface ReceiptStats {
   readonly processed: number;
   readonly failed: number;
   readonly verified: number;
+  readonly rejected: number;
 }
 
 export interface GetReceiptStatsQuery extends IQuery {

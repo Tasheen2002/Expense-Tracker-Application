@@ -4,7 +4,6 @@ import {  WorkspaceId, UserId  } from '@core/domain/value-objects';
 import { RuleCondition } from '../../domain/value-objects/rule-condition';
 import {  CategoryId  } from '@core/domain/value-objects';
 import {
-  RuleConditionType,
   isValidRuleConditionType,
 } from '../../domain/enums/rule-condition-type';
 import { InvalidRuleConditionError } from '../../domain/errors/categorization-rules.errors';
@@ -29,7 +28,7 @@ export class CreateCategoryRuleHandler implements ICommandHandler<
   CreateCategoryRuleCommand,
   CommandResult<CategoryRuleDTO>
 > {
-  constructor(private readonly ruleService: CategoryRuleService) {}
+  constructor(private readonly ruleService: Pick<CategoryRuleService, 'createRule'>) {}
 
   async handle(
     command: CreateCategoryRuleCommand
@@ -46,7 +45,7 @@ export class CreateCategoryRuleHandler implements ICommandHandler<
       description: command.description,
       priority: command.priority,
       condition: RuleCondition.create(
-        command.conditionType as RuleConditionType,
+        command.conditionType,
         command.conditionValue
       ),
       targetCategoryId: CategoryId.fromString(command.targetCategoryId),

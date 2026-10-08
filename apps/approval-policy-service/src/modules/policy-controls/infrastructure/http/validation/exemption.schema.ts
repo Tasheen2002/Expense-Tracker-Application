@@ -1,3 +1,4 @@
+import { paginationQuerySchema } from '@shared/http/validation';
 import { z } from "zod";
 import { toJsonSchema } from "./validator";
 import { ExemptionStatus } from "../../../domain/enums/exemption-status.enum";
@@ -36,8 +37,7 @@ export const exemptionQuerySchema = z.object({
   status: z.nativeEnum(ExemptionStatus).optional(),
   userId: z.string().uuid().optional(),
   policyId: z.string().uuid().optional(),
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().nonnegative().optional(),
+  ...paginationQuerySchema.shape,
 });
 
 /**
@@ -161,14 +161,7 @@ export const exemptionEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const createExemptionEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-    data: exemptionResponseSchema,
-  })
-);
+export const createExemptionEnvelopeJsonSchema = exemptionEnvelopeJsonSchema;
 
 export const exemptionListEnvelopeJsonSchema = toJsonSchema(
   z.object({
@@ -194,13 +187,7 @@ export const activeExemptionEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const expireExemptionsEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema as expireExemptionsEnvelopeJsonSchema } from '@shared/http/validation';
 
 export type ListExemptionsQuery = z.infer<typeof exemptionQuerySchema>;
 export type CheckActiveExemptionQuery = z.infer<typeof checkActiveExemptionQuerySchema>;
