@@ -1,3 +1,4 @@
+import { expenseParamsSchema } from './common.schema';
 import { z } from 'zod'
 import { toJsonSchema } from './validator'
 import {
@@ -9,10 +10,7 @@ import {
 /**
  * Params Schemas
  */
-export const workspaceExpenseParamsSchema = z.object({
-  workspaceId: z.string().uuid('Invalid workspace ID format'),
-  expenseId: z.string().uuid('Invalid expense ID format'),
-});
+export const workspaceExpenseParamsSchema = expenseParamsSchema;
 
 export const attachmentParamsSchema = z.object({
   workspaceId: z.string().uuid('Invalid workspace ID format'),
@@ -84,11 +82,5 @@ export const listAttachmentsEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const baseResponseEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema } from '@shared/http/validation';
 

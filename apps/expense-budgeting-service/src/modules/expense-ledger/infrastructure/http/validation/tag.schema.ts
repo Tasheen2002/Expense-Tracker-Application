@@ -84,11 +84,5 @@ export const paginatedTagsEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const baseResponseEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema } from '@shared/http/validation';
 
