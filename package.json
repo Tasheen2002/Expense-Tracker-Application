@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "dev:api": "node --no-deprecation scripts/start-backend.js",
-    "dev:web": "pnpm --filter @expense-tracker/web dev",
+    "dev:api:prepare": "node scripts/prepare-development-backend.cjs",
+    "outbox:inspect": "node scripts/outbox-maintenance.cjs inspect",
+    "outbox:replay": "node scripts/outbox-maintenance.cjs replay --service expense-budgeting",
+    "outbox:verify": "tsx --tsconfig apps/expense-budgeting-service/tsconfig.json scripts/verify-outbox-compatibility.ts",
+    "test:operations": "node --test scripts/backend-traffic-filter.test.cjs scripts/development-startup.test.cjs scripts/outbox-recovery-policy.test.cjs",
     "dev:gateway": "pnpm --filter @expense-tracker/gateway dev",
     "build": "pnpm -r build",
-    "build:web": "pnpm --filter @expense-tracker/web build",
     "generate": "pnpm --filter \"@expense-tracker/*-service\" generate",
     "prisma:generate": "pnpm --filter \"@expense-tracker/*-service\" generate",
     "prisma:migrate": "pnpm --filter \"@expense-tracker/*-service\" exec prisma migrate dev",
@@ -18,7 +21,8 @@
     "test:ui": "vitest --ui",
     "clean": "pnpm -r exec rimraf dist coverage .tsbuildinfo",
     "lint": "pnpm -r lint",
-    "type-check": "pnpm -r type-check"
+    "type-check": "pnpm -r type-check",
+    "lint:backend": "node scripts/lint-backend.cjs"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
