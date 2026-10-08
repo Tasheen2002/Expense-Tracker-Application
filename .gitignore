@@ -3,6 +3,14 @@ node_modules
 npm-debug.log
 yarn-error.log
 pnpm-debug.log
+*.log
+
+# Generated local verification results (repository root only)
+/*-results.json
+/*-before-fix.json
+/*-live-verification.json
+/*-foundation-probes.json
+/*-contract-probe.json
 
 # Build outputs
 dist

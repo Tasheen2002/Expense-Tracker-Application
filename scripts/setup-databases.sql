@@ -27,7 +27,6 @@ CREATE SCHEMA IF NOT EXISTS inventory_management;
 CREATE DATABASE expense_tracker_categorization;
 \c expense_tracker_categorization
 CREATE SCHEMA IF NOT EXISTS categorization_rules;
-CREATE SCHEMA IF NOT EXISTS identity_workspace;
 
 -- 4. Approval & Policy Service
 CREATE DATABASE expense_tracker_approval;
