@@ -1,4 +1,4 @@
-export type OutboxEventStatus = 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+export type OutboxEventStatus = 'PENDING' | 'PROCESSING' | 'PROCESSED' | 'FAILED' | 'DEAD_LETTER';
 
 export interface OutboxEventDTO {
   id: string;
@@ -11,13 +11,22 @@ export interface OutboxEventDTO {
   processedAt: string | null;
   retryCount: number;
   error: string | null;
+  deliveredTo?: string[];
+  leaseToken?: string | null;
+  leaseExpiresAt?: string | null;
+  nextAttemptAt?: string | null;
 }
 
 export interface IOutboxEventRepository {
   findPending(limit: number): Promise<OutboxEventDTO[]>;
   findFailed(limit: number, maxRetries: number): Promise<OutboxEventDTO[]>;
-  updateStatus(id: string, status: OutboxEventStatus, error?: string | null): Promise<void>;
-  incrementRetry(id: string, error: string): Promise<void>;
+  claimPending?(limit: number, leaseDurationMs?: number): Promise<OutboxEventDTO[]>;
+  claimFailed?(limit: number, maxRetries: number, leaseDurationMs?: number): Promise<OutboxEventDTO[]>;
+  releaseExpiredLeases?(): Promise<number>;
+  markDelivered?(id: string, subscriberUrl: string, leaseToken?: string | null): Promise<boolean | void>;
+  updateStatus(id: string, status: OutboxEventStatus, error?: string | null, leaseToken?: string | null): Promise<boolean | void>;
+  incrementRetry(id: string, error: string, leaseToken?: string | null): Promise<boolean | void>;
+  renewLease?(id: string, leaseToken: string, durationMs: number): Promise<boolean>;
   deleteProcessedBefore(days: number): Promise<number>;
   save(event: {
     aggregateType: string;

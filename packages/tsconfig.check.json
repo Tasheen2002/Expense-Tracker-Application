@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["tests/**/*.ts", "outbox-kit/tests/**/*.ts"],
+  "exclude": ["**/node_modules/**", "**/dist/**"]
+}

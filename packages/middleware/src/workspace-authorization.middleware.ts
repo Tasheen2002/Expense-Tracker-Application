@@ -82,6 +82,7 @@ export async function workspaceAuthorizationMiddleware(
       const response = await fetch(
         `${identityServiceUrl}/api/v1/workspaces/${workspaceId}/members/${userId}`,
         {
+          redirect: 'error',
           headers: {
             ...(authHeader ? { authorization: authHeader } : {}),
             ...(process.env.INTERNAL_API_KEY
@@ -145,7 +146,7 @@ export async function workspaceAuthorizationMiddleware(
         });
       }
 
-      if (data.userId && data.userId !== userId) {
+      if (data.userId !== userId) {
         request.log.warn(
           { expectedUser: userId, returnedUser: data.userId },
           'Authorization contract violation: user ID mismatch'
