@@ -24,11 +24,17 @@ export class SpendingLimitRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private async withMissingLimit(limitId: string, write: () => Promise<void>): Promise<void> {
+  private async withMissingLimit(
+    limitId: string,
+    write: () => Promise<void>
+  ): Promise<void> {
     try {
       await write();
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new SpendingLimitNotFoundError(limitId);
       }
       throw error;
@@ -42,7 +48,10 @@ export class SpendingLimitRepositoryImpl
           where: { id: limit.categoryId, workspaceId: limit.workspaceId },
           select: { id: true },
         });
-        if (!category) throw new InvalidBudgetDataError('Category does not belong to this workspace');
+        if (!category)
+          throw new InvalidBudgetDataError(
+            'Category does not belong to this workspace'
+          );
       }
       await tx.spendingLimit.create({
         data: {
@@ -63,18 +72,20 @@ export class SpendingLimitRepositoryImpl
   }
 
   async save(limit: SpendingLimit): Promise<void> {
-    await this.withMissingLimit(limit.id.getValue(), () => this.runInTransaction(async (tx) => {
-      await tx.spendingLimit.update({
-        where: { id: limit.id.getValue(), workspaceId: limit.workspaceId },
-        data: {
-          limitAmount: limit.limitAmount,
-          periodType: limit.periodType,
-          isActive: limit.active,
-          updatedAt: limit.updatedAt,
-        },
-      });
-      await this.dispatchEvents(limit, tx);
-    }));
+    await this.withMissingLimit(limit.id.getValue(), () =>
+      this.runInTransaction(async (tx) => {
+        await tx.spendingLimit.update({
+          where: { id: limit.id.getValue(), workspaceId: limit.workspaceId },
+          data: {
+            limitAmount: limit.limitAmount,
+            periodType: limit.periodType,
+            isActive: limit.active,
+            updatedAt: limit.updatedAt,
+          },
+        });
+        await this.dispatchEvents(limit, tx);
+      })
+    );
   }
 
   async findById(
@@ -100,8 +111,13 @@ export class SpendingLimitRepositoryImpl
     const where: Prisma.SpendingLimitWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.spendingLimit.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.spendingLimit.count({ where }),
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
       options
     );
@@ -132,8 +148,13 @@ export class SpendingLimitRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.spendingLimit.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.spendingLimit.count({ where }),
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
       options
     );
@@ -151,8 +172,13 @@ export class SpendingLimitRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.spendingLimit.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.spendingLimit.count({ where }),
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
       options
     );
@@ -170,8 +196,13 @@ export class SpendingLimitRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.spendingLimit,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.spendingLimit.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.spendingLimit.count({ where }),
       (record: Prisma.SpendingLimitGetPayload<object>) => this.toDomain(record),
       options
     );
@@ -225,10 +256,10 @@ export class SpendingLimitRepositoryImpl
     // before invoking this method, so events are already dispatched via save().
     await this.withMissingLimit(id.getValue(), async () => {
       await this.prisma.spendingLimit.delete({
-      where: {
-        id: id.getValue(),
-        workspaceId,
-      },
+        where: {
+          id: id.getValue(),
+          workspaceId,
+        },
       });
     });
   }

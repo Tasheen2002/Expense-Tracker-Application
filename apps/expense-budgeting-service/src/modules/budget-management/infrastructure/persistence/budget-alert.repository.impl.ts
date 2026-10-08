@@ -16,9 +16,7 @@ import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prism
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 import { AlertNotFoundError } from '../../domain/errors/budget.errors';
 
-export class BudgetAlertRepositoryImpl
-  implements IBudgetAlertRepository
-{
+export class BudgetAlertRepositoryImpl implements IBudgetAlertRepository {
   constructor(protected readonly prisma: PrismaClient) {}
 
   protected get client(): PrismaClient | Prisma.TransactionClient {
@@ -38,7 +36,10 @@ export class BudgetAlertRepositoryImpl
     }
   }
 
-  async findById(id: AlertId, workspaceId: string): Promise<BudgetAlert | null> {
+  async findById(
+    id: AlertId,
+    workspaceId: string
+  ): Promise<BudgetAlert | null> {
     const row = await this.client.budgetAlert.findFirst({
       where: { id: id.getValue(), budget: { workspaceId } },
     });
@@ -59,8 +60,13 @@ export class BudgetAlertRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      (this.client as PrismaClient).budgetAlert,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        (this.client as PrismaClient).budgetAlert.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => (this.client as PrismaClient).budgetAlert.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -77,8 +83,13 @@ export class BudgetAlertRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      (this.client as PrismaClient).budgetAlert,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        (this.client as PrismaClient).budgetAlert.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => (this.client as PrismaClient).budgetAlert.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -108,8 +119,13 @@ export class BudgetAlertRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      (this.client as PrismaClient).budgetAlert,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        (this.client as PrismaClient).budgetAlert.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => (this.client as PrismaClient).budgetAlert.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -127,8 +143,13 @@ export class BudgetAlertRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      (this.client as PrismaClient).budgetAlert,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        (this.client as PrismaClient).budgetAlert.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => (this.client as PrismaClient).budgetAlert.count({ where }),
       (record) => this.toDomain(record),
       options
     );

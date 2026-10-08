@@ -17,7 +17,11 @@ import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repo
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 import { IEventBus } from '@core/domain/events/domain-event';
 import { Decimal } from '@prisma/client/runtime/library';
-import { BudgetAllocationExceededError, BudgetAlreadyExistsError, BudgetNotFoundError } from '../../domain/errors/budget.errors';
+import {
+  BudgetAllocationExceededError,
+  BudgetAlreadyExistsError,
+  BudgetNotFoundError,
+} from '../../domain/errors/budget.errors';
 
 export class BudgetRepositoryImpl
   extends PrismaRepository<Budget>
@@ -28,20 +32,35 @@ export class BudgetRepositoryImpl
   }
 
   private rethrowNameConflict(error: unknown, budget: Budget): never {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
       throw new BudgetNotFoundError(budget.id.getValue(), budget.workspaceId);
     }
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
       const target = error.meta?.target;
-      const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
-      if (fields.some((field) => field === 'name' || field.includes('budget_workspace_name'))) {
+      const fields = Array.isArray(target)
+        ? target.map(String)
+        : [String(target ?? '')];
+      if (
+        fields.some(
+          (field) => field === 'name' || field.includes('budget_workspace_name')
+        )
+      ) {
         throw new BudgetAlreadyExistsError(budget.name, budget.workspaceId);
       }
     }
     throw error;
   }
 
-  private async withNameConflict(budget: Budget, write: () => Promise<void>): Promise<void> {
+  private async withNameConflict(
+    budget: Budget,
+    write: () => Promise<void>
+  ): Promise<void> {
     try {
       await write();
     } catch (error) {
@@ -52,105 +71,114 @@ export class BudgetRepositoryImpl
   async create(budget: Budget): Promise<void> {
     const period = budget.period;
 
-    await this.withNameConflict(budget, () => this.runInTransaction(async (tx) => {
-      await tx.budget.create({
-        data: {
-          id: budget.id.getValue(),
-          workspaceId: budget.workspaceId,
-          name: budget.name,
-          description: budget.description,
-          totalAmount: budget.totalAmount,
-          currency: budget.currency,
-          periodType: period.periodType,
-          startDate: period.startDate,
-          endDate: period.endDate,
-          status: budget.status,
-          createdBy: budget.createdBy,
-          isRecurring: budget.isRecurring(),
-          rolloverUnused: budget.shouldRolloverUnused(),
-          createdAt: budget.createdAt,
-          updatedAt: budget.updatedAt,
-        },
-      });
-      await this.dispatchEvents(budget, tx);
-    }));
+    await this.withNameConflict(budget, () =>
+      this.runInTransaction(async (tx) => {
+        await tx.budget.create({
+          data: {
+            id: budget.id.getValue(),
+            workspaceId: budget.workspaceId,
+            name: budget.name,
+            description: budget.description,
+            totalAmount: budget.totalAmount,
+            currency: budget.currency,
+            periodType: period.periodType,
+            startDate: period.startDate,
+            endDate: period.endDate,
+            status: budget.status,
+            createdBy: budget.createdBy,
+            isRecurring: budget.isRecurring(),
+            rolloverUnused: budget.shouldRolloverUnused(),
+            createdAt: budget.createdAt,
+            updatedAt: budget.updatedAt,
+          },
+        });
+        await this.dispatchEvents(budget, tx);
+      })
+    );
   }
 
   async save(budget: Budget): Promise<void> {
     const period = budget.period;
-    await this.withNameConflict(budget, () => this.runInTransaction(async (tx) => {
-      await tx.budget.update({
-        where: { id: budget.id.getValue(), workspaceId: budget.workspaceId },
-        data: {
-          name: budget.name,
-          description: budget.description,
-          totalAmount: budget.totalAmount,
-          currency: budget.currency,
-          periodType: period.periodType,
-          startDate: period.startDate,
-          endDate: period.endDate,
-          status: budget.status,
-          isRecurring: budget.isRecurring(),
-          rolloverUnused: budget.shouldRolloverUnused(),
-          updatedAt: budget.updatedAt,
-        },
-      });
-      await this.dispatchEvents(budget, tx);
-    }));
+    await this.withNameConflict(budget, () =>
+      this.runInTransaction(async (tx) => {
+        await tx.budget.update({
+          where: { id: budget.id.getValue(), workspaceId: budget.workspaceId },
+          data: {
+            name: budget.name,
+            description: budget.description,
+            totalAmount: budget.totalAmount,
+            currency: budget.currency,
+            periodType: period.periodType,
+            startDate: period.startDate,
+            endDate: period.endDate,
+            status: budget.status,
+            isRecurring: budget.isRecurring(),
+            rolloverUnused: budget.shouldRolloverUnused(),
+            updatedAt: budget.updatedAt,
+          },
+        });
+        await this.dispatchEvents(budget, tx);
+      })
+    );
   }
 
   async saveWithAllocationValidation(budget: Budget): Promise<void> {
-    await this.withNameConflict(budget, () => this.runInTransaction(async (tx) => {
-      // 1. Lock the budget row exclusively to coordinate with saveWithBudgetValidation (fails closed)
-      const lockedRows = await tx.$queryRaw<Array<{ id: string }>>`
+    await this.withNameConflict(budget, () =>
+      this.runInTransaction(async (tx) => {
+        // 1. Lock the budget row exclusively to coordinate with saveWithBudgetValidation (fails closed)
+        const lockedRows = await tx.$queryRaw<Array<{ id: string }>>`
         SELECT id FROM "budget_management"."budgets"
         WHERE id = ${budget.id.getValue()}::uuid AND workspace_id = ${budget.workspaceId}::uuid
         FOR UPDATE
       `;
-      if (lockedRows.length === 0) {
-        throw new BudgetNotFoundError(budget.id.getValue(), budget.workspaceId);
-      }
+        if (lockedRows.length === 0) {
+          throw new BudgetNotFoundError(
+            budget.id.getValue(),
+            budget.workspaceId
+          );
+        }
 
-      // 2. Aggregate current allocations under this exclusive lock
-      const allocations = await tx.budgetAllocation.aggregate({
-        where: {
-          budgetId: budget.id.getValue(),
-        },
-        _sum: { allocatedAmount: true },
-      });
+        // 2. Aggregate current allocations under this exclusive lock
+        const allocations = await tx.budgetAllocation.aggregate({
+          where: {
+            budgetId: budget.id.getValue(),
+          },
+          _sum: { allocatedAmount: true },
+        });
 
-      const currentAllocated =
-        allocations._sum.allocatedAmount || new Decimal(0);
+        const currentAllocated =
+          allocations._sum.allocatedAmount || new Decimal(0);
 
-      // 3. Verify new budget total is not less than already-allocated amount
-      if (budget.totalAmount.lt(currentAllocated)) {
-        throw new BudgetAllocationExceededError(
-          budget.id.getValue(),
-          budget.totalAmount.toNumber(),
-          currentAllocated.toNumber()
-        );
-      }
+        // 3. Verify new budget total is not less than already-allocated amount
+        if (budget.totalAmount.lt(currentAllocated)) {
+          throw new BudgetAllocationExceededError(
+            budget.id.getValue(),
+            budget.totalAmount.toNumber(),
+            currentAllocated.toNumber()
+          );
+        }
 
-      const period = budget.period;
+        const period = budget.period;
 
-      await tx.budget.update({
-        where: { id: budget.id.getValue(), workspaceId: budget.workspaceId },
-        data: {
-          name: budget.name,
-          description: budget.description,
-          totalAmount: budget.totalAmount,
-          currency: budget.currency,
-          periodType: period.periodType,
-          startDate: period.startDate,
-          endDate: period.endDate,
-          status: budget.status,
-          isRecurring: budget.isRecurring(),
-          rolloverUnused: budget.shouldRolloverUnused(),
-          updatedAt: budget.updatedAt,
-        },
-      });
-      await this.dispatchEvents(budget, tx);
-    }));
+        await tx.budget.update({
+          where: { id: budget.id.getValue(), workspaceId: budget.workspaceId },
+          data: {
+            name: budget.name,
+            description: budget.description,
+            totalAmount: budget.totalAmount,
+            currency: budget.currency,
+            periodType: period.periodType,
+            startDate: period.startDate,
+            endDate: period.endDate,
+            status: budget.status,
+            isRecurring: budget.isRecurring(),
+            rolloverUnused: budget.shouldRolloverUnused(),
+            updatedAt: budget.updatedAt,
+          },
+        });
+        await this.dispatchEvents(budget, tx);
+      })
+    );
   }
 
   async findById(id: BudgetId, workspaceId: string): Promise<Budget | null> {
@@ -201,8 +229,13 @@ export class BudgetRepositoryImpl
     const where: Prisma.BudgetWhereInput = { workspaceId };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budget,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.budget.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.budget.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -249,8 +282,13 @@ export class BudgetRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budget,
-      { where, orderBy: { createdAt: 'desc' } },
+      (page) =>
+        this.prisma.budget.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.budget.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -271,8 +309,13 @@ export class BudgetRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budget,
-      { where, orderBy: { startDate: 'desc' } },
+      (page) =>
+        this.prisma.budget.findMany({
+          where,
+          orderBy: { startDate: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.budget.count({ where }),
       (record) => this.toDomain(record),
       options
     );
@@ -292,8 +335,13 @@ export class BudgetRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budget,
-      { where, orderBy: { endDate: 'asc' } },
+      (page) =>
+        this.prisma.budget.findMany({
+          where,
+          orderBy: { endDate: 'asc' },
+          ...page,
+        }),
+      () => this.prisma.budget.count({ where }),
       (record) => this.toDomain(record),
       options
     );

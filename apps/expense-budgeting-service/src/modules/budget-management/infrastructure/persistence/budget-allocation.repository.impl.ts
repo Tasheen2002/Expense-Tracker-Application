@@ -19,9 +19,7 @@ import {
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
-export class BudgetAllocationRepositoryImpl
-  implements IBudgetAllocationRepository
-{
+export class BudgetAllocationRepositoryImpl implements IBudgetAllocationRepository {
   constructor(protected readonly prisma: PrismaClient) {}
 
   protected get client(): PrismaClient | Prisma.TransactionClient {
@@ -36,21 +34,37 @@ export class BudgetAllocationRepositoryImpl
     const validateAndSave = async (tx: any) => {
       // Row lock the parent budget to serialize concurrent allocation additions/updates
       // and read the authoritative budget total under this lock (fails closed if locking is unavailable or row missing)
-      const rows = await tx.$queryRaw<{ id: string; workspace_id: string; total_amount: Decimal | string | number }[]>`
+      const rows = await tx.$queryRaw<
+        {
+          id: string;
+          workspace_id: string;
+          total_amount: Decimal | string | number;
+        }[]
+      >`
         SELECT id, workspace_id, total_amount FROM "budget_management"."budgets"
         WHERE id = ${allocation.budgetId.getValue()}::uuid
         FOR UPDATE
       `;
-      if (!Array.isArray(rows) || rows.length === 0 || rows[0].total_amount === undefined) {
+      if (
+        !Array.isArray(rows) ||
+        rows.length === 0 ||
+        rows[0].total_amount === undefined
+      ) {
         throw new BudgetNotFoundError(allocation.budgetId.getValue());
       }
       const currentBudgetTotal = new Decimal(rows[0].total_amount);
       if (allocation.categoryId) {
         const category = await tx.category.findFirst({
-          where: { id: allocation.categoryId, workspaceId: rows[0].workspace_id },
+          where: {
+            id: allocation.categoryId,
+            workspaceId: rows[0].workspace_id,
+          },
           select: { id: true },
         });
-        if (!category) throw new InvalidBudgetDataError('Category does not belong to this workspace');
+        if (!category)
+          throw new InvalidBudgetDataError(
+            'Category does not belong to this workspace'
+          );
       }
 
       const otherAllocations = await tx.budgetAllocation.aggregate({
@@ -75,25 +89,31 @@ export class BudgetAllocationRepositoryImpl
 
       if (excludeAllocationId) {
         const result = await tx.budgetAllocation.updateMany({
-          where: { id: allocation.id.getValue(), budgetId: allocation.budgetId.getValue() },
+          where: {
+            id: allocation.id.getValue(),
+            budgetId: allocation.budgetId.getValue(),
+          },
           data: {
             allocatedAmount: allocation.allocatedAmount,
             description: allocation.description,
             updatedAt: allocation.updatedAt,
           },
         });
-        if (result.count !== 1) throw new AllocationNotFoundError(allocation.id.getValue());
+        if (result.count !== 1)
+          throw new AllocationNotFoundError(allocation.id.getValue());
       } else {
-        await tx.budgetAllocation.create({ data: {
-          id: allocation.id.getValue(),
-          budgetId: allocation.budgetId.getValue(),
-          categoryId: allocation.categoryId,
-          allocatedAmount: allocation.allocatedAmount,
-          spentAmount: allocation.spentAmount,
-          description: allocation.description,
-          createdAt: allocation.createdAt,
-          updatedAt: allocation.updatedAt,
-        } });
+        await tx.budgetAllocation.create({
+          data: {
+            id: allocation.id.getValue(),
+            budgetId: allocation.budgetId.getValue(),
+            categoryId: allocation.categoryId,
+            allocatedAmount: allocation.allocatedAmount,
+            spentAmount: allocation.spentAmount,
+            description: allocation.description,
+            createdAt: allocation.createdAt,
+            updatedAt: allocation.updatedAt,
+          },
+        });
       }
     };
 
@@ -106,13 +126,25 @@ export class BudgetAllocationRepositoryImpl
         });
       }
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
         const target = error.meta?.target;
-        const fields = Array.isArray(target) ? target.map(String) : [String(target ?? '')];
-        if (fields.some((field) => field === 'category_id' || field === 'categoryId' ||
-            field.includes('budget_category_allocation'))) {
+        const fields = Array.isArray(target)
+          ? target.map(String)
+          : [String(target ?? '')];
+        if (
+          fields.some(
+            (field) =>
+              field === 'category_id' ||
+              field === 'categoryId' ||
+              field.includes('budget_category_allocation')
+          )
+        ) {
           throw new AllocationAlreadyExistsError(
-            allocation.budgetId.getValue(), allocation.categoryId ?? 'uncategorized'
+            allocation.budgetId.getValue(),
+            allocation.categoryId ?? 'uncategorized'
           );
         }
       }
@@ -122,13 +154,17 @@ export class BudgetAllocationRepositoryImpl
 
   async save(allocation: BudgetAllocation): Promise<void> {
     const result = await (this.client as any).budgetAllocation.updateMany({
-      where: { id: allocation.id.getValue(), budgetId: allocation.budgetId.getValue() },
+      where: {
+        id: allocation.id.getValue(),
+        budgetId: allocation.budgetId.getValue(),
+      },
       data: {
         description: allocation.description,
         updatedAt: allocation.updatedAt,
       },
     });
-    if (result.count !== 1) throw new AllocationNotFoundError(allocation.id.getValue());
+    if (result.count !== 1)
+      throw new AllocationNotFoundError(allocation.id.getValue());
   }
 
   async saveWithAlerts(
@@ -139,13 +175,17 @@ export class BudgetAllocationRepositoryImpl
     const saveOperation = async (tx: any) => {
       // 1. Save Allocation
       const result = await tx.budgetAllocation.updateMany({
-        where: { id: allocation.id.getValue(), budgetId: allocation.budgetId.getValue() },
+        where: {
+          id: allocation.id.getValue(),
+          budgetId: allocation.budgetId.getValue(),
+        },
         data: {
           spentAmount: allocation.spentAmount,
           updatedAt: allocation.updatedAt,
         },
       });
-      if (result.count !== 1) throw new AllocationNotFoundError(allocation.id.getValue());
+      if (result.count !== 1)
+        throw new AllocationNotFoundError(allocation.id.getValue());
 
       // 2. Save Alerts
       for (const alert of alerts) {
@@ -207,8 +247,13 @@ export class BudgetAllocationRepositoryImpl
     };
 
     return PrismaRepositoryHelper.paginate(
-      (this.client as PrismaClient).budgetAllocation,
-      { where, orderBy: { createdAt: 'asc' } },
+      (page) =>
+        (this.client as PrismaClient).budgetAllocation.findMany({
+          where,
+          orderBy: { createdAt: 'asc' },
+          ...page,
+        }),
+      () => (this.client as PrismaClient).budgetAllocation.count({ where }),
       (record) => this.toDomain(record),
       options
     );
