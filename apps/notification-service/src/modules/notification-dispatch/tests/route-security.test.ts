@@ -7,6 +7,7 @@ import authPlugin from '../../../plugins/auth';
 import errorPlugin from '../../../plugins/error';
 import { buildNotificationApp } from '../../../app';
 import { registerNotificationDispatchRoutes } from '../infrastructure/http/routes';
+import { createCompositionRoot } from '../../../composition-root';
 
 describe('Notification route guards — real authentication, authorization and rate limits', () => {
   let app: FastifyInstance;
@@ -50,12 +51,14 @@ describe('Notification route guards — real authentication, authorization and r
     app = Fastify(); app.decorate('prisma', prisma);
     await app.register(internalAuthPlugin, { apiKey: internalKey });
     await app.register(authPlugin); await app.register(errorPlugin);
+    const root = createCompositionRoot(prisma);
     await registerNotificationDispatchRoutes(app, {
+      accountNotificationController: root.controllers.accountNotificationController,
       notificationController: { getNotifications: reached, getUnreadNotifications: reached, markAsRead: reached, markAllAsRead: reached },
       preferenceController: { getPreferences: reached, updateGlobalPreferences: reached, updateTypePreference: reached, checkChannelEnabled: reached },
       templateController: { createTemplate: reached, getTemplateById: reached, getActiveTemplate: reached, updateTemplate: reached,
         activateTemplate: reached, deactivateTemplate: reached },
-    }, prisma);
+    }, prisma, root.accountNotificationService);
   });
   afterEach(async () => { await app.close(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 

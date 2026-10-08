@@ -276,6 +276,50 @@ describe.skipIf(!database || database !== process.env.DATABASE_URL)('Durable req
     expect(await prisma.notificationRequest.findUnique({ where: { id: missing.eventId } })).toBeNull();
   });
 
+  it('delivers a category suggestion to its expense creator once across concurrent replays', async () => {
+    const c = context();
+    const input = { eventId: randomUUID(), eventType: 'CategorySuggestionCreated', payload: {
+      workspaceId: c.request.workspaceId, expenseOwnerId: c.request.recipientId,
+      userId: randomUUID(), recipientId: randomUUID(), suggestionId: randomUUID(),
+      expenseId: randomUUID(), suggestedCategoryId: randomUUID(), confidence: 0.9,
+    } };
+    const results = await Promise.all(Array.from({ length: 5 }, () => webhook(input)));
+    expect(results.filter(result => result.statusCode === 201)).toHaveLength(1);
+    expect(results.filter(result => result.statusCode === 200 && result.json().duplicate)).toHaveLength(4);
+    const row = await prisma.notification.findUniqueOrThrow({ where: { id: input.eventId } });
+    expect(row.recipientId).toBe(c.request.recipientId); expect(row.type).toBe(NotificationType.SYSTEM_ALERT);
+    expect(row.title).toBe('Category suggestion available');
+    expect(await prisma.notificationRequest.count({ where: { id: input.eventId } })).toBe(1);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: input.eventId } })).toBe(2);
+    expect((await webhook({ ...input, payload: { ...input.payload, expenseOwnerId: randomUUID() } })).statusCode).toBe(409);
+  });
+
+  it.each(['global', 'type'])('category suggestions honor %s opt-out and retain suppression on replay', async setting => {
+    const c = context();
+    if (setting === 'global') await preferences.updateGlobalPreferences(c.request.recipientId, c.request.workspaceId, { inApp: false });
+    else await preferences.updateTypePreference(c.request.recipientId, c.request.workspaceId, NotificationType.SYSTEM_ALERT, { inApp: false });
+    const input = { eventId: randomUUID(), eventType: 'CategorySuggestionCreated', payload: {
+      workspaceId: c.request.workspaceId, expenseOwnerId: c.request.recipientId, suggestionId: randomUUID(),
+      expenseId: randomUUID(), suggestedCategoryId: randomUUID(), mandatory: true,
+    } };
+    const result = await webhook(input); expect(result.statusCode).toBe(200); expect(result.json().suppressed).toBe(true);
+    await preferences.updateGlobalPreferences(c.request.recipientId, c.request.workspaceId, { inApp: true });
+    await preferences.updateTypePreference(c.request.recipientId, c.request.workspaceId, NotificationType.SYSTEM_ALERT, { inApp: true });
+    expect((await webhook(input)).json()).toMatchObject({ duplicate: true, suppressed: true });
+    expect(await prisma.notification.count({ where: { workspaceId: c.request.workspaceId } })).toBe(0);
+    expect(await prisma.outboxEvent.count({ where: { aggregateId: input.eventId } })).toBe(0);
+  });
+
+  it('rejects legacy category suggestions without verified recipient metadata instead of silently acknowledging them', async () => {
+    const c = context();
+    const input = { eventId: randomUUID(), eventType: 'CategorySuggestionCreated', payload: {
+      workspaceId: c.request.workspaceId, recipientId: c.request.recipientId, suggestionId: randomUUID(),
+      expenseId: randomUUID(), suggestedCategoryId: randomUUID(),
+    } };
+    expect((await webhook(input)).statusCode).toBe(400);
+    expect(await prisma.notificationRequest.findUnique({ where: { id: input.eventId } })).toBeNull();
+  });
+
   it('concurrent suppressed webhooks persist one receipt; a new event can deliver after opt-in', async () => {
     const c = context(); await preferences.updateGlobalPreferences(c.request.recipientId, c.request.workspaceId, { inApp: false });
     const input = { eventId: randomUUID(), eventType: 'BudgetAlert', payload: { workspaceId: c.request.workspaceId, userId: c.request.recipientId } };

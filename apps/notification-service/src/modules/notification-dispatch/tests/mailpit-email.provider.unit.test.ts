@@ -39,8 +39,7 @@ describe('Mailpit development transport', () => {
     expect(await provider.send(message)).toEqual({ success: false, retryable: false, error: 'Mailpit response 400' });
     expect(await provider.send(message)).toEqual({ success: false, retryable: true, error: 'Mailpit capture outcome is uncertain' });
   });
-  it.each(['file:///tmp', 'http://user:secret@localhost:8025', 'http://localhost:8025/path', 'http://localhost:8025?secret=x'])
-    ('rejects invalid origin %s', url => {
+  it.each(['file:///tmp', 'http://user:secret@localhost:8025', 'http://localhost:8025/path', 'http://localhost:8025?secret=x'])('rejects invalid origin %s', url => {
       expect(() => new MailpitEmailProvider(url, 'sender@example.test')).toThrow('HTTP origin');
     });
   it('rejects Mailpit selection in production and unsupported provider names', () => {
@@ -52,6 +51,7 @@ describe('Mailpit development transport', () => {
   });
   it('wires development delivery without Resend credentials', () => {
     vi.stubEnv('NODE_ENV', 'development'); vi.stubEnv('NOTIFICATION_EMAIL_PROVIDER', 'mailpit');
+    vi.stubEnv('MAILPIT_URL', 'http://127.0.0.1:8025');
     vi.stubEnv('RESEND_API_KEY', ''); vi.stubEnv('NOTIFICATION_EMAIL_FROM', '');
     expect(createCompositionRoot(new PrismaClient()).workers.email).toBeDefined();
   });
