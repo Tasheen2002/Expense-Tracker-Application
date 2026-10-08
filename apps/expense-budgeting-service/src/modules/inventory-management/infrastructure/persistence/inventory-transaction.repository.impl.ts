@@ -45,15 +45,32 @@ export class InventoryTransactionRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<InventoryTransaction>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.inventoryTransaction,
-      {
-        where: {
-          workspaceId: filters.workspaceId,
-          ...(filters.variantId !== undefined && { variantId: filters.variantId }),
-          ...(filters.locationId !== undefined && { locationId: filters.locationId }),
-        },
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      },
+      (page) =>
+        this.prisma.inventoryTransaction.findMany({
+          where: {
+            workspaceId: filters.workspaceId,
+            ...(filters.variantId !== undefined && {
+              variantId: filters.variantId,
+            }),
+            ...(filters.locationId !== undefined && {
+              locationId: filters.locationId,
+            }),
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.inventoryTransaction.count({
+          where: {
+            workspaceId: filters.workspaceId,
+            ...(filters.variantId !== undefined && {
+              variantId: filters.variantId,
+            }),
+            ...(filters.locationId !== undefined && {
+              locationId: filters.locationId,
+            }),
+          },
+        }),
       (record) => this.toDomain(record),
       options
     );
