@@ -1,17 +1,17 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
-import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
-import { PlanId } from "../../domain/value-objects/plan-id";
-import { PlanPeriod } from "../../domain/value-objects/plan-period";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { BudgetPlan } from '../../domain/entities/budget-plan.entity';
+import { IBudgetPlanRepository } from '../../domain/repositories/budget-plan.repository';
+import { PlanId } from '../../domain/value-objects/plan-id';
+import { PlanPeriod } from '../../domain/value-objects/plan-period';
 import { WorkspaceId } from '@core/domain/value-objects';
-import { PlanStatus } from "../../domain/enums/plan-status.enum";
-import { PeriodType } from "../../domain/enums/period-type.enum";
+import { PlanStatus } from '../../domain/enums/plan-status.enum';
+import { PeriodType } from '../../domain/enums/period-type.enum';
 import {
   BudgetPlanConcurrencyConflictError,
   BudgetPlanNotFoundError,
   CannotDeleteActivePlanError,
   ValidationError,
-} from "../../domain/errors/budget-planning.errors";
+} from '../../domain/errors/budget-planning.errors';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -113,7 +113,7 @@ export class BudgetPlanRepositoryImpl
   async findAll(
     workspaceId: WorkspaceId,
     status?: PlanStatus,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<BudgetPlan>> {
     const where: Prisma.BudgetPlanWhereInput = {
       workspaceId: workspaceId.getValue(),
@@ -123,8 +123,13 @@ export class BudgetPlanRepositoryImpl
     }
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.budgetPlan,
-      { where, orderBy: { createdAt: "desc" } },
+      (page) =>
+        this.prisma.budgetPlan.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () => this.prisma.budgetPlan.count({ where }),
       (raw) =>
         BudgetPlan.fromPersistence({
           id: raw.id,
@@ -140,13 +145,19 @@ export class BudgetPlanRepositoryImpl
           createdAt: raw.createdAt,
           updatedAt: raw.updatedAt,
         }),
-      options,
+      options
     );
   }
 
-  async delete(id: PlanId, workspaceId: string, plan?: BudgetPlan): Promise<void> {
+  async delete(
+    id: PlanId,
+    workspaceId: string,
+    plan?: BudgetPlan
+  ): Promise<void> {
     if (!workspaceId || workspaceId.trim() === '') {
-      throw new ValidationError('Workspace ID is required for deleting a budget plan');
+      throw new ValidationError(
+        'Workspace ID is required for deleting a budget plan'
+      );
     }
 
     await this.runInTransaction(async (tx) => {
@@ -190,7 +201,9 @@ export class BudgetPlanRepositoryImpl
         where: {
           id: id.getValue(),
           workspaceId,
-          ...(expectedVersion !== undefined ? { version: expectedVersion } : {}),
+          ...(expectedVersion !== undefined
+            ? { version: expectedVersion }
+            : {}),
           status: { not: PlanStatus.ACTIVE },
         },
       });
@@ -201,7 +214,10 @@ export class BudgetPlanRepositoryImpl
           select: { status: true, version: true, workspaceId: true },
         });
 
-        if (!current || (current.workspaceId && current.workspaceId !== workspaceId)) {
+        if (
+          !current ||
+          (current.workspaceId && current.workspaceId !== workspaceId)
+        ) {
           throw new BudgetPlanNotFoundError(id.getValue(), workspaceId);
         }
 
