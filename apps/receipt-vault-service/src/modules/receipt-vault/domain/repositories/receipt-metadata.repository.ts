@@ -3,10 +3,10 @@ import { MetadataId } from "../value-objects/metadata-id";
 import { ReceiptId } from "../value-objects/receipt-id";
 
 export interface IReceiptMetadataRepository {
-  save(metadata: ReceiptMetadata): Promise<void>;
-  findById(id: MetadataId): Promise<ReceiptMetadata | null>;
-  findByReceiptId(receiptId: ReceiptId): Promise<ReceiptMetadata | null>;
-  delete(id: MetadataId): Promise<void>;
-  deleteByReceiptId(receiptId: ReceiptId): Promise<void>;
-  exists(id: MetadataId): Promise<boolean>;
+  save(metadata: ReceiptMetadata, workspaceId: string): Promise<void>;
+  findById(id: MetadataId, workspaceId: string): Promise<ReceiptMetadata | null>;
+  findByReceiptId(receiptId: ReceiptId, workspaceId: string): Promise<ReceiptMetadata | null>;
+  delete(id: MetadataId, workspaceId: string): Promise<void>;
+  deleteByReceiptId(receiptId: ReceiptId, workspaceId: string): Promise<void>;
+  exists(id: MetadataId, workspaceId: string): Promise<boolean>;
 }
