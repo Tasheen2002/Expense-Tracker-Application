@@ -16,12 +16,15 @@ export function buildWebhookRoutes(config: {
   return {
     // Keep historical names readable while existing outbox rows are being delivered.
     ExpenseCreated: [audit],
-    ExpenseApproved: [audit, notification],
-    ExpenseRejected: [audit, notification],
+    ExpenseApproved: [audit],
+    ExpenseRejected: [audit],
     ExpenseSubmitted: [audit],
     ExpenseStatusChanged: [audit, notification],
     BudgetThresholdExceeded: [audit, notification],
     BudgetUpdated: [audit],
+    DepartmentDeleted: [audit],
+    CostCenterDeleted: [audit],
+    ProjectDeleted: [audit],
     ...expenseWebhookRoutes(auditServiceUrl, notificationServiceUrl),
     ...budgetWebhookRoutes(auditServiceUrl, notificationServiceUrl),
     ...planningWebhookRoutes(auditServiceUrl),
