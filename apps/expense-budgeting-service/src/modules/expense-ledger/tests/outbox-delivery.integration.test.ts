@@ -22,6 +22,8 @@ describe('expense outbox delivery', () => {
     });
     const prisma = new PrismaClient();
     const aggregateId = randomUUID();
+    const payload = { expenseId: aggregateId, workspaceId: randomUUID(), expenseOwnerId: randomUUID(),
+      changedBy: randomUUID(), oldStatus: 'SUBMITTED', newStatus: 'APPROVED' };
     let eventId: string | undefined;
 
     try {
@@ -39,8 +41,8 @@ describe('expense outbox delivery', () => {
         data: {
           aggregateType: 'ExpenseDeliveryTest',
           aggregateId,
-          eventType: EXPENSE_EVENTS.EXPENSE_APPROVED,
-          payload: { expenseId: aggregateId },
+          eventType: EXPENSE_EVENTS.EXPENSE_STATUS_CHANGED,
+          payload,
           status: 'PROCESSING',
           leaseToken: 'delivery-test-lease',
           leaseExpiresAt: new Date(Date.now() + 60_000),
@@ -52,7 +54,7 @@ describe('expense outbox delivery', () => {
         aggregateType: stored.aggregateType,
         aggregateId: stored.aggregateId,
         eventType: stored.eventType,
-        payload: { expenseId: aggregateId },
+        payload,
         status: 'PROCESSING',
         createdAt: stored.createdAt.toISOString(),
         processedAt: null,
@@ -72,6 +74,7 @@ describe('expense outbox delivery', () => {
         '/notification/api/v1/event-outbox/events',
       ]);
       expect(received.every((entry) => entry.body.eventId === stored.id)).toBe(true);
+      expect(received.every((entry) => JSON.stringify(entry.body.payload) === JSON.stringify(payload))).toBe(true);
 
       await publisher.publish({ ...event, deliveredTo: delivered.deliveredTo });
       expect(received).toHaveLength(2);

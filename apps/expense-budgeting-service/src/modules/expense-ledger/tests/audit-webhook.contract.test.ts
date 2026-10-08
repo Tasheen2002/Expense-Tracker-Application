@@ -7,6 +7,29 @@ import { buildWebhookRoutes } from '../../../shared/infrastructure/webhooks/webh
 import { ExpenseSubmittedEvent } from '../domain/entities/expense.entity';
 
 describe('expense to audit webhook contract', () => {
+  it.each(['BudgetPlanCreated', 'BudgetPlanUpdated', 'BudgetPlanStatusChanged'])('delivers historical %s with its original identity and workspace', async (eventType) => {
+    const eventId = '123e4567-e89b-42d3-a456-426614174010';
+    const planId = '123e4567-e89b-42d3-a456-426614174011';
+    const workspaceId = '123e4567-e89b-42d3-a456-426614174012';
+    const recordExternalEvent = vi.fn().mockResolvedValue({ auditLogId: eventId, duplicate: false });
+    const app = Fastify({ logger: false });
+    try {
+      await app.register(instance => registerAuditOutboxEventRoutes(instance,
+        { recordExternalEvent } as unknown as AuditService), { prefix: '/api/v1' });
+      await app.listen({ host: '127.0.0.1', port: 0 });
+      const address = app.server.address();
+      if (!address || typeof address === 'string') throw new Error('Audit test server did not bind');
+      const publisher = new HttpWebhookPublisher(buildWebhookRoutes({
+        auditServiceUrl: `http://127.0.0.1:${address.port}`, notificationServiceUrl: 'http://127.0.0.1:1' }));
+      const payload = { planId, workspaceId, name: 'Historical plan', oldStatus: 'DRAFT', newStatus: 'ACTIVE' };
+      await publisher.publish({ id: eventId, aggregateId: planId, aggregateType: 'BudgetPlan', eventType,
+        payload, status: 'PROCESSING', createdAt: '2026-09-24T13:14:06.319Z', processedAt: null,
+        retryCount: 0, error: null });
+      expect(recordExternalEvent).toHaveBeenCalledOnce();
+      expect(recordExternalEvent).toHaveBeenCalledWith(expect.objectContaining({ eventId, eventType,
+        aggregateId: planId, payload: expect.objectContaining({ planId, workspaceId }) }));
+    } finally { await app.close(); }
+  });
   it('persists the submitting actor and workspace from a real expense event, including duplicate delivery', async () => {
     const expenseId = '123e4567-e89b-12d3-a456-426614174002';
     const workspaceId = '123e4567-e89b-12d3-a456-426614174001';
