@@ -25,7 +25,7 @@ const plugin: FastifyPluginAsync = async (fastify) => {
 
   fastify.addHook('onRequest', async (request, reply) => {
     const incoming = request.headers[CORRELATION_HEADER];
-    const correlationId = (typeof incoming === 'string' && incoming.length > 0)
+    const correlationId = (typeof incoming === 'string' && /^[A-Za-z0-9._-]{1,128}$/.test(incoming))
       ? incoming
       : uuidv4();
 

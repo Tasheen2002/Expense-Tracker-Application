@@ -1,0 +1,17 @@
+{
+  "name": "@expense-tracker/resilience",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@expense-tracker/typescript-config": "workspace:*",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}
