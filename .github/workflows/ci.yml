@@ -9,8 +9,30 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public
+      IDENTITY_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public
+      EXPENSE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_expense?schema=public
+      EXPENSE_E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_expense_e2e?schema=public
+      CATEGORIZATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_categorization?schema=public
+      CATEGORIZATION_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/codex_test_categorization_ci?schema=public
+      APPROVAL_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_approval?schema=public
+      BANK_FEED_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_bank_feed?schema=public
+      BANK_FEED_OUTBOX_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_bank_outbox_test?schema=public
+      RECEIPT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_receipt?schema=public
+      RECEIPT_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/codex_test_receipt_ci?schema=public
+      NOTIFICATION_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_notification?schema=public
+      AUDIT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_audit?schema=public
+      MAILPIT_TEST_URL: http://127.0.0.1:8025
+      JWT_SECRET: super-secret-key-change-me-for-ci-runs
+      INTERNAL_API_KEY: internal-api-key-change-me
+      BCRYPT_ROUNDS: 4
 
     services:
+      mailpit:
+        image: axllent/mailpit@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+        ports:
+          - 8025:8025
       postgres:
         image: postgres:15
         env:
@@ -47,20 +69,223 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm prisma:generate
 
-      - name: Push Database Schema
-        run: pnpm exec prisma db push --schema=prisma/schema.prisma --accept-data-loss
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker?schema=public
+      - name: Setup Microservice Databases
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -f scripts/setup-databases.sql
+          PGPASSWORD=postgres createdb -h localhost -U postgres expense_tracker_expense_e2e
+          PGPASSWORD=postgres createdb -h localhost -U postgres expense_tracker_bank_outbox_test
+          PGPASSWORD=postgres createdb -h localhost -U postgres codex_test_categorization_ci
+          PGPASSWORD=postgres createdb -h localhost -U postgres codex_test_receipt_ci
+
+      - name: Push Database Schemas
+        run: |
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public" pnpm --filter @expense-tracker/identity-access-service exec prisma migrate deploy
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_expense?schema=public" pnpm --filter @expense-tracker/expense-budgeting-service exec prisma migrate deploy
+          DATABASE_URL="$EXPENSE_E2E_DATABASE_URL" pnpm --filter @expense-tracker/expense-budgeting-service exec prisma migrate deploy
+          DATABASE_URL="$CATEGORIZATION_DATABASE_URL" pnpm --filter @expense-tracker/categorization-service exec prisma migrate deploy
+          DATABASE_URL="$CATEGORIZATION_TEST_DATABASE_URL" pnpm --filter @expense-tracker/categorization-service exec prisma migrate deploy
+          DATABASE_URL="$CATEGORIZATION_TEST_DATABASE_URL" pnpm --filter @expense-tracker/categorization-service exec prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_approval?schema=public" pnpm --filter @expense-tracker/approval-policy-service exec prisma migrate deploy
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_bank_feed?schema=public" pnpm --filter @expense-tracker/bank-feed-service exec prisma migrate deploy
+          DATABASE_URL="$BANK_FEED_OUTBOX_TEST_DATABASE_URL" pnpm --filter @expense-tracker/bank-feed-service exec prisma migrate deploy
+          DATABASE_URL="$RECEIPT_DATABASE_URL" pnpm --filter @expense-tracker/receipt-vault-service exec prisma migrate deploy
+          DATABASE_URL="$RECEIPT_TEST_DATABASE_URL" pnpm --filter @expense-tracker/receipt-vault-service exec prisma migrate deploy
+          DATABASE_URL="$NOTIFICATION_DATABASE_URL" pnpm --filter @expense-tracker/notification-service exec prisma migrate deploy
+          DATABASE_URL="$NOTIFICATION_DATABASE_URL" pnpm --filter @expense-tracker/notification-service exec prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_audit?schema=public" pnpm --filter @expense-tracker/audit-compliance-service exec prisma migrate deploy
 
       - name: Lint Check
-        run: pnpm lint
+        run: pnpm lint:backend
 
       - name: Type Check
         run: pnpm type-check
 
-      - name: Run Tests
-        run: pnpm test
+      - name: Run Package Tests
+        run: |
+          pnpm exec tsc --noEmit -p packages/tsconfig.check.json
+          pnpm exec vitest run --config packages/vitest.config.ts
+
+      - name: Run Gateway Boundary Tests
+        run: pnpm --filter @expense-tracker/gateway test:coverage
+
+      - name: Verify Development and Recovery Tooling
+        run: pnpm test:operations
+
+      - name: Run Service Tests & Verify Coverage
+        run: |
+          DATABASE_URL="$IDENTITY_DATABASE_URL" pnpm --filter @expense-tracker/identity-access-service test:coverage
+          DATABASE_URL="$APPROVAL_DATABASE_URL" pnpm --filter @expense-tracker/approval-policy-service test:coverage
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_expense?schema=public" pnpm --filter @expense-tracker/expense-budgeting-service test:coverage
+          DATABASE_URL="$CATEGORIZATION_TEST_DATABASE_URL" pnpm --filter @expense-tracker/categorization-service test:coverage
+          EXPENSE_E2E_DATABASE_URL="$EXPENSE_E2E_DATABASE_URL" BANK_FEED_TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_bank_feed?schema=public" DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_bank_feed?schema=public" pnpm --filter @expense-tracker/bank-feed-service test:coverage
+          DATABASE_URL="$RECEIPT_TEST_DATABASE_URL" pnpm --filter @expense-tracker/receipt-vault-service test:coverage
+          NOTIFICATION_TEST_DATABASE_URL="$NOTIFICATION_DATABASE_URL" DATABASE_URL="$NOTIFICATION_DATABASE_URL" pnpm --filter @expense-tracker/notification-service test:coverage
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_audit?schema=public" pnpm --filter @expense-tracker/audit-compliance-service test:coverage
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker?schema=public
+          IDENTITY_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public
+          APPROVAL_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/expense_tracker_approval?schema=public
           JWT_SECRET: super-secret-key-change-me-for-ci-runs
+          INTERNAL_API_KEY: internal-api-key-change-me
           BCRYPT_ROUNDS: 4
+
+  # ============================================================================
+  # Docker Build Verification — catch Dockerfile issues before deployment
+  # ============================================================================
+  docker-build-check:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: expense_tracker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Microservice Databases
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          PGPASSWORD=postgres psql -h localhost -U postgres -f scripts/setup-databases.sql
+
+      - name: Deploy Service Database Schemas
+        # The container workflow below also needs host-generated service clients.
+        run: |
+          pnpm prisma:generate
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public" pnpm --filter @expense-tracker/identity-access-service exec prisma migrate deploy
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_approval?schema=public" pnpm --filter @expense-tracker/approval-policy-service exec prisma migrate deploy
+          DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_categorization?schema=public" pnpm --filter @expense-tracker/categorization-service exec prisma migrate deploy
+
+      - name: Build All Service Images (no push)
+        run: |
+          set -e
+          services=(
+            "apps/gateway/Dockerfile"
+            "apps/identity-access-service/Dockerfile"
+            "apps/expense-budgeting-service/Dockerfile"
+            "apps/categorization-service/Dockerfile"
+            "apps/approval-policy-service/Dockerfile"
+            "apps/bank-feed-service/Dockerfile"
+            "apps/receipt-vault-service/Dockerfile"
+            "apps/notification-service/Dockerfile"
+            "apps/audit-compliance-service/Dockerfile"
+          )
+          for dockerfile in "${services[@]}"; do
+            service_name=$(basename $(dirname "$dockerfile"))
+            echo "🔨 Building $service_name..."
+            docker build -f "$dockerfile" -t "expense-tracker/$service_name:ci" .
+            echo "✅ $service_name built successfully"
+          done
+
+      - name: Smoke Test Built Service Images
+        run: |
+          set -e
+          echo "🚀 Smoke testing Identity Access Service container artifact against migrated database..."
+          cid_id=$(docker run -d --net=host \
+            -e DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_identity?schema=public" \
+            -e INTERNAL_API_KEY="internal-api-key-change-me" \
+            -e JWT_SECRET="super-secret-key-change-me-for-ci-runs" \
+            -e PORT="3002" \
+            expense-tracker/identity-access-service:ci)
+
+          id_ok=false
+          for i in $(seq 1 15); do
+            if curl -s -f http://localhost:3002/health > /dev/null; then
+              echo "✅ Identity Access Service passed health check (table verification confirmed)"
+              id_ok=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$id_ok" != "true" ]; then
+            echo "❌ Identity Access Service failed health check within 30s. Logs:"
+            docker logs "$cid_id"
+            docker stop "$cid_id" || true
+            exit 1
+          fi
+          docker stop "$cid_id"
+
+          echo "🚀 Smoke testing Approval Policy Service container artifact against migrated database..."
+          cid_app=$(docker run -d --net=host \
+            -e DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_approval?schema=public" \
+            -e INTERNAL_API_KEY="internal-api-key-change-me" \
+            -e PORT="3005" \
+            expense-tracker/approval-policy-service:ci)
+
+          app_ok=false
+          for i in $(seq 1 15); do
+            if curl -s -f http://localhost:3005/health > /dev/null; then
+              echo "✅ Approval Policy Service passed health check (table verification confirmed)"
+              app_ok=true
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$app_ok" != "true" ]; then
+            echo "❌ Approval Policy Service failed health check within 30s. Logs:"
+            docker logs "$cid_app"
+            docker stop "$cid_app" || true
+            exit 1
+          fi
+          docker stop "$cid_app"
+
+          echo "Smoke testing Categorization container against migrated database..."
+          cid_cat=$(docker run -d --net=host \
+            -e DATABASE_URL="postgresql://postgres:postgres@localhost:5432/expense_tracker_categorization?schema=public" \
+            -e INTERNAL_API_KEY="internal-api-key-change-me" \
+            -e PORT="3004" \
+            expense-tracker/categorization-service:ci)
+          trap 'docker stop "$cid_cat" || true' EXIT
+          cat_ok=false
+          for i in $(seq 1 15); do
+            if curl -s -f http://localhost:3004/health > /dev/null; then
+              cat_ok=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$cat_ok" != "true" ]; then
+            docker logs "$cid_cat"
+            exit 1
+          fi
+          docker stop "$cid_cat"
+          trap - EXIT
+
+      - name: Verify All Backend Containers Through Gateway
+        run: node scripts/ci-backend-workflows.cjs
+
+      - name: Upload Backend Workflow Result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-workflow-result
+          path: ${{ runner.temp }}/gateway-workflow-results-*.json
+          if-no-files-found: ignore
