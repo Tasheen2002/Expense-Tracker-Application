@@ -3,24 +3,22 @@ import { Receipt } from "../domain/entities/receipt.entity";
 import { ReceiptStatus } from "../domain/enums/receipt-status";
 import { ReceiptType } from "../domain/enums/receipt-type";
 import { StorageLocation } from "../domain/value-objects/storage-location";
-import { StorageProvider } from "../domain/enums/storage-provider";
 import {
-  InvalidStatusTransitionError,
   InvalidReceiptOperationError,
   ReceiptValidationError,
 } from "../domain/errors/receipt.errors";
 
 describe("Receipt Entity", () => {
   const validData = {
-    workspaceId: "workspace-123",
-    userId: "user-123",
+    workspaceId: "123e4567-e89b-42d3-a456-426614174000",
+    userId: "123e4567-e89b-42d3-a456-426614174001",
     fileName: "receipt.pdf",
     originalName: "My Receipt.pdf",
     filePath: "/tmp/receipt.pdf",
     fileSize: 1024,
     mimeType: "application/pdf",
     receiptType: ReceiptType.EXPENSE,
-    storageLocation: StorageLocation.createLocal(),
+    storageLocation: StorageLocation.createLocal('receipt.pdf'),
   };
 
   it("should create a receipt with valid data", () => {
@@ -61,15 +59,15 @@ describe("Receipt Entity", () => {
 
   it("should link to expense", () => {
     const receipt = Receipt.create(validData);
-    receipt.linkToExpense("expense-123");
+    receipt.linkToExpense("123e4567-e89b-42d3-a456-426614174002");
 
-    expect(receipt.expenseId).toBe("expense-123");
+    expect(receipt.expenseId).toBe("123e4567-e89b-42d3-a456-426614174002");
     expect(receipt.isLinkedToExpense()).toBe(true);
   });
 
   it("should unlink from expense", () => {
     const receipt = Receipt.create(validData);
-    receipt.linkToExpense("expense-123");
+    receipt.linkToExpense("123e4567-e89b-42d3-a456-426614174002");
     receipt.unlinkFromExpense();
 
     expect(receipt.expenseId).toBeUndefined();
