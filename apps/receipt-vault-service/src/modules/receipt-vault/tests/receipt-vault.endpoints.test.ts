@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createServer } from '../../../app';
 import { FastifyInstance } from 'fastify';
+import { mkdtemp, readdir, unlink, rmdir } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 vi.mock('@shared/middleware', () => ({
   workspaceAuthorizationMiddleware: async (request: any) => {
@@ -39,6 +42,8 @@ vi.mock('@shared/middleware/role-authorization.middleware', () => ({
 
 describe('Receipt Vault Module - Endpoint Tests', () => {
   let app: FastifyInstance;
+  let storageDirectory: string;
+  const previousStorage = process.env.RECEIPT_UPLOAD_DIR;
 
   // Test data - will be populated during tests
   let authToken: string;
@@ -49,10 +54,10 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
   const testTimestamp = Date.now();
   const testEmail = `receipt-test-${testTimestamp}@example.com`;
-  const testPassword = 'SecurePassword123!';
-  const testWorkspaceName = `Receipt Test Workspace ${testTimestamp}`;
 
   beforeAll(async () => {
+    storageDirectory = await mkdtemp(join(tmpdir(), 'receipt-endpoint-test-'));
+    process.env.RECEIPT_UPLOAD_DIR = storageDirectory;
     app = await createServer();
 
     testUserId = '123e4567-e89b-12d3-a456-426614174001';
@@ -73,6 +78,10 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   afterAll(async () => {
     if (app) {
       await app.close();
+      for (const key of await readdir(storageDirectory)) await unlink(join(storageDirectory, key));
+      await rmdir(storageDirectory);
+      if (previousStorage === undefined) delete process.env.RECEIPT_UPLOAD_DIR;
+      else process.env.RECEIPT_UPLOAD_DIR = previousStorage;
     }
   });
 
@@ -80,11 +89,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   // RECEIPT TAG ENDPOINTS
   // ============================================================================
   describe('Receipt Tag Endpoints', () => {
-    describe('POST /api/v1/:workspaceId/receipt-tags', () => {
+    describe('POST /api/v1/workspaces/:workspaceId/receipt-tags', () => {
       it('✅ should create a receipt tag', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -108,7 +117,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags`,
           payload: {
             name: 'test-tag',
           },
@@ -121,7 +130,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail with empty name', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -135,11 +144,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('GET /api/v1/:workspaceId/receipt-tags', () => {
+    describe('GET /api/v1/workspaces/workspaces/:workspaceId/receipt-tags', () => {
       it('✅ should list receipt tags', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -157,7 +166,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags`,
         });
 
         console.log('List Receipt Tags No Auth:', response.statusCode);
@@ -165,11 +174,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('PATCH /api/v1/:workspaceId/receipt-tags/:tagId', () => {
+    describe('PATCH /api/v1/workspaces/workspaces/:workspaceId/receipt-tags/:tagId', () => {
       it('✅ should update receipt tag', async () => {
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags/${testTagId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -189,7 +198,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags/${testTagId}`,
           payload: {
             name: 'updated-name',
           },
@@ -205,21 +214,18 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   // RECEIPT ENDPOINTS
   // ============================================================================
   describe('Receipt Endpoints', () => {
-    describe('POST /api/v1/:workspaceId/receipts/upload', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/upload', () => {
       it('✅ should upload a receipt', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/upload`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/upload`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
           payload: {
-            fileName: `receipt-${testTimestamp}.jpg`,
-            originalName: `receipt-${testTimestamp}.jpg`,
-            filePath: `/receipts/${testTimestamp}.jpg`,
-            fileSize: 1024000,
-            mimeType: 'image/jpeg',
-            storageProvider: 'LOCAL',
+            originalName: 'receipt.pdf',
+            fileContent: Buffer.from('%PDF-1.7 synthetic endpoint receipt').toString('base64'),
+            mimeType: 'application/pdf',
           },
         });
 
@@ -227,7 +233,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
         console.log('Upload Receipt:', response.statusCode, body.message);
 
         // API may have internal issues - accept both success and error
-        expect([201, 500]).toContain(response.statusCode);
+        expect(response.statusCode).toBe(201);
         if (response.statusCode === 201) {
           expect(body.success).toBe(true);
           expect(body.data).toHaveProperty('receiptId');
@@ -242,14 +248,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/upload`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/upload`,
           payload: {
-            fileName: 'test.jpg',
-            originalName: 'test.jpg',
-            filePath: '/receipts/test.jpg',
-            fileSize: 1024000,
-            mimeType: 'image/jpeg',
-            storageProvider: 'LOCAL',
+            originalName: 'receipt.pdf',
+            fileContent: Buffer.from('%PDF-1.7 synthetic endpoint receipt').toString('base64'),
+            mimeType: 'application/pdf',
           },
         });
 
@@ -260,7 +263,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail with missing required fields', async () => {
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/upload`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/upload`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -275,11 +278,11 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('GET /api/v1/:workspaceId/receipts', () => {
+    describe('GET /api/v1/workspaces/workspaces/:workspaceId/receipts', () => {
       it('✅ should list receipts', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -300,7 +303,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts`,
         });
 
         console.log('List Receipts No Auth:', response.statusCode);
@@ -308,7 +311,16 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('GET /api/v1/:workspaceId/receipts/:receiptId', () => {
+    describe('GET /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId', () => {
+      it('downloads the stored bytes through the authenticated endpoint', async () => {
+        expect(testReceiptId).toBeTruthy();
+        const response = await app.inject({ method: 'GET', url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${testReceiptId}/download`, headers: { authorization: `Bearer ${authToken}` } });
+        expect(response.statusCode).toBe(200);
+        expect(response.rawPayload).toEqual(Buffer.from('%PDF-1.7 synthetic endpoint receipt'));
+        expect(response.headers['cache-control']).toBe('private, no-store');
+        const unauthenticated = await app.inject({ method: 'GET', url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${testReceiptId}/download` });
+        expect(unauthenticated.statusCode).toBe(401);
+      });
       it('✅ should get receipt by ID', async () => {
         // If no receipt was created, use a dummy UUID to test the endpoint returns a valid response
         const receiptId =
@@ -316,7 +328,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -331,29 +343,29 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(body.success).toBe(true);
           expect(body.data.receiptId).toBe(testReceiptId);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
 
       it('❌ should fail with non-existent receipt ID', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/00000000-0000-0000-0000-000000000000`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/00000000-0000-4000-8000-000000000000`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
         });
 
         console.log('Get Non-existent Receipt:', response.statusCode);
-        expect([400, 404, 500]).toContain(response.statusCode);
+        expect(response.statusCode).toBe(404);
       });
     });
 
-    describe('GET /api/v1/:workspaceId/receipts/stats', () => {
+    describe('GET /api/v1/workspaces/workspaces/:workspaceId/receipts/stats', () => {
       it('✅ should get receipt statistics', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/stats`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/stats`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -369,7 +381,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/stats`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/stats`,
         });
 
         console.log('Receipt Stats No Auth:', response.statusCode);
@@ -377,14 +389,15 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('POST /api/v1/:workspaceId/receipts/:receiptId/process', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/process', () => {
       it('✅ should process receipt', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/process`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/process`,
+          payload: {},
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -394,7 +407,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
         console.log('Process Receipt:', response.statusCode, body.message);
 
         // May succeed or fail depending on OCR service or if receipt doesn't exist
-        expect([200, 400, 404, 500]).toContain(response.statusCode);
+        expect(response.statusCode).toBe(200);
       });
 
       it('❌ should fail without auth token', async () => {
@@ -403,7 +416,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/process`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/process`,
           payload: {},
         });
 
@@ -412,14 +425,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('POST /api/v1/:workspaceId/receipts/:receiptId/verify', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/verify', () => {
       it('✅ should verify receipt', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/verify`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/verify`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -429,7 +442,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
         console.log('Verify Receipt:', response.statusCode, body.message);
 
         // Receipt may be in PENDING state (not yet processed), so 400 is valid
-        expect([200, 400, 404, 500]).toContain(response.statusCode);
+        expect(response.statusCode).toBe(200);
         if (response.statusCode === 200) {
           expect(body.success).toBe(true);
         }
@@ -441,7 +454,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/verify`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/verify`,
         });
 
         console.log('Verify Receipt No Auth:', response.statusCode);
@@ -449,14 +462,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('POST /api/v1/:workspaceId/receipts/:receiptId/reject', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/reject', () => {
       it('❌ should fail without auth token', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/reject`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/reject`,
           payload: {
             reason: 'Invalid receipt',
           },
@@ -472,14 +485,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   // RECEIPT METADATA ENDPOINTS
   // ============================================================================
   describe('Receipt Metadata Endpoints', () => {
-    describe('POST /api/v1/:workspaceId/receipts/:receiptId/metadata', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/metadata', () => {
       it('✅ should add metadata to receipt', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -500,7 +513,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(201);
           expect(body.success).toBe(true);
         } else {
-          expect([201, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(201);
         }
       });
 
@@ -510,7 +523,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
           payload: {
             merchantName: 'Test',
           },
@@ -521,14 +534,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('GET /api/v1/:workspaceId/receipts/:receiptId/metadata', () => {
+    describe('GET /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/metadata', () => {
       it('✅ should get receipt metadata', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -542,7 +555,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(200);
           expect(body.success).toBe(true);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
 
@@ -552,7 +565,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'GET',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
         });
 
         console.log('Get Metadata No Auth:', response.statusCode);
@@ -560,14 +573,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('PATCH /api/v1/:workspaceId/receipts/:receiptId/metadata', () => {
+    describe('PATCH /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/metadata', () => {
       it('✅ should update receipt metadata', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -585,7 +598,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(200);
           expect(body.success).toBe(true);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
 
@@ -595,7 +608,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'PATCH',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/metadata`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/metadata`,
           payload: {
             merchantName: 'Updated',
           },
@@ -611,14 +624,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   // RECEIPT TAG MANAGEMENT
   // ============================================================================
   describe('Receipt Tag Management', () => {
-    describe('POST /api/v1/:workspaceId/receipts/:receiptId/tags', () => {
+    describe('POST /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/tags', () => {
       it('✅ should add tag to receipt', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/tags`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -635,7 +648,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(200);
           expect(body.success).toBe(true);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
 
@@ -645,7 +658,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'POST',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/tags`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/tags`,
           payload: {
             tagId: testTagId,
           },
@@ -656,14 +669,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       });
     });
 
-    describe('DELETE /api/v1/:workspaceId/receipts/:receiptId/tags/:tagId', () => {
+    describe('DELETE /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId/tags/:tagId', () => {
       it('✅ should remove tag from receipt', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/tags/${testTagId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -681,7 +694,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(200);
           expect(body.success).toBe(true);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
 
@@ -691,7 +704,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}/tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}/tags/${testTagId}`,
         });
 
         console.log('Remove Tag from Receipt No Auth:', response.statusCode);
@@ -704,14 +717,14 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
   // CLEANUP & DELETE TESTS
   // ============================================================================
   describe('Cleanup - Delete Tests', () => {
-    describe('DELETE /api/v1/:workspaceId/receipts/:receiptId', () => {
+    describe('DELETE /api/v1/workspaces/workspaces/:workspaceId/receipts/:receiptId', () => {
       it('❌ should fail without auth token', async () => {
         const receiptId =
           testReceiptId || '00000000-0000-0000-0000-000000000001';
 
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}`,
         });
 
         console.log('Delete Receipt No Auth:', response.statusCode);
@@ -724,7 +737,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
 
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipts/${receiptId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipts/${receiptId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -738,16 +751,16 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
           expect(response.statusCode).toBe(200);
           expect(body.success).toBe(true);
         } else {
-          expect([200, 400, 404, 500]).toContain(response.statusCode);
+          expect(response.statusCode).toBe(200);
         }
       });
     });
 
-    describe('DELETE /api/v1/:workspaceId/receipt-tags/:tagId', () => {
+    describe('DELETE /api/v1/workspaces/workspaces/:workspaceId/receipt-tags/:tagId', () => {
       it('❌ should fail without auth token', async () => {
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags/${testTagId}`,
         });
 
         console.log('Delete Receipt Tag No Auth:', response.statusCode);
@@ -757,7 +770,7 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       it('✅ should delete receipt tag', async () => {
         const response = await app.inject({
           method: 'DELETE',
-          url: `/api/v1/${testWorkspaceId}/receipt-tags/${testTagId}`,
+          url: `/api/v1/workspaces/${testWorkspaceId}/receipt-tags/${testTagId}`,
           headers: {
             authorization: `Bearer ${authToken}`,
           },
@@ -783,57 +796,57 @@ describe('Receipt Vault Module - Endpoint Tests', () => {
       console.log('='.repeat(60));
       console.log('\n🧾 Receipt Endpoints:');
       console.log(
-        '    POST   /:workspaceId/receipts/upload           - Upload Receipt'
+        '    POST   /workspaces/:workspaceId/receipts/upload           - Upload Receipt'
       );
       console.log(
-        '    GET    /:workspaceId/receipts                  - List Receipts'
+        '    GET    /workspaces/:workspaceId/receipts                  - List Receipts'
       );
       console.log(
-        '    GET    /:workspaceId/receipts/:id              - Get Receipt'
+        '    GET    /workspaces/:workspaceId/receipts/:id              - Get Receipt'
       );
       console.log(
-        '    DELETE /:workspaceId/receipts/:id              - Delete Receipt'
+        '    DELETE /workspaces/:workspaceId/receipts/:id              - Delete Receipt'
       );
       console.log(
-        '    GET    /:workspaceId/receipts/stats            - Get Statistics'
+        '    GET    /workspaces/:workspaceId/receipts/stats            - Get Statistics'
       );
       console.log(
-        '    POST   /:workspaceId/receipts/:id/process      - Process (OCR)'
+        '    POST   /workspaces/:workspaceId/receipts/:id/process      - Process (OCR)'
       );
       console.log(
-        '    POST   /:workspaceId/receipts/:id/verify       - Verify Receipt'
+        '    POST   /workspaces/:workspaceId/receipts/:id/verify       - Verify Receipt'
       );
       console.log(
-        '    POST   /:workspaceId/receipts/:id/reject       - Reject Receipt'
+        '    POST   /workspaces/:workspaceId/receipts/:id/reject       - Reject Receipt'
       );
       console.log('\n📝 Metadata Endpoints:');
       console.log(
-        '    POST   /:workspaceId/receipts/:id/metadata     - Add Metadata'
+        '    POST   /workspaces/:workspaceId/receipts/:id/metadata     - Add Metadata'
       );
       console.log(
-        '    GET    /:workspaceId/receipts/:id/metadata     - Get Metadata'
+        '    GET    /workspaces/:workspaceId/receipts/:id/metadata     - Get Metadata'
       );
       console.log(
-        '    PUT    /:workspaceId/receipts/:id/metadata     - Update Metadata'
+        '    PUT    /workspaces/:workspaceId/receipts/:id/metadata     - Update Metadata'
       );
       console.log('\n🏷️  Receipt Tag Endpoints:');
       console.log(
-        '    POST   /:workspaceId/receipt-tags              - Create Tag'
+        '    POST   /workspaces/:workspaceId/receipt-tags              - Create Tag'
       );
       console.log(
-        '    GET    /:workspaceId/receipt-tags              - List Tags'
+        '    GET    /workspaces/:workspaceId/receipt-tags              - List Tags'
       );
       console.log(
-        '    PUT    /:workspaceId/receipt-tags/:id          - Update Tag'
+        '    PUT    /workspaces/:workspaceId/receipt-tags/:id          - Update Tag'
       );
       console.log(
-        '    DELETE /:workspaceId/receipt-tags/:id          - Delete Tag'
+        '    DELETE /workspaces/:workspaceId/receipt-tags/:id          - Delete Tag'
       );
       console.log(
-        '    POST   /:workspaceId/receipts/:id/tags         - Add Tag to Receipt'
+        '    POST   /workspaces/:workspaceId/receipts/:id/tags         - Add Tag to Receipt'
       );
       console.log(
-        '    DELETE /:workspaceId/receipts/:id/tags/:tagId  - Remove Tag'
+        '    DELETE /workspaces/:workspaceId/receipts/:id/tags/:tagId  - Remove Tag'
       );
       console.log('\n' + '='.repeat(60));
       console.log(`Test User: ${testEmail}`);
