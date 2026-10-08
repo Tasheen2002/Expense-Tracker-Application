@@ -5,6 +5,15 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 // Preserve an explicitly supplied DATABASE_URL so integration tests can target
 // an isolated database instead of the developer's service-local database.
 dotenv.config({ path: path.resolve(__dirname, '.env') });
+// Docker's published PostgreSQL port uses IPv4. Windows localhost resolution
+// can delay opening additional pooled connections past Prisma's maxWait.
+if (process.platform === 'win32' && process.env.DATABASE_URL) {
+  const databaseUrl = new URL(process.env.DATABASE_URL);
+  if (databaseUrl.hostname === 'localhost') {
+    databaseUrl.hostname = '127.0.0.1';
+    process.env.DATABASE_URL = databaseUrl.toString();
+  }
+}
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
