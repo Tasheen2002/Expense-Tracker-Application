@@ -6,7 +6,7 @@ import { QueryResult } from '@core/application/query-result';
 /**
  * Standard success response format
  */
-export interface SuccessResponse<T = any> {
+export interface SuccessResponse<T = unknown> {
   success: true;
   statusCode: number;
   message: string;
@@ -108,7 +108,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    data?: any,
+    data?: unknown,
     successStatusCode: number = 200
   ): FastifyReply {
     if (!result.success) {
@@ -140,7 +140,7 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: QueryResult<T>,
     successMessage: string,
-    data?: any
+    data?: unknown
   ): FastifyReply {
     if (!result.success) {
       const statusCode = result.statusCode ?? 404;
