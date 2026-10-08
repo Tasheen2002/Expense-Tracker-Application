@@ -4,6 +4,7 @@ import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 export class TagId extends UuidId {
   private constructor(value: string) {
     super(value, "TagId");
+    Object.freeze(this);
   }
 
   static create(): TagId {

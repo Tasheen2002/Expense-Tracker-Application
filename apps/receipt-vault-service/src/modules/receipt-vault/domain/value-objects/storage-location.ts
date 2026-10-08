@@ -1,4 +1,4 @@
-import { StorageProvider } from "../enums/storage-provider";
+import { StorageProvider, isValidStorageProvider } from "../enums/storage-provider";
 import { InvalidStorageConfigurationError } from "../errors/receipt.errors";
 
 export interface StorageLocationProps {
@@ -9,6 +9,7 @@ export interface StorageLocationProps {
 
 export class StorageLocation {
   private constructor(private readonly props: StorageLocationProps) {
+    this.props = Object.freeze({ ...props });
     this.validate();
   }
 
@@ -16,9 +17,11 @@ export class StorageLocation {
     return new StorageLocation(props);
   }
 
-  static createLocal(): StorageLocation {
+  static createLocal(key: string): StorageLocation {
     return new StorageLocation({
       provider: StorageProvider.LOCAL,
+      bucket: 'local',
+      key,
     });
   }
 
@@ -47,12 +50,15 @@ export class StorageLocation {
   }
 
   private validate(): void {
-    if (!this.props.provider) {
+    if (!isValidStorageProvider(this.props.provider)) {
       throw new InvalidStorageConfigurationError(
         "Storage provider cannot be empty",
       );
     }
 
+    if (!this.props.key || this.props.key.length > 500 || !this.props.key.trim()) throw new InvalidStorageConfigurationError('A storage key of at most 500 characters is required');
+    if (this.props.bucket !== undefined && (!this.props.bucket.trim() || this.props.bucket.length > 255)) throw new InvalidStorageConfigurationError('Invalid storage bucket');
+    if (this.props.provider === StorageProvider.LOCAL && this.props.bucket !== undefined && this.props.bucket !== 'local') throw new InvalidStorageConfigurationError('LOCAL bucket must be local');
     // Cloud providers require bucket and key
     if (this.props.provider !== StorageProvider.LOCAL) {
       if (!this.props.bucket || this.props.bucket.trim().length === 0) {

@@ -4,6 +4,7 @@ import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 export class MetadataId extends UuidId {
   private constructor(value: string) {
     super(value, "MetadataId");
+    Object.freeze(this);
   }
 
   static create(): MetadataId {

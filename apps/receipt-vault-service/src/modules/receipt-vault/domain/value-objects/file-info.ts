@@ -23,6 +23,7 @@ export interface FileInfoProps {
 
 export class FileInfo {
   private constructor(private readonly props: FileInfoProps) {
+    this.props = Object.freeze({ ...props });
     this.validate()
   }
 
@@ -53,17 +54,18 @@ export class FileInfo {
       )
     }
 
-    if (!this.props.filePath || this.props.filePath.trim().length === 0) {
+    if (!this.props.filePath || this.props.filePath.trim().length === 0 || this.props.filePath.length > 1000) {
       throw new ReceiptValidationError('filePath', 'File path cannot be empty')
     }
 
-    if (this.props.fileSize < MIN_FILE_SIZE) {
+    if (!Number.isSafeInteger(this.props.fileSize) || this.props.fileSize < MIN_FILE_SIZE) {
       throw new InvalidFileError('File size must be greater than zero')
     }
 
     if (this.props.fileSize > MAX_FILE_SIZE) {
       throw new FileSizeExceededError(this.props.fileSize, MAX_FILE_SIZE)
     }
+    if (this.props.fileHash !== undefined && !/^[a-f0-9]{64}$/.test(this.props.fileHash)) throw new ReceiptValidationError('fileHash', 'Expected a lowercase SHA-256 hash');
 
     if (!this.props.mimeType || this.props.mimeType.trim().length === 0) {
       throw new ReceiptValidationError('mimeType', 'MIME type cannot be empty')
