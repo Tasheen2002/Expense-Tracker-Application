@@ -341,12 +341,6 @@ export const budgetAlertEnvelopeJsonSchema = toJsonSchema(z.object({
   data: budgetAlertResponseSchema,
 }));
 
-export const baseResponseEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema } from '@shared/http/validation';
 
 export const paginationQueryJsonSchema = toJsonSchema(paginationQuerySchema);

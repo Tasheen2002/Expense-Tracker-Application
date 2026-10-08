@@ -4,7 +4,7 @@ import { toJsonSchema } from './validator';
 import Decimal from 'decimal.js';
 import { MAX_BUDGET_AMOUNT, SUPPORTED_CURRENCIES } from '../../../domain/constants/budget.constants';
 
-const moneySchema = z.union([z.number(), z.string()]).refine((value) => {
+const moneySchema = z.union([z.number().finite(), z.string()]).refine((value) => {
   try {
     const amount = new Decimal(value);
     return amount.isFinite() && amount.greaterThan(0) &&
@@ -122,10 +122,4 @@ export const paginatedSpendingLimitsEnvelopeJsonSchema = toJsonSchema(
   })
 );
 
-export const baseResponseEnvelopeJsonSchema = toJsonSchema(
-  z.object({
-    success: z.boolean(),
-    statusCode: z.number(),
-    message: z.string(),
-  })
-);
+export { baseResponseEnvelopeJsonSchema } from '@shared/http/validation';
