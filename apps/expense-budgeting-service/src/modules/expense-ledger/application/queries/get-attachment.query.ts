@@ -1,11 +1,8 @@
+import { getVisibleExpense } from '../services/expense-access';
 import { IQuery, IQueryHandler } from '@core/application/cqrs';
 import { AttachmentService } from '../services/attachment.service';
 import { AttachmentDTO } from '../../domain/entities/attachment.entity';
-import {
-  AttachmentNotFoundError,
-  ExpenseNotFoundError,
-  UnauthorizedExpenseAccessError,
-} from '../../domain/errors/expense.errors';
+import { AttachmentNotFoundError } from '../../domain/errors/expense.errors';
 import { ExpenseService } from '../services/expense.service';
 import { OperationService } from '../services/operation.service';
 
@@ -21,7 +18,10 @@ export interface GetAttachmentQuery extends IQuery {
   readonly verifiedMembership?: WorkspaceMembershipContext;
 }
 
-export class GetAttachmentHandler implements IQueryHandler<GetAttachmentQuery, AttachmentDTO> {
+export class GetAttachmentHandler implements IQueryHandler<
+  GetAttachmentQuery,
+  AttachmentDTO
+> {
   constructor(
     private readonly attachmentService: AttachmentService,
     private readonly expenseService: ExpenseService,
@@ -39,30 +39,14 @@ export class GetAttachmentHandler implements IQueryHandler<GetAttachmentQuery, A
   }
 
   async handle(query: GetAttachmentQuery): Promise<AttachmentDTO> {
-    if (!query.userId) {
-      throw new UnauthorizedExpenseAccessError(query.expenseId, 'anonymous', 'view attachment');
-    }
-
-    // Verify workspace membership at application boundary
-    const membership = await this.operationService.authorize({
+    await getVisibleExpense(this.operationService, this.expenseService, {
       actorId: query.userId,
       workspaceId: query.workspaceId,
+      expenseId: query.expenseId,
       authToken: query.authToken,
       verifiedMembership: query.verifiedMembership,
+      action: 'view attachment',
     });
-
-    const expense = await this.expenseService.getExpenseById(
-      query.expenseId,
-      query.workspaceId
-    );
-
-    if (!expense) {
-      throw new ExpenseNotFoundError(query.expenseId, query.workspaceId);
-    }
-
-    // Application-boundary authorization: enforce expense visibility
-    const effectiveRole = membership.role;
-    this.operationService.authorizeExpenseVisibility(query.userId, expense, effectiveRole);
 
     const attachment = await this.attachmentService.getAttachmentDTOById(
       query.attachmentId,
