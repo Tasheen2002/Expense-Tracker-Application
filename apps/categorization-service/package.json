@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "outbox:retry": "tsx scripts/retry-outbox-event.ts"
+    "outbox:retry": "tsx scripts/retry-outbox-event.ts",
+    "lint": "node ../../scripts/lint-backend.cjs categorization-service"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
