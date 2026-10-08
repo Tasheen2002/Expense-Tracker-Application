@@ -22,10 +22,10 @@ export const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/
 export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 // MIME type validation
-export const MIME_TYPE_REGEX = /^[a-z]+\/[a-z0-9\-\+\.]+$/i
+export const MIME_TYPE_REGEX = /^[a-z]+\/[a-z0-9\-+.]+$/i
 
 // Allowed MIME types for receipts
-export const ALLOWED_IMAGE_MIME_TYPES = [
+export const ALLOWED_IMAGE_MIME_TYPES: readonly string[] = Object.freeze([
   'image/jpeg',
   'image/jpg',
   'image/png',
@@ -33,16 +33,16 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/webp',
   'image/bmp',
   'image/tiff',
-]
+])
 
-export const ALLOWED_DOCUMENT_MIME_TYPES = [
+export const ALLOWED_DOCUMENT_MIME_TYPES: readonly string[] = Object.freeze([
   'application/pdf',
-]
+])
 
-export const ALLOWED_MIME_TYPES = [
+export const ALLOWED_MIME_TYPES: readonly string[] = Object.freeze([
   ...ALLOWED_IMAGE_MIME_TYPES,
   ...ALLOWED_DOCUMENT_MIME_TYPES,
-]
+])
 
 // OCR confidence thresholds
 export const MIN_OCR_CONFIDENCE = 0
