@@ -1,3 +1,4 @@
+import { requireExpenseCategory } from '../services/expense-access';
 import {
   ICommand,
   ICommandHandler,
@@ -8,8 +9,6 @@ import { ExpenseService } from '../services/expense.service';
 import { ExpenseDTO } from '../../domain/entities/expense.entity';
 import { ICategoryRepository } from '../../domain/repositories/category.repository';
 import { ITagRepository } from '../../domain/repositories/tag.repository';
-import { CategoryId } from '../../domain/value-objects/category-id';
-import { CategoryNotFoundError } from '../../domain/errors/expense.errors';
 import { OperationService } from '../services/operation.service';
 import { WorkspaceMembershipContext } from '../ports/workspace-authorization.port';
 
@@ -61,18 +60,7 @@ export class CreateExpenseHandler implements ICommandHandler<
       verifiedMembership: command.verifiedMembership,
     });
 
-    if (command.categoryId) {
-      const categoryExists = await this.categoryRepository.exists(
-        CategoryId.fromString(command.categoryId),
-        command.workspaceId
-      );
-      if (!categoryExists) {
-        throw new CategoryNotFoundError(
-          command.categoryId,
-          command.workspaceId
-        );
-      }
-    }
+    await requireExpenseCategory(this.categoryRepository, command.categoryId, command.workspaceId);
 
     const dto = await this.expenseService.createExpense({
       workspaceId: command.workspaceId,
