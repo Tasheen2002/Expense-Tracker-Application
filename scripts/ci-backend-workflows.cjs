@@ -8,7 +8,10 @@ if (process.env.GITHUB_ACTIONS !== 'true') throw new Error('This runner is restr
 if (existsSync('.env.docker-smoke')) throw new Error('Refusing to overwrite existing smoke credentials');
 process.env.BACKEND_REPORT_DIR = process.env.RUNNER_TEMP || tmpdir();
 const credentials = ['POSTGRES_PASSWORD', 'JWT_SECRET', 'INTERNAL_API_KEY', 'BANK_FEED_TOKEN_ENCRYPTION_KEY', 'REDIS_PASSWORD'];
-writeFileSync('.env.docker-smoke', credentials.map(key => `${key}=${randomBytes(32).toString('hex')}`).join('\n') + '\n', { mode: 0o600 });
+writeFileSync('.env.docker-smoke', credentials.map(key => {
+  const encoding = key === 'BANK_FEED_TOKEN_ENCRYPTION_KEY' ? 'base64' : 'hex';
+  return `${key}=${randomBytes(32).toString(encoding)}`;
+}).join('\n') + '\n', { mode: 0o600 });
 const services = ['gateway', 'identity-access-service', 'expense-budgeting-service', 'categorization-service',
   'approval-policy-service', 'bank-feed-service', 'receipt-vault-service', 'notification-service', 'audit-compliance-service'];
 const images = join(tmpdir(), 'expense-ci-images.yml');
@@ -26,6 +29,11 @@ try {
   run(process.execPath, ['scripts/gateway-workflow-smoke.cjs']);
   run(process.execPath, ['--test', 'scripts/outbox-maintenance.integration.test.cjs']);
   run(process.execPath, ['scripts/verify-database-backup.cjs']);
+} catch (error) {
+  // Collect startup diagnostics before cleanup removes the failed containers.
+  spawnSync('docker', [...compose, 'ps', '--all'], { stdio: 'inherit', timeout: 30000 });
+  spawnSync('docker', [...compose, 'logs', '--no-color', '--tail', '80', ...services], { stdio: 'inherit', timeout: 30000 });
+  throw error;
 } finally {
   // This project and these volumes are created only on the ephemeral CI host.
   const result = spawnSync('docker', [...compose, 'down', '--volumes', '--remove-orphans'], { stdio: 'inherit', timeout: 120000 });
