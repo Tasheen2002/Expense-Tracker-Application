@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { UuidId } from '@core/domain/value-objects/uuid-id.base';
 
 export class PreferenceId extends UuidId {
+  declare private readonly preferenceIdBrand: void;
   private constructor(value: string) {
     super(value, "PreferenceId");
     Object.freeze(this);
