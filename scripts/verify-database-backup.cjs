@@ -19,7 +19,10 @@ const restoreVolume = `expense_restore_verify_${runId}`;
 let volumeCreated = false;
 function docker(args) {
   const result = spawnSync('docker', args, { encoding: 'utf8', timeout: 120000 });
-  if (result.status !== 0) throw new Error(`Backup command ${args[0]} failed`);
+  if (result.status !== 0) {
+    const details = result.error?.message || result.stderr?.trim() || `exit ${result.status}`;
+    throw new Error(`Backup command ${args[0]} failed: ${details}`);
+  }
   return result.stdout.trim();
 }
 async function counts(db) {
@@ -81,18 +84,19 @@ async function seedReceipt() {
   return receipt.receiptId;
 }
 function copyReceiptFiles() {
-  const image = 'expense-smoke-receipt-vault-service';
-  docker(['run', '--rm', '--network', 'none', '--user', '0', '--volumes-from', 'expense_smoke_receipt:ro',
+  const image = docker(['inspect', '--format', '{{.Image}}', 'expense_smoke_receipt']);
+  assert.match(image, /^sha256:[a-f0-9]{64}$/, 'Receipt container must identify a local image');
+  docker(['run', '--rm', '--pull', 'never', '--network', 'none', '--user', '0', '--volumes-from', 'expense_smoke_receipt:ro',
     '--mount', `type=bind,source=${directory},target=/backup`, '--entrypoint', 'node', image, '-e',
     "const fs=require('fs');fs.cpSync('/app/uploads','/backup/receipt-files',{recursive:true});"]);
   docker(['volume', 'create', restoreVolume]); volumeCreated = true;
-  docker(['run', '--rm', '--network', 'none', '--user', '0', '--mount', `type=bind,source=${directory},target=/backup,readonly`,
+  docker(['run', '--rm', '--pull', 'never', '--network', 'none', '--user', '0', '--mount', `type=bind,source=${directory},target=/backup,readonly`,
     '--mount', `type=volume,source=${restoreVolume},target=/restore`, '--entrypoint', 'node', image, '-e',
     "const fs=require('fs'),p=require('path');fs.cpSync('/backup/receipt-files','/restore',{recursive:true});function own(d){const s=fs.lstatSync(d);if(s.isSymbolicLink()||(!s.isDirectory()&&!s.isFile()))throw new Error('Nonregular restore object');fs.chownSync(d,1000,1000);if(s.isDirectory()){fs.chmodSync(d,0o700);for(const n of fs.readdirSync(d))own(p.join(d,n));}else fs.chmodSync(d,0o600);}own('/restore');"]);
   const inventory = root => `const fs=require('fs'),p=require('path'),c=require('crypto'),rows=[];function walk(d){for(const n of fs.readdirSync(d).sort()){const f=p.join(d,n),s=fs.lstatSync(f);if(s.isDirectory())walk(f);else{if(!s.isFile()||s.isSymbolicLink())throw new Error('Nonregular storage object');rows.push({key:p.relative('${root}',f),size:s.size,sha256:c.createHash('sha256').update(fs.readFileSync(f)).digest('hex')});}}}walk('${root}');console.log(JSON.stringify(rows));`;
-  const source = JSON.parse(docker(['run', '--rm', '--network', 'none', '--volumes-from', 'expense_smoke_receipt:ro',
+  const source = JSON.parse(docker(['run', '--rm', '--pull', 'never', '--network', 'none', '--volumes-from', 'expense_smoke_receipt:ro',
     '--entrypoint', 'node', image, '-e', inventory('/app/uploads')]));
-  const restored = JSON.parse(docker(['run', '--rm', '--network', 'none', '--mount', `type=volume,source=${restoreVolume},target=/restore,readonly`,
+  const restored = JSON.parse(docker(['run', '--rm', '--pull', 'never', '--network', 'none', '--mount', `type=volume,source=${restoreVolume},target=/restore,readonly`,
     '--entrypoint', 'node', image, '-e', inventory('/restore')]));
   assert.deepEqual(restored, source, 'Restored file bytes differ or cannot be read by the application user');
   writeFileSync(join(directory, 'receipt-files-manifest.json'), JSON.stringify(restored, null, 2));
