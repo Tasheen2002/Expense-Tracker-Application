@@ -128,3 +128,10 @@ export function validateParams<T extends ZodSchema>(schema: T) {
     }
   };
 }
+
+/** Shared envelope for successful operations without a data payload. */
+export const baseResponseEnvelopeJsonSchema = toJsonSchema(z.object({
+  success: z.boolean(),
+  statusCode: z.number(),
+  message: z.string(),
+}));
