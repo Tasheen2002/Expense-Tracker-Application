@@ -15,6 +15,9 @@ import { validateText } from '../../../domain/entities/entity-validation';
 import { NOTIFICATION_TITLE_MAX_LENGTH, NOTIFICATION_CONTENT_MAX_LENGTH } from '../../../domain/constants';
 import { InvalidNotificationDataError, NotificationRequestConflictError } from '../../../domain/errors/notification.errors';
 import { notificationWebhookRateLimit } from '@shared/http/notification-rate-limits';
+import { AccountNotificationService } from '../../../application/services/account-notification.service';
+import { AccountNotificationRepositoryImpl } from '../../persistence/account-notification.repository.impl';
+import { accountEventOwner } from '../../../../../../../../packages/contracts/src/account-events';
 
 function canonicalJson(value: unknown): string {
   return JSON.stringify(value, (_key, item: unknown) => {
@@ -38,7 +41,8 @@ export type OutboxEventPayload = z.infer<typeof OutboxEventPayloadSchema>;
 
 export async function registerNotificationOutboxEventRoutes(
   fastify: FastifyInstance,
-  prisma: PrismaClient
+  prisma: PrismaClient,
+  accountNotifications = new AccountNotificationService(new AccountNotificationRepositoryImpl(prisma)),
 ) {
   fastify.post(
     '/event-outbox/events',
@@ -58,6 +62,21 @@ export async function registerNotificationOutboxEventRoutes(
       }
 
       const { eventId, eventType, payload, timestamp } = parseResult.data;
+      let accountId: string | null;
+      try { accountId = accountEventOwner(parseResult.data); }
+      catch { return reply.code(400).send({ success: false, error: 'Invalid account event scope' }); }
+      if (accountId) {
+        try {
+          const result = await accountNotifications.accept(parseResult.data);
+          return reply.code(result.duplicate || result.suppressed ? 200 : 201).send({ success: true, ...result,
+            notificationId: result.suppressed ? undefined : result.notificationId });
+        } catch (err: unknown) {
+          if (err instanceof NotificationRequestConflictError) return reply.code(409).send({ success: false, error: 'Event ID conflict' });
+          if (err instanceof InvalidNotificationDataError) return reply.code(400).send({ success: false, error: err.code });
+          request.log.error({ err }, 'Account notification acceptance failed');
+          return reply.code(500).send({ success: false, error: 'Failed to create account notification' });
+        }
+      }
       const fingerprint = createHash('sha256').update(canonicalJson(parseResult.data)).digest('hex');
       const nested = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
         ? payload.data as Record<string, unknown> : {};
@@ -65,9 +84,17 @@ export async function registerNotificationOutboxEventRoutes(
       const expenseStatusChanged = normalizedType === 'expense.status_changed' || normalizedType === 'expensestatuschanged';
       const approvalStarted = normalizedType === 'approval.workflow_started' || normalizedType === 'approvalworkflowstarted';
       const budgetThreshold = normalizedType === 'budget.threshold_exceeded';
+      const categorySuggestionCreated = normalizedType === 'categorysuggestioncreated';
+      if (categorySuggestionCreated && !z.object({
+        suggestionId: z.string().uuid(), expenseId: z.string().uuid(), suggestedCategoryId: z.string().uuid(),
+        expenseOwnerId: z.string().uuid().refine(UserId.isValid),
+      }).safeParse(payload).success) {
+        return reply.code(400).send({ success: false, error: 'Category suggestion requires valid resource IDs and its verified expense owner' });
+      }
 
       // 2. Extract recipient and workspace
       const rawRecipient =
+        (categorySuggestionCreated ? payload.expenseOwnerId : undefined) ||
         (budgetThreshold ? payload.recipientId : undefined) ||
         (expenseStatusChanged ? payload.expenseOwnerId : approvalStarted ? payload.requesterId : undefined) ||
         payload?.userId ||
@@ -130,7 +157,10 @@ export async function registerNotificationOutboxEventRoutes(
       let content = `An event of type ${eventType} has occurred.`;
       let priority: NotificationPriority = NotificationPriority.MEDIUM;
 
-      if (expenseStatusChanged) {
+      if (categorySuggestionCreated) {
+        title = 'Category suggestion available';
+        content = 'A category has been suggested for your expense. Review the suggestion to accept or reject it.';
+      } else if (expenseStatusChanged) {
         if (payload.newStatus !== 'APPROVED' && payload.newStatus !== 'REJECTED') {
           return reply.code(200).send({ success: true, message: 'Expense status does not require a notification' });
         }
@@ -193,6 +223,7 @@ export async function registerNotificationOutboxEventRoutes(
         const deliveredAt = new Date();
         const outcome = await prisma.$transaction(async (tx) => {
           await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${eventId}, 0))::text`;
+          if (await tx.accountNotificationRequest.findUnique({ where: { id: eventId } })) throw new NotificationRequestConflictError();
           const receipt = await tx.notificationRequest.findUnique({ where: { id: eventId } });
           if (receipt) {
             if (receipt.kind !== 'WEBHOOK' || receipt.fingerprint !== fingerprint
