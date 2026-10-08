@@ -1,100 +1,69 @@
 import Fastify, { FastifyInstance, FastifyRequest } from 'fastify';
-import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { PrismaClient } from '@prisma/client';
-import { container } from './container';
+import { correlationPlugin, internalAuthPlugin } from '@expense-tracker/correlation';
+import { z } from 'zod';
+import { createCompositionRoot, CompositionRoot } from './composition-root';
+import errorPlugin from './plugins/error';
 import { registerReceiptVaultRoutes } from './modules/receipt-vault/infrastructure/http/routes';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    prisma: PrismaClient;
+    prisma: PrismaClient; compositionRoot: CompositionRoot;
     authenticate: (request: FastifyRequest) => Promise<void>;
   }
   interface FastifyRequest {
-    user?: {
-      id: string;
-      userId: string;
-      email: string;
-      workspaceId?: string;
-    };
+    user?: { id: string; userId: string; email: string; workspaceId?: string };
   }
 }
+export interface ReceiptVaultAppOptions {
+  enableInternalAuth?: boolean; logger?: boolean | object;
+  prismaFactory?: () => PrismaClient;
+  compositionRootFactory?: (prisma: PrismaClient) => CompositionRoot;
+}
 
-/**
- * Creates and configures a Fastify server for the Receipt Vault Service.
- * Does NOT start listening or start the outbox worker — used by both
- * `index.ts` and integration tests.
- */
-export const createServer = async (): Promise<FastifyInstance> => {
+export async function buildReceiptVaultApp(options: ReceiptVaultAppOptions = {}): Promise<FastifyInstance> {
+  if (process.env.NODE_ENV === 'production') {
+    if (options.enableInternalAuth === false) throw new Error('Internal authentication cannot be disabled in production');
+    if (!process.env.INTERNAL_API_KEY?.trim()) throw new Error('INTERNAL_API_KEY is required');
+  }
   const server = Fastify({
-    ajv: {
-      customOptions: { keywords: ['example'] },
-    },
-    logger:
-      process.env.NODE_ENV === 'test'
-        ? false
-        : process.env.NODE_ENV === 'development'
-        ? {
-            level: process.env.LOG_LEVEL || 'info',
-            transport: {
-              target: 'pino-pretty',
-              options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname', colorize: true },
-            },
-          }
-        : { level: process.env.LOG_LEVEL || 'info' },
-    schemaErrorFormatter: (errors, dataVar) => {
-      const error = errors[0];
-      let message = `${dataVar}${error.instancePath} ${error.message}`;
-      if (error.params && 'missingProperty' in error.params) {
-        message = `${dataVar} must have required property '${error.params.missingProperty}'`;
-      }
-      return new Error(message);
-    },
+    ajv: { customOptions: { keywords: ['example'] } },
+    logger: options.logger ?? (process.env.NODE_ENV === 'test' ? false : true),
   });
-
-  await server.register(cors, {
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  });
-  await server.register(helmet, { contentSecurityPolicy: false });
-
-  const prisma = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
-
-  server.decorate('prisma', prisma);
-
-  server.addHook('onClose', async () => {
-    await prisma.$disconnect();
-  });
-
-  // Gateway-integrated auth via context headers
-  server.decorate('authenticate', async (request: FastifyRequest) => {
-    const userId = request.headers['x-user-id'] as string;
-    const email = request.headers['x-user-email'] as string;
-    const workspaceId = request.headers['x-workspace-id'] as string;
-
-    if (!userId) {
-      const err = new Error('Authentication failed: Missing context headers from Gateway') as any;
-      err.statusCode = 401;
-      throw err;
+  try {
+    await server.register(correlationPlugin);
+    if (options.enableInternalAuth !== false) {
+      await server.register(internalAuthPlugin);
     }
-
-    request.user = { id: userId, userId, email: email || '', workspaceId };
-  });
-
-  container.register(prisma);
-
-  const receiptController = container.get<any>('receiptController');
-  const tagController = container.get<any>('receiptTagController');
-
-  await registerReceiptVaultRoutes(server, { receiptController, tagController });
-
-  server.get('/health', async () => ({
-    status: 'ok',
-    service: 'receipt-vault-service',
-    uptime: process.uptime(),
-  }));
-
-  return server;
-};
+    await server.register(helmet, { contentSecurityPolicy: false });
+    await server.register(errorPlugin);
+    const prisma = options.prismaFactory?.() ?? new PrismaClient();
+    server.decorate('prisma', prisma);
+    server.addHook('onClose', async () => { await prisma.$disconnect(); });
+    await prisma.$connect();
+    server.decorate('authenticate', async (request: FastifyRequest) => {
+      const value = z.object({ userId: z.string().uuid(), email: z.string(), workspaceId: z.string().uuid().optional() })
+        .safeParse({ userId: request.headers['x-user-id'], email: request.headers['x-user-email'] ?? '', workspaceId: request.headers['x-workspace-id'] });
+      if (!value.success) throw Object.assign(new Error('Invalid gateway authentication context'), { statusCode: 401 });
+      request.user = { ...value.data, id: value.data.userId };
+    });
+    const root = (options.compositionRootFactory ?? createCompositionRoot)(prisma);
+    server.decorate('compositionRoot', root);
+    await registerReceiptVaultRoutes(server, root);
+    server.get('/health', async (_request, reply) => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        return { status: 'ok', service: 'receipt-vault-service', database: 'connected' };
+      } catch (error) {
+        server.log.error(error, 'Database health check failed');
+        return reply.code(503).send({ status: 'degraded', service: 'receipt-vault-service', error: 'Database service unavailable' });
+      }
+    });
+    return server;
+  } catch (error) {
+    await server.close().catch(closeError => server.log.error(closeError, 'Startup cleanup failed'));
+    throw error;
+  }
+}
+export const createServer = () => buildReceiptVaultApp({ enableInternalAuth: false, logger: false });
