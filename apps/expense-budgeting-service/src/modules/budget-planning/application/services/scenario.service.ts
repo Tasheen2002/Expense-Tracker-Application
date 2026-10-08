@@ -1,5 +1,5 @@
+import { getAuthorizedPlan } from './plan-access';
 import { Scenario, ScenarioDTO } from "../../domain/entities/scenario.entity";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
 import { IScenarioRepository } from "../../domain/repositories/scenario.repository";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
@@ -10,8 +10,6 @@ import { PLANNING_CONSTANTS } from "../../domain/constants/planning.constants";
 import {
   ScenarioNotFoundError,
   DuplicateScenarioNameError,
-  BudgetPlanNotFoundError,
-  UnauthorizedBudgetPlanAccessError,
   MaxScenariosExceededError,
   PlanNotModifiableError,
 } from "../../domain/errors/budget-planning.errors";
@@ -30,30 +28,6 @@ export class ScenarioService {
     private readonly unitOfWork?: IUnitOfWork,
   ) {}
 
-  private async checkPlanAccess(
-    userId: string,
-    planId: PlanId,
-    workspaceId: string,
-    action: string,
-  ): Promise<BudgetPlan> {
-    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.getValue(), workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === userId;
-    const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
-      userId,
-      plan.workspaceId.getValue(),
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError(action);
-    }
-
-    return plan;
-  }
-
   async createScenario(params: {
     planId: string;
     workspaceId: string;
@@ -64,7 +38,14 @@ export class ScenarioService {
   }): Promise<ScenarioDTO> {
     const planId = PlanId.fromString(params.planId);
 
-    const plan = await this.checkPlanAccess(params.createdBy, planId, params.workspaceId, "create scenario");
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
+      params.createdBy,
+      planId,
+      params.workspaceId,
+      "create scenario",
+    );
 
     if (plan.status === PlanStatus.ARCHIVED) {
       throw new PlanNotModifiableError(planId.getValue(), plan.status, 'add scenarios to');
@@ -123,7 +104,9 @@ export class ScenarioService {
       throw new ScenarioNotFoundError(params.id, params.workspaceId);
     }
 
-    const plan = await this.checkPlanAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       params.userId,
       scenario.planId,
       params.workspaceId,
@@ -175,7 +158,14 @@ export class ScenarioService {
       throw new ScenarioNotFoundError(id, workspaceId);
     }
 
-    const plan = await this.checkPlanAccess(userId, scenario.planId, workspaceId, "delete scenario");
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
+      userId,
+      scenario.planId,
+      workspaceId,
+      "delete scenario",
+    );
 
     if (plan.status === PlanStatus.ARCHIVED) {
       throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'delete scenarios from');

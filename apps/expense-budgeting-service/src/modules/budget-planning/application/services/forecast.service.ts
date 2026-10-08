@@ -1,5 +1,5 @@
+import { getAuthorizedPlan } from './plan-access';
 import { Forecast, ForecastDTO } from "../../domain/entities/forecast.entity";
-import { BudgetPlan } from "../../domain/entities/budget-plan.entity";
 import { IForecastRepository } from "../../domain/repositories/forecast.repository";
 import { IForecastItemRepository } from "../../domain/repositories/forecast-item.repository";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
@@ -17,8 +17,6 @@ import {
   DuplicateForecastNameError,
   DuplicateForecastItemError,
   ForecastItemNotFoundError,
-  BudgetPlanNotFoundError,
-  UnauthorizedBudgetPlanAccessError,
   MaxForecastsExceededError,
   MaxForecastItemsExceededError,
   PlanNotModifiableError,
@@ -39,30 +37,6 @@ export class ForecastService {
     private readonly unitOfWork?: IUnitOfWork,
   ) {}
 
-  private async checkPlanAccess(
-    userId: string,
-    planId: PlanId,
-    workspaceId: string,
-    action: string,
-  ): Promise<BudgetPlan> {
-    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(planId.getValue(), workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === userId;
-    const isAdminOrOwner = await this.workspaceAccess.isAdminOrOwner(
-      userId,
-      plan.workspaceId.getValue(),
-    );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError(action);
-    }
-
-    return plan;
-  }
-
   async createForecast(params: {
     planId: string;
     workspaceId: string;
@@ -71,7 +45,9 @@ export class ForecastService {
     userId: string;
   }): Promise<ForecastDTO> {
     const planId = PlanId.fromString(params.planId);
-    const plan = await this.checkPlanAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       params.userId,
       planId,
       params.workspaceId,
@@ -135,7 +111,9 @@ export class ForecastService {
     }
 
     // Check access to the parent plan
-    const plan = await this.checkPlanAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       params.userId,
       forecast.planId,
       params.workspaceId,
@@ -205,7 +183,9 @@ export class ForecastService {
     if (!forecast)
       throw new ForecastNotFoundError(item.forecastId.getValue(), params.workspaceId);
 
-    const plan = await this.checkPlanAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       params.userId,
       forecast.planId,
       params.workspaceId,
@@ -251,7 +231,9 @@ export class ForecastService {
     if (!forecast)
       throw new ForecastNotFoundError(item.forecastId.getValue(), workspaceId);
 
-    const plan = await this.checkPlanAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       userId,
       forecast.planId,
       workspaceId,
@@ -282,7 +264,14 @@ export class ForecastService {
       throw new ForecastNotFoundError(id, workspaceId);
     }
 
-    const plan = await this.checkPlanAccess(userId, forecast.planId, workspaceId, "delete forecast");
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
+      userId,
+      forecast.planId,
+      workspaceId,
+      "delete forecast",
+    );
 
     if (plan.status === PlanStatus.ARCHIVED) {
       throw new PlanNotModifiableError(plan.id.getValue(), plan.status, 'delete forecasts from');

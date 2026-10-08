@@ -1,3 +1,4 @@
+import { getAuthorizedPlan } from './plan-access';
 import { BudgetPlan, BudgetPlanDTO } from "../../domain/entities/budget-plan.entity";
 import { IBudgetPlanRepository } from "../../domain/repositories/budget-plan.repository";
 import { PlanId } from "../../domain/value-objects/plan-id";
@@ -6,7 +7,6 @@ import { PlanPeriod } from "../../domain/value-objects/plan-period";
 import { PlanStatus } from "../../domain/enums/plan-status.enum";
 import { PeriodType } from "../../domain/enums/period-type.enum";
 import {
-  BudgetPlanNotFoundError,
   UnauthorizedBudgetPlanAccessError,
 } from "../../domain/errors/budget-planning.errors";
 import { IWorkspaceAccessPort } from "../../domain/ports/workspace-access.port";
@@ -70,21 +70,14 @@ export class BudgetPlanService {
     description?: string | null;
   }): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(params.id);
-    const plan = await this.budgetPlanRepository.findById(planId, params.workspaceId);
-
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(params.id, params.workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === params.userId;
-    const isAdminOrOwner = await this.checkWorkspaceAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       params.userId,
-      plan.workspaceId.getValue(),
+      planId,
+      params.workspaceId,
+      'update',
     );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError("update");
-    }
 
     plan.updateDetails(params.name, params.description);
     await this.budgetPlanRepository.save(plan);
@@ -93,21 +86,14 @@ export class BudgetPlanService {
 
   async activatePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
-
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(id, workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === userId;
-    const isAdminOrOwner = await this.checkWorkspaceAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       userId,
-      plan.workspaceId.getValue(),
+      planId,
+      workspaceId,
+      'activate',
     );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError("activate");
-    }
 
     plan.updateStatus(PlanStatus.ACTIVE);
     await this.budgetPlanRepository.save(plan);
@@ -116,21 +102,14 @@ export class BudgetPlanService {
 
   async archivePlan(id: string, workspaceId: string, userId: string): Promise<BudgetPlanDTO> {
     const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
-
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(id, workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === userId;
-    const isAdminOrOwner = await this.checkWorkspaceAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       userId,
-      plan.workspaceId.getValue(),
+      planId,
+      workspaceId,
+      'archive',
     );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError("archive");
-    }
 
     plan.updateStatus(PlanStatus.ARCHIVED);
     await this.budgetPlanRepository.save(plan);
@@ -139,21 +118,14 @@ export class BudgetPlanService {
 
   async deletePlan(id: string, workspaceId: string, userId: string): Promise<void> {
     const planId = PlanId.fromString(id);
-    const plan = await this.budgetPlanRepository.findById(planId, workspaceId);
-
-    if (!plan) {
-      throw new BudgetPlanNotFoundError(id, workspaceId);
-    }
-
-    const isCreator = plan.createdBy.getValue() === userId;
-    const isAdminOrOwner = await this.checkWorkspaceAccess(
+    const plan = await getAuthorizedPlan(
+      this.budgetPlanRepository,
+      this.workspaceAccess,
       userId,
-      plan.workspaceId.getValue(),
+      planId,
+      workspaceId,
+      'delete',
     );
-
-    if (!isCreator && !isAdminOrOwner) {
-      throw new UnauthorizedBudgetPlanAccessError("delete");
-    }
 
     plan.markAsDeleted();
     await this.budgetPlanRepository.delete(planId, plan.workspaceId.getValue(), plan);
