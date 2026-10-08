@@ -9,6 +9,12 @@ import {
 } from '../../domain/repositories/receipt.repository';
 import { ReceiptStatus } from '../../domain/enums/receipt-status';
 import { ReceiptType } from '../../domain/enums/receipt-type';
+import { randomUUID } from 'node:crypto';
+import {
+  DuplicateReceiptError,
+  ReceiptNotFoundError,
+  ReceiptWriteConflictError,
+} from '../../domain/errors/receipt.errors';
 import { StorageProvider } from '../../domain/enums/storage-provider';
 import {
   PaginatedResult,
@@ -16,66 +22,94 @@ import {
 } from '@core/domain/interfaces/paginated-result.interface';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 
-// ... (imports)
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
-import { IEventBus } from '@core/domain/events/domain-event';
+import { isUniqueConstraint } from '@shared/infrastructure/persistence/constraint-errors';
 
 export class ReceiptRepositoryImpl
   extends PrismaRepository<Receipt>
   implements IReceiptRepository
 {
-  constructor(prisma: PrismaClient, eventBus: IEventBus) {
-    super(prisma, eventBus);
+  constructor(prisma: PrismaClient) {
+    super(prisma);
   }
 
   async save(receipt: Receipt): Promise<void> {
     const fileInfo = receipt.fileInfo;
     const storageLocation = receipt.storageLocation;
 
-    await this.prisma.receipt.upsert({
-      where: { id: receipt.id.getValue() },
-      create: {
-        id: receipt.id.getValue(),
-        workspaceId: receipt.workspaceId,
-        expenseId: receipt.expenseId,
-        userId: receipt.userId,
-        fileName: fileInfo.getFileName(),
-        originalName: fileInfo.getOriginalName(),
-        filePath: fileInfo.getFilePath(),
-        fileSize: fileInfo.getFileSize(),
-        mimeType: fileInfo.getMimeType(),
-        fileHash: fileInfo.getFileHash(),
-        receiptType: receipt.receiptType,
-        status: receipt.status,
-        storageProvider: storageLocation.getProvider(),
-        storageBucket: storageLocation.getBucket(),
-        storageKey: storageLocation.getKey(),
-        thumbnailPath: receipt.thumbnailPath,
-        ocrText: receipt.ocrText,
-        ocrConfidence: receipt.ocrConfidence,
-        processedAt: receipt.processedAt,
-        failureReason: receipt.failureReason,
-        createdAt: receipt.createdAt,
-        updatedAt: receipt.updatedAt,
-        deletedAt: receipt.deletedAt,
-      },
-      update: {
-        expenseId: receipt.expenseId,
-        fileName: fileInfo.getFileName(),
-        filePath: fileInfo.getFilePath(),
-        receiptType: receipt.receiptType,
-        status: receipt.status,
-        thumbnailPath: receipt.thumbnailPath,
-        ocrText: receipt.ocrText,
-        ocrConfidence: receipt.ocrConfidence,
-        processedAt: receipt.processedAt,
-        failureReason: receipt.failureReason,
-        updatedAt: receipt.updatedAt,
-        deletedAt: receipt.deletedAt,
-      },
-    });
-
-    await this.dispatchEvents(receipt);
+    try {
+      await this.persistWithEvents(
+        receipt,
+        async (tx) => {
+          if (receipt.expectedVersion === undefined) {
+            await tx.receipt.create({
+              data: {
+                id: receipt.id.getValue(),
+                workspaceId: receipt.workspaceId,
+                expenseId: receipt.expenseId,
+                userId: receipt.userId,
+                fileName: fileInfo.getFileName(),
+                originalName: fileInfo.getOriginalName(),
+                filePath: fileInfo.getFilePath(),
+                fileSize: fileInfo.getFileSize(),
+                mimeType: fileInfo.getMimeType(),
+                fileHash: fileInfo.getFileHash(),
+                receiptType: receipt.receiptType,
+                status: receipt.status,
+                storageProvider: storageLocation.getProvider(),
+                storageBucket: storageLocation.getBucket(),
+                storageKey: storageLocation.getKey(),
+                thumbnailPath: receipt.thumbnailPath,
+                ocrText: receipt.ocrText,
+                ocrConfidence: receipt.ocrConfidence,
+                processedAt: receipt.processedAt,
+                failureReason: receipt.failureReason,
+                createdAt: receipt.createdAt,
+                updatedAt: receipt.updatedAt,
+                deletedAt: receipt.deletedAt,
+                version: 0,
+              },
+            });
+          } else {
+            const result = await tx.receipt.updateMany({
+              where: {
+                id: receipt.id.getValue(),
+                workspaceId: receipt.workspaceId,
+                version: receipt.expectedVersion,
+              },
+              data: {
+                expenseId: receipt.expenseId ?? null,
+                fileName: fileInfo.getFileName(),
+                filePath: fileInfo.getFilePath(),
+                receiptType: receipt.receiptType,
+                status: receipt.status,
+                thumbnailPath: receipt.thumbnailPath,
+                ocrText: receipt.ocrText ?? null,
+                ocrConfidence: receipt.ocrConfidence ?? null,
+                processedAt: receipt.processedAt ?? null,
+                failureReason: receipt.failureReason ?? null,
+                updatedAt: receipt.updatedAt,
+                deletedAt: receipt.deletedAt ?? null,
+                version: { increment: 1 },
+              },
+            });
+            if (result.count !== 1)
+              throw new ReceiptWriteConflictError(receipt.id.getValue());
+          }
+        },
+        { workspaceId: receipt.workspaceId, userId: receipt.userId }
+      );
+      receipt.acknowledgePersistence();
+    } catch (error) {
+      if (
+        isUniqueConstraint(error, 'file_hash', 'receipt_active_workspace_hash')
+      ) {
+        throw new DuplicateReceiptError(
+          receipt.fileInfo.getFileHash() ?? 'unknown'
+        );
+      }
+      throw error;
+    }
   }
 
   async findById(id: ReceiptId, workspaceId: string): Promise<Receipt | null> {
@@ -95,15 +129,24 @@ export class ReceiptRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where: {
-          expenseId,
-          workspaceId,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: 'desc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where: {
+            expenseId,
+            workspaceId,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.receipt.count({
+          where: {
+            expenseId,
+            workspaceId,
+            deletedAt: null,
+          },
+        }),
       (row) => this.toDomain(row),
       options
     );
@@ -114,14 +157,22 @@ export class ReceiptRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where: {
-          workspaceId,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: 'desc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where: {
+            workspaceId,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.receipt.count({
+          where: {
+            workspaceId,
+            deletedAt: null,
+          },
+        }),
       (row) => this.toDomain(row),
       options
     );
@@ -133,15 +184,24 @@ export class ReceiptRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where: {
-          userId,
-          workspaceId,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: 'desc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where: {
+            userId,
+            workspaceId,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.receipt.count({
+          where: {
+            userId,
+            workspaceId,
+            deletedAt: null,
+          },
+        }),
       (row) => this.toDomain(row),
       options
     );
@@ -154,11 +214,13 @@ export class ReceiptRepositoryImpl
     const where = this.buildWhereClause(filters);
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where,
-        orderBy: { createdAt: 'desc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () => this.prisma.receipt.count({ where }),
       (row) => this.toDomain(row),
       options
     );
@@ -192,7 +254,7 @@ export class ReceiptRepositoryImpl
     }
 
     if (filters.isLinked !== undefined) {
-      where.expenseId = filters.isLinked ? { not: null } : null;
+      where.AND = [{ expenseId: filters.isLinked ? { not: null } : null }];
     }
 
     if (filters.isDeleted !== undefined) {
@@ -238,15 +300,24 @@ export class ReceiptRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where: {
-          workspaceId,
-          status: ReceiptStatus.PENDING,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: 'asc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where: {
+            workspaceId,
+            status: ReceiptStatus.PENDING,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.receipt.count({
+          where: {
+            workspaceId,
+            status: ReceiptStatus.PENDING,
+            deletedAt: null,
+          },
+        }),
       (row) => this.toDomain(row),
       options
     );
@@ -257,15 +328,24 @@ export class ReceiptRepositoryImpl
     options?: PaginationOptions
   ): Promise<PaginatedResult<Receipt>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.receipt,
-      {
-        where: {
-          workspaceId,
-          status: ReceiptStatus.FAILED,
-          deletedAt: null,
-        },
-        orderBy: { createdAt: 'desc' },
-      },
+      (page) =>
+        this.prisma.receipt.findMany({
+          where: {
+            workspaceId,
+            status: ReceiptStatus.FAILED,
+            deletedAt: null,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          ...page,
+        }),
+      () =>
+        this.prisma.receipt.count({
+          where: {
+            workspaceId,
+            status: ReceiptStatus.FAILED,
+            deletedAt: null,
+          },
+        }),
       (row) => this.toDomain(row),
       options
     );
@@ -280,14 +360,6 @@ export class ReceiptRepositoryImpl
     });
 
     return count > 0;
-  }
-
-  async delete(id: ReceiptId, _workspaceId: string): Promise<void> {
-    await this.prisma.receipt.delete({
-      where: {
-        id: id.getValue(),
-      },
-    });
   }
 
   async countByWorkspace(workspaceId: string): Promise<number> {
@@ -347,6 +419,7 @@ export class ReceiptRepositoryImpl
 
     return Receipt.fromPersistence({
       id: ReceiptId.fromString(row.id),
+      version: row.version,
       workspaceId: row.workspaceId,
       expenseId: row.expenseId ?? undefined,
       userId: row.userId,
@@ -368,19 +441,39 @@ export class ReceiptRepositoryImpl
     id: ReceiptId,
     workspaceId: string
   ): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.receiptMetadata.deleteMany({
-        where: { receiptId: id.getValue() },
-      }),
-      this.prisma.receiptTag.deleteMany({
-        where: { receiptId: id.getValue() },
-      }),
-      this.prisma.receipt.delete({
-        where: {
-          id: id.getValue(),
-          workspaceId,
+    await this.prisma.$transaction(async (tx) => {
+      const row = await tx.receipt.findUnique({
+        where: { id: id.getValue(), workspaceId },
+      });
+      if (!row) throw new ReceiptNotFoundError(id.getValue(), workspaceId);
+      const context = { workspaceId, userId: row.userId, receiptId: row.id };
+      if (row.storageKey)
+        await tx.outboxEvent.create({
+          data: {
+            id: randomUUID(),
+            aggregateId: row.id,
+            aggregateType: 'Receipt',
+            eventType: 'ReceiptFileDeletionRequested',
+            status: 'PENDING',
+            payload: {
+              ...context,
+              key: row.storageKey,
+              bucket: row.storageBucket ?? 'local',
+              provider: row.storageProvider,
+            },
+          },
+        });
+      await tx.receipt.delete({ where: { id: row.id, workspaceId } });
+      await tx.outboxEvent.create({
+        data: {
+          id: randomUUID(),
+          aggregateId: row.id,
+          aggregateType: 'Receipt',
+          eventType: 'ReceiptDeleted',
+          status: 'PENDING',
+          payload: context,
         },
-      }),
-    ]);
+      });
+    });
   }
 }
