@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  output   = "../src/generated/prisma-client"
+  output          = "../node_modules/.prisma/client-receipt-vault"
   previewFeatures = ["multiSchema"]
 }
 
@@ -23,6 +23,7 @@ model Receipt {
   fileHash        String?          @map("file_hash") @db.VarChar(64)
   receiptType     ReceiptType      @default(EXPENSE) @map("receipt_type")
   status          ReceiptStatus    @default(PENDING)
+  version         Int              @default(0)
   storageProvider StorageProvider  @default(LOCAL) @map("storage_provider")
   storageBucket   String?          @map("storage_bucket") @db.VarChar(255)
   storageKey      String?          @map("storage_key") @db.VarChar(500)
@@ -37,6 +38,8 @@ model Receipt {
   metadata        ReceiptMetadata?
   tags            ReceiptTag[]
 
+  @@unique([id, workspaceId])
+
   @@index([workspaceId])
   @@index([expenseId])
   @@index([userId])
@@ -49,6 +52,7 @@ model Receipt {
 }
 
 model ReceiptMetadata {
+  version         Int       @default(0)
   id              String    @id @default(uuid()) @db.Uuid
   receiptId       String    @unique @map("receipt_id") @db.Uuid
   merchantName    String?   @map("merchant_name") @db.VarChar(255)
@@ -81,6 +85,7 @@ model ReceiptMetadata {
 }
 
 model ReceiptTagDefinition {
+  version     Int          @default(0)
   id          String       @id @default(uuid()) @db.Uuid
   workspaceId String       @map("workspace_id") @db.Uuid
   name        String       @db.VarChar(50)
@@ -89,6 +94,8 @@ model ReceiptTagDefinition {
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   receipts    ReceiptTag[]
 
+  @@unique([id, workspaceId])
+
   @@unique([workspaceId, name], map: "receipt_tag_workspace_name")
   @@index([workspaceId])
   @@map("receipt_tag_definitions")
@@ -96,15 +103,17 @@ model ReceiptTagDefinition {
 }
 
 model ReceiptTag {
+  workspaceId String             @map("workspace_id") @db.Uuid
   receiptId String               @map("receipt_id") @db.Uuid
   tagId     String               @map("tag_id") @db.Uuid
   createdAt DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  receipt   Receipt              @relation(fields: [receiptId], references: [id], onDelete: Cascade)
-  tag       ReceiptTagDefinition @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  receipt   Receipt              @relation(fields: [receiptId, workspaceId], references: [id, workspaceId], onDelete: Cascade, onUpdate: Restrict)
+  tag       ReceiptTagDefinition @relation(fields: [tagId, workspaceId], references: [id, workspaceId], onDelete: Cascade, onUpdate: Restrict)
 
   @@id([receiptId, tagId])
   @@index([receiptId])
   @@index([tagId])
+  @@index([workspaceId])
   @@map("receipt_tags")
   @@schema("receipt_vault")
 }
@@ -120,6 +129,10 @@ model OutboxEvent {
   processedAt   DateTime?         @map("processed_at")
   retryCount    Int               @default(0) @map("retry_count")
   error         String?
+  deliveredTo   String[]          @default([]) @map("delivered_to")
+  leaseToken    String?           @map("lease_token")
+  leaseExpiresAt DateTime?        @map("lease_expires_at") @db.Timestamptz(6)
+  nextAttemptAt DateTime?         @map("next_attempt_at") @db.Timestamptz(6)
 
   @@index([status, createdAt])
   @@index([aggregateId])
@@ -162,6 +175,7 @@ enum OutboxEventStatus {
   PROCESSING
   PROCESSED
   FAILED
+  DEAD_LETTER
 
   @@schema("receipt_vault")
 }
