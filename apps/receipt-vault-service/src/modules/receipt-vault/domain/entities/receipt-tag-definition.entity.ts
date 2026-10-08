@@ -1,14 +1,14 @@
 import { TagId } from '../value-objects/tag-id';
 import {
   MAX_TAG_NAME_LENGTH,
-  MIN_TAG_NAME_LENGTH,
   MAX_TAG_DESCRIPTION_LENGTH,
   HEX_COLOR_REGEX,
 } from '../constants/receipt.constants';
-import { ReceiptValidationError } from '../errors/receipt.errors';
+import { date, eventSnapshots, invalid, ReceiptAuditEvent, text, uuid } from './receipt-validation';
 import { AggregateRoot } from '@core/domain/aggregate-root';
 
 export interface ReceiptTagDefinitionProps {
+  version?: number;
   id: TagId;
   workspaceId: string;
   name: string;
@@ -36,135 +36,43 @@ export interface CreateTagData {
 export class ReceiptTagDefinition extends AggregateRoot {
   private constructor(private props: ReceiptTagDefinitionProps) {
     super();
+    if (props.version !== undefined && (!Number.isSafeInteger(props.version) || props.version < 0)) invalid('version', 'Expected a nonnegative integer');
+    this.props = { ...props, workspaceId: uuid(props.workspaceId, 'workspaceId'), createdAt: date(props.createdAt, 'createdAt'),
+      name: ReceiptTagDefinition.nameValue(props.name), color: ReceiptTagDefinition.colorValue(props.color),
+      description: text(props.description, 'description', MAX_TAG_DESCRIPTION_LENGTH) };
   }
-
+  private static nameValue(value: string): string {
+    const name = text(value, 'name', MAX_TAG_NAME_LENGTH);
+    if (!name) invalid('name', 'Tag name cannot be empty'); return name;
+  }
+  private static colorValue(value?: string): string | undefined {
+    const color = text(value, 'color', 7);
+    if (color !== undefined && !HEX_COLOR_REGEX.test(color)) invalid('color', 'Expected #RRGGBB');
+    return color?.toUpperCase();
+  }
+  private emit(type: 'ReceiptTagCreated' | 'ReceiptTagUpdated'): void { this.addDomainEvent(new ReceiptAuditEvent(this.id.getValue(), 'ReceiptTagDefinition', type, { tagId: this.id.getValue(), workspaceId: this.workspaceId })); }
   static create(data: CreateTagData): ReceiptTagDefinition {
-    if (!data.name || data.name.trim().length === 0) {
-      throw new ReceiptValidationError('name', 'Tag name cannot be empty');
-    }
-
-    if (data.name.length < MIN_TAG_NAME_LENGTH) {
-      throw new ReceiptValidationError(
-        'name',
-        `Tag name must be at least ${MIN_TAG_NAME_LENGTH} character`
-      );
-    }
-
-    if (data.name.length > MAX_TAG_NAME_LENGTH) {
-      throw new ReceiptValidationError(
-        'name',
-        `Tag name cannot exceed ${MAX_TAG_NAME_LENGTH} characters`
-      );
-    }
-
-    if (data.color && !this.isValidHexColor(data.color)) {
-      throw new ReceiptValidationError(
-        'color',
-        'Invalid hex color format. Expected format: #RRGGBB'
-      );
-    }
-
-    if (
-      data.description &&
-      data.description.length > MAX_TAG_DESCRIPTION_LENGTH
-    ) {
-      throw new ReceiptValidationError(
-        'description',
-        `Tag description cannot exceed ${MAX_TAG_DESCRIPTION_LENGTH} characters`
-      );
-    }
-
-    return new ReceiptTagDefinition({
-      id: TagId.create(),
-      workspaceId: data.workspaceId,
-      name: data.name.trim(),
-      color: data.color,
-      description: data.description,
-      createdAt: new Date(),
-    });
+    const tag = new ReceiptTagDefinition({ ...data, id: TagId.create(), createdAt: new Date() }); tag.emit('ReceiptTagCreated'); return tag;
   }
-
-  static fromPersistence(
-    props: ReceiptTagDefinitionProps
-  ): ReceiptTagDefinition {
-    return new ReceiptTagDefinition(props);
+  static fromPersistence(props: ReceiptTagDefinitionProps) { return new ReceiptTagDefinition({ ...props, version: props.version ?? 0 }); }
+  get expectedVersion() { return this.props.version; }
+  acknowledgePersistence(): void { this.props.version = this.props.version === undefined ? 0 : this.props.version + 1; }
+  get domainEvents() { return eventSnapshots(super.domainEvents); }
+  get id() { return this.props.id; }
+  get workspaceId() { return this.props.workspaceId; }
+  get name() { return this.props.name; }
+  get color() { return this.props.color; }
+  get description() { return this.props.description; }
+  get createdAt() { return date(this.props.createdAt, 'createdAt'); }
+  updateDetails(updates: { name?: string; color?: string; description?: string }): void {
+    const next = new ReceiptTagDefinition({ ...this.props, ...updates, name: updates.name ?? this.name, color: updates.color === undefined ? this.color : updates.color, description: updates.description === undefined ? this.description : updates.description });
+    if (next.name === this.name && next.color === this.color && next.description === this.description) return;
+    this.props = next.props; this.emit('ReceiptTagUpdated');
   }
-
-  private static isValidHexColor(color: string): boolean {
-    return HEX_COLOR_REGEX.test(color);
-  }
-
-  // Getters
-  get id(): TagId {
-    return this.props.id;
-  }
-
-  get workspaceId(): string {
-    return this.props.workspaceId;
-  }
-
-  get name(): string {
-    return this.props.name;
-  }
-
-  get color(): string | undefined {
-    return this.props.color;
-  }
-
-  get description(): string | undefined {
-    return this.props.description;
-  }
-
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  // Business logic methods
-  updateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new ReceiptValidationError('name', 'Tag name cannot be empty');
-    }
-
-    if (name.length > MAX_TAG_NAME_LENGTH) {
-      throw new ReceiptValidationError(
-        'name',
-        `Tag name cannot exceed ${MAX_TAG_NAME_LENGTH} characters`
-      );
-    }
-
-    this.props.name = name.trim();
-  }
-
-  updateColor(color: string | undefined): void {
-    if (color && !ReceiptTagDefinition.isValidHexColor(color)) {
-      throw new ReceiptValidationError(
-        'color',
-        'Invalid hex color format. Expected format: #RRGGBB'
-      );
-    }
-
-    this.props.color = color;
-  }
-
-  updateDescription(description: string | undefined): void {
-    if (description && description.length > MAX_TAG_DESCRIPTION_LENGTH) {
-      throw new ReceiptValidationError(
-        'description',
-        `Tag description cannot exceed ${MAX_TAG_DESCRIPTION_LENGTH} characters`
-      );
-    }
-
-    this.props.description = description;
-  }
-
+  updateName(value: string): void { const name = ReceiptTagDefinition.nameValue(value); if (name === this.props.name) return; this.props.name = name; this.emit('ReceiptTagUpdated'); }
+  updateColor(value?: string): void { const color = ReceiptTagDefinition.colorValue(value); if (color === this.props.color) return; this.props.color = color; this.emit('ReceiptTagUpdated'); }
+  updateDescription(value?: string): void { const description = text(value, 'description', MAX_TAG_DESCRIPTION_LENGTH); if (description === this.props.description) return; this.props.description = description; this.emit('ReceiptTagUpdated'); }
   static toDTO(tag: ReceiptTagDefinition): ReceiptTagDefinitionDTO {
-    return {
-      tagId: tag.id.getValue(),
-      workspaceId: tag.workspaceId,
-      name: tag.name,
-      color: tag.color,
-      description: tag.description,
-      createdAt: tag.createdAt.toISOString(),
-    };
+    return { tagId: tag.id.getValue(), workspaceId: tag.workspaceId, name: tag.name, color: tag.color, description: tag.description, createdAt: tag.createdAt.toISOString() };
   }
 }
