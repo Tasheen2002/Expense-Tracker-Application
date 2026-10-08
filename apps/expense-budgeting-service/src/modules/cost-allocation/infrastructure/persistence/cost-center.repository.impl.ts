@@ -1,8 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { CostCenter } from "../../domain/entities/cost-center.entity";
-import { ICostCenterRepository } from "../../domain/repositories/cost-center.repository";
-import { CostCenterId } from "../../domain/value-objects/cost-center-id";
-import {  WorkspaceId  } from '@core/domain/value-objects';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { CostCenter } from '../../domain/entities/cost-center.entity';
+import { ICostCenterRepository } from '../../domain/repositories/cost-center.repository';
+import { CostCenterId } from '../../domain/value-objects/cost-center-id';
+import { WorkspaceId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -12,7 +12,10 @@ import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repo
 import { IEventBus } from '@core/domain/events/domain-event';
 import { managementOrderBy } from './management-order';
 import { isWorkspaceCodeConflict } from './management-constraint';
-import { DuplicateCostCenterCodeError, ManagementConcurrencyConflictError } from '../../domain/errors/cost-allocation.errors';
+import {
+  DuplicateCostCenterCodeError,
+  ManagementConcurrencyConflictError,
+} from '../../domain/errors/cost-allocation.errors';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
 export class CostCenterRepositoryImpl
@@ -28,7 +31,10 @@ export class CostCenterRepositoryImpl
       await this.runInTransaction(async (tx) => {
         const id = costCenter.id.getValue();
         const workspaceId = costCenter.workspaceId.getValue();
-        const existing = await tx.costCenter.findUnique({ where: { id }, select: { id: true } });
+        const existing = await tx.costCenter.findUnique({
+          where: { id },
+          select: { id: true },
+        });
         if (!existing) {
           await tx.costCenter.create({
             data: {
@@ -60,20 +66,31 @@ export class CostCenterRepositoryImpl
           }
           const previousVersion = costCenter.version;
           costCenter.synchronizeVersion(previousVersion + 1);
-          PrismaUnitOfWork.addRollbackHook(() => costCenter.synchronizeVersion(previousVersion));
+          PrismaUnitOfWork.addRollbackHook(() =>
+            costCenter.synchronizeVersion(previousVersion)
+          );
         }
 
         await this.dispatchEvents(costCenter, tx);
       });
     } catch (error) {
-      if (isWorkspaceCodeConflict(error)) throw new DuplicateCostCenterCodeError(costCenter.code);
+      if (isWorkspaceCodeConflict(error))
+        throw new DuplicateCostCenterCodeError(costCenter.code);
       throw error;
     }
   }
 
-  async findById(id: CostCenterId, workspaceId: WorkspaceId): Promise<CostCenter | null> {
+  async findById(
+    id: CostCenterId,
+    workspaceId: WorkspaceId
+  ): Promise<CostCenter | null> {
     const data = await this.prisma.costCenter.findUnique({
-      where: { id_workspaceId: { id: id.getValue(), workspaceId: workspaceId.getValue() } },
+      where: {
+        id_workspaceId: {
+          id: id.getValue(),
+          workspaceId: workspaceId.getValue(),
+        },
+      },
     });
 
     if (!data) return null;
@@ -93,7 +110,7 @@ export class CostCenterRepositoryImpl
 
   async findByCode(
     code: string,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<CostCenter | null> {
     const data = await this.prisma.costCenter.findFirst({
       where: {
@@ -119,15 +136,20 @@ export class CostCenterRepositoryImpl
 
   async findAll(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<CostCenter>> {
     const where: Prisma.CostCenterWhereInput = {
       workspaceId: workspaceId.getValue(),
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.costCenter,
-      { where, orderBy: managementOrderBy(options, 'costCenter') },
+      (page) =>
+        this.prisma.costCenter.findMany({
+          where,
+          orderBy: managementOrderBy(options, 'costCenter'),
+          ...page,
+        }),
+      () => this.prisma.costCenter.count({ where }),
       (c) =>
         CostCenter.fromPersistence({
           id: c.id,
@@ -140,8 +162,7 @@ export class CostCenterRepositoryImpl
           updatedAt: c.updatedAt,
           version: c.version,
         }),
-      options,
+      options
     );
   }
-
 }

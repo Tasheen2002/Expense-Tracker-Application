@@ -1,8 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { Project } from "../../domain/entities/project.entity";
-import { IProjectRepository } from "../../domain/repositories/project.repository";
-import { ProjectId } from "../../domain/value-objects/project-id";
-import {  WorkspaceId  } from '@core/domain/value-objects';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Project } from '../../domain/entities/project.entity';
+import { IProjectRepository } from '../../domain/repositories/project.repository';
+import { ProjectId } from '../../domain/value-objects/project-id';
+import { WorkspaceId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -12,7 +12,10 @@ import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repo
 import { IEventBus } from '@core/domain/events/domain-event';
 import { managementOrderBy } from './management-order';
 import { isWorkspaceCodeConflict } from './management-constraint';
-import { DuplicateProjectCodeError, ManagementConcurrencyConflictError } from '../../domain/errors/cost-allocation.errors';
+import {
+  DuplicateProjectCodeError,
+  ManagementConcurrencyConflictError,
+} from '../../domain/errors/cost-allocation.errors';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
 export class ProjectRepositoryImpl
@@ -28,7 +31,10 @@ export class ProjectRepositoryImpl
       await this.runInTransaction(async (tx) => {
         const id = project.id.getValue();
         const workspaceId = project.workspaceId.getValue();
-        const existing = await tx.project.findUnique({ where: { id }, select: { id: true } });
+        const existing = await tx.project.findUnique({
+          where: { id },
+          select: { id: true },
+        });
         if (!existing) {
           await tx.project.create({
             data: {
@@ -68,20 +74,31 @@ export class ProjectRepositoryImpl
           }
           const previousVersion = project.version;
           project.synchronizeVersion(previousVersion + 1);
-          PrismaUnitOfWork.addRollbackHook(() => project.synchronizeVersion(previousVersion));
+          PrismaUnitOfWork.addRollbackHook(() =>
+            project.synchronizeVersion(previousVersion)
+          );
         }
 
         await this.dispatchEvents(project, tx);
       });
     } catch (error) {
-      if (isWorkspaceCodeConflict(error)) throw new DuplicateProjectCodeError(project.code);
+      if (isWorkspaceCodeConflict(error))
+        throw new DuplicateProjectCodeError(project.code);
       throw error;
     }
   }
 
-  async findById(id: ProjectId, workspaceId: WorkspaceId): Promise<Project | null> {
+  async findById(
+    id: ProjectId,
+    workspaceId: WorkspaceId
+  ): Promise<Project | null> {
     const data = await this.prisma.project.findUnique({
-      where: { id_workspaceId: { id: id.getValue(), workspaceId: workspaceId.getValue() } },
+      where: {
+        id_workspaceId: {
+          id: id.getValue(),
+          workspaceId: workspaceId.getValue(),
+        },
+      },
     });
 
     if (!data) return null;
@@ -105,7 +122,7 @@ export class ProjectRepositoryImpl
 
   async findByCode(
     code: string,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<Project | null> {
     const data = await this.prisma.project.findFirst({
       where: {
@@ -135,15 +152,20 @@ export class ProjectRepositoryImpl
 
   async findAll(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Project>> {
     const where: Prisma.ProjectWhereInput = {
       workspaceId: workspaceId.getValue(),
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.project,
-      { where, orderBy: managementOrderBy(options, 'project') },
+      (page) =>
+        this.prisma.project.findMany({
+          where,
+          orderBy: managementOrderBy(options, 'project'),
+          ...page,
+        }),
+      () => this.prisma.project.count({ where }),
       (p) =>
         Project.fromPersistence({
           id: p.id,
@@ -160,8 +182,7 @@ export class ProjectRepositoryImpl
           updatedAt: p.updatedAt,
           version: p.version,
         }),
-      options,
+      options
     );
   }
-
 }

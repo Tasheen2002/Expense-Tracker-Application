@@ -1,8 +1,8 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { Department } from "../../domain/entities/department.entity";
-import { IDepartmentRepository } from "../../domain/repositories/department.repository";
-import { DepartmentId } from "../../domain/value-objects/department-id";
-import {  WorkspaceId  } from '@core/domain/value-objects';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Department } from '../../domain/entities/department.entity';
+import { IDepartmentRepository } from '../../domain/repositories/department.repository';
+import { DepartmentId } from '../../domain/value-objects/department-id';
+import { WorkspaceId } from '@core/domain/value-objects';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -12,7 +12,10 @@ import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repo
 import { IEventBus } from '@core/domain/events/domain-event';
 import { managementOrderBy } from './management-order';
 import { isWorkspaceCodeConflict } from './management-constraint';
-import { DuplicateDepartmentCodeError, ManagementConcurrencyConflictError } from '../../domain/errors/cost-allocation.errors';
+import {
+  DuplicateDepartmentCodeError,
+  ManagementConcurrencyConflictError,
+} from '../../domain/errors/cost-allocation.errors';
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
 export class DepartmentRepositoryImpl
@@ -28,7 +31,10 @@ export class DepartmentRepositoryImpl
       await this.runInTransaction(async (tx) => {
         const id = department.id.getValue();
         const workspaceId = department.workspaceId.getValue();
-        const existing = await tx.department.findUnique({ where: { id }, select: { id: true } });
+        const existing = await tx.department.findUnique({
+          where: { id },
+          select: { id: true },
+        });
         if (!existing) {
           await tx.department.create({
             data: {
@@ -38,7 +44,8 @@ export class DepartmentRepositoryImpl
               code: department.code,
               description: department.description,
               managerId: department.managerId?.getValue() || null,
-              parentDepartmentId: department.parentDepartmentId?.getValue() || null,
+              parentDepartmentId:
+                department.parentDepartmentId?.getValue() || null,
               isActive: department.isActive,
               createdAt: department.createdAt,
               updatedAt: department.updatedAt,
@@ -53,7 +60,8 @@ export class DepartmentRepositoryImpl
               code: department.code,
               description: department.description,
               managerId: department.managerId?.getValue() || null,
-              parentDepartmentId: department.parentDepartmentId?.getValue() || null,
+              parentDepartmentId:
+                department.parentDepartmentId?.getValue() || null,
               isActive: department.isActive,
               updatedAt: department.updatedAt,
               version: { increment: 1 },
@@ -64,20 +72,31 @@ export class DepartmentRepositoryImpl
           }
           const previousVersion = department.version;
           department.synchronizeVersion(previousVersion + 1);
-          PrismaUnitOfWork.addRollbackHook(() => department.synchronizeVersion(previousVersion));
+          PrismaUnitOfWork.addRollbackHook(() =>
+            department.synchronizeVersion(previousVersion)
+          );
         }
 
         await this.dispatchEvents(department, tx);
       });
     } catch (error) {
-      if (isWorkspaceCodeConflict(error)) throw new DuplicateDepartmentCodeError(department.code);
+      if (isWorkspaceCodeConflict(error))
+        throw new DuplicateDepartmentCodeError(department.code);
       throw error;
     }
   }
 
-  async findById(id: DepartmentId, workspaceId: WorkspaceId): Promise<Department | null> {
+  async findById(
+    id: DepartmentId,
+    workspaceId: WorkspaceId
+  ): Promise<Department | null> {
     const data = await this.prisma.department.findUnique({
-      where: { id_workspaceId: { id: id.getValue(), workspaceId: workspaceId.getValue() } },
+      where: {
+        id_workspaceId: {
+          id: id.getValue(),
+          workspaceId: workspaceId.getValue(),
+        },
+      },
     });
 
     if (!data) return null;
@@ -99,7 +118,7 @@ export class DepartmentRepositoryImpl
 
   async findByCode(
     code: string,
-    workspaceId: WorkspaceId,
+    workspaceId: WorkspaceId
   ): Promise<Department | null> {
     const data = await this.prisma.department.findFirst({
       where: {
@@ -127,15 +146,20 @@ export class DepartmentRepositoryImpl
 
   async findAll(
     workspaceId: WorkspaceId,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Department>> {
     const where: Prisma.DepartmentWhereInput = {
       workspaceId: workspaceId.getValue(),
     };
 
     return PrismaRepositoryHelper.paginate(
-      this.prisma.department,
-      { where, orderBy: managementOrderBy(options, 'department') },
+      (page) =>
+        this.prisma.department.findMany({
+          where,
+          orderBy: managementOrderBy(options, 'department'),
+          ...page,
+        }),
+      () => this.prisma.department.count({ where }),
       (d) =>
         Department.fromPersistence({
           id: d.id,
@@ -150,8 +174,7 @@ export class DepartmentRepositoryImpl
           updatedAt: d.updatedAt,
           version: d.version,
         }),
-      options,
+      options
     );
   }
-
 }
