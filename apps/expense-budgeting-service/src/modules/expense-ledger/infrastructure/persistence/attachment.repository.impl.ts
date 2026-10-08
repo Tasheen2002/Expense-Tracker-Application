@@ -1,8 +1,11 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { IAttachmentRepository } from "../../domain/repositories/attachment.repository";
-import { Attachment } from "../../domain/entities/attachment.entity";
-import { AttachmentId } from "../../domain/value-objects/attachment-id";
-import { ExpenseNotFoundError, FileSizeLimitExceededError } from '../../domain/errors/expense.errors';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { IAttachmentRepository } from '../../domain/repositories/attachment.repository';
+import { Attachment } from '../../domain/entities/attachment.entity';
+import { AttachmentId } from '../../domain/value-objects/attachment-id';
+import {
+  ExpenseNotFoundError,
+  FileSizeLimitExceededError,
+} from '../../domain/errors/expense.errors';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
 import {
   PaginatedResult,
@@ -11,9 +14,7 @@ import {
 
 import { PrismaUnitOfWork } from '@shared/infrastructure/persistence/prisma-unit-of-work';
 
-export class AttachmentRepositoryImpl
-  implements IAttachmentRepository
-{
+export class AttachmentRepositoryImpl implements IAttachmentRepository {
   constructor(protected readonly rootPrisma: PrismaClient) {}
 
   protected get prisma(): PrismaClient | Prisma.TransactionClient {
@@ -38,7 +39,7 @@ export class AttachmentRepositoryImpl
   async saveWithinSizeLimit(
     attachment: Attachment,
     workspaceId: string,
-    maxTotalSize: number,
+    maxTotalSize: number
   ): Promise<void> {
     await new PrismaUnitOfWork(this.rootPrisma).execute(async () => {
       const client = this.prisma;
@@ -53,15 +54,24 @@ export class AttachmentRepositoryImpl
         throw new ExpenseNotFoundError(attachment.expenseId, workspaceId);
       }
 
-      const totalSize = await this.getTotalSizeByExpense(attachment.expenseId, workspaceId);
+      const totalSize = await this.getTotalSizeByExpense(
+        attachment.expenseId,
+        workspaceId
+      );
       if (totalSize + attachment.fileSize > maxTotalSize) {
-        throw new FileSizeLimitExceededError(totalSize + attachment.fileSize, maxTotalSize);
+        throw new FileSizeLimitExceededError(
+          totalSize + attachment.fileSize,
+          maxTotalSize
+        );
       }
       await this.insert(attachment);
     });
   }
 
-  async findById(id: AttachmentId, workspaceId: string): Promise<Attachment | null> {
+  async findById(
+    id: AttachmentId,
+    workspaceId: string
+  ): Promise<Attachment | null> {
     const attachment = await this.prisma.attachment.findFirst({
       where: {
         id: id.getValue(),
@@ -77,24 +87,36 @@ export class AttachmentRepositoryImpl
   async findByExpense(
     expenseId: string | { getValue(): string },
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Attachment>> {
-    const expId = typeof expenseId === 'string' ? expenseId : expenseId.getValue();
+    const expId =
+      typeof expenseId === 'string' ? expenseId : expenseId.getValue();
     return PrismaRepositoryHelper.paginate(
-      this.prisma.attachment,
-      {
-        where: {
-          expenseId: expId,
-          expense: { workspaceId },
-        },
-        orderBy: { createdAt: "desc" },
-      },
+      (page) =>
+        this.prisma.attachment.findMany({
+          where: {
+            expenseId: expId,
+            expense: { workspaceId },
+          },
+          orderBy: { createdAt: 'desc' },
+          ...page,
+        }),
+      () =>
+        this.prisma.attachment.count({
+          where: {
+            expenseId: expId,
+            expense: { workspaceId },
+          },
+        }),
       (attachment) => this.toDomain(attachment),
-      options,
+      options
     );
   }
 
-  async findByIds(ids: AttachmentId[], workspaceId: string): Promise<Attachment[]> {
+  async findByIds(
+    ids: AttachmentId[],
+    workspaceId: string
+  ): Promise<Attachment[]> {
     const attachments = await this.prisma.attachment.findMany({
       where: {
         id: { in: ids.map((id) => id.getValue()) },
@@ -116,9 +138,10 @@ export class AttachmentRepositoryImpl
 
   async deleteByExpense(
     expenseId: string | { getValue(): string },
-    workspaceId: string,
+    workspaceId: string
   ): Promise<void> {
-    const expId = typeof expenseId === 'string' ? expenseId : expenseId.getValue();
+    const expId =
+      typeof expenseId === 'string' ? expenseId : expenseId.getValue();
     await this.prisma.attachment.deleteMany({
       where: {
         expenseId: expId,
@@ -139,9 +162,10 @@ export class AttachmentRepositoryImpl
 
   async getTotalSizeByExpense(
     expenseId: string | { getValue(): string },
-    workspaceId: string,
+    workspaceId: string
   ): Promise<number> {
-    const expId = typeof expenseId === 'string' ? expenseId : expenseId.getValue();
+    const expId =
+      typeof expenseId === 'string' ? expenseId : expenseId.getValue();
     const result = await this.prisma.attachment.aggregate({
       where: {
         expenseId: expId,

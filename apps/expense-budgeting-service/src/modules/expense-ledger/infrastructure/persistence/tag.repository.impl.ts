@@ -1,7 +1,7 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import { ITagRepository } from "../../domain/repositories/tag.repository";
-import { Tag } from "../../domain/entities/tag.entity";
-import { TagId } from "../../domain/value-objects/tag-id";
+import { PrismaClient, Prisma } from '@prisma/client';
+import { ITagRepository } from '../../domain/repositories/tag.repository';
+import { Tag } from '../../domain/entities/tag.entity';
+import { TagId } from '../../domain/value-objects/tag-id';
 import { IEventBus } from '@core/domain/events/domain-event';
 import { PrismaRepository } from '@shared/infrastructure/persistence/prisma-repository.base';
 import { PrismaRepositoryHelper } from '@shared/infrastructure/persistence/prisma-repository.helper';
@@ -81,16 +81,18 @@ export class TagRepositoryImpl
 
   async findByWorkspace(
     workspaceId: string,
-    options?: PaginationOptions,
+    options?: PaginationOptions
   ): Promise<PaginatedResult<Tag>> {
     return PrismaRepositoryHelper.paginate(
-      this.prisma.tag,
-      {
-        where: { workspaceId },
-        orderBy: { name: "asc" },
-      },
+      (page) =>
+        this.prisma.tag.findMany({
+          where: { workspaceId },
+          orderBy: { name: 'asc' },
+          ...page,
+        }),
+      () => this.prisma.tag.count({ where: { workspaceId } }),
       (tag) => this.toDomain(tag),
-      options,
+      options
     );
   }
 
