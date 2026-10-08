@@ -48,7 +48,7 @@ export async function buildNotificationApp(options: NotificationAppOptions = {})
       ? options.compositionRootFactory(fastify.prisma)
       : createCompositionRoot(fastify.prisma, { onWorkerError: error => fastify.log.error({ err: error }, 'Email batch interrupted') });
     fastify.decorate('compositionRoot', root);
-    await registerNotificationDispatchRoutes(fastify, root.controllers, fastify.prisma);
+    await registerNotificationDispatchRoutes(fastify, root.controllers, fastify.prisma, root.accountNotificationService);
     fastify.get('/health', async (_request, reply) => {
       try {
         await verifyDatabaseReadiness(fastify.prisma);

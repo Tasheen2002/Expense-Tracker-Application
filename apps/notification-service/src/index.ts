@@ -17,10 +17,9 @@ if (fs.existsSync(rootEnvPath)) {
   applyEnvironmentFallback(rootEnvConfig);
 }
 
-import { startNotificationService } from './runtime';
-
 async function main() {
   try {
+    const { startNotificationService } = await import('./runtime');
     const app = await startNotificationService({ installSignalHandlers: true });
     app.log.info({ address: app.server.address() }, 'Notification service listening');
   } catch (error: unknown) {

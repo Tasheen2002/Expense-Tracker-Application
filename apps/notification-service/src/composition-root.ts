@@ -47,7 +47,17 @@ import { NotificationController } from './modules/notification-dispatch/infrastr
 import { TemplateController } from './modules/notification-dispatch/infrastructure/http/controllers/template.controller';
 import { PreferenceController } from './modules/notification-dispatch/infrastructure/http/controllers/preference.controller';
 
-import { OutboxWorker, HttpWebhookPublisher } from '@expense-tracker/outbox-kit';
+import {
+  OutboxWorker,
+  HttpWebhookPublisher,
+} from '@expense-tracker/outbox-kit';
+import { AccountNotificationRepositoryImpl } from './modules/notification-dispatch/infrastructure/persistence/account-notification.repository.impl';
+import { AccountNotificationService } from './modules/notification-dispatch/application/services/account-notification.service';
+import { AccountNotificationController } from './modules/notification-dispatch/infrastructure/http/controllers/account-notification.controller';
+import { ListAccountNotificationsHandler } from './modules/notification-dispatch/application/queries/list-account-notifications.query';
+import { GetAccountNotificationPreferencesHandler } from './modules/notification-dispatch/application/queries/get-account-notification-preferences.query';
+import { MarkAccountNotificationReadHandler } from './modules/notification-dispatch/application/commands/mark-account-notification-read.command';
+import { UpdateAccountNotificationPreferencesHandler } from './modules/notification-dispatch/application/commands/update-account-notification-preferences.command';
 export interface ManagedWorker {
   start(): void;
   stop(): Promise<void>;
@@ -55,106 +65,178 @@ export interface ManagedWorker {
 export interface CompositionOptions {
   onWorkerError?: (error: unknown) => void;
 }
-export function createCompositionRoot(prisma: PrismaClient, options: CompositionOptions = {}) {
-    // Repositories record domain events transactionally; bus subscribers are
-    // only for best-effort in-process delivery after commit.
-    const eventBus = new InMemoryEventBus();
+export function createCompositionRoot(
+  prisma: PrismaClient,
+  options: CompositionOptions = {}
+) {
+  // Repositories record domain events transactionally; bus subscribers are
+  // only for best-effort in-process delivery after commit.
+  const eventBus = new InMemoryEventBus();
 
-    // Repositories
-    const notificationRepository = new NotificationRepositoryImpl(prisma, eventBus);
-    const notificationTemplateRepository = new NotificationTemplateRepositoryImpl(prisma);
-    const notificationPreferenceRepository = new NotificationPreferenceRepositoryImpl(prisma);
-    const outboxEventRepository = new PrismaOutboxEventRepository(prisma);
+  // Repositories
+  const notificationRepository = new NotificationRepositoryImpl(
+    prisma,
+    eventBus
+  );
+  const notificationTemplateRepository = new NotificationTemplateRepositoryImpl(
+    prisma
+  );
+  const notificationPreferenceRepository =
+    new NotificationPreferenceRepositoryImpl(prisma);
+  const outboxEventRepository = new PrismaOutboxEventRepository(prisma);
 
+  // Recipient lookup
+  const recipientLookup = new PrismaRecipientLookupAdapter();
 
-    // Recipient lookup
-    const recipientLookup = new PrismaRecipientLookupAdapter();
+  // Services
+  const notificationService = new NotificationService(
+    notificationRepository,
+    notificationTemplateRepository,
+    notificationPreferenceRepository
+  );
+  const templateService = new TemplateService(notificationTemplateRepository);
+  const preferenceService = new PreferenceService(
+    notificationPreferenceRepository
+  );
 
-    // Services
-    const notificationService = new NotificationService(
-      notificationRepository,
-      notificationTemplateRepository,
-      notificationPreferenceRepository
+  const apiKey = (process.env.RESEND_API_KEY ?? '').trim();
+  const sender = (process.env.NOTIFICATION_EMAIL_FROM ?? '').trim();
+  const provider = (process.env.NOTIFICATION_EMAIL_PROVIDER ?? 'resend').trim();
+  if (!['resend', 'mailpit'].includes(provider))
+    throw new Error('NOTIFICATION_EMAIL_PROVIDER must be resend or mailpit');
+  if (provider === 'resend' && Boolean(apiKey) !== Boolean(sender))
+    throw new Error(
+      'Configure both RESEND_API_KEY and NOTIFICATION_EMAIL_FROM'
     );
-    const templateService = new TemplateService(notificationTemplateRepository);
-    const preferenceService = new PreferenceService(notificationPreferenceRepository);
-
-    const apiKey = (process.env.RESEND_API_KEY ?? '').trim();
-    const sender = (process.env.NOTIFICATION_EMAIL_FROM ?? '').trim();
-    const provider = (process.env.NOTIFICATION_EMAIL_PROVIDER ?? 'resend').trim();
-    if (!['resend', 'mailpit'].includes(provider)) throw new Error('NOTIFICATION_EMAIL_PROVIDER must be resend or mailpit');
-    if (provider === 'resend' && Boolean(apiKey) !== Boolean(sender)) throw new Error('Configure both RESEND_API_KEY and NOTIFICATION_EMAIL_FROM');
-    let email: ManagedWorker | undefined;
-    if (provider === 'mailpit' || (apiKey && sender)) {
-      const transport = provider === 'mailpit'
-        ? new MailpitEmailProvider(process.env.MAILPIT_URL ?? 'http://localhost:8025', sender || 'notifications@expense-tracker.test')
+  let email: ManagedWorker | undefined;
+  if (provider === 'mailpit' || (apiKey && sender)) {
+    const transport =
+      provider === 'mailpit'
+        ? new MailpitEmailProvider(
+            process.env.MAILPIT_URL ?? 'http://localhost:8025',
+            sender || 'notifications@expense-tracker.test'
+          )
         : new ResendEmailProvider(apiKey, sender);
-      const delivery = new EmailDeliveryService(new EmailDeliveryRepositoryImpl(prisma, eventBus),
-        transport, recipientLookup);
-      email = new EmailDeliveryWorker(delivery, options.onWorkerError);
-    }
-
-    // Command Handlers
-    // Send is an internal required-ID command; there is no unrestricted HTTP endpoint.
-    const markAsReadHandler = new MarkAsReadHandler(notificationService);
-    const markAllAsReadHandler = new MarkAllAsReadHandler(notificationService);
-    const createTemplateHandler = new CreateTemplateHandler(templateService);
-    const updateTemplateHandler = new UpdateTemplateHandler(templateService);
-    const activateTemplateHandler = new ActivateTemplateHandler(templateService);
-    const deactivateTemplateHandler = new DeactivateTemplateHandler(templateService);
-    const updatePreferencesHandler = new UpdatePreferencesHandler(preferenceService);
-    const updateTypePreferenceHandler = new UpdateTypePreferenceHandler(preferenceService);
-
-    // Query Handlers
-    const listNotificationsHandler = new ListNotificationsHandler(notificationService);
-    const getUnreadCountHandler = new GetUnreadCountHandler(notificationService);
-    const getUnreadNotificationsHandler = new GetUnreadNotificationsHandler(notificationService);
-    const getTemplateByIdHandler = new GetTemplateByIdHandler(templateService);
-    const getActiveTemplateHandler = new GetActiveTemplateHandler(templateService);
-    const getPreferencesHandler = new GetPreferencesHandler(preferenceService);
-    const checkChannelEnabledHandler = new CheckChannelEnabledHandler(preferenceService);
-
-    // Controllers
-    const notificationController = new NotificationController(
-      listNotificationsHandler,
-      getUnreadCountHandler,
-      getUnreadNotificationsHandler,
-      markAsReadHandler,
-      markAllAsReadHandler
+    const delivery = new EmailDeliveryService(
+      new EmailDeliveryRepositoryImpl(prisma, eventBus),
+      transport,
+      recipientLookup
     );
+    email = new EmailDeliveryWorker(delivery, options.onWorkerError);
+  }
 
-    const templateController = new TemplateController(
-      createTemplateHandler,
-      getTemplateByIdHandler,
-      getActiveTemplateHandler,
-      updateTemplateHandler,
-      activateTemplateHandler,
-      deactivateTemplateHandler
-    );
+  // Command Handlers
+  // Send is an internal required-ID command; there is no unrestricted HTTP endpoint.
+  const markAsReadHandler = new MarkAsReadHandler(notificationService);
+  const markAllAsReadHandler = new MarkAllAsReadHandler(notificationService);
+  const createTemplateHandler = new CreateTemplateHandler(templateService);
+  const updateTemplateHandler = new UpdateTemplateHandler(templateService);
+  const activateTemplateHandler = new ActivateTemplateHandler(templateService);
+  const deactivateTemplateHandler = new DeactivateTemplateHandler(
+    templateService
+  );
+  const updatePreferencesHandler = new UpdatePreferencesHandler(
+    preferenceService
+  );
+  const updateTypePreferenceHandler = new UpdateTypePreferenceHandler(
+    preferenceService
+  );
 
-    const preferenceController = new PreferenceController(
-      getPreferencesHandler,
-      updatePreferencesHandler,
-      updateTypePreferenceHandler,
-      checkChannelEnabledHandler
-    );
+  // Query Handlers
+  const listNotificationsHandler = new ListNotificationsHandler(
+    notificationService
+  );
+  const getUnreadCountHandler = new GetUnreadCountHandler(notificationService);
+  const getUnreadNotificationsHandler = new GetUnreadNotificationsHandler(
+    notificationService
+  );
+  const getTemplateByIdHandler = new GetTemplateByIdHandler(templateService);
+  const getActiveTemplateHandler = new GetActiveTemplateHandler(
+    templateService
+  );
+  const getPreferencesHandler = new GetPreferencesHandler(preferenceService);
+  const checkChannelEnabledHandler = new CheckChannelEnabledHandler(
+    preferenceService
+  );
 
-    const auditUrl = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
-    const endpoint = auditUrl.replace(/\/$/, '') + '/api/v1/event-outbox/events';
-    const routes = Object.fromEntries([
-      'NotificationCreated', 'notification.created', 'NotificationSent', 'notification.sent',
-      'NotificationFailed', 'notification.failed', 'NotificationRead', 'notification.read',
-    ].map(type => [type, [endpoint]]));
-    const workers: Readonly<{ outbox: ManagedWorker; email?: ManagedWorker }> = Object.freeze({
-      outbox: new OutboxWorker(outboxEventRepository, new HttpWebhookPublisher(routes), { pollIntervalMs: 5000 }),
+  // Controllers
+  const notificationController = new NotificationController(
+    listNotificationsHandler,
+    getUnreadCountHandler,
+    getUnreadNotificationsHandler,
+    markAsReadHandler,
+    markAllAsReadHandler
+  );
+
+  const templateController = new TemplateController(
+    createTemplateHandler,
+    getTemplateByIdHandler,
+    getActiveTemplateHandler,
+    updateTemplateHandler,
+    activateTemplateHandler,
+    deactivateTemplateHandler
+  );
+
+  const preferenceController = new PreferenceController(
+    getPreferencesHandler,
+    updatePreferencesHandler,
+    updateTypePreferenceHandler,
+    checkChannelEnabledHandler
+  );
+
+  const auditUrl = process.env.AUDIT_SERVICE_URL || 'http://localhost:3009';
+  const endpoint = auditUrl.replace(/\/$/, '') + '/api/v1/event-outbox/events';
+  const routes = Object.fromEntries(
+    [
+      'NotificationCreated',
+      'notification.created',
+      'NotificationSent',
+      'notification.sent',
+      'NotificationFailed',
+      'notification.failed',
+      'NotificationRead',
+      'notification.read',
+      'account.notification.created',
+      'account.notification.read',
+    ].map((type) => [type, [endpoint]])
+  );
+  const workers: Readonly<{ outbox: ManagedWorker; email?: ManagedWorker }> =
+    Object.freeze({
+      outbox: new OutboxWorker(
+        outboxEventRepository,
+        new HttpWebhookPublisher(routes),
+        { pollIntervalMs: 5000 }
+      ),
       email,
     });
-    return Object.freeze({
-      prisma, workers,
-      notificationRepository, notificationTemplateRepository, notificationPreferenceRepository, outboxEventRepository,
-      notificationService, templateService, preferenceService,
-      sendNotificationHandler: new SendNotificationHandler(notificationService),
-      controllers: Object.freeze({ notificationController, templateController, preferenceController }),
-    });
+  const accountRepository = new AccountNotificationRepositoryImpl(prisma);
+  const accountNotificationService = new AccountNotificationService(
+    accountRepository
+  );
+  const accountNotificationController = new AccountNotificationController(
+    new ListAccountNotificationsHandler(accountRepository),
+    new MarkAccountNotificationReadHandler(accountRepository),
+    new GetAccountNotificationPreferencesHandler(accountRepository),
+    new UpdateAccountNotificationPreferencesHandler(accountRepository)
+  );
+  return Object.freeze({
+    prisma,
+    workers,
+    notificationRepository,
+    notificationTemplateRepository,
+    notificationPreferenceRepository,
+    outboxEventRepository,
+    notificationService,
+    templateService,
+    preferenceService,
+    accountNotificationService,
+    sendNotificationHandler: new SendNotificationHandler(notificationService),
+    controllers: Object.freeze({
+      notificationController,
+      templateController,
+      preferenceController,
+      accountNotificationController,
+    }),
+  });
 }
 export type CompositionRoot = ReturnType<typeof createCompositionRoot>;
