@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
 import { AuthController } from '../controllers/auth.controller';
 import { validateBody } from '../validation/validator';
 import {
@@ -22,7 +22,10 @@ export async function registerAuthRoutes(
   app: FastifyInstance,
   controller: AuthController
 ): Promise<void> {
-  const authRateLimit = { rateLimit: { max: 10, timeWindow: '15 minutes' } };
+  const authRateLimit = { rateLimit: {
+    max: 10, timeWindow: '15 minutes', hook: 'onRequest' as const,
+    keyGenerator: (request: FastifyRequest) => `auth-ip:${request.ip}`,
+  } };
   const writeRateLimit = { rateLimit: { max: 30, timeWindow: '1 minute' } };
 
   // 1. Register User (Public)
