@@ -21,6 +21,19 @@ function client() {
   return prisma;
 }
 describe('Categorization composition and lifecycle', () => {
+  it('rejects disabling internal authentication in production before creating Prisma', async () => {
+    vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('INTERNAL_API_KEY', 'test-internal-key');
+    const prismaFactory = vi.fn(client);
+    await expect(buildCategorizationApp({ enableInternalAuth: false, logger: false, prismaFactory }))
+      .rejects.toThrow('Internal authentication cannot be disabled in production');
+    expect(prismaFactory).not.toHaveBeenCalled();
+  });
+  it('rejects a whitespace-only production internal key before creating Prisma', async () => {
+    vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('INTERNAL_API_KEY', '   ');
+    const prismaFactory = vi.fn(client);
+    await expect(buildCategorizationApp({ logger: false, prismaFactory })).rejects.toThrow('INTERNAL_API_KEY is required');
+    expect(prismaFactory).not.toHaveBeenCalled();
+  });
   it('schedules retention cleanup without overlap and drains it before disconnecting', async () => {
     const prisma = client();
     const app = await buildCategorizationApp({ logger: false, enableInternalAuth: false, prismaFactory: () => prisma });
@@ -110,12 +123,12 @@ describe('Categorization composition and lifecycle', () => {
     expect(prisma.$disconnect).toHaveBeenCalledOnce();
   });
   it('sanitizes database health and explicit 5xx errors', async () => {
-    const prisma = client(); vi.stubEnv('NODE_ENV', 'production');
-    const app = await buildCategorizationApp({ enableInternalAuth: false, logger: false, prismaFactory: () => prisma });
+    const prisma = client(); vi.stubEnv('NODE_ENV', 'production'); vi.stubEnv('INTERNAL_API_KEY', 'test-internal-key');
+    const app = await buildCategorizationApp({ logger: false, prismaFactory: () => prisma });
     vi.mocked(prisma.$queryRaw).mockRejectedValue(new Error('private database details'));
     app.get('/test-error', async () => { throw Object.assign(new Error('private dependency details'), { statusCode: 503 }); });
     expect((await app.inject('/health')).json().error).toBe('Database service unavailable');
-    const response = await app.inject('/test-error'); expect(response.statusCode).toBe(503);
+    const response = await app.inject({ url: '/test-error', headers: { 'x-internal-api-key': 'test-internal-key' } }); expect(response.statusCode).toBe(503);
     expect(response.body).not.toContain('private'); await app.close();
   });
   it('routes accepted suggestions to the actual expense receiver and audit', () => {

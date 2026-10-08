@@ -21,6 +21,10 @@ declare module 'fastify' { interface FastifyInstance { compositionRoot: Composit
  * Factory to construct and configure the Categorization Service Fastify application.
  */
 export async function buildCategorizationApp(options?: CategorizationAppOptions): Promise<FastifyInstance> {
+  if (process.env.NODE_ENV === 'production') {
+    if (options?.enableInternalAuth === false) throw new Error('Internal authentication cannot be disabled in production');
+    if (!process.env.INTERNAL_API_KEY?.trim()) throw new Error('INTERNAL_API_KEY is required');
+  }
   const isTest = process.env.NODE_ENV === 'test';
   const fastify = Fastify({
     logger: options?.logger !== undefined ? options.logger : (isTest ? false : true),
@@ -33,7 +37,6 @@ export async function buildCategorizationApp(options?: CategorizationAppOptions)
 
   // 2. Service-to-service internal authentication
   if (options?.enableInternalAuth !== false) {
-    if (process.env.NODE_ENV === 'production' && !process.env.INTERNAL_API_KEY) throw new Error('INTERNAL_API_KEY is required');
     await fastify.register(internalAuthPlugin);
   }
 
